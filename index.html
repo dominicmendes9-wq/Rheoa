@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Login with Supabase</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .view { display: none; }
+        .view.active { display: block; }
+        .avatar-preview img { width: 100px; height: 100px; border-radius: 50%; object-fit: cover; }
+        .slider-container { margin: 20px 0; }
+        .dashboard-container { display: flex; gap: 40px; }
+        .left { flex: 1; }
+        .right { text-align: center; }
+        .info-item { margin: 10px 0; }
+        .welcome { font-size: 1.5em; margin-bottom: 20px; }
+        button { padding: 10px 20px; cursor: pointer; }
+        input, select, textarea { width: 100%; padding: 8px; margin: 5px 0 15px; border: 1px solid #ccc; border-radius: 4px; }
+        label { font-weight: bold; }
+    </style>
+    <!-- Load Supabase JS from CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <!-- LOGIN VIEW -->
+    <div id="login-view" class="view active">
+        <h1>Welcome</h1>
+        <p>Please sign in with Google to continue.</p>
+        <button id="google-signin-btn">Sign in with Google</button>
+    </div>
+
+    <!-- PROFILE SETUP VIEW -->
+    <div id="profile-setup-view" class="view">
+        <h1>Complete Your Profile</h1>
+        <form id="profile-form">
+            <label>Full Name:</label>
+            <input type="text" id="full-name" required>
+
+            <label>Gender:</label>
+            <select id="gender">
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="other">Other</option>
+            </select>
+
+            <label>Age:</label>
+            <input type="number" id="age" min="1" max="120" required>
+
+            <label>Location:</label>
+            <input type="text" id="location" required>
+
+            <label>Bio:</label>
+            <textarea id="bio" rows="3"></textarea>
+
+            <div class="slider-container">
+                <label>Choose Avatar:</label><br>
+                <div class="avatar-preview">
+                    <img id="setup-avatar-preview" src="" alt="Avatar preview">
+                </div>
+                <input type="range" id="setup-avatar-slider" min="0" value="0" step="1">
+            </div>
+
+            <button type="submit">Save and Continue</button>
+        </form>
+    </div>
+
+    <!-- DASHBOARD VIEW -->
+    <div id="dashboard-view" class="view">
+        <div class="dashboard-container">
+            <div class="left">
+                <div class="welcome" id="welcome-message"></div>
+                <div class="info-item"><strong>Name:</strong> <span id="display-name"></span></div>
+                <div class="info-item"><strong>Gender:</strong> <span id="display-gender"></span></div>
+                <div class="info-item"><strong>Age:</strong> <span id="display-age"></span></div>
+                <div class="info-item"><strong>Location:</strong> <span id="display-location"></span></div>
+                <div class="info-item"><strong>Bio:</strong> <span id="display-bio"></span></div>
+            </div>
+            <div class="right">
+                <div class="avatar-preview">
+                    <img id="dashboard-avatar" src="" alt="Avatar">
+                </div>
+                <div class="slider-container">
+                    <input type="range" id="dashboard-avatar-slider" min="0" value="0" step="1">
+                </div>
+                <button id="logout-btn">Logout</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            // --- CONFIGURATION (REPLACE WITH YOUR SUPABASE CREDENTIALS) ---
+            const SUPABASE_URL = 'https://xovtjaqxujtsexvlhjbx.supabase.co';
+            const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhvdnRqYXF4dWp0c2V4dmxoamJ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM2NTI1MjAsImV4cCI6MjA4OTIyODUyMH0.F9eQX58DyHDii5hX1P4I2cCJGZ8HQlXeScWhgSAVoKY';
+
+            // --- AVATARS (DiceBear example) ---
+            const AVATARS = [
+                'https://avatars.dicebear.com/api/adventurer/1.svg',
+                'https://avatars.dicebear.com/api/adventurer/2.svg',
+                'https://avatars.dicebear.com/api/adventurer/3.svg',
+                'https://avatars.dicebear.com/api/adventurer/4.svg',
+                'https://avatars.dicebear.com/api/adventurer/5.svg'
+            ];
+
+            // Initialize Supabase client
+            const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+            // DOM elements
+            const loginView = document.getElementById('login-view');
+            const profileSetupView = document.getElementById('profile-setup-view');
+            const dashboardView = document.getElementById('dashboard-view');
+
+            // Helper: show only one view
+            function showView(view) {
+                [loginView, profileSetupView, dashboardView].forEach(v => v.classList.remove('active'));
+                view.classList.add('active');
+            }
+
+            // Helper: get current user and profile (returns null if no session)
+            async function getCurrentUserAndProfile() {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (!session) return { user: null, profile: null };
+
+                const user = session.user;
+                // Fetch profile from 'profiles' table
+                const { data: profile, error } = await supabase
+                    .from('profiles')
+                    .select('*')
+                    .eq('id', user.id)
+                    .single();
+
+                if (error && error.code !== 'PGRST116') { // PGRST116 = no rows
+                    console.error('Error fetching profile:', error);
+                }
+                return { user, profile: profile || null };
+            }
+
+            // --- Google Sign-In ---
+            document.getElementById('google-signin-btn').addEventListener('click', async () => {
+                const { error } = await supabase.auth.signInWithOAuth({
+                    provider: 'google',
+                    options: { redirectTo: window.location.href }
+                });
+                if (error) alert('Login error: ' + error.message);
+            });
+
+            // --- Profile Setup ---
+            document.getElementById('profile-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                const fullName = document.getElementById('full-name').value;
+                const gender = document.getElementById('gender').value;
+                const age = parseInt(document.getElementById('age').value);
+                const location = document.getElementById('location').value;
+                const bio = document.getElementById('bio').value;
+                const avatarId = parseInt(document.getElementById('setup-avatar-slider').value);
+
+                const { user } = await getCurrentUserAndProfile();
+                if (!user) {
+                    alert('You must be logged in.');
+                    return;
+                }
+
+                const profile = {
+                    id: user.id,
+                    full_name: fullName,
+                    gender,
+                    age,
+                    location,
+                    bio,
+                    avatar_id: avatarId
+                };
+
+                const { error } = await supabase
+                    .from('profiles')
+                    .upsert(profile);
+
+                if (error) {
+                    alert('Error saving profile: ' + error.message);
+                } else {
+                    // After saving, refresh and go to dashboard
+                    await refreshApp();
+                }
+            });
+
+            // --- Dashboard: avatar slider ---
+            document.getElementById('dashboard-avatar-slider').addEventListener('input', async (e) => {
+                const newAvatarId = parseInt(e.target.value);
+                document.getElementById('dashboard-avatar').src = AVATARS[newAvatarId];
+
+                // Update in database
+                const { user, profile } = await getCurrentUserAndProfile();
+                if (user && profile) {
+                    profile.avatar_id = newAvatarId;
+                    await supabase
+                        .from('profiles')
+                        .upsert({ id: user.id, avatar_id: newAvatarId });
+                }
+            });
+
+            // --- Logout ---
+            document.getElementById('logout-btn').addEventListener('click', async () => {
+                await supabase.auth.signOut();
+                showView(loginView);
+            });
+
+            // --- Avatar slider preview in setup ---
+            document.getElementById('setup-avatar-slider').addEventListener('input', (e) => {
+                const idx = parseInt(e.target.value);
+                document.getElementById('setup-avatar-preview').src = AVATARS[idx];
+            });
+
+            // --- Populate dashboard with user data ---
+            async function populateDashboard(profile) {
+                document.getElementById('display-name').textContent = profile.full_name || '—';
+                document.getElementById('display-gender').textContent = profile.gender || '—';
+                document.getElementById('display-age').textContent = profile.age || '—';
+                document.getElementById('display-location').textContent = profile.location || '—';
+                document.getElementById('display-bio').textContent = profile.bio || '—';
+
+                // Avatar
+                const avatarId = profile.avatar_id || 0;
+                document.getElementById('dashboard-avatar').src = AVATARS[avatarId];
+                const slider = document.getElementById('dashboard-avatar-slider');
+                slider.max = AVATARS.length - 1;
+                slider.value = avatarId;
+
+                // Welcome message with time-based greeting
+                const hour = new Date().getHours();
+                let greeting = 'Good Morning';
+                if (hour >= 12 && hour < 17) greeting = 'Good Afternoon';
+                else if (hour >= 17) greeting = 'Good Evening';
+                document.getElementById('welcome-message').textContent = `Hello ${profile.full_name}, ${greeting}`;
+            }
+
+            // --- Populate setup form with Google data if available ---
+            function populateSetupForm(user) {
+                if (user.user_metadata?.full_name) {
+                    document.getElementById('full-name').value = user.user_metadata.full_name;
+                }
+                // Reset other fields
+                document.getElementById('gender').value = 'male';
+                document.getElementById('age').value = '';
+                document.getElementById('location').value = '';
+                document.getElementById('bio').value = '';
+                document.getElementById('setup-avatar-slider').value = 0;
+                document.getElementById('setup-avatar-preview').src = AVATARS[0];
+            }
+
+            // --- Refresh app state: decide which view to show ---
+            async function refreshApp() {
+                const { user, profile } = await getCurrentUserAndProfile();
+
+                if (!user) {
+                    showView(loginView);
+                } else if (!profile) {
+                    // No profile yet – show setup
+                    populateSetupForm(user);
+                    showView(profileSetupView);
+                } else {
+                    // Profile exists – show dashboard
+                    await populateDashboard(profile);
+                    showView(dashboardView);
+                }
+            }
+
+            // --- Listen to auth changes (login, logout) ---
+            supabase.auth.onAuthStateChange((event, session) => {
+                // Small delay to allow session to be fully set
+                setTimeout(refreshApp, 100);
+            });
+
+            // --- Initial load ---
+            refreshApp();
+        })();
+    </script>
+</body>
+</html>
