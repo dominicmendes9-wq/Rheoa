@@ -1,279 +1,463 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simple Login with Supabase</title>
-    <style>
-        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
-        .view { display: none; }
-        .view.active { display: block; }
-        .avatar-preview img { width: 100px; height: 100px; border-radius: 50%; object-fit: cover; }
-        .slider-container { margin: 20px 0; }
-        .dashboard-container { display: flex; gap: 40px; }
-        .left { flex: 1; }
-        .right { text-align: center; }
-        .info-item { margin: 10px 0; }
-        .welcome { font-size: 1.5em; margin-bottom: 20px; }
-        button { padding: 10px 20px; cursor: pointer; }
-        input, select, textarea { width: 100%; padding: 8px; margin: 5px 0 15px; border: 1px solid #ccc; border-radius: 4px; }
-        label { font-weight: bold; }
-    </style>
-    <!-- Load Supabase JS from CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+  <title>Supabase RPG · Google Sign‑In</title>
+  <style>
+    * { box-sizing: border-box; font-family: 'Segoe UI', Roboto, system-ui, sans-serif; margin: 0; padding: 0; }
+    body { background: #e9f0f5; color: #1e2b37; min-height: 100vh; display: flex; flex-direction: column; }
+    .app-header { background: #2c3e50; color: #ecf0f1; padding: 15px; text-align: center; font-size: 1.5rem; font-weight: 500; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+    .app-header small { font-size: 0.9rem; display: block; color: #b0c4de; }
+    .container { flex: 1; padding: 15px; max-width: 600px; margin: 0 auto; width: 100%; }
+    .card { background: #ffffff; border-radius: 16px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border: 1px solid #d4e0e9; }
+    h2 { color: #2c3e50; font-size: 1.3rem; margin-bottom: 15px; border-bottom: 2px solid #b0c4de; padding-bottom: 5px; }
+    .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px,1fr)); gap: 12px; }
+    .stat-item { background: #f4f9ff; padding: 12px; border-radius: 14px; text-align: center; border: 1px solid #cbd7e6; }
+    .stat-label { font-size: 0.8rem; color: #4b637a; text-transform: uppercase; letter-spacing: 0.5px; }
+    .stat-value { font-size: 1.6rem; font-weight: 600; color: #1e3b5c; line-height: 1.2; }
+    button { background: #3498db; border: none; color: white; padding: 12px 24px; border-radius: 40px; font-size: 1rem; font-weight: 500; width: 100%; margin: 8px 0; box-shadow: 0 2px 5px rgba(52,152,219,0.3); transition: 0.2s; cursor: pointer; border: 1px solid #2980b9; }
+    button.secondary { background: #95a5a6; border-color: #7f8c8d; box-shadow: none; }
+    button:active { transform: scale(0.98); }
+    input, select, textarea { width: 100%; padding: 14px; margin: 8px 0; border: 1px solid #cbd7e6; border-radius: 30px; font-size: 1rem; background: white; }
+    .nav-row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin: 20px 0; }
+    .nav-row button { flex: 1 1 80px; padding: 10px 0; font-size: 0.9rem; }
+    .hidden { display: none !important; }
+    .message { background: #d1ecf1; color: #0c5460; padding: 12px; border-radius: 40px; margin: 10px 0; text-align: center; }
+    .error { background: #f8d7da; color: #721c24; }
+    .location-item { background: #f0f7fe; border-radius: 40px; padding: 12px 18px; margin: 10px 0; display: flex; justify-content: space-between; align-items: center; border: 1px solid #bacfdf; }
+    .location-name { font-weight: 600; }
+  </style>
+  <!-- Supabase JS client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-    <!-- LOGIN VIEW -->
-    <div id="login-view" class="view active">
-        <h1>Welcome</h1>
-        <p>Please sign in with Google to continue.</p>
-        <button id="google-signin-btn">Sign in with Google</button>
+  <div class="app-header">
+    🏰 Supabase RPG
+    <small>Sign in with Google</small>
+  </div>
+  <div class="container" id="app">
+    <!-- LOGIN VIEW (Google Sign‑In) -->
+    <div id="loginView" class="card">
+      <h2>🔐 Welcome</h2>
+      <p style="text-align:center; margin-bottom:20px;">Sign in to start your adventure</p>
+      <button id="googleSignInBtn">Sign in with Google</button>
     </div>
 
-    <!-- PROFILE SETUP VIEW -->
-    <div id="profile-setup-view" class="view">
-        <h1>Complete Your Profile</h1>
-        <form id="profile-form">
-            <label>Full Name:</label>
-            <input type="text" id="full-name" required>
-
-            <label>Gender:</label>
-            <select id="gender">
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="other">Other</option>
-            </select>
-
-            <label>Age:</label>
-            <input type="number" id="age" min="1" max="120" required>
-
-            <label>Location:</label>
-            <input type="text" id="location" required>
-
-            <label>Bio:</label>
-            <textarea id="bio" rows="3"></textarea>
-
-            <div class="slider-container">
-                <label>Choose Avatar:</label><br>
-                <div class="avatar-preview">
-                    <img id="setup-avatar-preview" src="" alt="Avatar preview">
-                </div>
-                <input type="range" id="setup-avatar-slider" min="0" value="0" step="1">
-            </div>
-
-            <button type="submit">Save and Continue</button>
-        </form>
+    <!-- PROFILE SETUP VIEW (for first‑time users) -->
+    <div id="profileSetupView" class="card hidden">
+      <h2>📝 Complete Your Profile</h2>
+      <form id="profileForm">
+        <input type="text" id="fullName" placeholder="Full Name (from Google)" readonly>
+        <input type="text" id="username" placeholder="Username (display name)" required>
+        <select id="gender" required>
+          <option value="">Select Gender</option>
+          <option value="Male">Male</option>
+          <option value="Female">Female</option>
+          <option value="Other">Other</option>
+        </select>
+        <input type="number" id="age" placeholder="Age" min="1" max="120" required>
+        <input type="text" id="location" placeholder="Location (e.g., New York)" required>
+        <textarea id="bio" placeholder="Tell us about yourself" rows="3"></textarea>
+        <button type="submit">Save & Enter Game</button>
+      </form>
     </div>
 
-    <!-- DASHBOARD VIEW -->
-    <div id="dashboard-view" class="view">
-        <div class="dashboard-container">
-            <div class="left">
-                <div class="welcome" id="welcome-message"></div>
-                <div class="info-item"><strong>Name:</strong> <span id="display-name"></span></div>
-                <div class="info-item"><strong>Gender:</strong> <span id="display-gender"></span></div>
-                <div class="info-item"><strong>Age:</strong> <span id="display-age"></span></div>
-                <div class="info-item"><strong>Location:</strong> <span id="display-location"></span></div>
-                <div class="info-item"><strong>Bio:</strong> <span id="display-bio"></span></div>
-            </div>
-            <div class="right">
-                <div class="avatar-preview">
-                    <img id="dashboard-avatar" src="" alt="Avatar">
-                </div>
-                <div class="slider-container">
-                    <input type="range" id="dashboard-avatar-slider" min="0" value="0" step="1">
-                </div>
-                <button id="logout-btn">Logout</button>
-            </div>
+    <!-- MAIN GAME VIEW (dashboard + map + inventory + bank) -->
+    <div id="gameView" class="hidden">
+      <!-- Dashboard -->
+      <div id="dashboardView">
+        <div class="card">
+          <h2>📊 Dashboard</h2>
+          <div class="stat-grid" id="playerStats"></div>
         </div>
+        <div class="nav-row">
+          <button class="secondary" data-view="map">🗺️ Map</button>
+          <button class="secondary" data-view="inventory">🎒 Inventory</button>
+          <button class="secondary" data-view="bank">🏦 Bank</button>
+          <button class="secondary" id="logoutBtn">🚪 Logout</button>
+        </div>
+      </div>
+
+      <!-- Map View -->
+      <div id="mapView" class="hidden">
+        <div class="card">
+          <h2>🗺️ Explore Locations</h2>
+          <div id="locationList"></div>
+          <div id="exploreResult" class="message hidden"></div>
+          <button class="secondary" data-view="dashboard">⬅️ Back</button>
+        </div>
+      </div>
+
+      <!-- Inventory View -->
+      <div id="inventoryView" class="hidden">
+        <div class="card">
+          <h2>🎒 Inventory</h2>
+          <div id="inventoryList">Loading...</div>
+          <button class="secondary" data-view="dashboard">⬅️ Back</button>
+        </div>
+      </div>
+
+      <!-- Bank View -->
+      <div id="bankView" class="hidden">
+        <div class="card">
+          <h2>🏦 Bank</h2>
+          <div id="bankStats"></div>
+          <input type="number" id="bankAmount" placeholder="Amount">
+          <button id="depositBtn">Deposit</button>
+          <button id="withdrawBtn">Withdraw</button>
+          <div id="bankMessage" class="message hidden"></div>
+          <button class="secondary" data-view="dashboard">⬅️ Back</button>
+        </div>
+      </div>
     </div>
+  </div>
 
-    <script>
-        (function() {
-            // --- CONFIGURATION (REPLACE WITH YOUR SUPABASE CREDENTIALS) ---
-            const SUPABASE_URL = 'https://xovtjaqxujtsexvlhjbx.supabase.co';
-            const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhvdnRqYXF4dWp0c2V4dmxoamJ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM2NTI1MjAsImV4cCI6MjA4OTIyODUyMH0.F9eQX58DyHDii5hX1P4I2cCJGZ8HQlXeScWhgSAVoKY';
+  <script>
+    // ========== SUPABASE INIT ==========
+    const SUPABASE_URL = 'https://xovtjaqxujtsexvlhjbx.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhvdnRqYXF4dWp0c2V4dmxoamJ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM2NTI1MjAsImV4cCI6MjA4OTIyODUyMH0.F9eQX58DyHDii5hX1P4I2cCJGZ8HQlXeScWhgSAVoKY';
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: { autoRefreshToken: true, persistSession: true }
+    });
 
-            // --- AVATARS (DiceBear example) ---
-            const AVATARS = [
-                'https://avatars.dicebear.com/api/adventurer/1.svg',
-                'https://avatars.dicebear.com/api/adventurer/2.svg',
-                'https://avatars.dicebear.com/api/adventurer/3.svg',
-                'https://avatars.dicebear.com/api/adventurer/4.svg',
-                'https://avatars.dicebear.com/api/adventurer/5.svg'
-            ];
+    // ========== STATE ==========
+    let currentPlayer = null;  // player record from 'players' table
 
-            // Initialize Supabase client
-            const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // ========== VIEW TOGGLING ==========
+    function showLogin() {
+      document.getElementById('loginView').classList.remove('hidden');
+      document.getElementById('profileSetupView').classList.add('hidden');
+      document.getElementById('gameView').classList.add('hidden');
+    }
+    function showProfileSetup() {
+      document.getElementById('loginView').classList.add('hidden');
+      document.getElementById('profileSetupView').classList.remove('hidden');
+      document.getElementById('gameView').classList.add('hidden');
+    }
+    function showGame() {
+      document.getElementById('loginView').classList.add('hidden');
+      document.getElementById('profileSetupView').classList.add('hidden');
+      document.getElementById('gameView').classList.remove('hidden');
+      showDashboard();
+    }
+    function showDashboard() {
+      hideAllSubViews();
+      document.getElementById('dashboardView').classList.remove('hidden');
+      loadDashboard();
+    }
+    function showMap() {
+      hideAllSubViews();
+      document.getElementById('mapView').classList.remove('hidden');
+      loadMap();
+    }
+    function showInventory() {
+      hideAllSubViews();
+      document.getElementById('inventoryView').classList.remove('hidden');
+      loadInventory();
+    }
+    function showBank() {
+      hideAllSubViews();
+      document.getElementById('bankView').classList.remove('hidden');
+      loadBank();
+    }
+    function hideAllSubViews() {
+      document.getElementById('dashboardView').classList.add('hidden');
+      document.getElementById('mapView').classList.add('hidden');
+      document.getElementById('inventoryView').classList.add('hidden');
+      document.getElementById('bankView').classList.add('hidden');
+    }
 
-            // DOM elements
-            const loginView = document.getElementById('login-view');
-            const profileSetupView = document.getElementById('profile-setup-view');
-            const dashboardView = document.getElementById('dashboard-view');
+    // ========== GOOGLE SIGN‑IN ==========
+    document.getElementById('googleSignInBtn').addEventListener('click', async () => {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: window.location.origin }  // back to this page
+      });
+      if (error) alert('Google sign‑in error: ' + error.message);
+    });
 
-            // Helper: show only one view
-            function showView(view) {
-                [loginView, profileSetupView, dashboardView].forEach(v => v.classList.remove('active'));
-                view.classList.add('active');
-            }
+    // ========== CHECK SESSION AND PLAYER ON LOAD ==========
+    async function init() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        showLogin();
+        return;
+      }
 
-            // Helper: get current user and profile (returns null if no session)
-            async function getCurrentUserAndProfile() {
-                const { data: { session } } = await supabase.auth.getSession();
-                if (!session) return { user: null, profile: null };
+      // User is logged in – fetch player record
+      const { data: player, error } = await supabase
+        .from('players')
+        .select('*')
+        .eq('auth_id', session.user.id)
+        .single();
 
-                const user = session.user;
-                // Fetch profile from 'profiles' table
-                const { data: profile, error } = await supabase
-                    .from('profiles')
-                    .select('*')
-                    .eq('id', user.id)
-                    .single();
+      if (error && error.code === 'PGRST116') {
+        // No player record – first time user
+        // Pre‑fill full name from Google if available
+        const fullName = session.user.user_metadata?.full_name || session.user.user_metadata?.name || '';
+        document.getElementById('fullName').value = fullName;
+        showProfileSetup();
+      } else if (player) {
+        currentPlayer = player;
+        showGame();
+      } else {
+        // Other error
+        console.error('Error fetching player:', error);
+        showLogin();
+      }
+    }
 
-                if (error && error.code !== 'PGRST116') { // PGRST116 = no rows
-                    console.error('Error fetching profile:', error);
-                }
-                return { user, profile: profile || null };
-            }
+    // ========== PROFILE SETUP SUBMISSION ==========
+    document.getElementById('profileForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
 
-            // --- Google Sign-In ---
-            document.getElementById('google-signin-btn').addEventListener('click', async () => {
-                const { error } = await supabase.auth.signInWithOAuth({
-                    provider: 'google',
-                    options: { redirectTo: window.location.href }
-                });
-                if (error) alert('Login error: ' + error.message);
-            });
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        alert('You must be logged in');
+        return;
+      }
 
-            // --- Profile Setup ---
-            document.getElementById('profile-form').addEventListener('submit', async (e) => {
-                e.preventDefault();
+      const fullName = document.getElementById('fullName').value;
+      const username = document.getElementById('username').value.trim();
+      const gender = document.getElementById('gender').value;
+      const age = parseInt(document.getElementById('age').value);
+      const location = document.getElementById('location').value.trim();
+      const bio = document.getElementById('bio').value.trim();
 
-                const fullName = document.getElementById('full-name').value;
-                const gender = document.getElementById('gender').value;
-                const age = parseInt(document.getElementById('age').value);
-                const location = document.getElementById('location').value;
-                const bio = document.getElementById('bio').value;
-                const avatarId = parseInt(document.getElementById('setup-avatar-slider').value);
+      if (!username || !gender || !age || !location) {
+        alert('Please fill all required fields');
+        return;
+      }
 
-                const { user } = await getCurrentUserAndProfile();
-                if (!user) {
-                    alert('You must be logged in.');
-                    return;
-                }
+      // Insert into players table
+      const { error } = await supabase
+        .from('players')
+        .insert([{
+          auth_id: session.user.id,
+          full_name: fullName,
+          username: username,
+          gender: gender,
+          age: age,
+          location: location,
+          bio: bio,
+          cash: 5000,          // starting cash (from game settings)
+          energy: 100,
+          health: 100,
+          hunger: 100,
+          happiness: 100,
+          reputation: 50
+        }]);
 
-                const profile = {
-                    id: user.id,
-                    full_name: fullName,
-                    gender,
-                    age,
-                    location,
-                    bio,
-                    avatar_id: avatarId
-                };
+      if (error) {
+        if (error.code === '23505' && error.message.includes('username')) {
+          alert('Username already taken. Please choose another.');
+        } else {
+          alert('Error creating profile: ' + error.message);
+        }
+        return;
+      }
 
-                const { error } = await supabase
-                    .from('profiles')
-                    .upsert(profile);
+      // Fetch the newly created player
+      const { data: player } = await supabase
+        .from('players')
+        .select('*')
+        .eq('auth_id', session.user.id)
+        .single();
+      currentPlayer = player;
+      showGame();
+    });
 
-                if (error) {
-                    alert('Error saving profile: ' + error.message);
-                } else {
-                    // After saving, refresh and go to dashboard
-                    await refreshApp();
-                }
-            });
+    // ========== FETCH / REFRESH CURRENT PLAYER ==========
+    async function fetchPlayer() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+      const { data, error } = await supabase
+        .from('players')
+        .select('*')
+        .eq('auth_id', user.id)
+        .single();
+      if (error) {
+        console.error('Error fetching player:', error);
+        return null;
+      }
+      currentPlayer = data;
+      return data;
+    }
 
-            // --- Dashboard: avatar slider ---
-            document.getElementById('dashboard-avatar-slider').addEventListener('input', async (e) => {
-                const newAvatarId = parseInt(e.target.value);
-                document.getElementById('dashboard-avatar').src = AVATARS[newAvatarId];
+    // ========== DASHBOARD ==========
+    async function loadDashboard() {
+      await fetchPlayer();
+      if (!currentPlayer) return;
+      const statsHtml = `
+        <div class="stat-item"><div class="stat-label">Level</div><div class="stat-value">${currentPlayer.level}</div></div>
+        <div class="stat-item"><div class="stat-label">XP</div><div class="stat-value">${currentPlayer.xp}</div></div>
+        <div class="stat-item"><div class="stat-label">Cash</div><div class="stat-value">$${currentPlayer.cash}</div></div>
+        <div class="stat-item"><div class="stat-label">Bank</div><div class="stat-value">$${currentPlayer.bank_balance}</div></div>
+        <div class="stat-item"><div class="stat-label">Energy</div><div class="stat-value">${currentPlayer.energy}/100</div></div>
+        <div class="stat-item"><div class="stat-label">Hunger</div><div class="stat-value">${currentPlayer.hunger}</div></div>
+      `;
+      document.getElementById('playerStats').innerHTML = statsHtml;
+    }
 
-                // Update in database
-                const { user, profile } = await getCurrentUserAndProfile();
-                if (user && profile) {
-                    profile.avatar_id = newAvatarId;
-                    await supabase
-                        .from('profiles')
-                        .upsert({ id: user.id, avatar_id: newAvatarId });
-                }
-            });
+    // ========== MAP ==========
+    async function loadMap() {
+      const { data: locations, error } = await supabase
+        .from('map_locations')
+        .select('*');
+      if (error) {
+        alert('Error loading locations');
+        return;
+      }
+      let html = '';
+      locations.forEach(loc => {
+        html += `<div class="location-item">
+          <span class="location-name">${loc.location_name}</span>
+          <button class="explore-btn" data-id="${loc.location_id}">Explore</button>
+        </div>`;
+      });
+      document.getElementById('locationList').innerHTML = html;
+      document.querySelectorAll('.explore-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const locId = e.target.dataset.id;
+          exploreLocation(locId);
+        });
+      });
+    }
 
-            // --- Logout ---
-            document.getElementById('logout-btn').addEventListener('click', async () => {
-                await supabase.auth.signOut();
-                showView(loginView);
-            });
+    async function exploreLocation(locationId) {
+      const { data, error } = await supabase.rpc('explore_location', { p_location_id: locationId });
+      if (error) {
+        alert('Explore error: ' + error.message);
+        return;
+      }
+      if (data.success) {
+        document.getElementById('exploreResult').classList.remove('hidden');
+        document.getElementById('exploreResult').innerText = data.message;
+        await loadDashboard(); // refresh stats
+      } else {
+        alert(data.error);
+      }
+    }
 
-            // --- Avatar slider preview in setup ---
-            document.getElementById('setup-avatar-slider').addEventListener('input', (e) => {
-                const idx = parseInt(e.target.value);
-                document.getElementById('setup-avatar-preview').src = AVATARS[idx];
-            });
+    // ========== INVENTORY ==========
+    async function loadInventory() {
+      if (!currentPlayer) await fetchPlayer();
+      const { data: items, error } = await supabase
+        .from('player_inventory')
+        .select('*')
+        .eq('player_id', currentPlayer.player_id);
+      if (error) {
+        document.getElementById('inventoryList').innerHTML = '<p>Error loading inventory</p>';
+        return;
+      }
+      if (items.length === 0) {
+        document.getElementById('inventoryList').innerHTML = '<p>Your inventory is empty.</p>';
+      } else {
+        let html = '<ul style="list-style:none;">';
+        items.forEach(item => {
+          html += `<li style="background:#f0f4f9; margin:8px 0; padding:12px; border-radius:30px;">📦 ${item.item_type} x${item.quantity} (Durability: ${item.durability})</li>`;
+        });
+        html += '</ul>';
+        document.getElementById('inventoryList').innerHTML = html;
+      }
+    }
 
-            // --- Populate dashboard with user data ---
-            async function populateDashboard(profile) {
-                document.getElementById('display-name').textContent = profile.full_name || '—';
-                document.getElementById('display-gender').textContent = profile.gender || '—';
-                document.getElementById('display-age').textContent = profile.age || '—';
-                document.getElementById('display-location').textContent = profile.location || '—';
-                document.getElementById('display-bio').textContent = profile.bio || '—';
+    // ========== BANK ==========
+    async function loadBank() {
+      if (!currentPlayer) await fetchPlayer();
+      document.getElementById('bankStats').innerHTML = `
+        <p><strong>Cash:</strong> $${currentPlayer.cash}</p>
+        <p><strong>Bank Balance:</strong> $${currentPlayer.bank_balance}</p>
+      `;
+    }
 
-                // Avatar
-                const avatarId = profile.avatar_id || 0;
-                document.getElementById('dashboard-avatar').src = AVATARS[avatarId];
-                const slider = document.getElementById('dashboard-avatar-slider');
-                slider.max = AVATARS.length - 1;
-                slider.value = avatarId;
+    async function deposit() {
+      const amount = parseInt(document.getElementById('bankAmount').value);
+      if (isNaN(amount) || amount <= 0) {
+        alert('Enter a valid amount');
+        return;
+      }
+      const { data, error } = await supabase.rpc('deposit_bank', { amount });
+      if (error) {
+        alert('Deposit error: ' + error.message);
+        return;
+      }
+      if (data.success) {
+        currentPlayer.cash = data.new_cash;
+        currentPlayer.bank_balance = data.new_bank;
+        document.getElementById('bankStats').innerHTML = `
+          <p><strong>Cash:</strong> $${data.new_cash}</p>
+          <p><strong>Bank Balance:</strong> $${data.new_bank}</p>
+        `;
+        document.getElementById('bankMessage').innerText = 'Deposit successful';
+        document.getElementById('bankMessage').classList.remove('hidden');
+      } else {
+        alert(data.error);
+      }
+    }
 
-                // Welcome message with time-based greeting
-                const hour = new Date().getHours();
-                let greeting = 'Good Morning';
-                if (hour >= 12 && hour < 17) greeting = 'Good Afternoon';
-                else if (hour >= 17) greeting = 'Good Evening';
-                document.getElementById('welcome-message').textContent = `Hello ${profile.full_name}, ${greeting}`;
-            }
+    async function withdraw() {
+      const amount = parseInt(document.getElementById('bankAmount').value);
+      if (isNaN(amount) || amount <= 0) {
+        alert('Enter a valid amount');
+        return;
+      }
+      const { data, error } = await supabase.rpc('withdraw_bank', { amount });
+      if (error) {
+        alert('Withdraw error: ' + error.message);
+        return;
+      }
+      if (data.success) {
+        currentPlayer.cash = data.new_cash;
+        currentPlayer.bank_balance = data.new_bank;
+        document.getElementById('bankStats').innerHTML = `
+          <p><strong>Cash:</strong> $${data.new_cash}</p>
+          <p><strong>Bank Balance:</strong> $${data.new_bank}</p>
+        `;
+        document.getElementById('bankMessage').innerText = 'Withdrawal successful';
+        document.getElementById('bankMessage').classList.remove('hidden');
+      } else {
+        alert(data.error);
+      }
+    }
 
-            // --- Populate setup form with Google data if available ---
-            function populateSetupForm(user) {
-                if (user.user_metadata?.full_name) {
-                    document.getElementById('full-name').value = user.user_metadata.full_name;
-                }
-                // Reset other fields
-                document.getElementById('gender').value = 'male';
-                document.getElementById('age').value = '';
-                document.getElementById('location').value = '';
-                document.getElementById('bio').value = '';
-                document.getElementById('setup-avatar-slider').value = 0;
-                document.getElementById('setup-avatar-preview').src = AVATARS[0];
-            }
+    // ========== LOGOUT ==========
+    async function logout() {
+      await supabase.auth.signOut();
+      currentPlayer = null;
+      showLogin();
+    }
 
-            // --- Refresh app state: decide which view to show ---
-            async function refreshApp() {
-                const { user, profile } = await getCurrentUserAndProfile();
+    // ========== EVENT LISTENERS ==========
+    document.addEventListener('DOMContentLoaded', () => {
+      init();
 
-                if (!user) {
-                    showView(loginView);
-                } else if (!profile) {
-                    // No profile yet – show setup
-                    populateSetupForm(user);
-                    showView(profileSetupView);
-                } else {
-                    // Profile exists – show dashboard
-                    await populateDashboard(profile);
-                    showView(dashboardView);
-                }
-            }
+      // Navigation
+      document.querySelectorAll('[data-view]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const view = e.target.dataset.view;
+          if (view === 'dashboard') showDashboard();
+          else if (view === 'map') showMap();
+          else if (view === 'inventory') showInventory();
+          else if (view === 'bank') showBank();
+        });
+      });
 
-            // --- Listen to auth changes (login, logout) ---
-            supabase.auth.onAuthStateChange((event, session) => {
-                // Small delay to allow session to be fully set
-                setTimeout(refreshApp, 100);
-            });
+      document.getElementById('logoutBtn').addEventListener('click', logout);
+      document.getElementById('depositBtn').addEventListener('click', deposit);
+      document.getElementById('withdrawBtn').addEventListener('click', withdraw);
 
-            // --- Initial load ---
-            refreshApp();
-        })();
-    </script>
+      // Listen for auth changes (e.g., after OAuth redirect)
+      supabase.auth.onAuthStateChange((event, session) => {
+        if (event === 'SIGNED_IN') {
+          // After redirect, session is set – run init again
+          init();
+        } else if (event === 'SIGNED_OUT') {
+          showLogin();
+        }
+      });
+    });
+  </script>
 </body>
 </html>
