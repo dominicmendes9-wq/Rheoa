@@ -168,19 +168,19 @@
       document.getElementById('bankView').classList.add('hidden');
     }
 
-   // ========== GOOGLE SIGN‑IN (FIXED) ==========
-document.getElementById('googleSignInBtn').addEventListener('click', async () => {
-  try {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: window.location.href }
+    // ========== GOOGLE SIGN‑IN (FIXED) ==========
+    document.getElementById('googleSignInBtn').addEventListener('click', async () => {
+      try {
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: { redirectTo: window.location.href }
+        });
+        if (error) throw error;
+      } catch (err) {
+        alert('Google sign‑in error: ' + err.message);
+        console.error(err);
+      }
     });
-    if (error) throw error;
-  } catch (err) {
-    alert('Google sign‑in error: ' + err.message);
-    console.error(err);
-  }
-});
 
     // ========== CHECK SESSION AND PLAYER ON LOAD ==========
     async function init() {
