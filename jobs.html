@@ -1,0 +1,24 @@
+<h2>Jobs</h2>
+<button onclick="work()">Work</button>
+
+<script>
+async function work() {
+  const { data: { user } } = await supabase.auth.getUser();
+
+  let player = await supabase
+    .from('players')
+    .select('*')
+    .eq('auth_id', user.id)
+    .single();
+
+  let newCash = player.data.cash + 500;
+  let newEnergy = player.data.energy - 10;
+
+  await supabase.from('players').update({
+    cash: newCash,
+    energy: newEnergy
+  }).eq('auth_id', user.id);
+
+  alert("Worked! Earned 500");
+}
+</script>
