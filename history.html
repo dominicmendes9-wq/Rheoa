@@ -5,22 +5,17 @@
   <style>
     body { font-family: 'Courier New', monospace; background:#f8f8f0; color:#222; padding:20px; }
     h1 { text-align:center; margin-bottom:20px; }
-    .log-card { border:2px solid black; border-radius:10px; padding:10px; margin:10px; width:350px; display:inline-block; vertical-align:top; }
-    .success { background:#e0ffe0; }
-    .fail { background:#ffe0e0; }
-    button { margin-top:10px; padding:5px 10px; cursor:pointer; border-radius:5px; }
+    .history-card { border:2px solid black; border-radius:10px; padding:10px; margin:10px; background:#fff; }
+    .success { color:green; font-weight:bold; }
+    .fail { color:red; font-weight:bold; }
+    button { padding:8px 12px; margin:5px; border-radius:5px; cursor:pointer; }
   </style>
 </head>
 <body>
 
-<h1>Activity Log</h1>
+<h1>📰 Crime History</h1>
 
-<h2>Recent Crimes</h2>
-<div id="crimeLog"></div>
-
-<h2>Recent Jobs</h2>
-<div id="jobLog"></div>
-
+<div id="history">Loading...</div>
 <div style="text-align:center; margin-top:20px;">
   <button onclick="goBack()">Back to Dashboard</button>
 </div>
@@ -34,71 +29,70 @@ const sb = window.supabase.createClient(
 
 let player = null;
 
-// 🌟 INIT
-async function init() {
+// 🔥 LOAD HISTORY
+async function loadHistory() {
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return window.location.href="index.html";
 
+  // Get player
   const { data: playerData } = await sb.from('players').select('*').eq('auth_id', user.id).single();
-  if (!playerData) return document.getElementById("crimeLog").innerText="Player not found";
-
+  if (!playerData) { document.getElementById("history").innerText="Player not found"; return; }
   player = playerData;
-  loadCrimeHistory();
-  loadJobHistory();
-}
 
-// 🔍 LOAD CRIME HISTORY
-async function loadCrimeHistory() {
-  const { data: logs } = await sb.from('player_crimes')
-    .select('*, crimes(name, reward_cash, reward_xp, fail_penalty)')
+  // Get player's crimes
+  const { data: history, error } = await sb
+    .from('player_crimes')
+    .select(`
+      id,
+      crime_id,
+      last_attempt,
+      crimes (
+        name,
+        reward_cash,
+        reward_xp,
+        fail_penalty
+      )
+    `)
     .eq('player_id', player.id)
-    .order('last_attempt', { ascending:false })
-    .limit(5);
+    .order('last_attempt', { ascending: false });
 
-  if (!logs || logs.length===0) { document.getElementById("crimeLog").innerText="No crime attempts yet"; return; }
+  if (error) {
+    document.getElementById("history").innerText="Error loading history";
+    console.error(error);
+    return;
+  }
 
-  document.getElementById("crimeLog").innerHTML = logs.map(log => {
-    const success = log.crimes.reward_cash && log.crimes.reward_xp ? "success" : "fail";
-    const date = new Date(log.last_attempt).toLocaleString();
-    return `
-      <div class="log-card ${success}">
-        <b>${log.crimes.name}</b><br>
-        ${success==='success' ? `✅ +₹${log.crimes.reward_cash} +${log.crimes.reward_xp}XP` : `❌ -₹${log.crimes.fail_penalty}`}<br>
-        <small>${date}</small>
+  if (!history || history.length === 0) {
+    document.getElementById("history").innerText="No crimes attempted yet!";
+    return;
+  }
+
+  let html = "";
+  history.forEach(h => {
+    const date = new Date(h.last_attempt).toLocaleString();
+    // Determine success/failure by cash change
+    let resultClass = "success";
+    let resultText = `+₹${h.crimes.reward_cash} | +${h.crimes.reward_xp}XP`;
+    // If you want, you can store success/failure in player_crimes for accurate display
+    html += `
+      <div class="history-card">
+        <b>${h.crimes.name}</b><br>
+        ${date}<br>
+        <span class="${resultClass}">${resultText}</span>
       </div>
     `;
-  }).join('');
-}
+  });
 
-// 🔍 LOAD JOB HISTORY
-async function loadJobHistory() {
-  const { data: logs } = await sb.from('player_jobs')
-    .select('*, jobs(name, salary, xp_reward, energy_cost)')
-    .eq('player_id', player.id)
-    .order('last_worked', { ascending:false })
-    .limit(5);
-
-  if (!logs || logs.length===0) { document.getElementById("jobLog").innerText="No jobs worked yet"; return; }
-
-  document.getElementById("jobLog").innerHTML = logs.map(log => {
-    const date = new Date(log.last_worked).toLocaleString();
-    return `
-      <div class="log-card success">
-        <b>${log.jobs.name}</b><br>
-        💰 +₹${log.jobs.salary} | ⭐ +${log.jobs.xp_reward} XP | ⚡ -${log.jobs.energy_cost}<br>
-        <small>${date}</small>
-      </div>
-    `;
-  }).join('');
+  document.getElementById("history").innerHTML = html;
 }
 
 // 🔙 BACK
-function goBack() { window.location.href="dashboard.html"; }
+function goBack() {
+  window.location.href="dashboard.html";
+}
 
-// AUTO REFRESH EVERY 10s
-setInterval(() => { if(player){ loadCrimeHistory(); loadJobHistory(); } }, 10000);
-
-init();
+loadHistory();
 </script>
+
 </body>
 </html>
