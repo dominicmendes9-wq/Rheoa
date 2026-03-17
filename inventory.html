@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Inventory</title>
+</head>
+<body>
+
+<h1>Inventory & Shop</h1>
+
+<h2>🛒 Shop</h2>
+<div id="shop"></div>
+
+<hr>
+
+<h2>🎒 Your Inventory</h2>
+<div id="inventory"></div>
+
+<hr>
+<div id="status"></div>
+
+<button onclick="goBack()">Back to Dashboard</button>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+
+<script>
+const sb = window.supabase.createClient(
+  "https://mtiwodvsrwvrujbhmmrn.supabase.co",
+  "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
+);
+
+let currentPlayer = null;
+
+// 🔥 LOAD EVERYTHING
+async function loadInventory() {
+  const { data: { user } } = await sb.auth.getUser();
+
+  if (!user) {
+    window.location.href = "index.html";
+    return;
+  }
+
+  let { data: player } = await sb
+    .from('players')
+    .select('*')
+    .eq('auth_id', user.id)
+    .single();
+
+  if (!player) {
+    document.body.innerHTML = "Player not found!";
+    return;
+  }
+
+  currentPlayer = player;
+
+  loadShop();
+  loadUserInventory();
+}
+
+// 🛒 SHOP
+async function loadShop() {
+  let { data: items } = await sb.from('items').select('*');
+
+  let html = "";
+
+  items.forEach(item => {
+    html += `
+      <div style="border:1px solid black; margin:10px; padding:10px;">
+        <h3>${item.name}</h3>
+        <p>💰 ₹${item.price}</p>
+        <p>📦 ${item.type}</p>
+        <button onclick="buyItem('${item.id}', ${item.price})">
+          Buy
+        </button>
+      </div>
+    `;
+  });
+
+  document.getElementById("shop").innerHTML = html;
+}
+
+// 💰 BUY ITEM
+async function buyItem(itemId, price) {
+
+  if (currentPlayer.cash < price) {
+    alert("Not enough money!");
+    return;
+  }
+
+  // deduct money
+  let newCash = currentPlayer.cash - price;
+
+  await sb.from('players')
+    .update({ cash: newCash })
+    .eq('id', currentPlayer.id);
+
+  currentPlayer.cash = newCash;
+
+  // check if already exists
+  let { data: existing } = await sb
+    .from('inventory')
+    .select('*')
+    .eq('player_id', currentPlayer.id)
+    .eq('item_id', itemId)
+    .maybeSingle();
+
+  if (existing) {
+    await sb.from('inventory')
+      .update({ quantity: existing.quantity + 1 })
+      .eq('id', existing.id);
+  } else {
+    await sb.from('inventory').insert({
+      player_id: currentPlayer.id,
+      item_id: itemId,
+      quantity: 1
+    });
+  }
+
+  document.getElementById("status").innerText = "✅ Item purchased!";
+
+  loadInventory();
+}
+
+// 🎒 LOAD PLAYER INVENTORY
+async function loadUserInventory() {
+  let { data: inv } = await sb
+    .from('inventory')
+    .select('*, items(name)')
+    .eq('player_id', currentPlayer.id);
+
+  let html = "";
+
+  if (!inv || inv.length === 0) {
+    html = "No items yet.";
+  } else {
+    inv.forEach(i => {
+      html += `
+        <div style="border:1px solid black; margin:5px; padding:5px;">
+          ${i.items.name} x${i.quantity}
+        </div>
+      `;
+    });
+  }
+
+  document.getElementById("inventory").innerHTML = html;
+}
+
+// 🔙
+function goBack() {
+  window.location.href = "dashboard.html";
+}
+
+// 🚀 START
+loadInventory();
+</script>
+
+</body>
+</html>
