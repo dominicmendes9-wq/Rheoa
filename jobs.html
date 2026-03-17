@@ -1,24 +1,100 @@
-<h2>Jobs</h2>
-<button onclick="work()">Work</button>
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Jobs</title>
+</head>
+<body>
+
+<h1>Jobs</h1>
+
+<div id="jobs"></div>
+<hr>
+<div id="status"></div>
+
+<button onclick="goBack()">Back to Dashboard</button>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 
 <script>
-async function work() {
-  const { data: { user } } = await supabase.auth.getUser();
+const sb = window.supabase.createClient(
+  "https://mtiwodvsrwvrujbhmmrn.supabase.co",
+  "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
+);
 
-  let player = await supabase
+let currentPlayer = null;
+
+// 🔥 Load player + jobs
+async function loadJobs() {
+  const { data: { user } } = await sb.auth.getUser();
+
+  if (!user) {
+    window.location.href = "index.html";
+    return;
+  }
+
+  // get player
+  let { data: player } = await sb
     .from('players')
     .select('*')
     .eq('auth_id', user.id)
     .single();
 
-  let newCash = player.data.cash + 500;
-  let newEnergy = player.data.energy - 10;
+  currentPlayer = player;
 
-  await supabase.from('players').update({
-    cash: newCash,
-    energy: newEnergy
-  }).eq('auth_id', user.id);
+  // get jobs
+  let { data: jobs } = await sb.from('jobs').select('*');
 
-  alert("Worked! Earned 500");
+  let html = "";
+
+  jobs.forEach(job => {
+    html += `
+      <div style="border:1px solid black; margin:10px; padding:10px;">
+        <h3>${job.name}</h3>
+        <p>💰 Salary: ${job.salary}</p>
+        <p>⚡ Energy Cost: ${job.energy_cost}</p>
+        <p>⭐ XP: ${job.xp_reward}</p>
+        <button onclick="work('${job.id}', ${job.salary}, ${job.energy_cost}, ${job.xp_reward})">
+          Work
+        </button>
+      </div>
+    `;
+  });
+
+  document.getElementById("jobs").innerHTML = html;
 }
+
+// 💼 Work function
+async function work(jobId, salary, energyCost, xpReward) {
+
+  if (currentPlayer.energy < energyCost) {
+    alert("Not enough energy!");
+    return;
+  }
+
+  let newCash = currentPlayer.cash + salary;
+  let newEnergy = currentPlayer.energy - energyCost;
+  let newXP = currentPlayer.xp + xpReward;
+
+  // update player
+  await sb.from('players').update({
+    cash: newCash,
+    energy: newEnergy,
+    xp: newXP
+  }).eq('id', currentPlayer.id);
+
+  document.getElementById("status").innerText =
+    `Worked! Earned ₹${salary}, -${energyCost} energy`;
+
+  loadJobs(); // refresh
+}
+
+// 🔙 Back
+function goBack() {
+  window.location.href = "dashboard.html";
+}
+
+loadJobs();
 </script>
+
+</body>
+</html>
