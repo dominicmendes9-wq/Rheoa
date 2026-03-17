@@ -81,45 +81,67 @@ async function loadShop() {
 // 💰 BUY ITEM
 async function buyItem(itemId, price) {
 
-  if (currentPlayer.cash < price) {
+  const { data: { user } } = await sb.auth.getUser();
+
+  if (!user) {
+    alert("Not logged in");
+    return;
+  }
+
+  // 🔍 Get player
+  let { data: player } = await sb
+    .from('players')
+    .select('*')
+    .eq('auth_id', user.id)
+    .single();
+
+  if (!player) {
+    alert("Player not found");
+    return;
+  }
+
+  if (player.cash < price) {
     alert("Not enough money!");
     return;
   }
 
-  // deduct money
-  let newCash = currentPlayer.cash - price;
+  // 💰 Deduct cash
+  let newCash = player.cash - price;
 
   await sb.from('players')
     .update({ cash: newCash })
-    .eq('id', currentPlayer.id);
+    .eq('id', player.id);
 
-  currentPlayer.cash = newCash;
-
-  // check if already exists
+  // 🔍 Check existing item
   let { data: existing } = await sb
-    .from('inventory')
+    .from('player_items')
     .select('*')
-    .eq('player_id', currentPlayer.id)
+    .eq('player_id', player.id)
     .eq('item_id', itemId)
     .maybeSingle();
 
   if (existing) {
-    await sb.from('inventory')
+    await sb.from('player_items')
       .update({ quantity: existing.quantity + 1 })
       .eq('id', existing.id);
   } else {
-    await sb.from('inventory').insert({
-      player_id: currentPlayer.id,
-      item_id: itemId,
-      quantity: 1
-    });
+    let { error } = await sb.from('player_items')
+      .insert({
+        player_id: player.id,
+        item_id: itemId,
+        quantity: 1
+      });
+
+    if (error) {
+      console.error(error);
+      alert("Insert failed!");
+      return;
+    }
   }
 
-  document.getElementById("status").innerText = "✅ Item purchased!";
-
-  loadInventory();
+  alert("Item purchased!");
 }
-
+console.log("Buying item:", itemId);
 // 🎒 LOAD PLAYER INVENTORY
 async function loadUserInventory() {
   let { data: inv } = await sb
