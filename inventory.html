@@ -197,6 +197,11 @@ function goBack() {
   window.location.href = "dashboard.html";
 }
 
+// Expose functions globally so HTML buttons can call them
+window.useItem = useItem;
+window.buy = buy;
+window.goBack = goBack;
+
 init();
 </script>
 
