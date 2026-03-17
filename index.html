@@ -22,14 +22,12 @@ const sb = window.supabase.createClient(
 
 // ✅ Login
 async function login() {
-  const { error } = await sb.auth.signInWithOAuth({
+  await sb.auth.signInWithOAuth({
     provider: 'google',
     options: {
       redirectTo: window.location.origin + "/dashboard.html"
     }
   });
-
-  if (error) console.error(error);
 }
 // ✅ Attach button
 document.getElementById("loginBtn").addEventListener("click", login);
