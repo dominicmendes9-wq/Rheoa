@@ -3,21 +3,26 @@
 <head>
   <title>Rheoa RPG - Explore</title>
   <style>
-    body { font-family: 'Courier New', monospace; background:#f8f8f0; padding:20px; }
+    body { font-family: 'Courier New', monospace; background:#f0f0f8; color:#222; padding:20px; }
     h1, h2 { text-align:center; }
-    .location { border:2px solid black; margin:10px; padding:10px; border-radius:10px; }
-    .item { border:1px solid #333; padding:5px; margin:5px; border-radius:5px; display:inline-block; }
-    button { padding:5px 10px; margin:5px; cursor:pointer; }
+    select, button { padding:8px 12px; margin:5px; border-radius:5px; cursor:pointer; }
+    .item-card { border:2px solid black; border-radius:8px; padding:10px; margin:10px; display:inline-block; width:180px; vertical-align:top; text-align:center; }
+    #items { margin-top:20px; text-align:center; }
   </style>
 </head>
 <body>
 
-<h1>Map & Discoveries</h1>
+<h1>Explore the World</h1>
 
-<div id="locations"></div>
-<hr>
-<h2>Items in Selected Location</h2>
-<div id="items">Select a location...</div>
+<h2>Select Location</h2>
+<select id="locationSelect">
+  <option value="">-- Choose Location --</option>
+</select>
+
+<div id="items">
+  <h2>Items in Selected Location</h2>
+  <div id="itemCards">Select a location to view items...</div>
+</div>
 
 <button onclick="goBack()">Back to Dashboard</button>
 
@@ -28,96 +33,85 @@ const sb = window.supabase.createClient(
   "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
 );
 
-let currentPlayer = null;
+let player = null;
 
-// Load player info
-async function loadPlayer() {
+// 🚀 INIT
+async function init() {
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return window.location.href="index.html";
 
   const { data: playerData } = await sb.from('players').select('*').eq('auth_id', user.id).single();
-  if (!playerData) { document.getElementById("locations").innerText="Player not found"; return; }
-  currentPlayer = playerData;
+  if (!playerData) return alert("Player not found");
+  player = playerData;
 
   loadLocations();
 }
 
-// Load map locations
+// 🌍 LOAD LOCATIONS
 async function loadLocations() {
-  const { data: locations } = await sb.from('map_locations').select('*').order('location_name');
-  if (!locations || locations.length===0) {
-    document.getElementById("locations").innerText = "No locations found";
-    return;
-  }
+  const { data: locations, error } = await sb.from('map_locations').select('*').order('location_name');
+  if (error) return document.getElementById("itemCards").innerText = "Error loading locations";
 
-  let html = '';
+  const select = document.getElementById("locationSelect");
   locations.forEach(loc => {
-    html += `<div class="location">
-      <b>${loc.location_name}</b><br>
-      ${loc.description}<br>
-      <button onclick="showItems('${loc.location_id}')">Explore</button>
-    </div>`;
+    const opt = document.createElement("option");
+    opt.value = loc.location_id;
+    opt.text = loc.location_name;
+    select.appendChild(opt);
   });
 
-  document.getElementById("locations").innerHTML = html;
+  select.addEventListener("change", () => {
+    if (select.value) {
+      loadItemsInLocation(select.value);
+    } else {
+      document.getElementById("itemCards").innerText = "Select a location to view items...";
+    }
+  });
 }
 
-// Show items in a location
-async function showItems(locationId) {
-  document.getElementById("items").innerText = "Loading...";
-
-  // fetch discoveries + join items_master
+// 🛒 LOAD ITEMS IN LOCATION
+async function loadItemsInLocation(locationId) {
   const { data, error } = await sb.from('map_discoveries')
     .select(`
       discovery_id,
-      item_id,
-      items_master (item_name, item_category, rarity, description)
+      cash_reward,
+      spawn_probability,
+      items_master:items_master!map_discoveries_item_id_fkey (id, item_name, description, image_url)
     `)
     .eq('location_id', locationId);
 
+  const container = document.getElementById("itemCards");
+  container.innerHTML = "";
+
   if (error) {
-    document.getElementById("items").innerText = "Error loading items";
+    container.innerText = "Error loading items";
     console.error(error);
     return;
   }
 
   if (!data || data.length === 0) {
-    document.getElementById("items").innerText = "No items found in this location";
+    container.innerText = "No items found in this location.";
     return;
   }
 
-  let html = '';
   data.forEach(d => {
-    html += `<div class="item">
+    const card = document.createElement("div");
+    card.className = "item-card";
+    card.innerHTML = `
       <b>${d.items_master.item_name}</b><br>
-      Category: ${d.items_master.item_category}<br>
-      Rarity: ${d.items_master.rarity}<br>
-      ${d.items_master.description || ''}
-      <br>
-      <button onclick="collectItem('${d.discovery_id}')">Collect</button>
-    </div>`;
+      ${d.items_master.description || ""}<br>
+      Cash Reward: ₹${d.cash_reward}<br>
+      Spawn Probability: ${(d.spawn_probability*100).toFixed(0)}%<br>
+      ${d.items_master.image_url ? `<img src="${d.items_master.image_url}" width="100">` : ""}
+    `;
+    container.appendChild(card);
   });
-
-  document.getElementById("items").innerHTML = html;
 }
 
-// Collect item logic
-async function collectItem(discoveryId) {
-  const now = new Date();
-  // Fetch discovery
-  const { data: discovery } = await sb.from('map_discoveries').select('*').eq('discovery_id', discoveryId).single();
-  if (!discovery) return alert("Discovery not found");
+// 🔙 BACK BUTTON
+function goBack() { window.location.href="dashboard.html"; }
 
-  // TODO: Apply probability, player level check, inventory insert
-  alert("You collected: " + discovery.item_id);
-}
-
-// Go back
-function goBack() {
-  window.location.href = "dashboard.html";
-}
-
-loadPlayer();
+init();
 </script>
 
 </body>
