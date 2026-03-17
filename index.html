@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Rheoa RPG Login</title>
+  <title>Rheoa RPG</title>
 </head>
 <body>
 
@@ -10,47 +10,44 @@
 
 <p id="status"></p>
 
-<!-- Supabase CDN -->
+<!-- ONLY ONE TIME -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 
 <script>
-// ✅ Initialize Supabase (ONLY ONCE)
-const supabase = window.supabase.createClient(
+// ✅ Use UNIQUE variable name
+const sb = window.supabase.createClient(
   "https://mtiwodvsrwvrujbhmmrn.supabase.co",
   "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
 );
 
-// ✅ Login function (global-safe)
+// ✅ Login
 async function login() {
-  const { error } = await supabase.auth.signInWithOAuth({
+  const { error } = await sb.auth.signInWithOAuth({
     provider: 'google'
   });
 
   if (error) {
     console.error(error);
-    document.getElementById("status").innerText = "Login failed!";
+    document.getElementById("status").innerText = "Login failed";
   }
 }
 
-// ✅ Button event (clean method)
+// ✅ Attach button
 document.getElementById("loginBtn").addEventListener("click", login);
 
-// ✅ Check if already logged in
+// ✅ Check session
 async function checkUser() {
-  const { data } = await supabase.auth.getUser();
+  const { data } = await sb.auth.getUser();
 
   if (data.user) {
-    document.getElementById("status").innerText = 
-      "Logged in as: " + data.user.email;
+    document.getElementById("status").innerText =
+      "Logged in as " + data.user.email;
 
-    // 🔁 Redirect to dashboard
     window.location.href = "dashboard.html";
   }
 }
 
-// Run on load
 checkUser();
-
 </script>
 
 </body>
