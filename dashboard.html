@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Dashboard</title>
+</head>
+<body>
+
+<h1>Dashboard</h1>
+<div id="player"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<script>
+
+const supabase = window.supabase.createClient(
+  "https://mtiwodvsrwvrujbhmmrn.supabase.co",
+  "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
+);
+
+async function loadPlayer() {
+  const { data: { user } } = await supabase.auth.getUser();
+
+  let { data } = await supabase
+    .from('players')
+    .select('*')
+    .eq('auth_id', user.id)
+    .single();
+
+  if (!data) {
+    await supabase.from('players').insert({
+      auth_id: user.id,
+      username: user.email
+    });
+    return loadPlayer();
+  }
+
+  document.getElementById("player").innerHTML = `
+    <p>Username: ${data.username}</p>
+    <p>Cash: ${data.cash}</p>
+    <p>XP: ${data.xp}</p>
+    <p>Energy: ${data.energy}</p>
+  `;
+}
+
+loadPlayer();
+</script>
+
+</body>
+</html>
