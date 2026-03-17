@@ -1,40 +1,32 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Rheoa RPG - Dashboard</title>
+  <title>Rheoa RPG - Inventory & Shop</title>
   <style>
     body { font-family: 'Courier New', monospace; background: #f8f8f0; color: #222; padding: 20px; }
-    h1 { text-align: center; font-size: 2em; margin-bottom: 20px; }
-    .stat-bar { margin: 10px 0; background: #ddd; border-radius: 10px; overflow: hidden; width: 300px; height: 25px; }
-    .stat-fill { height: 100%; text-align: right; padding-right: 5px; color: #fff; font-weight: bold; line-height: 25px; }
-    .stat-energy { background: #4caf50; }
-    .stat-health { background: #f44336; }
-    .stat-hunger { background: #ff9800; }
-    .stat-happiness { background: #2196f3; }
-    .stat-xp { background: #9c27b0; }
-    .buttons { margin-top: 20px; }
-    button { margin: 5px; padding: 10px 20px; font-size: 1em; cursor: pointer; border-radius: 5px; }
-    #levelUpPopup { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); 
-                    background:#fff; padding:30px; border:3px solid #9c27b0; border-radius:10px; font-size:1.5em; 
-                    z-index:1000; text-align:center; }
+    h1 { text-align: center; margin-bottom: 20px; }
+    h2 { margin-top: 30px; }
+    .card { border:2px solid black; border-radius:10px; margin:10px; padding:10px; width:300px; display:inline-block; vertical-align:top; }
+    button { margin-top:5px; padding:5px 10px; cursor:pointer; border-radius:5px; }
+    #feedback { margin-top:20px; font-size:1.2em; font-weight:bold; }
+    .boost { background:#e0ffe0; }
+    .cooldown { background:#ccc; color:#666; cursor: not-allowed; }
   </style>
 </head>
 <body>
 
-<h1>Rheoa RPG Dashboard</h1>
+<h1>Inventory & Shop</h1>
 
-<div id="playerStats">
-  <!-- Stats bars will be injected here -->
-</div>
+<h2>🛒 Shop</h2>
+<div id="shop"></div>
 
-<div class="buttons">
-  <button onclick="window.location.href='jobs.html'">Go to Jobs</button>
-  <button onclick="window.location.href='crime.html'">Crime</button> 
-  <button onclick="window.location.href='inventory.html'">Inventory</button>  
-  <button onclick="logout()">Logout</button>
-</div>
+<hr>
 
-<div id="levelUpPopup">🎉 Level Up! 🎉</div>
+<h2>🎒 Your Inventory</h2>
+<div id="inventory"></div>
+
+<div id="feedback"></div>
+<button onclick="goBack()">Back</button>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 <script>
@@ -45,79 +37,127 @@ const sb = window.supabase.createClient(
 
 let player = null;
 
-// 🌟 Load player stats
-async function loadPlayer() {
+// 🌟 INIT
+async function init() {
   const { data: { user } } = await sb.auth.getUser();
+  if (!user) return document.body.innerHTML = "Not logged in";
 
-  if (!user) {
-    window.location.href = "index.html";
-    return;
-  }
-
-  let { data: playerData } = await sb
-    .from('players')
-    .select('*')
-    .eq('auth_id', user.id)
-    .single();
-
-  if (!playerData) {
-    // Create new player
-    await sb.from('players').insert({ auth_id: user.id, username: user.email });
-    return loadPlayer();
-  }
+  const { data: playerData } = await sb.from('players').select('*').eq('auth_id', user.id).single();
+  if (!playerData) return document.body.innerHTML = "Player not found";
 
   player = playerData;
-  renderStats();
+  loadShop();
+  loadInventory();
 }
 
-// 🎨 Render Stats Bars
-function renderStats() {
-  const statsDiv = document.getElementById("playerStats");
+// 🛒 LOAD SHOP
+async function loadShop() {
+  const { data: items } = await sb.from('items').select('*');
+  if (!items || items.length === 0) { document.getElementById("shop").innerText="No shop items"; return; }
 
-  const nextLevelXP = (player.level ** 2) * 100;
-  const xpPercent = Math.min(100, (player.xp / nextLevelXP) * 100);
-
-  statsDiv.innerHTML = `
-    <h2>${player.username} (Level ${player.level})</h2>
-
-    <div>💰 Cash: ₹${player.cash}</div>
-
-    <div class="stat-bar"><div class="stat-fill stat-xp" style="width:${xpPercent}%">${player.xp} / ${nextLevelXP} XP</div></div>
-    <div class="stat-bar"><div class="stat-fill stat-energy" style="width:${player.energy}%">${player.energy} Energy</div></div>
-    <div class="stat-bar"><div class="stat-fill stat-health" style="width:${player.health}%">${player.health} Health</div></div>
-    <div class="stat-bar"><div class="stat-fill stat-hunger" style="width:${player.hunger}%">${player.hunger} Hunger</div></div>
-    <div class="stat-bar"><div class="stat-fill stat-happiness" style="width:${player.happiness}%">${player.happiness} Happiness</div></div>
-
-    ${player.success_boost ? `<div>✨ Success Boost Active: +${player.success_boost}%</div>` : ''}
-  `;
-
-  checkLevelUp();
+  document.getElementById("shop").innerHTML = items.map(item => `
+    <div class="card">
+      <b>${item.name}</b><br>
+      Type: ${item.type}<br>
+      Effect: ${item.effect_value}<br>
+      Price: ₹${item.price}<br>
+      <button onclick="buyItem('${item.id}', ${item.price})">Buy</button>
+    </div>
+  `).join('');
 }
 
-// 🎉 Level-Up Popup
-let lastLevel = null;
-function checkLevelUp() {
-  if (lastLevel === null) lastLevel = player.level;
+// 💰 BUY ITEM
+async function buyItem(itemId, price) {
+  if (player.cash < price) { showFeedback("Not enough cash!", false); return; }
 
-  if (player.level > lastLevel) {
-    const popup = document.getElementById("levelUpPopup");
-    popup.style.display = "block";
-    setTimeout(() => popup.style.display = "none", 2500);
+  await sb.from('players').update({ cash: player.cash - price }).eq('id', player.id);
+  player.cash -= price;
+
+  const { data: existing } = await sb.from('player_items')
+    .select('*')
+    .eq('player_id', player.id)
+    .eq('item_id', itemId)
+    .maybeSingle();
+
+  if (existing) {
+    await sb.from('player_items').update({ quantity: existing.quantity + 1 }).eq('id', existing.id);
+  } else {
+    await sb.from('player_items').insert({ player_id: player.id, item_id: itemId, quantity: 1 });
   }
 
-  lastLevel = player.level;
+  showFeedback("Purchased item!", true);
+  loadInventory();
 }
 
-// 🚪 Logout
-async function logout() {
-  await sb.auth.signOut();
-  window.location.href = "index.html";
+// 🎒 LOAD INVENTORY
+async function loadInventory() {
+  const { data: items } = await sb.from('player_items')
+    .select('item_id, quantity, items(name,type,effect_value)')
+    .eq('player_id', player.id);
+
+  if (!items || items.length === 0) { document.getElementById("inventory").innerText="No items yet"; return; }
+
+  document.getElementById("inventory").innerHTML = items.map(i => {
+    const boostClass = (i.items.type==='energy' && player.energy>0) || (i.items.type==='success_boost' && player.success_boost>0) ? 'boost' : '';
+    return `
+      <div class="card ${boostClass}">
+        <b>${i.items.name}</b> x${i.quantity}<br>
+        Type: ${i.items.type}<br>
+        Effect: ${i.items.effect_value}<br>
+        <button onclick="useItem('${i.item_id}', '${i.items.type}', ${i.items.effect_value})">Use</button>
+      </div>
+    `;
+  }).join('');
 }
 
-// 🔁 Auto-refresh every 5 seconds to update bars
-setInterval(() => loadPlayer(), 5000);
+// 🧪 USE ITEM
+async function useItem(itemId, type, value) {
+  if (!player) return;
 
-loadPlayer();
+  let msg = "";
+
+  if (type==='energy') {
+    player.energy = (player.energy||0)+value;
+    await sb.from('players').update({ energy: player.energy }).eq('id', player.id);
+    msg = `⚡ Energy +${value}`;
+  } else if (type==='success_boost') {
+    player.success_boost = (player.success_boost||0)+value;
+    await sb.from('players').update({ success_boost: player.success_boost }).eq('id', player.id);
+    msg = `⭐ Success Boost +${value}`;
+  }
+
+  const { data: existing } = await sb.from('player_items')
+    .select('*').eq('player_id', player.id).eq('item_id', itemId).maybeSingle();
+
+  if (existing) {
+    if (existing.quantity>1) {
+      await sb.from('player_items').update({ quantity: existing.quantity-1 }).eq('id', existing.id);
+    } else {
+      await sb.from('player_items').delete().eq('id', existing.id);
+    }
+  }
+
+  showFeedback(msg, true);
+  loadInventory();
+}
+
+// ⚡ Feedback
+function showFeedback(msg, success=true) {
+  const f = document.getElementById("feedback");
+  f.style.color = success?'green':'red';
+  f.innerText = msg;
+  setTimeout(()=>f.innerText='', 3000);
+}
+
+// 🔙 Back
+function goBack() { window.location.href="dashboard.html"; }
+
+// Expose globally
+window.useItem = useItem;
+window.buyItem = buyItem;
+window.goBack = goBack;
+
+init();
 </script>
 
 </body>
