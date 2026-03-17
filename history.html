@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Rheoa RPG - History</title>
+  <style>
+    body { font-family: 'Courier New', monospace; background:#f8f8f0; color:#222; padding:20px; }
+    h1 { text-align:center; margin-bottom:20px; }
+    .log-card { border:2px solid black; border-radius:10px; padding:10px; margin:10px; width:350px; display:inline-block; vertical-align:top; }
+    .success { background:#e0ffe0; }
+    .fail { background:#ffe0e0; }
+    button { margin-top:10px; padding:5px 10px; cursor:pointer; border-radius:5px; }
+  </style>
+</head>
+<body>
+
+<h1>Activity Log</h1>
+
+<h2>Recent Crimes</h2>
+<div id="crimeLog"></div>
+
+<h2>Recent Jobs</h2>
+<div id="jobLog"></div>
+
+<div style="text-align:center; margin-top:20px;">
+  <button onclick="goBack()">Back to Dashboard</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<script>
+const sb = window.supabase.createClient(
+  "https://mtiwodvsrwvrujbhmmrn.supabase.co",
+  "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
+);
+
+let player = null;
+
+// 🌟 INIT
+async function init() {
+  const { data: { user } } = await sb.auth.getUser();
+  if (!user) return window.location.href="index.html";
+
+  const { data: playerData } = await sb.from('players').select('*').eq('auth_id', user.id).single();
+  if (!playerData) return document.getElementById("crimeLog").innerText="Player not found";
+
+  player = playerData;
+  loadCrimeHistory();
+  loadJobHistory();
+}
+
+// 🔍 LOAD CRIME HISTORY
+async function loadCrimeHistory() {
+  const { data: logs } = await sb.from('player_crimes')
+    .select('*, crimes(name, reward_cash, reward_xp, fail_penalty)')
+    .eq('player_id', player.id)
+    .order('last_attempt', { ascending:false })
+    .limit(5);
+
+  if (!logs || logs.length===0) { document.getElementById("crimeLog").innerText="No crime attempts yet"; return; }
+
+  document.getElementById("crimeLog").innerHTML = logs.map(log => {
+    const success = log.crimes.reward_cash && log.crimes.reward_xp ? "success" : "fail";
+    const date = new Date(log.last_attempt).toLocaleString();
+    return `
+      <div class="log-card ${success}">
+        <b>${log.crimes.name}</b><br>
+        ${success==='success' ? `✅ +₹${log.crimes.reward_cash} +${log.crimes.reward_xp}XP` : `❌ -₹${log.crimes.fail_penalty}`}<br>
+        <small>${date}</small>
+      </div>
+    `;
+  }).join('');
+}
+
+// 🔍 LOAD JOB HISTORY
+async function loadJobHistory() {
+  const { data: logs } = await sb.from('player_jobs')
+    .select('*, jobs(name, salary, xp_reward, energy_cost)')
+    .eq('player_id', player.id)
+    .order('last_worked', { ascending:false })
+    .limit(5);
+
+  if (!logs || logs.length===0) { document.getElementById("jobLog").innerText="No jobs worked yet"; return; }
+
+  document.getElementById("jobLog").innerHTML = logs.map(log => {
+    const date = new Date(log.last_worked).toLocaleString();
+    return `
+      <div class="log-card success">
+        <b>${log.jobs.name}</b><br>
+        💰 +₹${log.jobs.salary} | ⭐ +${log.jobs.xp_reward} XP | ⚡ -${log.jobs.energy_cost}<br>
+        <small>${date}</small>
+      </div>
+    `;
+  }).join('');
+}
+
+// 🔙 BACK
+function goBack() { window.location.href="dashboard.html"; }
+
+// AUTO REFRESH EVERY 10s
+setInterval(() => { if(player){ loadCrimeHistory(); loadJobHistory(); } }, 10000);
+
+init();
+</script>
+</body>
+</html>
