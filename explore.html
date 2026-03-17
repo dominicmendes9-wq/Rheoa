@@ -35,7 +35,6 @@ const sb = window.supabase.createClient(
 
 let player = null;
 
-// 🚀 INIT
 async function init() {
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return window.location.href="index.html";
@@ -47,7 +46,6 @@ async function init() {
   loadLocations();
 }
 
-// 🌍 LOAD LOCATIONS
 async function loadLocations() {
   const { data: locations, error } = await sb.from('map_locations').select('*').order('location_name');
   if (error) return document.getElementById("itemCards").innerText = "Error loading locations";
@@ -69,15 +67,9 @@ async function loadLocations() {
   });
 }
 
-// 🛒 LOAD ITEMS IN LOCATION
 async function loadItemsInLocation(locationId) {
-  const { data, error } = await sb.from('map_discoveries')
-    .select(`
-      discovery_id,
-      cash_reward,
-      spawn_probability,
-      items_master:items_master!map_discoveries_item_id_fkey (id, item_name, description, image_url)
-    `)
+  const { data: discoveries, error } = await sb.from('map_discoveries')
+    .select('*')
     .eq('location_id', locationId);
 
   const container = document.getElementById("itemCards");
@@ -89,26 +81,40 @@ async function loadItemsInLocation(locationId) {
     return;
   }
 
-  if (!data || data.length === 0) {
+  if (!discoveries || discoveries.length === 0) {
     container.innerText = "No items found in this location.";
     return;
   }
 
-  data.forEach(d => {
+  // fetch items_master for each discovery
+  const itemIds = discoveries.map(d => d.item_id);
+  const { data: items, error: itemErr } = await sb.from('items_master')
+    .select('*')
+    .in('id', itemIds);
+
+  if (itemErr) {
+    container.innerText = "Error fetching item details";
+    console.error(itemErr);
+    return;
+  }
+
+  discoveries.forEach(d => {
+    const item = items.find(i => i.id === d.item_id);
+    if (!item) return;
+
     const card = document.createElement("div");
     card.className = "item-card";
     card.innerHTML = `
-      <b>${d.items_master.item_name}</b><br>
-      ${d.items_master.description || ""}<br>
+      <b>${item.item_name}</b><br>
+      ${item.description || ""}<br>
       Cash Reward: ₹${d.cash_reward}<br>
-      Spawn Probability: ${(d.spawn_probability*100).toFixed(0)}%<br>
-      ${d.items_master.image_url ? `<img src="${d.items_master.image_url}" width="100">` : ""}
+      Spawn Probability: ${d.spawn_probability || 0}%<br>
+      ${item.image_url ? `<img src="${item.image_url}" width="100">` : ""}
     `;
     container.appendChild(card);
   });
 }
 
-// 🔙 BACK BUTTON
 function goBack() { window.location.href="dashboard.html"; }
 
 init();
