@@ -129,8 +129,9 @@ async function loadInventory() {
   let { data, error } = await sb
     .from('player_items')
     .select(`
+      item_id,
       quantity,
-      items (name)
+      items (name, type, effect_value)
     `)
     .eq('player_id', player.id);
 
@@ -142,13 +143,62 @@ async function loadInventory() {
     html = "No items yet";
   } else {
     data.forEach(i => {
-      html += `<div>${i.items.name} x${i.quantity}</div>`;
+
+      const type = i.items.type || "none";
+      const value = i.items.effect_value || 0;
+
+      html += `
+        <div style="border:1px solid black; margin:5px; padding:5px;">
+          <b>${i.items.name}</b> x${i.quantity}
+          <br>
+          <button onclick="useItem('${i.item_id}', '${type}', ${value})">
+            Use
+          </button>
+        </div>
+      `;
     });
   }
 
   document.getElementById("inventory").innerHTML = html;
 }
+// some extra function 
 
+  async function loadInventory() {
+  let { data, error } = await sb
+    .from('player_items')
+    .select(`
+      item_id,
+      quantity,
+      items (name, type, effect_value)
+    `)
+    .eq('player_id', player.id);
+
+  console.log("INVENTORY:", data, error);
+
+  let html = "";
+
+  if (!data || data.length === 0) {
+    html = "No items yet";
+  } else {
+    data.forEach(i => {
+
+      const type = i.items.type || "none";
+      const value = i.items.effect_value || 0;
+
+      html += `
+        <div style="border:1px solid black; margin:5px; padding:5px;">
+          <b>${i.items.name}</b> x${i.quantity}
+          <br>
+          <button onclick="useItem('${i.item_id}', '${type}', ${value})">
+            Use
+          </button>
+        </div>
+      `;
+    });
+  }
+
+  document.getElementById("inventory").innerHTML = html;
+}
 // 🔙
 function goBack() {
   window.location.href = "dashboard.html";
