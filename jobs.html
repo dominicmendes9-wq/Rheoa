@@ -34,6 +34,7 @@ async function loadJobs() {
     return;
   }
 
+  // 🔍 Get player
   let { data: player, error: pError } = await sb
     .from('players')
     .select('*')
@@ -42,8 +43,25 @@ async function loadJobs() {
 
   console.log("PLAYER:", player, pError);
 
+  if (!player) {
+    document.getElementById("jobs").innerText = "Player not found!";
+    return;
+  }
+
   currentPlayer = player;
 
+  // ⚡ ENERGY REGEN (fixed)
+  if (currentPlayer.energy < 100) {
+    let newEnergy = currentPlayer.energy + 1;
+
+    await sb.from('players')
+      .update({ energy: newEnergy })
+      .eq('id', currentPlayer.id);
+
+    currentPlayer.energy = newEnergy;
+  }
+
+  // 🔍 Get jobs
   let { data: jobs, error } = await sb.from('jobs').select('*');
 
   console.log("JOBS:", jobs, error);
@@ -58,15 +76,14 @@ async function loadJobs() {
     return;
   }
 
+  // 🎨 Render jobs
   let html = "";
 
   jobs.forEach(job => {
     html += `
-      <div style="border:1px solid black; margin:10px; padding:10px;">
+      <div style="border:2px solid black; margin:10px; padding:10px; border-radius:10px;">
         <h3>${job.name}</h3>
-        <p>💰 Salary: ${job.salary}</p>
-        <p>⚡ Energy Cost: ${job.energy_cost}</p>
-        <p>⭐ XP: ${job.xp_reward}</p>
+        <p>💰 ₹${job.salary} | ⚡ ${job.energy_cost} | ⭐ ${job.xp_reward}</p>
         <button onclick="work('${job.id}', ${job.salary}, ${job.energy_cost}, ${job.xp_reward})">
           Work
         </button>
@@ -82,15 +99,15 @@ async function work(jobId, salary, energyCost, xpReward) {
 
   const now = new Date();
 
-  // 🔍 check last worked
-  let { data: jobData } = await sb
+  // 🔍 Get last worked safely
+  let { data: jobData, error: jobError } = await sb
     .from('player_jobs')
     .select('*')
     .eq('player_id', currentPlayer.id)
     .eq('job_id', jobId)
-    .single();
+    .maybeSingle();
 
-  // ⏱️ COOLDOWN = 30 seconds
+  // ⏱️ COOLDOWN = 30 sec
   if (jobData && jobData.last_worked) {
     let last = new Date(jobData.last_worked);
     let diff = (now - last) / 1000;
@@ -101,21 +118,21 @@ async function work(jobId, salary, energyCost, xpReward) {
     }
   }
 
-  // ⚡ energy check
+  // ⚡ Energy check
   if (currentPlayer.energy < energyCost) {
     alert("Not enough energy!");
     return;
   }
 
-  // 💰 calculations
+  // 💰 Calculations
   let newCash = currentPlayer.cash + salary;
   let newEnergy = currentPlayer.energy - energyCost;
   let newXP = currentPlayer.xp + xpReward;
 
-  // 📈 level calculation
+  // 📈 Level formula
   let newLevel = Math.floor(Math.sqrt(newXP / 100)) + 1;
 
-  // 🔄 update player
+  // 🔄 Update player
   await sb.from('players').update({
     cash: newCash,
     energy: newEnergy,
@@ -123,7 +140,7 @@ async function work(jobId, salary, energyCost, xpReward) {
     level: newLevel
   }).eq('id', currentPlayer.id);
 
-  // 💾 update cooldown
+  // 💾 Update cooldown
   if (jobData) {
     await sb.from('player_jobs')
       .update({ last_worked: now })
@@ -139,8 +156,16 @@ async function work(jobId, salary, energyCost, xpReward) {
   document.getElementById("status").innerText =
     `💼 Worked! +₹${salary} | -${energyCost}⚡ | +${xpReward}XP`;
 
-  loadJobs();
+  loadJobs(); // 🔄 Refresh
 }
+
+// 🔙 Back button
+function goBack() {
+  window.location.href = "dashboard.html";
+}
+
+// 🚀 Start
+loadJobs();
 </script>
 
 </body>
