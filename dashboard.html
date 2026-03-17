@@ -1,25 +1,51 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Dashboard</title>
+  <title>Rheoa RPG - Dashboard</title>
+  <style>
+    body { font-family: 'Courier New', monospace; background: #f8f8f0; color: #222; padding: 20px; }
+    h1 { text-align: center; font-size: 2em; margin-bottom: 20px; }
+    .stat-bar { margin: 10px 0; background: #ddd; border-radius: 10px; overflow: hidden; width: 300px; height: 25px; }
+    .stat-fill { height: 100%; text-align: right; padding-right: 5px; color: #fff; font-weight: bold; line-height: 25px; }
+    .stat-energy { background: #4caf50; }
+    .stat-health { background: #f44336; }
+    .stat-hunger { background: #ff9800; }
+    .stat-happiness { background: #2196f3; }
+    .stat-xp { background: #9c27b0; }
+    .buttons { margin-top: 20px; }
+    button { margin: 5px; padding: 10px 20px; font-size: 1em; cursor: pointer; border-radius: 5px; }
+    #levelUpPopup { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); 
+                    background:#fff; padding:30px; border:3px solid #9c27b0; border-radius:10px; font-size:1.5em; 
+                    z-index:1000; text-align:center; }
+  </style>
 </head>
 <body>
 
-<h1>Dashboard</h1>
+<h1>Rheoa RPG Dashboard</h1>
 
-<div id="player"></div>
+<div id="playerStats">
+  <!-- Stats bars will be injected here -->
+</div>
 
-<button onclick="logout()">Logout</button>
+<div class="buttons">
+  <button onclick="window.location.href='jobs.html'">Go to Jobs</button>
+  <button onclick="window.location.href='crime.html'">Crime</button> 
+  <button onclick="window.location.href='inventory.html'">Inventory</button>  
+  <button onclick="logout()">Logout</button>
+</div>
+
+<div id="levelUpPopup">🎉 Level Up! 🎉</div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-
 <script>
 const sb = window.supabase.createClient(
   "https://mtiwodvsrwvrujbhmmrn.supabase.co",
   "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
 );
 
-// 🔥 MAIN FUNCTION
+let player = null;
+
+// 🌟 Load player stats
 async function loadPlayer() {
   const { data: { user } } = await sb.auth.getUser();
 
@@ -28,31 +54,58 @@ async function loadPlayer() {
     return;
   }
 
-  // 🔍 Check if player exists
-  let { data: player } = await sb
+  let { data: playerData } = await sb
     .from('players')
     .select('*')
     .eq('auth_id', user.id)
     .single();
 
-  // 🆕 Create player if not exists
-  if (!player) {
-    await sb.from('players').insert({
-      auth_id: user.id,
-      username: user.email
-    });
-
-    return loadPlayer(); // reload
+  if (!playerData) {
+    // Create new player
+    await sb.from('players').insert({ auth_id: user.id, username: user.email });
+    return loadPlayer();
   }
 
-  // 🎮 Display player
-  document.getElementById("player").innerHTML = `
-    <h2>${player.username}</h2>
-    <p>💰 Cash: ${player.cash}</p>
-    <p>⭐ XP: ${player.xp}</p>
-    <p>⚡ Energy: ${player.energy}</p>
-    <p>📈 Level: ${player.level}</p>
+  player = playerData;
+  renderStats();
+}
+
+// 🎨 Render Stats Bars
+function renderStats() {
+  const statsDiv = document.getElementById("playerStats");
+
+  const nextLevelXP = (player.level ** 2) * 100;
+  const xpPercent = Math.min(100, (player.xp / nextLevelXP) * 100);
+
+  statsDiv.innerHTML = `
+    <h2>${player.username} (Level ${player.level})</h2>
+
+    <div>💰 Cash: ₹${player.cash}</div>
+
+    <div class="stat-bar"><div class="stat-fill stat-xp" style="width:${xpPercent}%">${player.xp} / ${nextLevelXP} XP</div></div>
+    <div class="stat-bar"><div class="stat-fill stat-energy" style="width:${player.energy}%">${player.energy} Energy</div></div>
+    <div class="stat-bar"><div class="stat-fill stat-health" style="width:${player.health}%">${player.health} Health</div></div>
+    <div class="stat-bar"><div class="stat-fill stat-hunger" style="width:${player.hunger}%">${player.hunger} Hunger</div></div>
+    <div class="stat-bar"><div class="stat-fill stat-happiness" style="width:${player.happiness}%">${player.happiness} Happiness</div></div>
+
+    ${player.success_boost ? `<div>✨ Success Boost Active: +${player.success_boost}%</div>` : ''}
   `;
+
+  checkLevelUp();
+}
+
+// 🎉 Level-Up Popup
+let lastLevel = null;
+function checkLevelUp() {
+  if (lastLevel === null) lastLevel = player.level;
+
+  if (player.level > lastLevel) {
+    const popup = document.getElementById("levelUpPopup");
+    popup.style.display = "block";
+    setTimeout(() => popup.style.display = "none", 2500);
+  }
+
+  lastLevel = player.level;
 }
 
 // 🚪 Logout
@@ -61,10 +114,11 @@ async function logout() {
   window.location.href = "index.html";
 }
 
+// 🔁 Auto-refresh every 5 seconds to update bars
+setInterval(() => loadPlayer(), 5000);
+
 loadPlayer();
 </script>
-<button onclick="window.location.href='jobs.html'">Go to Jobs</button>
-<button onclick="window.location.href='crime.html'">Crime</button> 
-<button onclick="window.location.href='inventory.html'">Inventory</button>  
+
 </body>
 </html>
