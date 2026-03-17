@@ -1,29 +1,56 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Login</title>
+  <title>Rheoa RPG Login</title>
 </head>
 <body>
 
-<h1>Login</h1>
-<button onclick="login()">Login with Google</button>
+<h1>Rheoa RPG</h1>
+<button id="loginBtn">Login with Google</button>
 
-<!-- Supabase -->
+<p id="status"></p>
+
+<!-- Supabase CDN -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 
 <script>
+// ✅ Initialize Supabase (ONLY ONCE)
 const supabase = window.supabase.createClient(
   "https://mtiwodvsrwvrujbhmmrn.supabase.co",
   "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
 );
 
+// ✅ Login function (global-safe)
 async function login() {
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'google'
   });
 
-  if (error) console.error(error);
+  if (error) {
+    console.error(error);
+    document.getElementById("status").innerText = "Login failed!";
+  }
 }
+
+// ✅ Button event (clean method)
+document.getElementById("loginBtn").addEventListener("click", login);
+
+// ✅ Check if already logged in
+async function checkUser() {
+  const { data } = await supabase.auth.getUser();
+
+  if (data.user) {
+    document.getElementById("status").innerText = 
+      "Logged in as: " + data.user.email;
+
+    // 🔁 Redirect to dashboard
+    window.location.href = "dashboard.html";
+  }
+}
+
+// Run on load
+checkUser();
+
 </script>
 
 </body>
