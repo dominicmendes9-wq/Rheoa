@@ -1,14 +1,16 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>RPG Login</title>
+  <title>Login</title>
 </head>
 <body>
 
-<h1>Game Login</h1>
+<h1>Login</h1>
 <button onclick="login()">Login with Google</button>
 
+<!-- Supabase -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+
 <script>
 const supabase = window.supabase.createClient(
   "https://mtiwodvsrwvrujbhmmrn.supabase.co",
@@ -16,9 +18,11 @@ const supabase = window.supabase.createClient(
 );
 
 async function login() {
-  await supabase.auth.signInWithOAuth({
+  const { error } = await supabase.auth.signInWithOAuth({
     provider: 'google'
   });
+
+  if (error) console.error(error);
 }
 </script>
 
