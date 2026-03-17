@@ -6,42 +6,35 @@
 <body>
 
 <h1>Dashboard</h1>
-<div id="player"></div>
+<div id="user"></div>
+<button onclick="logout()">Logout</button>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-<script>
 
+<script>
 const supabase = window.supabase.createClient(
   "https://mtiwodvsrwvrujbhmmrn.supabase.co",
   "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
 );
 
-async function loadPlayer() {
-  const { data: { user } } = await supabase.auth.getUser();
+async function loadUser() {
+  const { data } = await supabase.auth.getUser();
 
-  let { data } = await supabase
-    .from('players')
-    .select('*')
-    .eq('auth_id', user.id)
-    .single();
-
-  if (!data) {
-    await supabase.from('players').insert({
-      auth_id: user.id,
-      username: user.email
-    });
-    return loadPlayer();
+  if (!data.user) {
+    window.location.href = "index.html";
+    return;
   }
 
-  document.getElementById("player").innerHTML = `
-    <p>Username: ${data.username}</p>
-    <p>Cash: ${data.cash}</p>
-    <p>XP: ${data.xp}</p>
-    <p>Energy: ${data.energy}</p>
-  `;
+  document.getElementById("user").innerHTML =
+    "Welcome: " + data.user.email;
 }
 
-loadPlayer();
+async function logout() {
+  await supabase.auth.signOut();
+  window.location.href = "index.html";
+}
+
+loadUser();
 </script>
 
 </body>
