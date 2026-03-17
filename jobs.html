@@ -27,22 +27,36 @@ let currentPlayer = null;
 async function loadJobs() {
   const { data: { user } } = await sb.auth.getUser();
 
+  console.log("USER:", user);
+
   if (!user) {
     window.location.href = "index.html";
     return;
   }
 
-  // get player
-  let { data: player } = await sb
+  let { data: player, error: pError } = await sb
     .from('players')
     .select('*')
     .eq('auth_id', user.id)
     .single();
 
+  console.log("PLAYER:", player, pError);
+
   currentPlayer = player;
 
-  // get jobs
-  let { data: jobs } = await sb.from('jobs').select('*');
+  let { data: jobs, error } = await sb.from('jobs').select('*');
+
+  console.log("JOBS:", jobs, error);
+
+  if (error) {
+    document.getElementById("jobs").innerText = "Error loading jobs!";
+    return;
+  }
+
+  if (!jobs || jobs.length === 0) {
+    document.getElementById("jobs").innerText = "No jobs found!";
+    return;
+  }
 
   let html = "";
 
