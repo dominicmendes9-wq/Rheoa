@@ -1,7 +1,17 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Inventory</title>
+  <title>Rheoa RPG - Inventory & Shop</title>
+  <style>
+    body { font-family: 'Courier New', monospace; background: #f8f8f0; color: #222; padding: 20px; }
+    h1 { text-align: center; margin-bottom: 20px; }
+    h2 { margin-top: 30px; }
+    .card { border:2px solid black; border-radius:10px; margin:10px; padding:10px; width:300px; display:inline-block; vertical-align:top; }
+    button { margin-top:5px; padding:5px 10px; cursor:pointer; border-radius:5px; }
+    #feedback { margin-top:20px; font-size:1.2em; font-weight:bold; }
+    .boost { background:#e0ffe0; }
+    .cooldown { background:#ccc; color:#666; cursor: not-allowed; }
+  </style>
 </head>
 <body>
 
@@ -15,13 +25,10 @@
 <h2>🎒 Your Inventory</h2>
 <div id="inventory"></div>
 
-<hr>
-<div id="status"></div>
-
+<div id="feedback"></div>
 <button onclick="goBack()">Back</button>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-
 <script>
 const sb = window.supabase.createClient(
   "https://mtiwodvsrwvrujbhmmrn.supabase.co",
@@ -30,176 +37,124 @@ const sb = window.supabase.createClient(
 
 let player = null;
 
-// 🚀 INIT
+// 🌟 INIT
 async function init() {
   const { data: { user } } = await sb.auth.getUser();
+  if (!user) return document.body.innerHTML = "Not logged in";
 
-  if (!user) {
-    document.body.innerHTML = "Not logged in";
-    return;
-  }
-
-  const { data: playerData } = await sb
-    .from('players')
-    .select('*')
-    .eq('auth_id', user.id)
-    .single();
-
-  if (!playerData) {
-    document.body.innerHTML = "Player not found";
-    return;
-  }
+  const { data: playerData } = await sb.from('players').select('*').eq('auth_id', user.id).single();
+  if (!playerData) return document.body.innerHTML = "Player not found";
 
   player = playerData;
-
   loadShop();
   loadInventory();
 }
 
 // 🛒 LOAD SHOP
 async function loadShop() {
-  const { data, error } = await sb.from('items').select('*');
+  const { data: items } = await sb.from('items').select('*');
+  if (!items || items.length === 0) { document.getElementById("shop").innerText="No shop items"; return; }
 
-  if (!data || data.length === 0) {
-    document.getElementById("shop").innerText = "No shop items found";
-    return;
-  }
-
-  let html = "";
-  data.forEach(item => {
-    html += `
-      <div style="border:1px solid black; padding:10px; margin:10px;">
-        <b>${item.name}</b><br>
-        ₹${item.price}<br>
-        ${item.type}<br>
-        <button onclick="buy('${item.id}', ${item.price})">Buy</button>
-      </div>
-    `;
-  });
-
-  document.getElementById("shop").innerHTML = html;
+  document.getElementById("shop").innerHTML = items.map(item => `
+    <div class="card">
+      <b>${item.name}</b><br>
+      Type: ${item.type}<br>
+      Effect: ${item.effect_value}<br>
+      Price: ₹${item.price}<br>
+      <button onclick="buyItem('${item.id}', ${item.price})">Buy</button>
+    </div>
+  `).join('');
 }
 
 // 💰 BUY ITEM
-async function buy(itemId, price) {
-  if (player.cash < price) {
-    alert("Not enough cash");
-    return;
-  }
+async function buyItem(itemId, price) {
+  if (player.cash < price) { showFeedback("Not enough cash!", false); return; }
 
-  await sb.from('players')
-    .update({ cash: player.cash - price })
-    .eq('id', player.id);
+  await sb.from('players').update({ cash: player.cash - price }).eq('id', player.id);
+  player.cash -= price;
 
-  // Check existing
-  const { data: existing } = await sb
-    .from('player_items')
+  const { data: existing } = await sb.from('player_items')
     .select('*')
     .eq('player_id', player.id)
     .eq('item_id', itemId)
     .maybeSingle();
 
   if (existing) {
-    await sb.from('player_items')
-      .update({ quantity: existing.quantity + 1 })
-      .eq('id', existing.id);
+    await sb.from('player_items').update({ quantity: existing.quantity + 1 }).eq('id', existing.id);
   } else {
-    await sb.from('player_items').insert({
-      player_id: player.id,
-      item_id: itemId,
-      quantity: 1
-    });
+    await sb.from('player_items').insert({ player_id: player.id, item_id: itemId, quantity: 1 });
   }
 
-  alert("Purchased!");
-  loadInventory(); // reload inventory only
+  showFeedback("Purchased item!", true);
+  loadInventory();
 }
 
 // 🎒 LOAD INVENTORY
 async function loadInventory() {
-  const { data, error } = await sb
-    .from('player_items')
-    .select(`
-      item_id,
-      quantity,
-      items (name, type, effect_value)
-    `)
+  const { data: items } = await sb.from('player_items')
+    .select('item_id, quantity, items(name,type,effect_value)')
     .eq('player_id', player.id);
 
-  let html = "";
+  if (!items || items.length === 0) { document.getElementById("inventory").innerText="No items yet"; return; }
 
-  if (!data || data.length === 0) {
-    html = "No items yet";
-  } else {
-    data.forEach(i => {
-      const type = i.items.type || "none";
-      const value = i.items.effect_value || 0;
-
-      html += `
-        <div style="border:1px solid black; margin:5px; padding:5px;">
-          <b>${i.items.name}</b> x${i.quantity}
-          <br>
-          <button onclick="useItem('${i.item_id}', '${type}', ${value})">
-            Use
-          </button>
-        </div>
-      `;
-    });
-  }
-
-  document.getElementById("inventory").innerHTML = html;
+  document.getElementById("inventory").innerHTML = items.map(i => {
+    const boostClass = (i.items.type==='energy' && player.energy>0) || (i.items.type==='success_boost' && player.success_boost>0) ? 'boost' : '';
+    return `
+      <div class="card ${boostClass}">
+        <b>${i.items.name}</b> x${i.quantity}<br>
+        Type: ${i.items.type}<br>
+        Effect: ${i.items.effect_value}<br>
+        <button onclick="useItem('${i.item_id}', '${i.items.type}', ${i.items.effect_value})">Use</button>
+      </div>
+    `;
+  }).join('');
 }
 
 // 🧪 USE ITEM
 async function useItem(itemId, type, value) {
   if (!player) return;
 
-  // Apply effect
-  if (type === "energy") {
-    player.energy = (player.energy || 0) + value;
-    await sb.from('players')
-      .update({ energy: player.energy })
-      .eq('id', player.id);
+  let msg = "";
+
+  if (type==='energy') {
+    player.energy = (player.energy||0)+value;
+    await sb.from('players').update({ energy: player.energy }).eq('id', player.id);
+    msg = `⚡ Energy +${value}`;
+  } else if (type==='success_boost') {
+    player.success_boost = (player.success_boost||0)+value;
+    await sb.from('players').update({ success_boost: player.success_boost }).eq('id', player.id);
+    msg = `⭐ Success Boost +${value}`;
   }
 
-  if (type === "success_boost") {
-    player.success_boost = (player.success_boost || 0) + value;
-    await sb.from('players')
-      .update({ success_boost: player.success_boost })
-      .eq('id', player.id);
+  const { data: existing } = await sb.from('player_items')
+    .select('*').eq('player_id', player.id).eq('item_id', itemId).maybeSingle();
+
+  if (existing) {
+    if (existing.quantity>1) {
+      await sb.from('player_items').update({ quantity: existing.quantity-1 }).eq('id', existing.id);
+    } else {
+      await sb.from('player_items').delete().eq('id', existing.id);
+    }
   }
 
-  // Reduce item quantity
-  const { data: existing } = await sb
-    .from('player_items')
-    .select('*')
-    .eq('player_id', player.id)
-    .eq('item_id', itemId)
-    .maybeSingle();
-
-  if (!existing) return;
-
-  if (existing.quantity > 1) {
-    await sb.from('player_items')
-      .update({ quantity: existing.quantity - 1 })
-      .eq('id', existing.id);
-  } else {
-    await sb.from('player_items')
-      .delete()
-      .eq('id', existing.id);
-  }
-
-  loadInventory(); // reload inventory after use
+  showFeedback(msg, true);
+  loadInventory();
 }
 
-// 🔙 BACK BUTTON
-function goBack() {
-  window.location.href = "dashboard.html";
+// ⚡ Feedback
+function showFeedback(msg, success=true) {
+  const f = document.getElementById("feedback");
+  f.style.color = success?'green':'red';
+  f.innerText = msg;
+  setTimeout(()=>f.innerText='', 3000);
 }
 
-// Expose functions globally so HTML buttons can call them
+// 🔙 Back
+function goBack() { window.location.href="dashboard.html"; }
+
+// Expose globally
 window.useItem = useItem;
-window.buy = buy;
+window.buyItem = buyItem;
 window.goBack = goBack;
 
 init();
