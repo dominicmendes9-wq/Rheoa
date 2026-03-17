@@ -10,42 +10,34 @@
 
 <p id="status"></p>
 
-<!-- Supabase -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 
 <script>
-// ✅ Create client (ONLY ONCE)
 const sb = window.supabase.createClient(
   "https://mtiwodvsrwvrujbhmmrn.supabase.co",
   "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
 );
 
-// ✅ Login
+// ✅ FIXED LOGIN
 async function login() {
-  const { error } = await sb.auth.signInWithOAuth({
+  await sb.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: window.location.origin + "/dashboard.html"
+      redirectTo: "https://dominicmendes9-wq.github.io/Rheoa/dashboard.html"
     }
   });
-
-  if (error) {
-    console.error(error);
-    document.getElementById("status").innerText = "Login error";
-  }
 }
 
-// ✅ Button event
 document.getElementById("loginBtn").addEventListener("click", login);
 
-// ✅ Handle session AFTER redirect (VERY IMPORTANT)
+// ✅ Handle login return
 sb.auth.onAuthStateChange((event, session) => {
   if (event === "SIGNED_IN") {
     window.location.href = "dashboard.html";
   }
 });
 
-// ✅ Check existing session on load
+// ✅ Check existing session
 async function checkUser() {
   const { data } = await sb.auth.getUser();
 
@@ -55,9 +47,7 @@ async function checkUser() {
   }
 }
 
-// ✅ CALL IT (you missed this)
 checkUser();
-
 </script>
 
 </body>
