@@ -38,13 +38,9 @@ async function checkUser() {
 
   if (data.user) {
     document.getElementById("status").innerText =
-      "Logged in as " + data.user.email;
-
-    window.location.href = "dashboard.html";
+      "Already logged in: " + data.user.email;
   }
 }
-
-checkUser();
 </script>
 
 </body>
