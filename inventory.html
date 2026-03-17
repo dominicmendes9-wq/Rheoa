@@ -199,6 +199,72 @@ async function loadInventory() {
 
   document.getElementById("inventory").innerHTML = html;
 }
+  // Use Item
+
+  async function useItem(itemId, type, value) {
+
+  console.log("USING ITEM:", itemId, type, value);
+
+  if (!player) return;
+
+  // 🧠 APPLY EFFECT
+  if (type === "energy") {
+    let newEnergy = (player.energy || 0) + value;
+
+    let { error } = await sb.from('players')
+      .update({ energy: newEnergy })
+      .eq('id', player.id);
+
+    console.log("ENERGY UPDATE:", error);
+
+    if (!error) {
+      player.energy = newEnergy;
+    }
+  }
+
+  if (type === "success_boost") {
+    let newBoost = (player.success_boost || 0) + value;
+
+    let { error } = await sb.from('players')
+      .update({ success_boost: newBoost })
+      .eq('id', player.id);
+
+    console.log("BOOST UPDATE:", error);
+
+    if (!error) {
+      player.success_boost = newBoost;
+    }
+  }
+
+  // 🔽 REDUCE ITEM
+  let { data: existing, error: fetchError } = await sb
+    .from('player_items')
+    .select('*')
+    .eq('player_id', player.id)
+    .eq('item_id', itemId)
+    .maybeSingle();
+
+  console.log("FETCH ITEM:", existing, fetchError);
+
+  if (!existing) return;
+
+  if (existing.quantity > 1) {
+    let { error } = await sb.from('player_items')
+      .update({ quantity: existing.quantity - 1 })
+      .eq('id', existing.id);
+
+    console.log("UPDATE QTY:", error);
+
+  } else {
+    let { error } = await sb.from('player_items')
+      .delete()
+      .eq('id', existing.id);
+
+    console.log("DELETE ITEM:", error);
+  }
+
+  setTimeout(() => init(), 300);
+}
 // 🔙
 function goBack() {
   window.location.href = "dashboard.html";
