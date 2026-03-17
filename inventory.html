@@ -18,7 +18,7 @@
 <hr>
 <div id="status"></div>
 
-<button onclick="goBack()">Back to Dashboard</button>
+<button onclick="goBack()">Back</button>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 
@@ -28,49 +28,58 @@ const sb = window.supabase.createClient(
   "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
 );
 
-let currentPlayer = null;
+let player = null;
 
-// 🔥 LOAD EVERYTHING
-async function loadInventory() {
+// 🚀 INIT
+async function init() {
+
   const { data: { user } } = await sb.auth.getUser();
+  console.log("USER:", user);
 
   if (!user) {
-    window.location.href = "index.html";
+    document.body.innerHTML = "Not logged in";
     return;
   }
 
-  let { data: player } = await sb
+  let res = await sb
     .from('players')
     .select('*')
     .eq('auth_id', user.id)
     .single();
 
-  if (!player) {
-    document.body.innerHTML = "Player not found!";
+  console.log("PLAYER:", res);
+
+  if (!res.data) {
+    document.body.innerHTML = "Player not found";
     return;
   }
 
-  currentPlayer = player;
+  player = res.data;
 
   loadShop();
-  loadUserInventory();
+  loadInventory();
 }
 
-// 🛒 SHOP
+// 🛒 LOAD SHOP
 async function loadShop() {
-  let { data: items } = await sb.from('items').select('*');
+  let { data, error } = await sb.from('items').select('*');
+
+  console.log("SHOP:", data, error);
+
+  if (!data || data.length === 0) {
+    document.getElementById("shop").innerText = "No shop items found";
+    return;
+  }
 
   let html = "";
 
-  items.forEach(item => {
+  data.forEach(item => {
     html += `
-      <div style="border:1px solid black; margin:10px; padding:10px;">
-        <h3>${item.name}</h3>
-        <p>💰 ₹${item.price}</p>
-        <p>📦 ${item.type}</p>
-        <button onclick="buyItem('${item.id}', ${item.price})">
-          Buy
-        </button>
+      <div style="border:1px solid black; padding:10px; margin:10px;">
+        <b>${item.name}</b><br>
+        ₹${item.price}<br>
+        ${item.type}<br>
+        <button onclick="buy('${item.id}', ${item.price})">Buy</button>
       </div>
     `;
   });
@@ -78,41 +87,20 @@ async function loadShop() {
   document.getElementById("shop").innerHTML = html;
 }
 
-// 💰 BUY ITEM
-async function buyItem(itemId, price) {
-
-  const { data: { user } } = await sb.auth.getUser();
-
-  if (!user) {
-    alert("Not logged in");
-    return;
-  }
-
-  // 🔍 Get player
-  let { data: player } = await sb
-    .from('players')
-    .select('*')
-    .eq('auth_id', user.id)
-    .single();
-
-  if (!player) {
-    alert("Player not found");
-    return;
-  }
+// 💰 BUY
+async function buy(itemId, price) {
 
   if (player.cash < price) {
-    alert("Not enough money!");
+    alert("Not enough cash");
     return;
   }
 
-  // 💰 Deduct cash
-  let newCash = player.cash - price;
-
+  // update cash
   await sb.from('players')
-    .update({ cash: newCash })
+    .update({ cash: player.cash - price })
     .eq('id', player.id);
 
-  // 🔍 Check existing item
+  // check existing
   let { data: existing } = await sb
     .from('player_items')
     .select('*')
@@ -125,41 +113,36 @@ async function buyItem(itemId, price) {
       .update({ quantity: existing.quantity + 1 })
       .eq('id', existing.id);
   } else {
-    let { error } = await sb.from('player_items')
-      .insert({
-        player_id: player.id,
-        item_id: itemId,
-        quantity: 1
-      });
-
-    if (error) {
-      console.error(error);
-      alert("Insert failed!");
-      return;
-    }
+    await sb.from('player_items').insert({
+      player_id: player.id,
+      item_id: itemId,
+      quantity: 1
+    });
   }
 
-  alert("Item purchased!");
+  alert("Purchased!");
+  init(); // reload everything
 }
-console.log("Buying item:", itemId);
-// 🎒 LOAD PLAYER INVENTORY
-async function loadUserInventory() {
-  let { data: inv } = await sb
-    .from('inventory')
-    .select('*, items(name)')
-    .eq('player_id', currentPlayer.id);
+
+// 🎒 LOAD INVENTORY
+async function loadInventory() {
+  let { data, error } = await sb
+    .from('player_items')
+    .select(`
+      quantity,
+      items (name)
+    `)
+    .eq('player_id', player.id);
+
+  console.log("INVENTORY:", data, error);
 
   let html = "";
 
-  if (!inv || inv.length === 0) {
-    html = "No items yet.";
+  if (!data || data.length === 0) {
+    html = "No items yet";
   } else {
-    inv.forEach(i => {
-      html += `
-        <div style="border:1px solid black; margin:5px; padding:5px;">
-          ${i.items.name} x${i.quantity}
-        </div>
-      `;
+    data.forEach(i => {
+      html += `<div>${i.items.name} x${i.quantity}</div>`;
     });
   }
 
@@ -171,8 +154,7 @@ function goBack() {
   window.location.href = "dashboard.html";
 }
 
-// 🚀 START
-loadInventory();
+init();
 </script>
 
 </body>
