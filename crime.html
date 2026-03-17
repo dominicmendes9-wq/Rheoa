@@ -1,146 +1,141 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Crime</title>
+  <title>Rheoa RPG - Crime</title>
+  <style>
+    body { font-family: 'Courier New', monospace; background: #f8f8f0; color: #222; padding: 20px; }
+    h1 { text-align: center; font-size: 2em; margin-bottom: 20px; }
+    .crime-card { border:2px solid black; border-radius:10px; margin:10px; padding:10px; width:300px; }
+    button { margin-top:5px; padding:5px 10px; cursor:pointer; border-radius:5px; }
+    #feedback { margin-top:20px; font-size:1.2em; font-weight:bold; }
+    #levelUpPopup { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); 
+                    background:#fff; padding:30px; border:3px solid #9c27b0; border-radius:10px; font-size:1.5em; 
+                    z-index:1000; text-align:center; }
+    .cooldown { background:#ccc; color:#666; cursor: not-allowed; }
+  </style>
 </head>
 <body>
 
 <h1>Crime</h1>
 
 <div id="crimes"></div>
-<hr>
-<div id="status"></div>
+<div id="feedback"></div>
+<div id="levelUpPopup">🎉 Level Up! 🎉</div>
 
 <button onclick="goBack()">Back to Dashboard</button>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-
 <script>
 const sb = window.supabase.createClient(
   "https://mtiwodvsrwvrujbhmmrn.supabase.co",
   "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
 );
 
-let currentPlayer = null;
+let player = null;
+let cooldowns = {}; // track cooldowns per crime
 
-// 🔥 Load Crimes
+// 🌟 Load player + crimes
 async function loadCrimes() {
   const { data: { user } } = await sb.auth.getUser();
+  if (!user) return window.location.href = "index.html";
 
-  if (!user) {
-    window.location.href = "index.html";
-    return;
-  }
-
-  let { data: player } = await sb
-    .from('players')
-    .select('*')
-    .eq('auth_id', user.id)
-    .single();
-
-  if (!player) {
-    document.getElementById("crimes").innerText = "Player not found!";
-    return;
-  }
-
-  currentPlayer = player;
+  let { data: playerData } = await sb.from('players').select('*').eq('auth_id', user.id).single();
+  if (!playerData) { document.getElementById("crimes").innerText="Player not found"; return; }
+  player = playerData;
 
   let { data: crimes } = await sb.from('crimes').select('*');
 
-  let html = "";
+  const crimesDiv = document.getElementById("crimes");
+  crimesDiv.innerHTML = "";
 
-  crimes.forEach(crime => {
-    html += `
-      <div style="border:2px solid black; margin:10px; padding:10px;">
-        <h3>${crime.name}</h3>
-        <p>🎯 Success: ${crime.success_rate}%</p>
-        <p>💰 Reward: ₹${crime.reward_cash}</p>
-        <p>⭐ XP: ${crime.reward_xp}</p>
-        <p>❌ Fail Loss: ₹${crime.fail_penalty}</p>
-        <p>⚡ Energy: ${crime.energy_cost}</p>
-        <button onclick="doCrime('${crime.id}', ${crime.success_rate}, ${crime.reward_cash}, ${crime.reward_xp}, ${crime.fail_penalty}, ${crime.energy_cost})">
-          Attempt
+  crimes.forEach(c => {
+    const cdKey = c.id;
+    const remaining = cooldowns[cdKey] ? Math.max(0, 60 - ((Date.now() - cooldowns[cdKey]) / 1000)) : 0;
+
+    crimesDiv.innerHTML += `
+      <div class="crime-card">
+        <h3>${c.name}</h3>
+        <p>🎯 Success: ${c.success_rate}%</p>
+        <p>💰 Reward: ₹${c.reward_cash}</p>
+        <p>⭐ XP: ${c.reward_xp}</p>
+        <p>❌ Fail Loss: ₹${c.fail_penalty}</p>
+        <p>⚡ Energy: ${c.energy_cost}</p>
+        <button id="crimeBtn-${c.id}" onclick="attemptCrime('${c.id}', ${c.success_rate}, ${c.reward_cash}, ${c.reward_xp}, ${c.fail_penalty}, ${c.energy_cost})"
+          ${remaining>0?'disabled class="cooldown"':''
+        }>
+          ${remaining>0?`Wait ${Math.ceil(remaining)}s`:'Attempt'}
         </button>
       </div>
     `;
   });
-
-  document.getElementById("crimes").innerHTML = html;
 }
 
-// 🎲 CRIME LOGIC
-async function doCrime(id, successRate, rewardCash, rewardXP, failPenalty, energyCost) {
+// 🎲 Attempt Crime
+async function attemptCrime(id, baseRate, rewardCash, rewardXP, failPenalty, energyCost) {
+  if (!player) return;
 
   const now = new Date();
+  if (player.energy < energyCost) { showFeedback("Not enough energy!", false); return; }
 
-  let { data: record } = await sb
-    .from('player_crimes')
-    .select('*')
-    .eq('player_id', currentPlayer.id)
-    .eq('crime_id', id)
-    .maybeSingle();
+  // Apply success boost
+  const finalRate = baseRate + (player.success_boost || 0);
+  const success = Math.random() * 100 < finalRate;
 
-  // ⏱️ 60 sec cooldown
-  if (record && record.last_attempt) {
-    let diff = (now - new Date(record.last_attempt)) / 1000;
-    if (diff < 60) {
-      alert("⏳ Wait " + Math.ceil(60 - diff) + " sec");
-      return;
-    }
-  }
-
-  if (currentPlayer.energy < energyCost) {
-    alert("Not enough energy!");
-    return;
-  }
-
-  let success = Math.random() * 100 < successRate;
-
-  let newCash = currentPlayer.cash;
-  let newXP = currentPlayer.xp;
-  let newEnergy = currentPlayer.energy - energyCost;
+  let newCash = player.cash;
+  let newXP = player.xp;
+  let newEnergy = player.energy - energyCost;
 
   if (success) {
     newCash += rewardCash;
     newXP += rewardXP;
-
-    document.getElementById("status").innerText =
-      `✅ Success! +₹${rewardCash} +${rewardXP}XP`;
+    showFeedback(`✅ Success! +₹${rewardCash}, +${rewardXP} XP`, true);
   } else {
-    newCash -= failPenalty;
-
-    document.getElementById("status").innerText =
-      `❌ Failed! Lost ₹${failPenalty}`;
+    newCash = Math.max(0, newCash - failPenalty);
+    showFeedback(`❌ Failed! Lost ₹${failPenalty}`, false);
   }
 
-  let newLevel = Math.floor(Math.sqrt(newXP / 100)) + 1;
+  const newLevel = Math.floor(Math.sqrt(newXP/100)) + 1;
 
-  await sb.from('players').update({
-    cash: newCash,
-    xp: newXP,
-    energy: newEnergy,
-    level: newLevel
-  }).eq('id', currentPlayer.id);
+  // Update player
+  await sb.from('players').update({ cash: newCash, xp: newXP, energy: newEnergy, level: newLevel }).eq('id', player.id);
+  player.cash = newCash; player.xp = newXP; player.energy = newEnergy; player.level = newLevel;
 
+  checkLevelUp(newLevel);
+
+  // Update cooldown
+  cooldowns[id] = Date.now();
+  const { data: record } = await sb.from('player_crimes').select('*').eq('player_id', player.id).eq('crime_id', id).maybeSingle();
   if (record) {
-    await sb.from('player_crimes')
-      .update({ last_attempt: now })
-      .eq('id', record.id);
+    await sb.from('player_crimes').update({ last_attempt: now }).eq('id', record.id);
   } else {
-    await sb.from('player_crimes').insert({
-      player_id: currentPlayer.id,
-      crime_id: id,
-      last_attempt: now
-    });
+    await sb.from('player_crimes').insert({ player_id: player.id, crime_id: id, last_attempt: now });
   }
 
   loadCrimes();
 }
 
-// 🔙
-function goBack() {
-  window.location.href = "dashboard.html";
+// ⚡ Feedback display
+function showFeedback(msg, success=true) {
+  const f = document.getElementById("feedback");
+  f.style.color = success ? 'green' : 'red';
+  f.innerText = msg;
+  setTimeout(() => { f.innerText = ''; }, 4000);
 }
+
+// 🎉 Level-Up Popup
+function checkLevelUp(newLevel) {
+  if (newLevel > player.level) {
+    const popup = document.getElementById("levelUpPopup");
+    popup.style.display = "block";
+    setTimeout(() => popup.style.display = "none", 2500);
+  }
+}
+
+// 🔙 Back to dashboard
+function goBack() { window.location.href="dashboard.html"; }
+
+// Auto-refresh cooldown timers every second
+setInterval(() => loadCrimes(), 1000);
 
 loadCrimes();
 </script>
