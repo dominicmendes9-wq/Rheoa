@@ -1,15 +1,13 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Explore Map</title>
+  <title>Rheoa RPG - Explore</title>
   <style>
-    body { font-family: 'Courier New', monospace; background: #f0f0f8; color: #222; padding: 20px; }
-    h1 { text-align:center; margin-bottom:20px; }
-    .location-card, .discovery-card {
-      border:2px solid black; border-radius:10px; padding:10px; margin:10px; display:inline-block; width:200px; text-align:center; vertical-align:top;
-    }
-    button { padding:6px 10px; margin:5px; border-radius:5px; cursor:pointer; }
-    #discoveries { margin-top:20px; }
+    body { font-family: 'Courier New', monospace; background:#f8f8f0; padding:20px; }
+    h1, h2 { text-align:center; }
+    .location { border:2px solid black; margin:10px; padding:10px; border-radius:10px; }
+    .item { border:1px solid #333; padding:5px; margin:5px; border-radius:5px; display:inline-block; }
+    button { padding:5px 10px; margin:5px; cursor:pointer; }
   </style>
 </head>
 <body>
@@ -17,11 +15,10 @@
 <h1>Map & Discoveries</h1>
 
 <div id="locations"></div>
-
+<hr>
 <h2>Items in Selected Location</h2>
-<div id="discoveries">Select a location to explore</div>
+<div id="items">Select a location...</div>
 
-<br>
 <button onclick="goBack()">Back to Dashboard</button>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
@@ -33,8 +30,8 @@ const sb = window.supabase.createClient(
 
 let currentPlayer = null;
 
-// 🌟 INIT
-async function init() {
+// Load player info
+async function loadPlayer() {
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return window.location.href="index.html";
 
@@ -45,96 +42,82 @@ async function init() {
   loadLocations();
 }
 
-// 🌍 LOAD LOCATIONS
+// Load map locations
 async function loadLocations() {
-  const { data, error } = await sb.from('map_locations').select('*').order('location_name');
-  if (error || !data) { document.getElementById("locations").innerText="Error loading locations"; return; }
+  const { data: locations } = await sb.from('map_locations').select('*').order('location_name');
+  if (!locations || locations.length===0) {
+    document.getElementById("locations").innerText = "No locations found";
+    return;
+  }
 
-  let html = "";
-  data.forEach(loc => {
-    html += `
-      <div class="location-card">
-        <b>${loc.location_name}</b><br>
-        Type: ${loc.location_type || "N/A"}<br>
-        Unlock Level: ${loc.unlock_level || 1}<br>
-        <button onclick="selectLocation('${loc.location_id}', '${loc.location_name}')">Explore</button>
-      </div>
-    `;
+  let html = '';
+  locations.forEach(loc => {
+    html += `<div class="location">
+      <b>${loc.location_name}</b><br>
+      ${loc.description}<br>
+      <button onclick="showItems('${loc.location_id}')">Explore</button>
+    </div>`;
   });
 
   document.getElementById("locations").innerHTML = html;
 }
 
-// 🔎 SELECT LOCATION
-async function selectLocation(locationId, locationName) {
-  document.getElementById("discoveries").innerHTML = `<h3>Exploring ${locationName}...</h3>`;
+// Show items in a location
+async function showItems(locationId) {
+  document.getElementById("items").innerText = "Loading...";
 
-  // Get discoveries for this location
-  const { data: discoveries, error } = await sb.from('map_discoveries')
-    .select('discovery_id, item_id, items_master(item_name, item_category, description)')
+  // fetch discoveries + join items_master
+  const { data, error } = await sb.from('map_discoveries')
+    .select(`
+      discovery_id,
+      item_id,
+      items_master (item_name, item_category, rarity, description)
+    `)
     .eq('location_id', locationId);
 
-  if (error || !discoveries || discoveries.length === 0) {
-    document.getElementById("discoveries").innerHTML = "No items found in this location.";
+  if (error) {
+    document.getElementById("items").innerText = "Error loading items";
+    console.error(error);
     return;
   }
 
-  let html = "";
-  for (let d of discoveries) {
-    const chance = Math.random() * 100;
-    // spawn probability check
-    const { data: disc } = await sb.from('map_discoveries').select('spawn_probability').eq('discovery_id', d.discovery_id).single();
-    const spawnRate = disc?.spawn_probability || 100;
-    if (chance <= spawnRate) {
-      html += `
-        <div class="discovery-card">
-          <b>${d.items_master.item_name}</b><br>
-          Category: ${d.items_master.item_category || "N/A"}<br>
-          ${d.items_master.description || ""}
-          <br>
-          <button onclick="collectItem('${d.item_id}', '${locationId}', '${d.discovery_id}')">Collect</button>
-        </div>
-      `;
-    }
+  if (!data || data.length === 0) {
+    document.getElementById("items").innerText = "No items found in this location";
+    return;
   }
 
-  if (html === "") html = "No items spawned this time. Try again later!";
-  document.getElementById("discoveries").innerHTML = html;
-}
-
-// 🏆 COLLECT ITEM
-async function collectItem(itemId, locationId, discoveryId) {
-  // Add to player inventory
-  const { data: existing } = await sb.from('player_items')
-    .select('*')
-    .eq('player_id', currentPlayer.id)
-    .eq('item_id', itemId)
-    .maybeSingle();
-
-  if (existing) {
-    await sb.from('player_items').update({ quantity: existing.quantity + 1 }).eq('id', existing.id);
-  } else {
-    await sb.from('player_items').insert({ player_id: currentPlayer.id, item_id: itemId, quantity: 1 });
-  }
-
-  // Log exploration
-  await sb.from('explore_log').insert({
-    player_id: currentPlayer.id,
-    location_id: locationId,
-    reward_item_id: itemId,
-    reward_cash: 0
+  let html = '';
+  data.forEach(d => {
+    html += `<div class="item">
+      <b>${d.items_master.item_name}</b><br>
+      Category: ${d.items_master.item_category}<br>
+      Rarity: ${d.items_master.rarity}<br>
+      ${d.items_master.description || ''}
+      <br>
+      <button onclick="collectItem('${d.discovery_id}')">Collect</button>
+    </div>`;
   });
 
-  alert("Item collected!");
-  selectLocation(locationId); // refresh discoveries
+  document.getElementById("items").innerHTML = html;
 }
 
-// 🔙 BACK
+// Collect item logic
+async function collectItem(discoveryId) {
+  const now = new Date();
+  // Fetch discovery
+  const { data: discovery } = await sb.from('map_discoveries').select('*').eq('discovery_id', discoveryId).single();
+  if (!discovery) return alert("Discovery not found");
+
+  // TODO: Apply probability, player level check, inventory insert
+  alert("You collected: " + discovery.item_id);
+}
+
+// Go back
 function goBack() {
-  window.location.href="dashboard.html";
+  window.location.href = "dashboard.html";
 }
 
-init();
+loadPlayer();
 </script>
 
 </body>
