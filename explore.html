@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Rheoa RPG - Explore Map</title>
+  <style>
+    body { font-family: 'Courier New', monospace; background: #f8f8f0; color: #222; padding: 20px; }
+    h1 { text-align:center; margin-bottom:20px; }
+    .location-card { border:2px solid black; border-radius:10px; padding:15px; margin:10px; display:inline-block; width:250px; vertical-align:top; }
+    button { padding:6px 10px; margin-top:8px; cursor:pointer; border-radius:5px; }
+    #history { margin-top:30px; }
+    .history-card { border:1px solid #555; padding:8px; margin:5px; border-radius:5px; background:#eee; }
+  </style>
+</head>
+<body>
+
+<h1>Explore Map</h1>
+<div id="locations"></div>
+<div id="status"></div>
+
+<h2>📰 Your Exploration History</h2>
+<div id="history"></div>
+
+<button onclick="goBack()">Back to Dashboard</button>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<script>
+const sb = window.supabase.createClient(
+  "https://mtiwodvsrwvrujbhmmrn.supabase.co",
+  "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
+);
+
+let player = null;
+
+// 🌟 INIT
+async function init() {
+  const { data: { user } } = await sb.auth.getUser();
+  if (!user) return window.location.href="index.html";
+
+  const { data: playerData } = await sb.from('players').select('*').eq('auth_id', user.id).single();
+  if (!playerData) { document.getElementById("status").innerText="Player not found"; return; }
+  player = playerData;
+
+  loadMapLocations();
+  loadHistory();
+}
+
+// 🌍 LOAD MAP LOCATIONS
+async function loadMapLocations() {
+  const { data: locations, error } = await sb.from('map_locations').select('*');
+  if (error || !locations) { document.getElementById("locations").innerText="No locations found"; return; }
+
+  let html = "";
+  for (const loc of locations) {
+    // Load possible discoveries for this location
+    const { data: discoveries } = await sb.from('map_discoveries')
+      .select('*, items_master(id, item_name)')
+      .eq('location_id', loc.location_id)
+      .gte('level_required', player.level);
+
+    html += `
+      <div class="location-card">
+        <h3>${loc.location_name}</h3>
+        <p>Type: ${loc.location_type || 'Unknown'}</p>
+        <p>${loc.description || ''}</p>
+        <button onclick="explore('${loc.location_id}')">Explore</button>
+        <p>Discoveries: ${discoveries?.length || 0}</p>
+      </div>
+    `;
+  }
+
+  document.getElementById("locations").innerHTML = html;
+}
+
+// 🎲 EXPLORE LOCATION
+async function explore(locationId) {
+  if (!player) return;
+
+  // Load possible discoveries
+  const { data: discoveries } = await sb.from('map_discoveries')
+    .select('*, items_master(id, item_name)')
+    .eq('location_id', locationId)
+    .lte('level_required', player.level);
+
+  if (!discoveries || discoveries.length === 0) {
+    alert("Nothing to discover here.");
+    return;
+  }
+
+  // Randomly pick discovery based on spawn_probability
+  const discovered = discoveries.find(d => Math.random() < parseFloat(d.spawn_probability));
+  let rewardItemId = null, rewardItemName = '', rewardCash = 0;
+
+  if (discovered) {
+    rewardItemId = discovered.item_id;
+    rewardItemName = discovered.items_master.item_name;
+    rewardCash = discovered.cash_reward;
+
+    // Add item to player inventory
+    const { data: existing } = await sb.from('player_items')
+      .select('*')
+      .eq('player_id', player.id)
+      .eq('item_id', rewardItemId)
+      .maybeSingle();
+
+    if (existing) {
+      await sb.from('player_items').update({ quantity: existing.quantity + 1 }).eq('id', existing.id);
+    } else {
+      await sb.from('player_items').insert({
+        player_id: player.id,
+        item_id: rewardItemId,
+        quantity: 1
+      });
+    }
+  }
+
+  // Give cash reward if any
+  let newCash = player.cash + rewardCash;
+  await sb.from('players').update({ cash: newCash }).eq('id', player.id);
+  player.cash = newCash;
+
+  // Log exploration
+  await sb.from('explore_log').insert({
+    player_id: player.id,
+    location_id: locationId,
+    reward_item_id: rewardItemId,
+    reward_cash: rewardCash
+  });
+
+  // Feedback
+  let msg = `You explored ${locationId}!`;
+  if (rewardItemName) msg += ` Found item: ${rewardItemName}`;
+  if (rewardCash) msg += ` | Cash: ₹${rewardCash}`;
+  document.getElementById("status").innerText = msg;
+
+  loadHistory();
+}
+
+// 📰 LOAD HISTORY
+async function loadHistory() {
+  if (!player) return;
+
+  const { data, error } = await sb.from('explore_log')
+    .select('*, map_locations(location_name), items_master(id, item_name)')
+    .eq('player_id', player.id)
+    .order('timestamp', { ascending: false })
+    .limit(50);
+
+  if (error) { document.getElementById("history").innerText="Error loading history"; return; }
+
+  let html = "";
+  data.forEach(h => {
+    let itemName = h.items_master?.item_name || '-';
+    let locationName = h.map_locations?.location_name || '-';
+    html += `
+      <div class="history-card">
+        <b>${locationName}</b> | Item: ${itemName} | Cash: ₹${h.reward_cash} | ${new Date(h.timestamp).toLocaleString()}
+      </div>
+    `;
+  });
+
+  document.getElementById("history").innerHTML = html;
+}
+
+// 🔙 BACK BUTTON
+function goBack() { window.location.href="dashboard.html"; }
+
+window.init = init;
+init();
+</script>
+</body>
+</html>
