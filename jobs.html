@@ -1,170 +1,128 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Jobs</title>
+  <title>Rheoa RPG - Jobs</title>
+  <style>
+    body { font-family: 'Courier New', monospace; background: #f8f8f0; color: #222; padding: 20px; }
+    h1 { text-align: center; font-size: 2em; margin-bottom: 20px; }
+    .job-card { border:2px solid black; border-radius:10px; margin:10px; padding:10px; width:300px; }
+    button { margin-top:5px; padding:5px 10px; cursor:pointer; border-radius:5px; }
+    #feedback { margin-top:20px; font-size:1.2em; font-weight:bold; }
+    #levelUpPopup { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); 
+                    background:#fff; padding:30px; border:3px solid #9c27b0; border-radius:10px; font-size:1.5em; 
+                    z-index:1000; text-align:center; }
+    .cooldown { background:#ccc; color:#666; cursor: not-allowed; }
+  </style>
 </head>
 <body>
 
 <h1>Jobs</h1>
 
 <div id="jobs"></div>
-<hr>
-<div id="status"></div>
+<div id="feedback"></div>
+<div id="levelUpPopup">🎉 Level Up! 🎉</div>
 
 <button onclick="goBack()">Back to Dashboard</button>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-
 <script>
 const sb = window.supabase.createClient(
   "https://mtiwodvsrwvrujbhmmrn.supabase.co",
   "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
 );
 
-let currentPlayer = null;
+let player = null;
+let cooldowns = {};
 
-// 🔥 Load player + jobs
+// 🌟 Load player + jobs
 async function loadJobs() {
   const { data: { user } } = await sb.auth.getUser();
+  if (!user) return window.location.href = "index.html";
 
-  console.log("USER:", user);
+  let { data: playerData } = await sb.from('players').select('*').eq('auth_id', user.id).single();
+  if (!playerData) { document.getElementById("jobs").innerText="Player not found"; return; }
+  player = playerData;
 
-  if (!user) {
-    window.location.href = "index.html";
-    return;
-  }
+  let { data: jobs } = await sb.from('jobs').select('*');
 
-  // 🔍 Get player
-  let { data: player, error: pError } = await sb
-    .from('players')
-    .select('*')
-    .eq('auth_id', user.id)
-    .single();
-
-  console.log("PLAYER:", player, pError);
-
-  if (!player) {
-    document.getElementById("jobs").innerText = "Player not found!";
-    return;
-  }
-
-  currentPlayer = player;
-
-  // ⚡ ENERGY REGEN (fixed)
-  if (currentPlayer.energy < 100) {
-    let newEnergy = currentPlayer.energy + 1;
-
-    await sb.from('players')
-      .update({ energy: newEnergy })
-      .eq('id', currentPlayer.id);
-
-    currentPlayer.energy = newEnergy;
-  }
-
-  // 🔍 Get jobs
-  let { data: jobs, error } = await sb.from('jobs').select('*');
-
-  console.log("JOBS:", jobs, error);
-
-  if (error) {
-    document.getElementById("jobs").innerText = "Error loading jobs!";
-    return;
-  }
-
-  if (!jobs || jobs.length === 0) {
-    document.getElementById("jobs").innerText = "No jobs found!";
-    return;
-  }
-
-  // 🎨 Render jobs
-  let html = "";
+  const jobsDiv = document.getElementById("jobs");
+  jobsDiv.innerHTML = "";
 
   jobs.forEach(job => {
-    html += `
-      <div style="border:2px solid black; margin:10px; padding:10px; border-radius:10px;">
+    const cdKey = job.id;
+    const remaining = cooldowns[cdKey] ? Math.max(0, 30 - ((Date.now() - cooldowns[cdKey]) / 1000)) : 0;
+
+    jobsDiv.innerHTML += `
+      <div class="job-card">
         <h3>${job.name}</h3>
         <p>💰 ₹${job.salary} | ⚡ ${job.energy_cost} | ⭐ ${job.xp_reward}</p>
-        <button onclick="work('${job.id}', ${job.salary}, ${job.energy_cost}, ${job.xp_reward})">
-          Work
+        <button id="jobBtn-${job.id}" onclick="doJob('${job.id}', ${job.salary}, ${job.energy_cost}, ${job.xp_reward})"
+          ${remaining>0?'disabled class="cooldown"':''
+        }>
+          ${remaining>0?`Wait ${Math.ceil(remaining)}s`:'Work'}
         </button>
       </div>
     `;
   });
-
-  document.getElementById("jobs").innerHTML = html;
 }
 
-// 💼 Work function
-async function work(jobId, salary, energyCost, xpReward) {
+// 💼 Do Job
+async function doJob(jobId, salary, energyCost, xpReward) {
+  if (!player) return;
 
   const now = new Date();
+  if (player.energy < energyCost) { showFeedback("Not enough energy!", false); return; }
 
-  // 🔍 Get last worked safely
-  let { data: jobData, error: jobError } = await sb
-    .from('player_jobs')
-    .select('*')
-    .eq('player_id', currentPlayer.id)
-    .eq('job_id', jobId)
-    .maybeSingle();
+  // Optional: success boost applies to XP
+  const finalXP = xpReward + Math.floor((player.success_boost || 0) * xpReward / 100);
 
-  // ⏱️ COOLDOWN = 30 sec
-  if (jobData && jobData.last_worked) {
-    let last = new Date(jobData.last_worked);
-    let diff = (now - last) / 1000;
+  let newCash = player.cash + salary;
+  let newXP = player.xp + finalXP;
+  let newEnergy = player.energy - energyCost;
 
-    if (diff < 30) {
-      alert("⏳ Wait " + Math.ceil(30 - diff) + " seconds");
-      return;
-    }
-  }
+  const newLevel = Math.floor(Math.sqrt(newXP / 100)) + 1;
 
-  // ⚡ Energy check
-  if (currentPlayer.energy < energyCost) {
-    alert("Not enough energy!");
-    return;
-  }
+  await sb.from('players').update({ cash: newCash, xp: newXP, energy: newEnergy, level: newLevel }).eq('id', player.id);
+  player.cash = newCash; player.xp = newXP; player.energy = newEnergy; player.level = newLevel;
 
-  // 💰 Calculations
-  let newCash = currentPlayer.cash + salary;
-  let newEnergy = currentPlayer.energy - energyCost;
-  let newXP = currentPlayer.xp + xpReward;
+  checkLevelUp(newLevel);
+  showFeedback(`💼 Worked! +₹${salary} | -${energyCost}⚡ | +${finalXP} XP`, true);
 
-  // 📈 Level formula
-  let newLevel = Math.floor(Math.sqrt(newXP / 100)) + 1;
-
-  // 🔄 Update player
-  await sb.from('players').update({
-    cash: newCash,
-    energy: newEnergy,
-    xp: newXP,
-    level: newLevel
-  }).eq('id', currentPlayer.id);
-
-  // 💾 Update cooldown
-  if (jobData) {
-    await sb.from('player_jobs')
-      .update({ last_worked: now })
-      .eq('id', jobData.id);
+  // Update cooldown
+  cooldowns[jobId] = Date.now();
+  const { data: record } = await sb.from('player_jobs').select('*').eq('player_id', player.id).eq('job_id', jobId).maybeSingle();
+  if (record) {
+    await sb.from('player_jobs').update({ last_worked: now }).eq('id', record.id);
   } else {
-    await sb.from('player_jobs').insert({
-      player_id: currentPlayer.id,
-      job_id: jobId,
-      last_worked: now
-    });
+    await sb.from('player_jobs').insert({ player_id: player.id, job_id: jobId, last_worked: now });
   }
 
-  document.getElementById("status").innerText =
-    `💼 Worked! +₹${salary} | -${energyCost}⚡ | +${xpReward}XP`;
-
-  loadJobs(); // 🔄 Refresh
+  loadJobs();
 }
 
-// 🔙 Back button
-function goBack() {
-  window.location.href = "dashboard.html";
+// ⚡ Feedback display
+function showFeedback(msg, success=true) {
+  const f = document.getElementById("feedback");
+  f.style.color = success ? 'green' : 'red';
+  f.innerText = msg;
+  setTimeout(() => { f.innerText = ''; }, 4000);
 }
 
-// 🚀 Start
+// 🎉 Level-Up Popup
+function checkLevelUp(newLevel) {
+  if (newLevel > player.level) {
+    const popup = document.getElementById("levelUpPopup");
+    popup.style.display = "block";
+    setTimeout(() => popup.style.display = "none", 2500);
+  }
+}
+
+// 🔙 Back to dashboard
+function goBack() { window.location.href="dashboard.html"; }
+
+// Auto-refresh cooldown timers every second
+setInterval(() => loadJobs(), 1000);
+
 loadJobs();
 </script>
 
