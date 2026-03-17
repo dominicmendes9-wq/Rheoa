@@ -6,35 +6,62 @@
 <body>
 
 <h1>Dashboard</h1>
-<div id="user"></div>
+
+<div id="player"></div>
+
 <button onclick="logout()">Logout</button>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 
 <script>
-const supabase = window.supabase.createClient(
+const sb = window.supabase.createClient(
   "https://mtiwodvsrwvrujbhmmrn.supabase.co",
   "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
 );
 
-async function loadUser() {
-  const { data } = await sb.auth.getUser();
+// 🔥 MAIN FUNCTION
+async function loadPlayer() {
+  const { data: { user } } = await sb.auth.getUser();
 
-  if (!data.user) {
-    document.body.innerHTML = "Not logged in";
+  if (!user) {
+    window.location.href = "index.html";
     return;
   }
 
-  document.getElementById("user").innerText =
-    "Welcome " + data.user.email;
+  // 🔍 Check if player exists
+  let { data: player } = await sb
+    .from('players')
+    .select('*')
+    .eq('auth_id', user.id)
+    .single();
+
+  // 🆕 Create player if not exists
+  if (!player) {
+    await sb.from('players').insert({
+      auth_id: user.id,
+      username: user.email
+    });
+
+    return loadPlayer(); // reload
+  }
+
+  // 🎮 Display player
+  document.getElementById("player").innerHTML = `
+    <h2>${player.username}</h2>
+    <p>💰 Cash: ${player.cash}</p>
+    <p>⭐ XP: ${player.xp}</p>
+    <p>⚡ Energy: ${player.energy}</p>
+    <p>📈 Level: ${player.level}</p>
+  `;
 }
 
+// 🚪 Logout
 async function logout() {
-  await supabase.auth.signOut();
+  await sb.auth.signOut();
   window.location.href = "index.html";
 }
 
-loadUser();
+loadPlayer();
 </script>
 
 </body>
