@@ -4,6 +4,7 @@
   <title>Rheoa RPG - Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
+    /* Keep all existing Phase 2 styles */
     * {
       box-sizing: border-box;
       margin: 0;
@@ -72,6 +73,17 @@
       font-weight: bold;
       margin-bottom: 5px;
       text-align: center;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .progress-badge {
+      font-size: 0.8rem;
+      padding: 2px 8px;
+      border-radius: 12px;
+      background: #9c27b0;
+      color: white;
     }
     
     .progress-bar-bg {
@@ -90,6 +102,36 @@
     
     #xpBar { background: #9c27b0; }
     #energyBar { background: #4CAF50; }
+    
+    /* Realtime status indicator */
+    .realtime-status {
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      padding: 5px 10px;
+      background: rgba(0,0,0,0.7);
+      color: white;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      z-index: 9997;
+    }
+    
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #4CAF50;
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.5; }
+      100% { opacity: 1; }
+    }
     
     .button-container {
       display: flex;
@@ -210,6 +252,12 @@
         padding: 12px 20px;
         font-size: 0.9rem;
       }
+      
+      .realtime-status {
+        bottom: 5px;
+        right: 5px;
+        font-size: 0.7rem;
+      }
     }
   </style>
 </head>
@@ -218,19 +266,31 @@
 <canvas id="confetti-canvas"></canvas>
 <div class="toast-container" id="toast-container"></div>
 
+<!-- Realtime Status Indicator -->
+<div class="realtime-status" id="realtimeStatus">
+  <span class="status-dot"></span>
+  <span>Live Updates Active</span>
+</div>
+
 <h1>📊 Dashboard</h1>
 
 <div class="stats-grid" id="stats"></div>
 
 <div class="progress-container">
-  <div class="progress-label">Level Progress</div>
+  <div class="progress-label">
+    <span>Level Progress</span>
+    <span class="progress-badge" id="levelDisplay">Level 1</span>
+  </div>
   <div class="progress-bar-bg">
     <div class="progress-bar-fill" id="xpBar" style="width:0%"></div>
   </div>
 </div>
 
 <div class="progress-container">
-  <div class="progress-label">Energy</div>
+  <div class="progress-label">
+    <span>Energy</span>
+    <span id="energyDisplay">100/100</span>
+  </div>
   <div class="progress-bar-bg">
     <div class="progress-bar-fill" id="energyBar" style="width:100%"></div>
   </div>
@@ -253,6 +313,7 @@ const sb = window.supabase.createClient(
 
 let player = null;
 let confettiAnimation = null;
+let playerChannel = null;
 
 // Toast notification system
 function showToast(message, type = 'info', duration = 3000) {
@@ -344,6 +405,49 @@ function stopConfetti() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 }
 
+// Set up realtime subscription
+function setupRealtimeSubscription() {
+  if (!player) return;
+  
+  // Unsubscribe from old channel if exists
+  if (playerChannel) {
+    playerChannel.unsubscribe();
+  }
+  
+  // Subscribe to player changes
+  playerChannel = sb
+    .channel('player-changes')
+    .on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'players',
+        filter: `id=eq.${player.id}`
+      },
+      (payload) => {
+        const oldLevel = player.level;
+        player = payload.new;
+        renderStats();
+        
+        // Check for level up
+        if (player.level > oldLevel) {
+          showToast(`🎉 LEVEL UP! You are now level ${player.level}!`, 'success', 4000);
+          startConfetti();
+          setTimeout(stopConfetti, 3000);
+        }
+        
+        showToast('✨ Stats updated!', 'info', 2000);
+      }
+    )
+    .subscribe((status) => {
+      console.log('Realtime subscription status:', status);
+      if (status === 'SUBSCRIBED') {
+        document.getElementById('realtimeStatus').style.opacity = '1';
+      }
+    });
+}
+
 async function loadPlayer() {
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return window.location.href="index.html";
@@ -354,6 +458,9 @@ async function loadPlayer() {
     return; 
   }
   player = playerData;
+  
+  // Setup realtime after player is loaded
+  setupRealtimeSubscription();
   renderStats();
 }
 
@@ -365,11 +472,13 @@ function renderStats() {
   const prevLevelXP = Math.pow(player.level - 1, 2) * 100;
   const xpProgress = ((player.xp - prevLevelXP) / (nextLevelXP - prevLevelXP)) * 100;
   document.getElementById("xpBar").style.width = Math.min(100, Math.max(0, xpProgress)) + '%';
+  document.getElementById("levelDisplay").textContent = `Level ${player.level}`;
   
   // Update Energy Bar
   const energyPercent = (player.energy / 100) * 100;
   const energyBar = document.getElementById("energyBar");
   energyBar.style.width = Math.min(100, Math.max(0, energyPercent)) + '%';
+  document.getElementById("energyDisplay").textContent = `${player.energy}/100`;
   
   // Color energy bar based on level
   if (player.energy < 20) energyBar.style.background = '#f44336';
@@ -412,15 +521,12 @@ function renderStats() {
   `;
 }
 
-function checkLevelUp(oldLevel, newLevel) {
-  if (newLevel > oldLevel) {
-    showToast(`🎉 LEVEL UP! You are now level ${newLevel}!`, 'success', 4000);
-    startConfetti();
-    setTimeout(stopConfetti, 3000);
-  }
-}
-
 async function logout() {
+  // Clean up realtime subscription
+  if (playerChannel) {
+    playerChannel.unsubscribe();
+  }
+  
   await sb.auth.signOut();
   showToast('Logged out successfully', 'info');
   setTimeout(() => {
@@ -432,17 +538,12 @@ function goTo(page) {
   window.location.href = page; 
 }
 
-// Polling with toast notification for updates
-setInterval(async () => {
-  if (!player) return;
-  const { data: playerData } = await sb.from('players').select('*').eq('id', player.id).single();
-  if (playerData) {
-    const oldLevel = player.level;
-    player = playerData;
-    renderStats();
-    checkLevelUp(oldLevel, player.level);
+// Clean up on page unload
+window.addEventListener('beforeunload', () => {
+  if (playerChannel) {
+    playerChannel.unsubscribe();
   }
-}, 5000);
+});
 
 loadPlayer();
 
