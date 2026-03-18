@@ -4,7 +4,6 @@
   <title>Rheoa RPG - Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    /* Keep all existing Phase 2 styles */
     * {
       box-sizing: border-box;
       margin: 0;
@@ -93,6 +92,7 @@
       border: 1px solid #999;
       border-radius: 15px;
       overflow: hidden;
+      position: relative;
     }
     
     .progress-bar-fill {
@@ -103,34 +103,22 @@
     #xpBar { background: #9c27b0; }
     #energyBar { background: #4CAF50; }
     
-    /* Realtime status indicator */
-    .realtime-status {
-      position: fixed;
-      bottom: 10px;
-      right: 10px;
-      padding: 5px 10px;
-      background: rgba(0,0,0,0.7);
-      color: white;
-      border-radius: 20px;
+    /* Energy regeneration indicator */
+    .regen-timer {
       font-size: 0.8rem;
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      z-index: 9997;
-    }
-    
-    .status-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #4CAF50;
+      color: #666;
+      margin-top: 5px;
+      text-align: center;
       animation: pulse 2s infinite;
     }
     
-    @keyframes pulse {
-      0% { opacity: 1; }
-      50% { opacity: 0.5; }
-      100% { opacity: 1; }
+    .regen-badge {
+      background: #ff9800;
+      color: white;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.7rem;
+      margin-left: 5px;
     }
     
     .button-container {
@@ -185,6 +173,7 @@
     .toast.success { background: #4CAF50; }
     .toast.error { background: #f44336; }
     .toast.info { background: #2196F3; }
+    .toast.warning { background: #ff9800; }
     
     @keyframes slideIn {
       from { transform: translateX(100%); opacity: 0; }
@@ -209,6 +198,36 @@
       height: 100%;
       pointer-events: none;
       z-index: 9998;
+    }
+    
+    /* Realtime status */
+    .realtime-status {
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      padding: 5px 10px;
+      background: rgba(0,0,0,0.7);
+      color: white;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      z-index: 9997;
+    }
+    
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #4CAF50;
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.5; }
+      100% { opacity: 1; }
     }
     
     @media (max-width: 600px) {
@@ -258,6 +277,10 @@
         right: 5px;
         font-size: 0.7rem;
       }
+      
+      .regen-timer {
+        font-size: 0.7rem;
+      }
     }
   </style>
 </head>
@@ -288,12 +311,16 @@
 
 <div class="progress-container">
   <div class="progress-label">
-    <span>Energy</span>
+    <span>
+      Energy
+      <span class="regen-badge" id="regenBadge">⚡ +1/min</span>
+    </span>
     <span id="energyDisplay">100/100</span>
   </div>
   <div class="progress-bar-bg">
     <div class="progress-bar-fill" id="energyBar" style="width:100%"></div>
   </div>
+  <div class="regen-timer" id="regenTimer"></div>
 </div>
 
 <div class="button-container">
@@ -314,6 +341,7 @@ const sb = window.supabase.createClient(
 let player = null;
 let confettiAnimation = null;
 let playerChannel = null;
+let regenInterval = null;
 
 // Toast notification system
 function showToast(message, type = 'info', duration = 3000) {
@@ -381,9 +409,6 @@ function startConfetti() {
         ctx.fillStyle = p.color;
         ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size);
         ctx.restore();
-      } else if (p.y > canvas.height + 50 && anyVisible === false) {
-        p.y = -20;
-        p.x = Math.random() * canvas.width;
       }
     });
     
@@ -403,6 +428,50 @@ function stopConfetti() {
   const canvas = document.getElementById('confetti-canvas');
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+// Regenerate energy function
+async function regenerateEnergy() {
+  if (!player) return;
+  
+  try {
+    const { data, error } = await sb.rpc('regenerate_energy');
+    
+    if (error) throw error;
+    
+    if (data.success && data.energy_added > 0) {
+      // Update local player data
+      player.energy = data.new_energy;
+      renderStats();
+      showToast(`⚡ +${data.energy_added} energy regenerated!`, 'info', 2000);
+    }
+  } catch (error) {
+    console.error('Error regenerating energy:', error);
+  }
+}
+
+// Get energy regen info
+async function updateRegenInfo() {
+  if (!player) return;
+  
+  try {
+    const { data, error } = await sb.rpc('get_energy_regen_info');
+    
+    if (error) throw error;
+    
+    if (data.success) {
+      const timerEl = document.getElementById('regenTimer');
+      if (data.energy_to_regenerate > 0) {
+        timerEl.textContent = `⏳ Next energy in ${data.seconds_to_next_regen}s (${data.energy_to_regenerate} available)`;
+      } else if (player.energy < 100) {
+        timerEl.textContent = `⏳ Next energy in ${data.seconds_to_next_regen}s`;
+      } else {
+        timerEl.textContent = `✨ Energy full`;
+      }
+    }
+  } catch (error) {
+    console.error('Error getting regen info:', error);
+  }
 }
 
 // Set up realtime subscription
@@ -436,12 +505,9 @@ function setupRealtimeSubscription() {
           startConfetti();
           setTimeout(stopConfetti, 3000);
         }
-        
-        showToast('✨ Stats updated!', 'info', 2000);
       }
     )
     .subscribe((status) => {
-      console.log('Realtime subscription status:', status);
       if (status === 'SUBSCRIBED') {
         document.getElementById('realtimeStatus').style.opacity = '1';
       }
@@ -458,6 +524,9 @@ async function loadPlayer() {
     return; 
   }
   player = playerData;
+  
+  // Regenerate energy on load
+  await regenerateEnergy();
   
   // Setup realtime after player is loaded
   setupRealtimeSubscription();
@@ -519,6 +588,9 @@ function renderStats() {
       <div class="value">${player.success_boost || 0}%</div>
     </div>
   `;
+  
+  // Update regen info
+  updateRegenInfo();
 }
 
 async function logout() {
@@ -543,14 +615,28 @@ window.addEventListener('beforeunload', () => {
   if (playerChannel) {
     playerChannel.unsubscribe();
   }
+  if (regenInterval) {
+    clearInterval(regenInterval);
+  }
 });
 
+// Start energy regeneration timer (check every 10 seconds)
+function startRegenTimer() {
+  regenInterval = setInterval(async () => {
+    if (player && player.energy < 100) {
+      await regenerateEnergy();
+    }
+    updateRegenInfo();
+  }, 10000); // Check every 10 seconds
+}
+
 loadPlayer();
+startRegenTimer();
 
 // Welcome toast
 setTimeout(() => {
   if (player) {
-    showToast(`Welcome back, ${player.username}!`, 'info');
+    showToast(`Welcome back, ${player.username}! Energy regenerates over time ⚡`, 'info');
   }
 }, 1000);
 </script>
