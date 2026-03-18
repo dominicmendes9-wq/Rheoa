@@ -161,6 +161,23 @@
       font-style: italic;
     }
     
+    /* Achievement notification badge */
+    .achievement-badge {
+      position: relative;
+      display: inline-block;
+    }
+    
+    .notification-dot {
+      position: absolute;
+      top: -5px;
+      right: -5px;
+      width: 12px;
+      height: 12px;
+      background: #f44336;
+      border-radius: 50%;
+      animation: pulse 1s infinite;
+    }
+    
     .button-container {
       display: flex;
       flex-wrap: wrap;
@@ -182,12 +199,23 @@
       transition: all 0.2s;
       min-width: 120px;
       flex: 0 1 auto;
+      position: relative;
     }
     
     button:hover {
       background: #333;
       color: white;
       transform: scale(1.02);
+    }
+    
+    button.achievement-btn {
+      background: #9c27b0;
+      color: white;
+      border-color: #7b1fa2;
+    }
+    
+    button.achievement-btn:hover {
+      background: #7b1fa2;
     }
     
     /* Toast Notification Styles */
@@ -214,6 +242,7 @@
     .toast.error { background: #f44336; }
     .toast.info { background: #2196F3; }
     .toast.warning { background: #ff9800; }
+    .toast.achievement { background: #9c27b0; }
     
     @keyframes slideIn {
       from { transform: translateX(100%); opacity: 0; }
@@ -325,6 +354,11 @@
       .stat-warning-badge {
         font-size: 1rem;
       }
+      
+      .notification-dot {
+        width: 8px;
+        height: 8px;
+      }
     }
   </style>
 </head>
@@ -376,7 +410,11 @@
   <button onclick="goTo('jobs.html')">💼 Jobs</button>
   <button onclick="goTo('crime.html')">🔫 Crime</button>
   <button onclick="goTo('inventory.html')">🎒 Inventory</button>
-  <button onclick="goTo('history.html')">📜 History</button> 
+  <button onclick="goTo('history.html')">📜 History</button>
+  <button onclick="goTo('achievements.html')" class="achievement-btn" id="achievementsBtn">
+    🏆 Achievements
+    <span id="achievementNotification" class="notification-dot" style="display: none;"></span>
+  </button>
   <button onclick="logout()" style="background:#f44336; color:white; border-color:#d32f2f;">🚪 Logout</button>
 </div>
 
@@ -392,6 +430,7 @@ let confettiAnimation = null;
 let playerChannel = null;
 let regenInterval = null;
 let decayCheckInterval = null;
+let achievementCheckInterval = null;
 
 // Toast notification system
 function showToast(message, type = 'info', duration = 3000) {
@@ -478,6 +517,40 @@ function stopConfetti() {
   const canvas = document.getElementById('confetti-canvas');
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+// ACHIEVEMENT FUNCTIONS
+async function checkAchievementNotifications() {
+  if (!player) return;
+  
+  try {
+    const { data: unviewed, error } = await sb.rpc('get_unviewed_achievements', {
+      p_player_id: player.id
+    });
+    
+    if (error) throw error;
+    
+    const notificationDot = document.getElementById('achievementNotification');
+    
+    if (unviewed && unviewed.length > 0) {
+      // Show notification dot
+      notificationDot.style.display = 'block';
+      
+      // Show toast for first achievement
+      showToast(`🏆 New Achievement: ${unviewed[0].name}!`, 'achievement', 5000);
+      
+      // If multiple, show count
+      if (unviewed.length > 1) {
+        setTimeout(() => {
+          showToast(`...and ${unviewed.length - 1} more achievement(s) unlocked!`, 'info', 3000);
+        }, 1000);
+      }
+    } else {
+      notificationDot.style.display = 'none';
+    }
+  } catch (error) {
+    console.error('Error checking achievements:', error);
+  }
 }
 
 // STAT DECAY FUNCTIONS
@@ -626,6 +699,9 @@ function setupRealtimeSubscription() {
           startConfetti();
           setTimeout(stopConfetti, 3000);
         }
+        
+        // Check achievements after any update
+        checkAchievementNotifications();
       }
     )
     .subscribe((status) => {
@@ -651,6 +727,9 @@ async function loadPlayer() {
   
   // Regenerate energy on load
   await regenerateEnergy();
+  
+  // Check for new achievements
+  await checkAchievementNotifications();
   
   // Setup realtime after player is loaded
   setupRealtimeSubscription();
@@ -767,6 +846,9 @@ window.addEventListener('beforeunload', () => {
   if (decayCheckInterval) {
     clearInterval(decayCheckInterval);
   }
+  if (achievementCheckInterval) {
+    clearInterval(achievementCheckInterval);
+  }
 });
 
 // Start energy regeneration timer (check every 10 seconds)
@@ -788,9 +870,19 @@ function startDecayChecker() {
   }, 300000); // Check every 5 minutes
 }
 
+// Check for new achievements every 30 seconds
+function startAchievementChecker() {
+  achievementCheckInterval = setInterval(async () => {
+    if (player) {
+      await checkAchievementNotifications();
+    }
+  }, 30000); // Check every 30 seconds
+}
+
 loadPlayer();
 startRegenTimer();
 startDecayChecker();
+startAchievementChecker();
 
 // Welcome toast
 setTimeout(() => {
