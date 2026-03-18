@@ -295,6 +295,16 @@
       margin-left: 8px;
     }
     
+    /* Energy regen indicator */
+    .regen-timer {
+      font-size: 0.8rem;
+      color: #666;
+      margin-top: 5px;
+      margin-bottom: 15px;
+      text-align: center;
+      animation: pulse 2s infinite;
+    }
+    
     @media (max-width: 600px) {
       body { padding: 10px; }
       
@@ -358,6 +368,11 @@
         font-size: 0.7rem;
         padding: 2px 6px;
       }
+      
+      .regen-timer {
+        font-size: 0.7rem;
+        margin-bottom: 10px;
+      }
     }
   </style>
 </head>
@@ -390,6 +405,9 @@
   </div>
 </div>
 
+<!-- Energy Regen Timer -->
+<div id="regenTimer" class="regen-timer"></div>
+
 <div id="jobs" class="jobs-grid">
   <div class="loading">Loading jobs...</div>
 </div>
@@ -409,6 +427,7 @@ let confettiAnimation = null;
 let playerChannel = null;
 let jobsChannel = null;
 let cooldownInterval = null;
+let regenInterval = null;
 let isUpdating = false;
 let jobCooldowns = new Map();
 
@@ -499,6 +518,50 @@ function stopConfetti() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 }
 
+// ENERGY REGENERATION FUNCTIONS
+async function regenerateEnergy() {
+  if (!player) return;
+  
+  try {
+    const { data, error } = await sb.rpc('regenerate_energy');
+    
+    if (error) throw error;
+    
+    if (data.success && data.energy_added > 0) {
+      // Update local player data
+      player.energy = data.new_energy;
+      updatePlayerStats();
+      showToast(`⚡ +${data.energy_added} energy regenerated!`, 'info', 2000);
+      updateCooldowns(); // Update button states
+    }
+  } catch (error) {
+    console.error('Error regenerating energy:', error);
+  }
+}
+
+async function updateRegenInfo() {
+  if (!player) return;
+  
+  try {
+    const { data, error } = await sb.rpc('get_energy_regen_info');
+    
+    if (error) throw error;
+    
+    if (data.success) {
+      const timerEl = document.getElementById('regenTimer');
+      if (data.energy_to_regenerate > 0) {
+        timerEl.textContent = `⏳ Next energy in ${data.seconds_to_next_regen}s (${data.energy_to_regenerate} available)`;
+      } else if (player.energy < 100) {
+        timerEl.textContent = `⏳ Next energy in ${data.seconds_to_next_regen}s`;
+      } else {
+        timerEl.textContent = `✨ Energy full`;
+      }
+    }
+  } catch (error) {
+    console.error('Error getting regen info:', error);
+  }
+}
+
 // Update player stats display
 function updatePlayerStats() {
   if (!player) return;
@@ -510,6 +573,9 @@ function updatePlayerStats() {
   document.getElementById('statCash').textContent = `₹${player.cash.toLocaleString()}`;
   document.getElementById('statEnergy').textContent = `${player.energy}/100`;
   document.getElementById('statLevel').textContent = player.level;
+  
+  // Update regen info
+  updateRegenInfo();
 }
 
 // Set up realtime subscriptions
@@ -710,6 +776,9 @@ async function loadJobs() {
     }
     
     player = playerData;
+    
+    // Regenerate energy on load
+    await regenerateEnergy();
     updatePlayerStats();
     
     // Setup realtime if not already done
@@ -863,6 +932,16 @@ function startCooldownTimer() {
   }, 1000);
 }
 
+// Start energy regeneration timer (check every 10 seconds)
+function startRegenTimer() {
+  regenInterval = setInterval(async () => {
+    if (player && player.energy < 100) {
+      await regenerateEnergy();
+    }
+    updateRegenInfo();
+  }, 10000); // Check every 10 seconds
+}
+
 function goBack() { 
   window.location.href = "dashboard.html"; 
 }
@@ -872,16 +951,18 @@ window.addEventListener('beforeunload', () => {
   if (playerChannel) playerChannel.unsubscribe();
   if (jobsChannel) jobsChannel.unsubscribe();
   if (cooldownInterval) clearInterval(cooldownInterval);
+  if (regenInterval) clearInterval(regenInterval);
 });
 
 // Initialize
 loadJobs();
 startCooldownTimer();
+startRegenTimer();
 
 // Welcome toast
 setTimeout(() => {
   if (player) {
-    showToast(`Ready to work, ${player?.username}?`, 'info');
+    showToast(`Ready to work, ${player?.username}? Energy regenerates over time ⚡`, 'info');
   }
 }, 1000);
 </script>
