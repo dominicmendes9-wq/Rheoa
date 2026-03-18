@@ -4,7 +4,6 @@
   <title>Rheoa RPG - Jobs</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    /* Same styles as crime.html but with job-specific colors */
     * {
       box-sizing: border-box;
       margin: 0;
@@ -43,7 +42,7 @@
       display: flex;
       flex-direction: column;
       height: fit-content;
-      min-height: 320px;
+      min-height: 360px; /* Fixed minimum height for consistency */
       width: 100%;
     }
     
@@ -259,6 +258,16 @@
       border: 2px dashed #ccc;
     }
     
+    /* Bonus XP indicator */
+    .bonus-badge {
+      background: #9c27b0;
+      color: white;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      margin-left: 8px;
+    }
+    
     @media (max-width: 600px) {
       body { padding: 10px; }
       
@@ -269,7 +278,7 @@
       
       .job-card {
         padding: 15px;
-        min-height: 300px;
+        min-height: 340px;
       }
       
       .job-card h3 {
@@ -545,7 +554,7 @@ function getJobCooldown(jobId) {
   return jobCooldowns.get(jobId) || 0;
 }
 
-// Update button states only
+// Update button states only (no full rebuild)
 function updateCooldowns() {
   if (!player) return;
   
@@ -581,7 +590,7 @@ function updateCooldowns() {
   });
 }
 
-// Build job card HTML
+// Build job card HTML (stable structure)
 function buildJobCard(job, remaining) {
   const xpBonus = Math.floor((player?.success_boost || 0) * job.xp_reward / 100);
   const totalXp = job.xp_reward + xpBonus;
@@ -606,7 +615,7 @@ function buildJobCard(job, remaining) {
       <div class="job-details">
         <p>💰 Salary <span class="salary">₹${job.salary.toLocaleString()}</span></p>
         <p>⭐ Base XP <span class="xp">${job.xp_reward} XP</span></p>
-        ${xpBonus > 0 ? `<p>✨ Bonus <span class="xp">+${xpBonus} XP</span></p>` : ''}
+        ${xpBonus > 0 ? `<p>✨ Bonus <span class="xp">+${xpBonus} XP <span class="bonus-badge">Boost!</span></span></p>` : ''}
         <p>⚡ Energy Cost <span class="${!hasEnergy ? 'energy-warning' : 'energy'}">${job.energy_cost}</span></p>
         <p>📊 Total XP <span class="xp">${totalXp} XP</span></p>
       </div>
@@ -672,7 +681,7 @@ async function loadJobs() {
     const jobsDiv = document.getElementById("jobs");
     jobsDiv.innerHTML = "";
 
-    // Build all cards
+    // Build all cards at once (no incremental rendering)
     jobs.forEach(job => {
       const remaining = jobCooldowns.get(job.id) || 0;
       jobsDiv.innerHTML += buildJobCard(job, remaining);
@@ -685,7 +694,7 @@ async function loadJobs() {
   }
 }
 
-// UPDATED: Now uses RPC instead of client-side logic
+// UPDATED: Uses RPC for server-side logic
 async function attemptJob(jobId) {
   if (!player || isUpdating) return;
 
@@ -744,14 +753,22 @@ async function attemptJob(jobId) {
       setTimeout(stopConfetti, 3000);
     }
 
-    // Update the job card button immediately
+    // Update the job card button immediately (no card rebuild)
     const jobCard = document.querySelector(`.job-card[data-job-id="${jobId}"]`);
     if (jobCard) {
       const button = jobCard.querySelector('button');
       if (button) {
         button.disabled = true;
         button.classList.add('cooldown');
+        button.classList.remove('need-energy');
         button.textContent = `⏳ Wait ${data.cooldown_seconds}s`;
+      }
+      
+      // Update energy cost color if energy changed
+      const energySpan = jobCard.querySelector('.energy, .energy-warning');
+      if (energySpan) {
+        const hasEnergy = player.energy >= parseInt(jobCard.dataset.energyCost);
+        energySpan.className = hasEnergy ? 'energy' : 'energy-warning';
       }
     }
 
@@ -763,7 +780,7 @@ async function attemptJob(jobId) {
   }
 }
 
-// Cooldown countdown timer
+// Cooldown countdown timer - updates cache and buttons only
 function startCooldownTimer() {
   cooldownInterval = setInterval(() => {
     if (!player || isUpdating) return;
