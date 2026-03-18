@@ -2,27 +2,202 @@
 <html>
 <head>
   <title>Rheoa RPG - Jobs</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body { font-family: 'Courier New', monospace; background: #f8f8f0; color: #222; padding: 20px; }
-    h1 { text-align: center; font-size: 2em; margin-bottom: 20px; }
-    .job-card { border:2px solid black; border-radius:10px; margin:10px; padding:10px; width:300px; }
-    button { margin-top:5px; padding:5px 10px; cursor:pointer; border-radius:5px; }
-    #feedback { margin-top:20px; font-size:1.2em; font-weight:bold; }
-    #levelUpPopup { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); 
-                    background:#fff; padding:30px; border:3px solid #9c27b0; border-radius:10px; font-size:1.5em; 
-                    z-index:1000; text-align:center; }
-    .cooldown { background:#ccc; color:#666; cursor: not-allowed; }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body { 
+      font-family: 'Courier New', monospace; 
+      background: #f8f8f0; 
+      color: #222; 
+      padding: 20px;
+      min-height: 100vh;
+    }
+    
+    h1 { 
+      text-align: center; 
+      margin-bottom: 30px;
+      font-size: clamp(1.5rem, 5vw, 2.5rem);
+    }
+    
+    .jobs-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      padding: 10px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    
+    .job-card { 
+      border: 2px solid black; 
+      border-radius: 12px; 
+      padding: 20px; 
+      background: white;
+      transition: transform 0.2s, box-shadow 0.2s;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .job-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 6px 15px rgba(0,0,0,0.15);
+    }
+    
+    .job-card h3 {
+      font-size: 1.3rem;
+      margin-bottom: 15px;
+      text-align: center;
+      border-bottom: 2px solid #eee;
+      padding-bottom: 8px;
+    }
+    
+    .job-details {
+      flex-grow: 1;
+      margin-bottom: 15px;
+    }
+    
+    .job-details p {
+      margin: 8px 0;
+      font-size: 1rem;
+      display: flex;
+      justify-content: space-between;
+    }
+    
+    .job-details p span {
+      font-weight: bold;
+    }
+    
+    .salary { color: #4CAF50; }
+    .xp { color: #9c27b0; }
+    .energy { color: #2196F3; }
+    
+    button {
+      width: 100%;
+      padding: 12px;
+      font-size: 1.1rem;
+      font-family: 'Courier New', monospace;
+      font-weight: bold;
+      border: 2px solid black;
+      border-radius: 8px;
+      background: #2196F3;
+      color: white;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-top: 10px;
+    }
+    
+    button:hover:not(:disabled) {
+      background: #1976D2;
+      transform: scale(1.02);
+    }
+    
+    button.cooldown {
+      background: #ccc;
+      color: #666;
+      cursor: not-allowed;
+      border-color: #999;
+    }
+    
+    .back-button {
+      display: block;
+      width: 200px;
+      margin: 30px auto;
+      background: #666;
+    }
+    
+    .back-button:hover {
+      background: #555;
+    }
+    
+    #feedback { 
+      margin: 20px auto;
+      font-weight: bold; 
+      text-align: center;
+      font-size: 1.2rem;
+      padding: 10px;
+      max-width: 600px;
+    }
+    
+    #levelUpPopup { 
+      display: none; 
+      position: fixed; 
+      top: 50%; 
+      left: 50%; 
+      transform: translate(-50%, -50%); 
+      background: #fff; 
+      padding: 30px; 
+      border: 4px solid #9c27b0; 
+      border-radius: 15px; 
+      font-size: 2rem; 
+      font-weight: bold;
+      z-index: 1000; 
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      animation: popIn 0.3s ease-out;
+    }
+    
+    @keyframes popIn {
+      0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+      100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+    }
+    
+    @media (max-width: 600px) {
+      body { padding: 10px; }
+      
+      .jobs-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+      }
+      
+      .job-card {
+        padding: 15px;
+      }
+      
+      .job-card h3 {
+        font-size: 1.2rem;
+      }
+      
+      button {
+        padding: 15px;
+      }
+      
+      .back-button {
+        width: 100%;
+      }
+      
+      #levelUpPopup {
+        font-size: 1.5rem;
+        padding: 20px;
+        width: 90%;
+      }
+    }
+    
+    .loading {
+      text-align: center;
+      font-size: 1.2rem;
+      padding: 40px;
+      color: #666;
+      grid-column: 1 / -1;
+    }
   </style>
 </head>
 <body>
 
-<h1>Jobs</h1>
+<h1>💼 Available Jobs</h1>
 
-<div id="jobs"></div>
+<div id="jobs" class="jobs-grid">
+  <div class="loading">Loading jobs...</div>
+</div>
+
 <div id="feedback"></div>
-<div id="levelUpPopup">🎉 Level Up! 🎉</div>
+<div id="levelUpPopup">🎉 LEVEL UP! 🎉</div>
 
-<button onclick="goBack()">Back to Dashboard</button>
+<button class="back-button" onclick="goBack()">← Back to Dashboard</button>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 <script>
@@ -34,16 +209,22 @@ const sb = window.supabase.createClient(
 let player = null;
 let cooldowns = {};
 
-// 🌟 Load player + jobs
 async function loadJobs() {
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return window.location.href = "index.html";
 
   let { data: playerData } = await sb.from('players').select('*').eq('auth_id', user.id).single();
-  if (!playerData) { document.getElementById("jobs").innerText="Player not found"; return; }
+  if (!playerData) { 
+    document.getElementById("jobs").innerHTML = '<div class="loading">Player not found</div>'; 
+    return; 
+  }
   player = playerData;
 
   let { data: jobs } = await sb.from('jobs').select('*');
+  if (!jobs || jobs.length === 0) {
+    document.getElementById("jobs").innerHTML = '<div class="loading">No jobs available</div>';
+    return;
+  }
 
   const jobsDiv = document.getElementById("jobs");
   jobsDiv.innerHTML = "";
@@ -51,64 +232,84 @@ async function loadJobs() {
   jobs.forEach(job => {
     const cdKey = job.id;
     const remaining = cooldowns[cdKey] ? Math.max(0, 30 - ((Date.now() - cooldowns[cdKey]) / 1000)) : 0;
+    const xpBonus = Math.floor((player.success_boost || 0) * job.xp_reward / 100);
 
     jobsDiv.innerHTML += `
       <div class="job-card">
         <h3>${job.name}</h3>
-        <p>💰 ₹${job.salary} | ⚡ ${job.energy_cost} | ⭐ ${job.xp_reward}</p>
-        <button id="jobBtn-${job.id}" onclick="doJob('${job.id}', ${job.salary}, ${job.energy_cost}, ${job.xp_reward})"
-          ${remaining>0?'disabled class="cooldown"':''
-        }>
-          ${remaining>0?`Wait ${Math.ceil(remaining)}s`:'Work'}
+        <div class="job-details">
+          <p>💰 Salary <span class="salary">₹${job.salary.toLocaleString()}</span></p>
+          <p>⭐ XP Reward <span class="xp">${job.xp_reward} XP</span></p>
+          ${xpBonus > 0 ? `<p>✨ Bonus <span class="xp">+${xpBonus} XP</span></p>` : ''}
+          <p>⚡ Energy Cost <span class="energy">${job.energy_cost}</span></p>
+        </div>
+        <button id="jobBtn-${job.id}" 
+                onclick="doJob('${job.id}', ${job.salary}, ${job.energy_cost}, ${job.xp_reward})"
+                ${remaining > 0 || player.energy < job.energy_cost ? 'disabled class="cooldown"' : ''}>
+          ${remaining > 0 ? `⏳ Wait ${Math.ceil(remaining)}s` : 
+            player.energy < job.energy_cost ? '⚡ Need Energy' : '💼 Work'}
         </button>
       </div>
     `;
   });
 }
 
-// 💼 Do Job
 async function doJob(jobId, salary, energyCost, xpReward) {
   if (!player) return;
 
   const now = new Date();
-  if (player.energy < energyCost) { showFeedback("Not enough energy!", false); return; }
+  if (player.energy < energyCost) { 
+    showFeedback("Not enough energy!", false); 
+    return; 
+  }
 
-  // Optional: success boost applies to XP
   const finalXP = xpReward + Math.floor((player.success_boost || 0) * xpReward / 100);
-
-  let newCash = player.cash + salary;
-  let newXP = player.xp + finalXP;
-  let newEnergy = player.energy - energyCost;
-
+  const newCash = player.cash + salary;
+  const newXP = player.xp + finalXP;
+  const newEnergy = player.energy - energyCost;
   const newLevel = Math.floor(Math.sqrt(newXP / 100)) + 1;
 
-  await sb.from('players').update({ cash: newCash, xp: newXP, energy: newEnergy, level: newLevel }).eq('id', player.id);
-  player.cash = newCash; player.xp = newXP; player.energy = newEnergy; player.level = newLevel;
+  await sb.from('players').update({ 
+    cash: newCash, 
+    xp: newXP, 
+    energy: newEnergy, 
+    level: newLevel 
+  }).eq('id', player.id);
+  
+  player.cash = newCash; 
+  player.xp = newXP; 
+  player.energy = newEnergy; 
+  player.level = newLevel;
 
   checkLevelUp(newLevel);
-  showFeedback(`💼 Worked! +₹${salary} | -${energyCost}⚡ | +${finalXP} XP`, true);
+  showFeedback(`✅ Worked! +₹${salary.toLocaleString()} | +${finalXP} XP`, true);
 
-  // Update cooldown
   cooldowns[jobId] = Date.now();
-  const { data: record } = await sb.from('player_jobs').select('*').eq('player_id', player.id).eq('job_id', jobId).maybeSingle();
+  const { data: record } = await sb.from('player_jobs')
+    .select('*')
+    .eq('player_id', player.id)
+    .eq('job_id', jobId)
+    .maybeSingle();
+    
   if (record) {
-    await sb.from('player_jobs').update({ last_worked: now }).eq('id', record.id);
+    await sb.from('player_jobs')
+      .update({ last_worked: now })
+      .eq('id', record.id);
   } else {
-    await sb.from('player_jobs').insert({ player_id: player.id, job_id: jobId, last_worked: now });
+    await sb.from('player_jobs')
+      .insert({ player_id: player.id, job_id: jobId, last_worked: now });
   }
 
   loadJobs();
 }
 
-// ⚡ Feedback display
 function showFeedback(msg, success=true) {
   const f = document.getElementById("feedback");
-  f.style.color = success ? 'green' : 'red';
+  f.style.color = success ? '#4CAF50' : '#f44336';
   f.innerText = msg;
   setTimeout(() => { f.innerText = ''; }, 4000);
 }
 
-// 🎉 Level-Up Popup
 function checkLevelUp(newLevel) {
   if (newLevel > player.level) {
     const popup = document.getElementById("levelUpPopup");
@@ -117,12 +318,11 @@ function checkLevelUp(newLevel) {
   }
 }
 
-// 🔙 Back to dashboard
-function goBack() { window.location.href="dashboard.html"; }
+function goBack() { 
+  window.location.href = "dashboard.html"; 
+}
 
-// Auto-refresh cooldown timers every second
 setInterval(() => loadJobs(), 1000);
-
 loadJobs();
 </script>
 
