@@ -143,13 +143,42 @@
       background: #555;
     }
     
-    #feedback { 
-      margin: 20px auto;
-      font-weight: bold; 
-      text-align: center;
-      font-size: 1.2rem;
-      padding: 10px;
-      max-width: 600px;
+    /* Toast Notification Styles */
+    .toast-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 9999;
+    }
+    
+    .toast {
+      padding: 15px 25px;
+      margin-bottom: 10px;
+      border-radius: 8px;
+      color: white;
+      font-weight: bold;
+      animation: slideIn 0.3s ease-out;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      min-width: 250px;
+      max-width: 350px;
+    }
+    
+    .toast.success { background: #4CAF50; }
+    .toast.error { background: #f44336; }
+    .toast.info { background: #2196F3; }
+    
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    
+    @keyframes slideOut {
+      from { transform: translateX(0); opacity: 1; }
+      to { transform: translateX(100%); opacity: 0; }
+    }
+    
+    .toast.fade-out {
+      animation: slideOut 0.3s ease-out forwards;
     }
     
     hr {
@@ -165,6 +194,7 @@
       background: white;
       border-radius: 10px;
       border: 2px dashed #ccc;
+      grid-column: 1 / -1;
     }
     
     @media (max-width: 600px) {
@@ -183,17 +213,18 @@
         width: 100%;
       }
       
-      h2 {
-        margin: 20px 0 15px;
-      }
-      
-      button {
-        padding: 12px;
+      .toast {
+        min-width: 200px;
+        max-width: 280px;
+        padding: 12px 20px;
+        font-size: 0.9rem;
       }
     }
   </style>
 </head>
 <body>
+
+<div class="toast-container" id="toast-container"></div>
 
 <h1>🎒 Inventory & Shop</h1>
 
@@ -209,8 +240,6 @@
   <div id="inventory" class="items-grid"></div>
 </div>
 
-<div id="feedback"></div>
-
 <button class="back-button" onclick="goBack()">← Back to Dashboard</button>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
@@ -221,6 +250,25 @@ const sb = window.supabase.createClient(
 );
 
 let player = null;
+
+// Toast notification system
+function showToast(message, type = 'info', duration = 3000) {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.textContent = message;
+  
+  container.appendChild(toast);
+  
+  setTimeout(() => {
+    toast.classList.add('fade-out');
+    setTimeout(() => {
+      if (toast.parentNode) {
+        container.removeChild(toast);
+      }
+    }, 300);
+  }, duration);
+}
 
 async function init() {
   const { data: { user } } = await sb.auth.getUser();
@@ -235,6 +283,11 @@ async function init() {
   player = playerData;
   loadShop();
   loadInventory();
+  
+  // Welcome toast
+  setTimeout(() => {
+    showToast(`Welcome to the shop, ${player.username}!`, 'info');
+  }, 500);
 }
 
 async function loadShop() {
@@ -253,6 +306,7 @@ async function loadShop() {
         <p>Type <span>${item.type}</span></p>
         <p>Effect <span class="effect">+${item.effect_value}</span></p>
         <p>Price <span class="price">₹${item.price.toLocaleString()}</span></p>
+        <p>Your Cash <span class="${player.cash >= item.price ? 'price' : 'energy-warning'}">₹${player.cash.toLocaleString()}</span></p>
       </div>
       <button class="buy" onclick="buyItem('${item.id}', ${item.price})" 
               ${player.cash < item.price ? 'disabled' : ''}>
@@ -277,6 +331,7 @@ async function loadInventory() {
   inventoryDiv.innerHTML = items.map(i => {
     const isBoost = (i.items.type === 'energy' && player.energy < 100) || 
                     (i.items.type === 'success_boost');
+    const canUseEnergy = i.items.type === 'energy' && player.energy < 100;
     
     return `
       <div class="item-card ${isBoost ? 'boost' : ''}">
@@ -285,6 +340,7 @@ async function loadInventory() {
           <p>Quantity <span class="quantity">x${i.quantity}</span></p>
           <p>Type <span>${i.items.type}</span></p>
           <p>Effect <span class="effect">+${i.items.effect_value}</span></p>
+          ${i.items.type === 'energy' ? `<p>Current Energy <span>${player.energy}/100</span></p>` : ''}
         </div>
         <button class="use" onclick="useItem('${i.item_id}', '${i.items.type}', ${i.items.effect_value})"
                 ${i.items.type === 'energy' && player.energy >= 100 ? 'disabled' : ''}>
@@ -297,7 +353,7 @@ async function loadInventory() {
 
 async function buyItem(itemId, price) {
   if (player.cash < price) { 
-    showFeedback("Not enough cash!", false); 
+    showToast("❌ Not enough cash!", 'error'); 
     return; 
   }
 
@@ -319,7 +375,7 @@ async function buyItem(itemId, price) {
       .insert({ player_id: player.id, item_id: itemId, quantity: 1 });
   }
 
-  showFeedback("✅ Purchase successful!", true);
+  showToast("✅ Purchase successful!", 'success');
   loadShop();
   loadInventory();
 }
@@ -331,15 +387,16 @@ async function useItem(itemId, type, value) {
   let updateData = {};
 
   if (type === 'energy') {
+    const oldEnergy = player.energy;
     const newEnergy = Math.min(100, (player.energy || 0) + value);
     updateData.energy = newEnergy;
     player.energy = newEnergy;
-    msg = `⚡ Energy +${value}`;
+    msg = `⚡ Energy +${value} (${oldEnergy} → ${newEnergy})`;
   } else if (type === 'success_boost') {
     const newBoost = (player.success_boost || 0) + value;
     updateData.success_boost = newBoost;
     player.success_boost = newBoost;
-    msg = `⭐ Success Boost +${value}%`;
+    msg = `⭐ Success Boost +${value}% (Total: ${newBoost}%)`;
   }
 
   await sb.from('players').update(updateData).eq('id', player.id);
@@ -355,22 +412,16 @@ async function useItem(itemId, type, value) {
       await sb.from('player_items')
         .update({ quantity: existing.quantity - 1 })
         .eq('id', existing.id);
+      showToast(`${msg} (${existing.quantity - 1} left)`, 'success');
     } else {
       await sb.from('player_items')
         .delete()
         .eq('id', existing.id);
+      showToast(`${msg} (Last one used!)`, 'success');
     }
   }
 
-  showFeedback(msg, true);
   loadInventory();
-}
-
-function showFeedback(msg, success=true) {
-  const f = document.getElementById("feedback");
-  f.style.color = success ? '#4CAF50' : '#f44336';
-  f.innerText = msg;
-  setTimeout(() => f.innerText = '', 3000);
 }
 
 function goBack() { 
