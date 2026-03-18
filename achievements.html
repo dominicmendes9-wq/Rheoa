@@ -1,0 +1,623 @@
+<!-- achievements.html -->
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Rheoa RPG - Achievements</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body { 
+      font-family: 'Courier New', monospace; 
+      background: #f8f8f0; 
+      color: #222; 
+      padding: 20px;
+      min-height: 100vh;
+    }
+    
+    h1 { 
+      text-align: center; 
+      margin-bottom: 10px;
+      font-size: clamp(1.5rem, 5vw, 2.5rem);
+    }
+    
+    .subtitle {
+      text-align: center;
+      color: #666;
+      margin-bottom: 30px;
+      font-style: italic;
+    }
+    
+    /* Stats Summary */
+    .stats-summary {
+      display: flex;
+      justify-content: center;
+      gap: 30px;
+      margin-bottom: 30px;
+      padding: 20px;
+      background: white;
+      border-radius: 12px;
+      border: 2px solid black;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    
+    .stat-item {
+      text-align: center;
+    }
+    
+    .stat-label {
+      font-size: 0.9rem;
+      color: #666;
+    }
+    
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #9c27b0;
+    }
+    
+    /* Category Filters */
+    .category-filters {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 30px;
+      flex-wrap: wrap;
+    }
+    
+    .category-btn {
+      padding: 10px 20px;
+      font-family: 'Courier New', monospace;
+      font-weight: bold;
+      border: 2px solid black;
+      border-radius: 25px;
+      background: white;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .category-btn:hover {
+      background: #333;
+      color: white;
+    }
+    
+    .category-btn.active {
+      background: #333;
+      color: white;
+    }
+    
+    /* Achievements Grid */
+    .achievements-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+      padding: 10px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    
+    .achievement-card {
+      border: 2px solid black;
+      border-radius: 12px;
+      padding: 20px;
+      background: white;
+      transition: transform 0.2s, box-shadow 0.2s;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .achievement-card.completed {
+      border-color: #4CAF50;
+      background: #f0f9f0;
+    }
+    
+    .achievement-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 6px 15px rgba(0,0,0,0.15);
+    }
+    
+    .achievement-icon {
+      font-size: 3rem;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    
+    .achievement-name {
+      font-size: 1.2rem;
+      font-weight: bold;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    
+    .achievement-description {
+      color: #666;
+      font-size: 0.9rem;
+      text-align: center;
+      margin-bottom: 15px;
+      flex-grow: 1;
+    }
+    
+    .progress-container {
+      margin: 15px 0;
+    }
+    
+    .progress-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      color: #666;
+      margin-bottom: 5px;
+    }
+    
+    .progress-bar-bg {
+      width: 100%;
+      height: 20px;
+      background: #ccc;
+      border: 1px solid #999;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    
+    .progress-bar-fill {
+      height: 100%;
+      background: #4CAF50;
+      transition: width 0.3s ease;
+      border-radius: 10px;
+    }
+    
+    .progress-bar-fill.completed {
+      background: #9c27b0;
+    }
+    
+    .reward-info {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      margin: 10px 0;
+      padding: 10px;
+      background: #f5f5f5;
+      border-radius: 8px;
+    }
+    
+    .reward-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    
+    .reward-icon {
+      font-size: 1.2rem;
+    }
+    
+    .reward-value {
+      font-weight: bold;
+    }
+    
+    .claim-button {
+      width: 100%;
+      padding: 10px;
+      font-family: 'Courier New', monospace;
+      font-weight: bold;
+      border: 2px solid #4CAF50;
+      border-radius: 8px;
+      background: #4CAF50;
+      color: white;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-top: 10px;
+    }
+    
+    .claim-button:hover:not(:disabled) {
+      background: #45a049;
+      transform: scale(1.02);
+    }
+    
+    .claim-button:disabled {
+      background: #ccc;
+      border-color: #999;
+      cursor: not-allowed;
+    }
+    
+    .completed-badge {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: #4CAF50;
+      color: white;
+      padding: 4px 8px;
+      border-radius: 20px;
+      font-size: 0.7rem;
+      font-weight: bold;
+    }
+    
+    .hidden-badge {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: #9c27b0;
+      color: white;
+      padding: 4px 8px;
+      border-radius: 20px;
+      font-size: 0.7rem;
+      font-weight: bold;
+    }
+    
+    .back-button {
+      display: block;
+      width: 200px;
+      margin: 30px auto;
+      padding: 12px 24px;
+      font-family: 'Courier New', monospace;
+      font-weight: bold;
+      border: 2px solid black;
+      border-radius: 8px;
+      background: #666;
+      color: white;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .back-button:hover {
+      background: #555;
+      transform: scale(1.02);
+    }
+    
+    /* Toast Notifications */
+    .toast-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 9999;
+    }
+    
+    .toast {
+      padding: 15px 25px;
+      margin-bottom: 10px;
+      border-radius: 8px;
+      color: white;
+      font-weight: bold;
+      animation: slideIn 0.3s ease-out;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      min-width: 250px;
+      max-width: 350px;
+    }
+    
+    .toast.success { background: #4CAF50; }
+    .toast.error { background: #f44336; }
+    .toast.info { background: #2196F3; }
+    .toast.achievement { background: #9c27b0; }
+    
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    
+    .empty-message {
+      text-align: center;
+      padding: 60px;
+      color: #666;
+      font-size: 1.2rem;
+      grid-column: 1 / -1;
+      background: white;
+      border-radius: 12px;
+      border: 2px dashed #ccc;
+    }
+    
+    .loading {
+      text-align: center;
+      padding: 60px;
+      color: #666;
+      font-size: 1.2rem;
+      grid-column: 1 / -1;
+    }
+    
+    @media (max-width: 600px) {
+      body { padding: 10px; }
+      
+      .stats-summary {
+        flex-direction: column;
+        gap: 15px;
+      }
+      
+      .category-filters {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      
+      .category-btn {
+        width: 100%;
+      }
+      
+      .achievements-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .back-button {
+        width: 100%;
+      }
+      
+      .reward-info {
+        flex-wrap: wrap;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="toast-container" id="toast-container"></div>
+
+<h1>🏆 Achievements</h1>
+<div class="subtitle">Complete challenges and earn rewards</div>
+
+<!-- Stats Summary -->
+<div id="statsSummary" class="stats-summary" style="display: none;">
+  <div class="stat-item">
+    <div class="stat-label">Completed</div>
+    <div class="stat-value" id="completedCount">0</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-label">Total</div>
+    <div class="stat-value" id="totalCount">0</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-label">Completion</div>
+    <div class="stat-value" id="completionPercent">0%</div>
+  </div>
+</div>
+
+<!-- Category Filters -->
+<div class="category-filters">
+  <button class="category-btn active" onclick="filterAchievements('all')" id="filterAll">All</button>
+  <button class="category-btn" onclick="filterAchievements('crimes')" id="filterCrimes">🔫 Crimes</button>
+  <button class="category-btn" onclick="filterAchievements('jobs')" id="filterJobs">💼 Jobs</button>
+  <button class="category-btn" onclick="filterAchievements('cash')" id="filterCash">💰 Cash</button>
+  <button class="category-btn" onclick="filterAchievements('items')" id="filterItems">🎒 Items</button>
+  <button class="category-btn" onclick="filterAchievements('level')" id="filterLevel">⭐ Level</button>
+  <button class="category-btn" onclick="filterAchievements('completed')" id="filterCompleted">✅ Completed</button>
+</div>
+
+<!-- Achievements Grid -->
+<div id="achievements" class="achievements-grid">
+  <div class="loading">Loading achievements...</div>
+</div>
+
+<button class="back-button" onclick="goBack()">← Back to Dashboard</button>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<script>
+const sb = window.supabase.createClient(
+  "https://mtiwodvsrwvrujbhmmrn.supabase.co",
+  "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
+);
+
+let player = null;
+let allAchievements = [];
+let currentFilter = 'all';
+
+// Toast notification system
+function showToast(message, type = 'info', duration = 3000) {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.textContent = message;
+  
+  container.appendChild(toast);
+  
+  setTimeout(() => {
+    toast.classList.add('fade-out');
+    setTimeout(() => {
+      if (toast.parentNode) {
+        container.removeChild(toast);
+      }
+    }, 300);
+  }, duration);
+}
+
+// Filter achievements
+function filterAchievements(filter) {
+  currentFilter = filter;
+  
+  // Update active button
+  document.querySelectorAll('.category-btn').forEach(btn => btn.classList.remove('active'));
+  document.getElementById(`filter${filter.charAt(0).toUpperCase() + filter.slice(1)}`).classList.add('active');
+  
+  displayAchievements();
+}
+
+// Display achievements based on filter
+function displayAchievements() {
+  let filtered = allAchievements;
+  
+  if (currentFilter === 'completed') {
+    filtered = allAchievements.filter(a => a.completed);
+  } else if (currentFilter !== 'all') {
+    filtered = allAchievements.filter(a => a.category === currentFilter);
+  }
+  
+  const achievementsDiv = document.getElementById('achievements');
+  
+  if (filtered.length === 0) {
+    achievementsDiv.innerHTML = '<div class="empty-message">No achievements found</div>';
+    return;
+  }
+  
+  achievementsDiv.innerHTML = filtered.map(a => buildAchievementCard(a)).join('');
+}
+
+// Build achievement card HTML
+function buildAchievementCard(achievement) {
+  const progress = achievement.progress || 0;
+  const requirement = achievement.requirement;
+  const percent = Math.min(100, Math.round((progress / requirement) * 100));
+  const isCompleted = achievement.completed;
+  
+  // Don't show hidden achievements unless completed
+  if (achievement.hidden && !isCompleted) {
+    return `
+      <div class="achievement-card">
+        <span class="hidden-badge">🔒 SECRET</span>
+        <div class="achievement-icon">❓</div>
+        <div class="achievement-name">???</div>
+        <div class="achievement-description">Secret achievement - keep playing to unlock!</div>
+      </div>
+    `;
+  }
+  
+  return `
+    <div class="achievement-card ${isCompleted ? 'completed' : ''}">
+      ${isCompleted ? '<span class="completed-badge">✅ Completed</span>' : ''}
+      <div class="achievement-icon">${achievement.icon || '🏆'}</div>
+      <div class="achievement-name">${achievement.name}</div>
+      <div class="achievement-description">${achievement.description}</div>
+      
+      <div class="progress-container">
+        <div class="progress-label">
+          <span>Progress</span>
+          <span>${progress.toLocaleString()} / ${requirement.toLocaleString()}</span>
+        </div>
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill ${isCompleted ? 'completed' : ''}" style="width: ${percent}%"></div>
+        </div>
+      </div>
+      
+      <div class="reward-info">
+        ${achievement.reward_cash > 0 ? `
+          <div class="reward-item">
+            <span class="reward-icon">💰</span>
+            <span class="reward-value">${achievement.reward_cash.toLocaleString()}</span>
+          </div>
+        ` : ''}
+        ${achievement.reward_xp > 0 ? `
+          <div class="reward-item">
+            <span class="reward-icon">⭐</span>
+            <span class="reward-value">${achievement.reward_xp} XP</span>
+          </div>
+        ` : ''}
+      </div>
+      
+      ${isCompleted ? `
+        <button class="claim-button" onclick="claimAchievement('${achievement.id}')">
+          Claim Reward
+        </button>
+      ` : ''}
+    </div>
+  `;
+}
+
+// Load player and achievements
+async function loadAchievements() {
+  try {
+    const { data: { user } } = await sb.auth.getUser();
+    if (!user) return window.location.href = "index.html";
+
+    const { data: playerData } = await sb.from('players').select('*').eq('auth_id', user.id).single();
+    if (!playerData) {
+      document.getElementById('achievements').innerHTML = '<div class="error-message">Player not found</div>';
+      return;
+    }
+    
+    player = playerData;
+    
+    // Get achievements
+    const { data: achievements, error } = await sb.rpc('get_player_achievements', {
+      p_player_id: player.id
+    });
+    
+    if (error) throw error;
+    
+    allAchievements = achievements || [];
+    
+    // Update stats
+    const completed = allAchievements.filter(a => a.completed).length;
+    const total = allAchievements.length;
+    const percent = Math.round((completed / total) * 100);
+    
+    document.getElementById('completedCount').textContent = completed;
+    document.getElementById('totalCount').textContent = total;
+    document.getElementById('completionPercent').textContent = percent + '%';
+    document.getElementById('statsSummary').style.display = 'flex';
+    
+    displayAchievements();
+    
+    // Check for any new achievements
+    await checkNewAchievements();
+    
+  } catch (error) {
+    console.error('Error loading achievements:', error);
+    document.getElementById('achievements').innerHTML = '<div class="error-message">Error loading achievements</div>';
+  }
+}
+
+// Check for newly unlocked achievements
+async function checkNewAchievements() {
+  try {
+    const { data: unviewed, error } = await sb.rpc('get_unviewed_achievements', {
+      p_player_id: player.id
+    });
+    
+    if (error) throw error;
+    
+    if (unviewed && unviewed.length > 0) {
+      unviewed.forEach(achievement => {
+        showToast(`🏆 Achievement Unlocked: ${achievement.name}!`, 'achievement', 5000);
+      });
+    }
+  } catch (error) {
+    console.error('Error checking new achievements:', error);
+  }
+}
+
+// Claim achievement reward
+async function claimAchievement(achievementId) {
+  try {
+    const { data, error } = await sb.rpc('claim_achievement', {
+      p_achievement_id: achievementId
+    });
+    
+    if (error) throw error;
+    
+    if (data.success) {
+      let message = 'Rewards claimed!';
+      if (data.reward_cash > 0 && data.reward_xp > 0) {
+        message = `💰 +${data.reward_cash} cash & ⭐ +${data.reward_xp} XP claimed!`;
+      } else if (data.reward_cash > 0) {
+        message = `💰 +${data.reward_cash} cash claimed!`;
+      } else if (data.reward_xp > 0) {
+        message = `⭐ +${data.reward_xp} XP claimed!`;
+      }
+      
+      showToast(message, 'success');
+      
+      // Reload achievements to update claimed state
+      await loadAchievements();
+    } else {
+      showToast('Error claiming reward', 'error');
+    }
+  } catch (error) {
+    console.error('Error claiming achievement:', error);
+    showToast('Error claiming reward', 'error');
+  }
+}
+
+function goBack() {
+  window.location.href = "dashboard.html";
+}
+
+// Initialize
+loadAchievements();
+
+// Welcome toast
+setTimeout(() => {
+  showToast('Track your progress and earn rewards! 🏆', 'info');
+}, 1000);
+</script>
+
+</body>
+</html>
