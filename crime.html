@@ -4,6 +4,7 @@
   <title>Rheoa RPG - Crime</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
+    /* Keep all existing styles from previous version */
     * {
       box-sizing: border-box;
       margin: 0;
@@ -367,7 +368,7 @@ let playerChannel = null;
 let crimesChannel = null;
 let cooldownInterval = null;
 let isUpdating = false;
-let crimeCooldowns = new Map(); // Cache cooldowns locally
+let crimeCooldowns = new Map();
 
 // Toast notification system
 function showToast(message, type = 'info', duration = 3000) {
@@ -497,7 +498,6 @@ function setupRealtimeSubscriptions() {
           setTimeout(stopConfetti, 3000);
         }
         
-        // Update energy status on cards
         updateCooldowns();
       }
     )
@@ -515,9 +515,8 @@ function setupRealtimeSubscriptions() {
         filter: `player_id=eq.${player.id}`
       },
       (payload) => {
-        // Update cache and UI
         if (payload.new && payload.new.crime_id) {
-          updateCrimeCooldownInCache(payload.new.crime_id, payload.new.next_available);
+          updateCrimeCooldownFromPayload(payload.new);
         }
         updateCooldowns();
       }
@@ -529,48 +528,24 @@ function setupRealtimeSubscriptions() {
     });
 }
 
-// Update cooldown in cache
-function updateCrimeCooldownInCache(crimeId, nextAvailable) {
-  if (nextAvailable) {
+// Update cooldown from realtime payload
+function updateCrimeCooldownFromPayload(data) {
+  if (data.next_available) {
     const now = new Date();
-    const next = new Date(nextAvailable);
+    const next = new Date(data.next_available);
     const remaining = Math.max(0, Math.ceil((next - now) / 1000));
-    crimeCooldowns.set(crimeId, remaining);
+    crimeCooldowns.set(data.crime_id, remaining);
   } else {
-    crimeCooldowns.delete(crimeId);
+    crimeCooldowns.delete(data.crime_id);
   }
 }
 
-// Get cooldown from cache or database
-async function getCrimeCooldown(crimeId) {
-  // Check cache first
-  if (crimeCooldowns.has(crimeId)) {
-    return crimeCooldowns.get(crimeId);
-  }
-  
-  // If not in cache, fetch from database
-  try {
-    const { data } = await sb
-      .from('player_crimes')
-      .select('next_available')
-      .eq('player_id', player.id)
-      .eq('crime_id', crimeId)
-      .maybeSingle();
-    
-    if (data && data.next_available) {
-      const now = new Date();
-      const nextAvailable = new Date(data.next_available);
-      const remaining = Math.max(0, Math.ceil((nextAvailable - now) / 1000));
-      crimeCooldowns.set(crimeId, remaining);
-      return remaining;
-    }
-  } catch (error) {
-    console.error('Error getting cooldown:', error);
-  }
-  return 0;
+// Get cooldown from cache
+function getCrimeCooldown(crimeId) {
+  return crimeCooldowns.get(crimeId) || 0;
 }
 
-// Update button states only (no full rebuild)
+// Update button states only
 function updateCooldowns() {
   if (!player) return;
   
@@ -636,7 +611,7 @@ function buildCrimeCard(crime, remaining) {
       </div>
       <div class="button-container">
         <button id="crimeBtn-${crime.id}" 
-                onclick="attemptCrime('${crime.id}', ${crime.success_rate}, ${crime.reward_cash}, ${crime.reward_xp}, ${crime.fail_penalty}, ${crime.energy_cost})"
+                onclick="attemptCrime('${crime.id}')"
                 class="${buttonClass}"
                 ${remaining > 0 || !hasEnergy ? 'disabled' : ''}>
           ${buttonText}
@@ -677,10 +652,21 @@ async function loadCrimes() {
 
     // Load cooldowns for all crimes
     crimeCooldowns.clear();
-    await Promise.all(crimes.map(async (crime) => {
-      const remaining = await getCrimeCooldown(crime.id);
-      crimeCooldowns.set(crime.id, remaining);
-    }));
+    const { data: cooldowns } = await sb
+      .from('player_crimes')
+      .select('crime_id, next_available')
+      .eq('player_id', player.id);
+
+    if (cooldowns) {
+      const now = new Date();
+      cooldowns.forEach(c => {
+        if (c.next_available) {
+          const next = new Date(c.next_available);
+          const remaining = Math.max(0, Math.ceil((next - now) / 1000));
+          crimeCooldowns.set(c.crime_id, remaining);
+        }
+      });
+    }
 
     const crimesDiv = document.getElementById("crimes");
     crimesDiv.innerHTML = "";
@@ -698,98 +684,77 @@ async function loadCrimes() {
   }
 }
 
-async function attemptCrime(id, baseRate, rewardCash, rewardXP, failPenalty, energyCost) {
+// UPDATED: Now uses RPC instead of client-side logic
+async function attemptCrime(crimeId) {
   if (!player || isUpdating) return;
 
-  // Check cooldown from cache
-  const remaining = crimeCooldowns.get(id) || 0;
-  if (remaining > 0) {
-    showToast(`⏳ Please wait ${remaining} seconds before trying again!`, 'error');
+  // Check local cache first for immediate feedback
+  const cachedCooldown = crimeCooldowns.get(crimeId) || 0;
+  if (cachedCooldown > 0) {
+    showToast(`⏳ Please wait ${cachedCooldown} seconds before trying again!`, 'error');
     return;
-  }
-
-  if (player.energy < energyCost) { 
-    showToast("❌ Not enough energy!", 'error'); 
-    return; 
   }
 
   isUpdating = true;
   
   try {
-    const finalRate = baseRate + (player.success_boost || 0);
-    const success = Math.random() * 100 < finalRate;
+    // Call the database function
+    const { data, error } = await sb.rpc('attempt_crime', {
+      p_crime_id: crimeId
+    });
 
-    let newCash = player.cash;
-    let newXP = player.xp;
-    let newEnergy = player.energy - energyCost;
+    if (error) throw error;
 
-    if (success) {
-      newCash += rewardCash;
-      newXP += rewardXP;
-      showToast(`✅ Success! +₹${rewardCash.toLocaleString()}, +${rewardXP} XP`, 'success');
-    } else {
-      newCash = Math.max(0, newCash - failPenalty);
-      showToast(`❌ Failed! Lost ₹${failPenalty.toLocaleString()}`, 'error');
+    if (!data.success) {
+      // Handle error cases
+      switch (data.error) {
+        case 'On cooldown':
+          crimeCooldowns.set(crimeId, Math.ceil(data.cooldown_remaining));
+          showToast(`⏳ Please wait ${Math.ceil(data.cooldown_remaining)}s`, 'error');
+          break;
+        case 'Not enough energy':
+          showToast(`❌ Need ${data.energy_needed} energy (you have ${data.energy_current})`, 'error');
+          break;
+        default:
+          showToast(`❌ ${data.error}`, 'error');
+      }
+      return;
     }
 
-    const newLevel = Math.floor(Math.sqrt(newXP/100)) + 1;
-
-    // Update player
-    await sb.from('players').update({ 
-      cash: newCash, 
-      xp: newXP, 
-      energy: newEnergy, 
-      level: newLevel 
-    }).eq('id', player.id);
-
-    // Update crime record with cooldown
-    const now = new Date();
-    const nextAvailable = new Date(now.getTime() + 60 * 1000);
-
-    const { data: record } = await sb.from('player_crimes')
-      .select('*')
-      .eq('player_id', player.id)
-      .eq('crime_id', id)
-      .maybeSingle();
-      
-    if (record) {
-      await sb.from('player_crimes')
-        .update({ 
-          last_attempt: now,
-          next_available: nextAvailable,
-          success: success
-        })
-        .eq('id', record.id);
-    } else {
-      await sb.from('player_crimes')
-        .insert({ 
-          player_id: player.id, 
-          crime_id: id, 
-          last_attempt: now,
-          next_available: nextAvailable,
-          success: success
-        });
-    }
-
-    // Update cache
-    crimeCooldowns.set(id, 60);
-
-    // Update local player data
-    player.cash = newCash;
-    player.xp = newXP;
-    player.energy = newEnergy;
-    player.level = newLevel;
+    // Update local player data with response
+    player.cash = data.new_cash;
+    player.xp = data.new_xp;
+    player.energy = data.new_energy;
+    player.level = data.new_level;
+    
+    // Update player stats display
     updatePlayerStats();
+    
+    // Update cooldown cache
+    crimeCooldowns.set(crimeId, data.cooldown_seconds);
+    
+    // Show result toast
+    if (data.crime_success) {
+      showToast(`✅ Success! +₹${data.cash_change.toLocaleString()}, +${data.xp_change} XP`, 'success');
+    } else {
+      showToast(`❌ Failed! Lost ₹${Math.abs(data.cash_change).toLocaleString()}`, 'error');
+    }
+    
+    // Show level up if applicable
+    if (data.leveled_up) {
+      showToast(`🎉 LEVEL UP! You are now level ${data.new_level}!`, 'success', 4000);
+      startConfetti();
+      setTimeout(stopConfetti, 3000);
+    }
 
-    // Update button for this crime
-    const crimeCard = document.querySelector(`.crime-card[data-crime-id="${id}"]`);
+    // Update the crime card button immediately
+    const crimeCard = document.querySelector(`.crime-card[data-crime-id="${crimeId}"]`);
     if (crimeCard) {
       const button = crimeCard.querySelector('button');
       if (button) {
         button.disabled = true;
         button.classList.add('cooldown');
-        button.classList.remove('need-energy');
-        button.textContent = '⏳ Wait 60s';
+        button.textContent = `⏳ Wait ${data.cooldown_seconds}s`;
       }
     }
 
@@ -801,7 +766,7 @@ async function attemptCrime(id, baseRate, rewardCash, rewardXP, failPenalty, ene
   }
 }
 
-// Cooldown countdown timer - updates cache and buttons
+// Cooldown countdown timer
 function startCooldownTimer() {
   cooldownInterval = setInterval(() => {
     if (!player || isUpdating) return;
@@ -812,6 +777,8 @@ function startCooldownTimer() {
       if (remaining > 0) {
         crimeCooldowns.set(crimeId, remaining - 1);
         needsUpdate = true;
+      } else {
+        crimeCooldowns.delete(crimeId);
       }
     }
     
