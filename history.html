@@ -84,6 +84,7 @@
       padding: 8px 12px;
       border-radius: 6px;
       display: inline-block;
+      margin-bottom: 10px;
     }
     
     .crime-result.success {
@@ -152,6 +153,44 @@
       grid-column: 1 / -1;
     }
     
+    /* Toast Notification Styles */
+    .toast-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 9999;
+    }
+    
+    .toast {
+      padding: 15px 25px;
+      margin-bottom: 10px;
+      border-radius: 8px;
+      color: white;
+      font-weight: bold;
+      animation: slideIn 0.3s ease-out;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      min-width: 250px;
+      max-width: 350px;
+    }
+    
+    .toast.success { background: #4CAF50; }
+    .toast.error { background: #f44336; }
+    .toast.info { background: #2196F3; }
+    
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    
+    @keyframes slideOut {
+      from { transform: translateX(0); opacity: 1; }
+      to { transform: translateX(100%); opacity: 0; }
+    }
+    
+    .toast.fade-out {
+      animation: slideOut 0.3s ease-out forwards;
+    }
+    
     @media (max-width: 600px) {
       body { padding: 10px; }
       
@@ -176,14 +215,18 @@
         width: 100%;
       }
       
-      .empty-history {
-        padding: 40px 15px;
-        font-size: 1rem;
+      .toast {
+        min-width: 200px;
+        max-width: 280px;
+        padding: 12px 20px;
+        font-size: 0.9rem;
       }
     }
   </style>
 </head>
 <body>
+
+<div class="toast-container" id="toast-container"></div>
 
 <h1>📜 Crime History</h1>
 
@@ -201,6 +244,25 @@ const sb = window.supabase.createClient(
 );
 
 let player = null;
+
+// Toast notification system
+function showToast(message, type = 'info', duration = 3000) {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.textContent = message;
+  
+  container.appendChild(toast);
+  
+  setTimeout(() => {
+    toast.classList.add('fade-out');
+    setTimeout(() => {
+      if (toast.parentNode) {
+        container.removeChild(toast);
+      }
+    }, 300);
+  }, duration);
+}
 
 async function loadHistory() {
   const { data: { user } } = await sb.auth.getUser();
@@ -232,6 +294,7 @@ async function loadHistory() {
   if (error) {
     document.getElementById("history").innerHTML = '<div class="empty-history">Error loading history</div>';
     console.error(error);
+    showToast('Error loading history', 'error');
     return;
   }
 
@@ -250,8 +313,6 @@ async function loadHistory() {
       minute: '2-digit'
     });
     
-    // Since we don't have success/failure yet, we'll estimate (to be updated in Phase 3)
-    // For now, we'll show a neutral card
     html += `
       <div class="history-card">
         <div class="crime-name">🔫 ${h.crimes.name}</div>
@@ -275,6 +336,7 @@ async function loadHistory() {
   });
 
   document.getElementById("history").innerHTML = html;
+  showToast(`Loaded ${history.length} crime records`, 'info', 2000);
 }
 
 function goBack() {
