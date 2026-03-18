@@ -4,7 +4,6 @@
   <title>Rheoa RPG - Crime</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    /* Keep all existing styles from Phase 3 */
     * {
       box-sizing: border-box;
       margin: 0;
@@ -27,7 +26,7 @@
     
     .crimes-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
       gap: 20px;
       padding: 10px;
       max-width: 1400px;
@@ -42,6 +41,9 @@
       transition: transform 0.2s, box-shadow 0.2s;
       display: flex;
       flex-direction: column;
+      height: fit-content;
+      min-height: 320px; /* Fixed minimum height */
+      width: 100%;
     }
     
     .crime-card:hover {
@@ -55,6 +57,9 @@
       text-align: center;
       border-bottom: 2px solid #eee;
       padding-bottom: 8px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     
     .crime-details {
@@ -63,19 +68,28 @@
     }
     
     .crime-details p {
-      margin: 8px 0;
+      margin: 10px 0;
       font-size: 1rem;
       display: flex;
       justify-content: space-between;
+      align-items: center;
     }
     
     .crime-details p span {
       font-weight: bold;
+      min-width: 80px;
+      text-align: right;
     }
     
     .reward { color: #4CAF50; }
     .penalty { color: #f44336; }
     .energy { color: #2196F3; }
+    .energy-warning { color: #f44336; font-weight: bold; }
+    
+    .button-container {
+      margin-top: auto;
+      width: 100%;
+    }
     
     button {
       width: 100%;
@@ -89,7 +103,7 @@
       color: white;
       cursor: pointer;
       transition: all 0.2s;
-      margin-top: 10px;
+      min-height: 48px; /* Fixed height for buttons */
     }
     
     button:hover:not(:disabled) {
@@ -109,6 +123,7 @@
       width: 200px;
       margin: 30px auto;
       background: #666;
+      min-height: 48px;
     }
     
     .back-button:hover {
@@ -164,11 +179,6 @@
       z-index: 9998;
     }
     
-    .energy-warning {
-      color: #f44336;
-      font-weight: bold;
-    }
-    
     /* Stats summary */
     .stats-summary {
       display: flex;
@@ -186,6 +196,7 @@
     
     .stat-item {
       text-align: center;
+      min-width: 100px;
     }
     
     .stat-label {
@@ -225,8 +236,34 @@
     .cooldown-timer {
       font-size: 0.8rem;
       color: #666;
-      margin-top: 5px;
+      margin-top: 8px;
       text-align: center;
+      background: #f5f5f5;
+      padding: 4px;
+      border-radius: 4px;
+    }
+    
+    .loading, .error-message {
+      text-align: center;
+      padding: 60px;
+      color: #666;
+      font-size: 1.2rem;
+      grid-column: 1 / -1;
+      background: white;
+      border-radius: 12px;
+      border: 2px dashed #ccc;
+    }
+    
+    /* Skeleton loading animation */
+    @keyframes shimmer {
+      0% { background-position: -1000px 0; }
+      100% { background-position: 1000px 0; }
+    }
+    
+    .skeleton {
+      background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+      background-size: 1000px 100%;
+      animation: shimmer 2s infinite;
     }
     
     @media (max-width: 600px) {
@@ -239,6 +276,20 @@
       
       .crime-card {
         padding: 15px;
+        min-height: 300px;
+      }
+      
+      .crime-card h3 {
+        font-size: 1.2rem;
+      }
+      
+      .crime-details p {
+        margin: 8px 0;
+        font-size: 0.95rem;
+      }
+      
+      .crime-details p span {
+        min-width: 70px;
       }
       
       .back-button {
@@ -254,14 +305,23 @@
       
       .stats-summary {
         flex-direction: column;
-        gap: 10px;
-        padding: 10px;
+        gap: 15px;
+        padding: 15px;
+      }
+      
+      .stat-item {
+        min-width: auto;
       }
       
       .realtime-status {
         bottom: 5px;
         right: 5px;
         font-size: 0.7rem;
+      }
+      
+      button {
+        min-height: 44px;
+        font-size: 1rem;
       }
     }
   </style>
@@ -309,10 +369,13 @@ const sb = window.supabase.createClient(
 );
 
 let player = null;
+let crimes = [];
 let confettiAnimation = null;
 let playerChannel = null;
 let crimesChannel = null;
 let cooldownInterval = null;
+let lastUpdateTime = Date.now();
+let isUpdating = false;
 
 // Toast notification system
 function showToast(message, type = 'info', duration = 3000) {
@@ -380,9 +443,6 @@ function startConfetti() {
         ctx.fillStyle = p.color;
         ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size);
         ctx.restore();
-      } else if (p.y > canvas.height + 50 && anyVisible === false) {
-        p.y = -20;
-        p.x = Math.random() * canvas.width;
       }
     });
     
@@ -408,10 +468,17 @@ function stopConfetti() {
 function updatePlayerStats() {
   if (!player) return;
   
-  document.getElementById('playerStats').style.display = 'flex';
-  document.getElementById('statCash').textContent = `₹${player.cash.toLocaleString()}`;
-  document.getElementById('statEnergy').textContent = `${player.energy}/100`;
-  document.getElementById('statBoost').textContent = `${player.success_boost || 0}%`;
+  const statsDiv = document.getElementById('playerStats');
+  statsDiv.style.display = 'flex';
+  statsDiv.style.opacity = '1';
+  
+  const cashEl = document.getElementById('statCash');
+  const energyEl = document.getElementById('statEnergy');
+  const boostEl = document.getElementById('statBoost');
+  
+  if (cashEl) cashEl.textContent = `₹${player.cash.toLocaleString()}`;
+  if (energyEl) energyEl.textContent = `${player.energy}/100`;
+  if (boostEl) boostEl.textContent = `${player.success_boost || 0}%`;
 }
 
 // Set up realtime subscriptions
@@ -457,8 +524,8 @@ function setupRealtimeSubscriptions() {
         filter: `player_id=eq.${player.id}`
       },
       () => {
-        // Reload crimes to update cooldown buttons
-        loadCrimes();
+        // Update cooldowns without full reload
+        updateCooldowns();
       }
     )
     .subscribe((status) => {
@@ -468,81 +535,149 @@ function setupRealtimeSubscriptions() {
     });
 }
 
+// Update only cooldowns without rebuilding entire grid
+async function updateCooldowns() {
+  if (!player || isUpdating) return;
+  
+  const crimeCards = document.querySelectorAll('.crime-card');
+  if (crimeCards.length === 0) return;
+  
+  for (const card of crimeCards) {
+    const crimeId = card.dataset.crimeId;
+    if (!crimeId) continue;
+    
+    const remaining = await getCrimeCooldown(crimeId);
+    const button = card.querySelector('button');
+    const timerDiv = card.querySelector('.cooldown-timer');
+    const hasEnergy = player.energy >= parseInt(card.dataset.energyCost);
+    
+    if (button) {
+      if (remaining > 0 || !hasEnergy) {
+        button.disabled = true;
+        button.classList.add('cooldown');
+        button.textContent = remaining > 0 ? `⏳ Wait ${remaining}s` : '⚡ Need Energy';
+      } else {
+        button.disabled = false;
+        button.classList.remove('cooldown');
+        button.textContent = '🚀 Attempt Crime';
+      }
+    }
+    
+    if (timerDiv) {
+      if (remaining > 0) {
+        timerDiv.textContent = `Ready in ${remaining}s`;
+        timerDiv.style.display = 'block';
+      } else {
+        timerDiv.style.display = 'none';
+      }
+    }
+  }
+}
+
 // Get cooldown from database
 async function getCrimeCooldown(crimeId) {
-  const { data } = await sb
-    .from('player_crimes')
-    .select('next_available')
-    .eq('player_id', player.id)
-    .eq('crime_id', crimeId)
-    .maybeSingle();
+  if (!player) return 0;
   
-  if (data && data.next_available) {
-    const now = new Date();
-    const nextAvailable = new Date(data.next_available);
-    const remaining = Math.max(0, (nextAvailable - now) / 1000);
-    return Math.ceil(remaining);
+  try {
+    const { data } = await sb
+      .from('player_crimes')
+      .select('next_available')
+      .eq('player_id', player.id)
+      .eq('crime_id', crimeId)
+      .maybeSingle();
+    
+    if (data && data.next_available) {
+      const now = new Date();
+      const nextAvailable = new Date(data.next_available);
+      const remaining = Math.max(0, Math.ceil((nextAvailable - now) / 1000));
+      return remaining;
+    }
+  } catch (error) {
+    console.error('Error getting cooldown:', error);
   }
   return 0;
 }
 
-async function loadCrimes() {
-  const { data: { user } } = await sb.auth.getUser();
-  if (!user) return window.location.href = "index.html";
-
-  let { data: playerData } = await sb.from('players').select('*').eq('auth_id', user.id).single();
-  if (!playerData) { 
-    document.getElementById("crimes").innerHTML = '<div class="stat-card">Player not found</div>'; 
-    return; 
-  }
-  player = playerData;
-  updatePlayerStats();
+// Build crime card HTML (stable structure)
+function buildCrimeCard(crime, remaining, hasEnergy) {
+  const successRate = crime.success_rate + (player?.success_boost || 0);
+  const energyWarning = !hasEnergy ? 'energy-warning' : 'energy';
   
-  // Setup realtime if not already done
-  if (!playerChannel) {
-    setupRealtimeSubscriptions();
-  }
-
-  let { data: crimes } = await sb.from('crimes').select('*');
-  if (!crimes || crimes.length === 0) {
-    document.getElementById("crimes").innerHTML = '<div class="loading">No crimes available</div>';
-    return;
-  }
-
-  const crimesDiv = document.getElementById("crimes");
-  crimesDiv.innerHTML = "";
-
-  // Load cooldowns for all crimes
-  for (const c of crimes) {
-    const remaining = await getCrimeCooldown(c.id);
-    const successRate = c.success_rate + (player.success_boost || 0);
-    const hasEnergy = player.energy >= c.energy_cost;
-
-    crimesDiv.innerHTML += `
-      <div class="crime-card">
-        <h3>${c.name}</h3>
-        <div class="crime-details">
-          <p>🎯 Success Chance <span>${successRate}%</span></p>
-          <p>💰 Reward <span class="reward">₹${c.reward_cash.toLocaleString()}</span></p>
-          <p>⭐ XP Reward <span class="reward">${c.reward_xp} XP</span></p>
-          <p>❌ Fail Penalty <span class="penalty">₹${c.fail_penalty.toLocaleString()}</span></p>
-          <p>⚡ Energy Cost <span class="${!hasEnergy ? 'energy-warning' : 'energy'}">${c.energy_cost}</span></p>
-        </div>
-        <button id="crimeBtn-${c.id}" 
-                onclick="attemptCrime('${c.id}', ${c.success_rate}, ${c.reward_cash}, ${c.reward_xp}, ${c.fail_penalty}, ${c.energy_cost})"
+  return `
+    <div class="crime-card" data-crime-id="${crime.id}" data-energy-cost="${crime.energy_cost}">
+      <h3 title="${crime.name}">${crime.name}</h3>
+      <div class="crime-details">
+        <p>🎯 Success Chance <span>${successRate}%</span></p>
+        <p>💰 Reward <span class="reward">₹${crime.reward_cash.toLocaleString()}</span></p>
+        <p>⭐ XP Reward <span class="reward">${crime.reward_xp} XP</span></p>
+        <p>❌ Fail Penalty <span class="penalty">₹${crime.fail_penalty.toLocaleString()}</span></p>
+        <p>⚡ Energy Cost <span class="${energyWarning}">${crime.energy_cost}</span></p>
+      </div>
+      <div class="button-container">
+        <button id="crimeBtn-${crime.id}" 
+                onclick="attemptCrime('${crime.id}', ${crime.success_rate}, ${crime.reward_cash}, ${crime.reward_xp}, ${crime.fail_penalty}, ${crime.energy_cost})"
                 ${remaining > 0 || !hasEnergy ? 'disabled class="cooldown"' : ''}>
           ${remaining > 0 ? `⏳ Wait ${remaining}s` : 
             !hasEnergy ? '⚡ Need Energy' : '🚀 Attempt Crime'}
         </button>
         ${remaining > 0 ? `<div class="cooldown-timer">Ready in ${remaining}s</div>` : ''}
       </div>
-    `;
+    </div>
+  `;
+}
+
+async function loadCrimes() {
+  if (isUpdating) return;
+  
+  try {
+    const { data: { user } } = await sb.auth.getUser();
+    if (!user) return window.location.href = "index.html";
+
+    const { data: playerData } = await sb.from('players').select('*').eq('auth_id', user.id).single();
+    if (!playerData) { 
+      document.getElementById("crimes").innerHTML = '<div class="error-message">Player not found</div>'; 
+      return; 
+    }
+    
+    player = playerData;
+    updatePlayerStats();
+    
+    // Setup realtime if not already done
+    if (!playerChannel) {
+      setupRealtimeSubscriptions();
+    }
+
+    const { data: crimesData } = await sb.from('crimes').select('*').order('name');
+    if (!crimesData || crimesData.length === 0) {
+      document.getElementById("crimes").innerHTML = '<div class="loading">No crimes available</div>';
+      return;
+    }
+    
+    crimes = crimesData;
+
+    // Load cooldowns for all crimes in parallel
+    const cooldownPromises = crimes.map(c => getCrimeCooldown(c.id));
+    const cooldowns = await Promise.all(cooldownPromises);
+
+    const crimesDiv = document.getElementById("crimes");
+    crimesDiv.innerHTML = "";
+
+    // Build all cards at once
+    crimes.forEach((crime, index) => {
+      const remaining = cooldowns[index];
+      const hasEnergy = player.energy >= crime.energy_cost;
+      crimesDiv.innerHTML += buildCrimeCard(crime, remaining, hasEnergy);
+    });
+
+  } catch (error) {
+    console.error('Error loading crimes:', error);
+    document.getElementById("crimes").innerHTML = '<div class="error-message">Error loading crimes. Please refresh.</div>';
+    showToast('Error loading crimes', 'error');
   }
 }
 
-// UPDATED: Now uses database cooldowns
 async function attemptCrime(id, baseRate, rewardCash, rewardXP, failPenalty, energyCost) {
-  if (!player) return;
+  if (!player || isUpdating) return;
 
   // Check cooldown from database
   const remaining = await getCrimeCooldown(id);
@@ -556,69 +691,144 @@ async function attemptCrime(id, baseRate, rewardCash, rewardXP, failPenalty, ene
     return; 
   }
 
-  const finalRate = baseRate + (player.success_boost || 0);
-  const success = Math.random() * 100 < finalRate;
+  isUpdating = true;
+  
+  try {
+    const finalRate = baseRate + (player.success_boost || 0);
+    const success = Math.random() * 100 < finalRate;
 
-  let newCash = player.cash;
-  let newXP = player.xp;
-  let newEnergy = player.energy - energyCost;
+    let newCash = player.cash;
+    let newXP = player.xp;
+    let newEnergy = player.energy - energyCost;
 
-  if (success) {
-    newCash += rewardCash;
-    newXP += rewardXP;
-    showToast(`✅ Success! +₹${rewardCash.toLocaleString()}, +${rewardXP} XP`, 'success');
-  } else {
-    newCash = Math.max(0, newCash - failPenalty);
-    showToast(`❌ Failed! Lost ₹${failPenalty.toLocaleString()}`, 'error');
+    if (success) {
+      newCash += rewardCash;
+      newXP += rewardXP;
+      showToast(`✅ Success! +₹${rewardCash.toLocaleString()}, +${rewardXP} XP`, 'success');
+    } else {
+      newCash = Math.max(0, newCash - failPenalty);
+      showToast(`❌ Failed! Lost ₹${failPenalty.toLocaleString()}`, 'error');
+    }
+
+    const newLevel = Math.floor(Math.sqrt(newXP/100)) + 1;
+
+    // Update player
+    await sb.from('players').update({ 
+      cash: newCash, 
+      xp: newXP, 
+      energy: newEnergy, 
+      level: newLevel 
+    }).eq('id', player.id);
+
+    // Update crime record with cooldown
+    const now = new Date();
+    const nextAvailable = new Date(now.getTime() + 60 * 1000); // 60 seconds cooldown
+
+    const { data: record } = await sb.from('player_crimes')
+      .select('*')
+      .eq('player_id', player.id)
+      .eq('crime_id', id)
+      .maybeSingle();
+      
+    if (record) {
+      await sb.from('player_crimes')
+        .update({ 
+          last_attempt: now,
+          next_available: nextAvailable,
+          success: success
+        })
+        .eq('id', record.id);
+    } else {
+      await sb.from('player_crimes')
+        .insert({ 
+          player_id: player.id, 
+          crime_id: id, 
+          last_attempt: now,
+          next_available: nextAvailable,
+          success: success
+        });
+    }
+
+    // Update local player data
+    player.cash = newCash;
+    player.xp = newXP;
+    player.energy = newEnergy;
+    player.level = newLevel;
+    updatePlayerStats();
+
+    // Update cooldown for this specific crime
+    const crimeCard = document.querySelector(`.crime-card[data-crime-id="${id}"]`);
+    if (crimeCard) {
+      const button = crimeCard.querySelector('button');
+      const timerDiv = crimeCard.querySelector('.cooldown-timer');
+      
+      if (button) {
+        button.disabled = true;
+        button.classList.add('cooldown');
+        button.textContent = '⏳ Wait 60s';
+      }
+      
+      if (timerDiv) {
+        timerDiv.textContent = 'Ready in 60s';
+        timerDiv.style.display = 'block';
+      } else {
+        const newTimerDiv = document.createElement('div');
+        newTimerDiv.className = 'cooldown-timer';
+        newTimerDiv.textContent = 'Ready in 60s';
+        crimeCard.querySelector('.button-container').appendChild(newTimerDiv);
+      }
+    }
+
+  } catch (error) {
+    console.error('Error attempting crime:', error);
+    showToast('Error processing crime', 'error');
+  } finally {
+    isUpdating = false;
   }
-
-  const newLevel = Math.floor(Math.sqrt(newXP/100)) + 1;
-
-  // Update player
-  await sb.from('players').update({ 
-    cash: newCash, 
-    xp: newXP, 
-    energy: newEnergy, 
-    level: newLevel 
-  }).eq('id', player.id);
-
-  // Update crime record with cooldown
-  const now = new Date();
-  const nextAvailable = new Date(now.getTime() + 60 * 1000); // 60 seconds cooldown
-
-  const { data: record } = await sb.from('player_crimes')
-    .select('*')
-    .eq('player_id', player.id)
-    .eq('crime_id', id)
-    .maybeSingle();
-    
-  if (record) {
-    await sb.from('player_crimes')
-      .update({ 
-        last_attempt: now,
-        next_available: nextAvailable,
-        success: success
-      })
-      .eq('id', record.id);
-  } else {
-    await sb.from('player_crimes')
-      .insert({ 
-        player_id: player.id, 
-        crime_id: id, 
-        last_attempt: now,
-        next_available: nextAvailable,
-        success: success
-      });
-  }
-
-  // Reload crimes to show updated cooldown
-  loadCrimes();
 }
 
-// Cooldown countdown timer
+// Cooldown countdown timer - only updates timers, not full rebuild
 function startCooldownTimer() {
-  cooldownInterval = setInterval(() => {
-    loadCrimes(); // Refresh to show updated cooldowns
+  cooldownInterval = setInterval(async () => {
+    if (!player || isUpdating) return;
+    
+    const crimeCards = document.querySelectorAll('.crime-card');
+    if (crimeCards.length === 0) return;
+    
+    for (const card of crimeCards) {
+      const crimeId = card.dataset.crimeId;
+      if (!crimeId) continue;
+      
+      const remaining = await getCrimeCooldown(crimeId);
+      const button = card.querySelector('button');
+      const timerDiv = card.querySelector('.cooldown-timer');
+      const hasEnergy = player.energy >= parseInt(card.dataset.energyCost);
+      
+      if (button) {
+        if (remaining > 0) {
+          button.disabled = true;
+          button.classList.add('cooldown');
+          button.textContent = `⏳ Wait ${remaining}s`;
+        } else if (!hasEnergy) {
+          button.disabled = true;
+          button.classList.add('cooldown');
+          button.textContent = '⚡ Need Energy';
+        } else {
+          button.disabled = false;
+          button.classList.remove('cooldown');
+          button.textContent = '🚀 Attempt Crime';
+        }
+      }
+      
+      if (timerDiv) {
+        if (remaining > 0) {
+          timerDiv.textContent = `Ready in ${remaining}s`;
+          timerDiv.style.display = 'block';
+        } else {
+          timerDiv.style.display = 'none';
+        }
+      }
+    }
   }, 1000);
 }
 
