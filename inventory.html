@@ -2,31 +2,216 @@
 <html>
 <head>
   <title>Rheoa RPG - Inventory & Shop</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body { font-family: 'Courier New', monospace; background: #f8f8f0; color: #222; padding: 20px; }
-    h1 { text-align: center; margin-bottom: 20px; }
-    h2 { margin-top: 30px; }
-    .card { border:2px solid black; border-radius:10px; margin:10px; padding:10px; width:300px; display:inline-block; vertical-align:top; }
-    button { margin-top:5px; padding:5px 10px; cursor:pointer; border-radius:5px; }
-    #feedback { margin-top:20px; font-size:1.2em; font-weight:bold; }
-    .boost { background:#e0ffe0; }
-    .cooldown { background:#ccc; color:#666; cursor: not-allowed; }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body { 
+      font-family: 'Courier New', monospace; 
+      background: #f8f8f0; 
+      color: #222; 
+      padding: 20px;
+      min-height: 100vh;
+    }
+    
+    h1, h2 { 
+      text-align: center; 
+      margin: 30px 0 20px;
+    }
+    
+    h1 { font-size: clamp(1.5rem, 5vw, 2.5rem); }
+    h2 { font-size: clamp(1.3rem, 4vw, 2rem); color: #333; }
+    
+    .section {
+      max-width: 1400px;
+      margin: 0 auto 40px;
+    }
+    
+    .items-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      padding: 10px;
+    }
+    
+    .item-card { 
+      border: 2px solid black; 
+      border-radius: 12px; 
+      padding: 20px; 
+      background: white;
+      transition: transform 0.2s, box-shadow 0.2s;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .item-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 6px 15px rgba(0,0,0,0.15);
+    }
+    
+    .item-card.boost {
+      background: #e8f5e8;
+      border-color: #4CAF50;
+    }
+    
+    .item-name {
+      font-size: 1.2rem;
+      font-weight: bold;
+      text-align: center;
+      margin-bottom: 15px;
+      border-bottom: 2px solid #eee;
+      padding-bottom: 8px;
+    }
+    
+    .item-details {
+      flex-grow: 1;
+      margin-bottom: 15px;
+    }
+    
+    .item-details p {
+      margin: 8px 0;
+      display: flex;
+      justify-content: space-between;
+    }
+    
+    .price {
+      color: #4CAF50;
+      font-weight: bold;
+    }
+    
+    .effect {
+      color: #2196F3;
+      font-weight: bold;
+    }
+    
+    .quantity {
+      color: #9c27b0;
+      font-weight: bold;
+    }
+    
+    button {
+      width: 100%;
+      padding: 10px;
+      font-size: 1rem;
+      font-family: 'Courier New', monospace;
+      font-weight: bold;
+      border: 2px solid black;
+      border-radius: 8px;
+      background: white;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-top: 10px;
+    }
+    
+    button.buy {
+      background: #4CAF50;
+      color: white;
+    }
+    
+    button.use {
+      background: #2196F3;
+      color: white;
+    }
+    
+    button.buy:hover:not(:disabled) {
+      background: #45a049;
+    }
+    
+    button.use:hover:not(:disabled) {
+      background: #1976D2;
+    }
+    
+    button:disabled {
+      background: #ccc;
+      color: #666;
+      cursor: not-allowed;
+    }
+    
+    .back-button {
+      display: block;
+      width: 200px;
+      margin: 30px auto;
+      background: #666;
+      color: white;
+    }
+    
+    .back-button:hover {
+      background: #555;
+    }
+    
+    #feedback { 
+      margin: 20px auto;
+      font-weight: bold; 
+      text-align: center;
+      font-size: 1.2rem;
+      padding: 10px;
+      max-width: 600px;
+    }
+    
+    hr {
+      margin: 40px 0;
+      border: 1px dashed #ccc;
+    }
+    
+    .empty-message {
+      text-align: center;
+      padding: 40px;
+      color: #666;
+      font-size: 1.1rem;
+      background: white;
+      border-radius: 10px;
+      border: 2px dashed #ccc;
+    }
+    
+    @media (max-width: 600px) {
+      body { padding: 10px; }
+      
+      .items-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+      }
+      
+      .item-card {
+        padding: 15px;
+      }
+      
+      .back-button {
+        width: 100%;
+      }
+      
+      h2 {
+        margin: 20px 0 15px;
+      }
+      
+      button {
+        padding: 12px;
+      }
+    }
   </style>
 </head>
 <body>
 
-<h1>Inventory & Shop</h1>
+<h1>🎒 Inventory & Shop</h1>
 
-<h2>🛒 Shop</h2>
-<div id="shop"></div>
+<div class="section">
+  <h2>🛒 Shop</h2>
+  <div id="shop" class="items-grid"></div>
+</div>
 
 <hr>
 
-<h2>🎒 Your Inventory</h2>
-<div id="inventory"></div>
+<div class="section">
+  <h2>📦 Your Inventory</h2>
+  <div id="inventory" class="items-grid"></div>
+</div>
 
 <div id="feedback"></div>
-<button onclick="goBack()">Back</button>
+
+<button class="back-button" onclick="goBack()">← Back to Dashboard</button>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 <script>
@@ -37,38 +222,84 @@ const sb = window.supabase.createClient(
 
 let player = null;
 
-// 🌟 INIT
 async function init() {
   const { data: { user } } = await sb.auth.getUser();
-  if (!user) return document.body.innerHTML = "Not logged in";
+  if (!user) return window.location.href = "index.html";
 
   const { data: playerData } = await sb.from('players').select('*').eq('auth_id', user.id).single();
-  if (!playerData) return document.body.innerHTML = "Player not found";
+  if (!playerData) {
+    document.body.innerHTML = '<div style="text-align:center; padding:50px;">Player not found</div>';
+    return;
+  }
 
   player = playerData;
   loadShop();
   loadInventory();
 }
 
-// 🛒 LOAD SHOP
 async function loadShop() {
   const { data: items } = await sb.from('items').select('*');
-  if (!items || items.length === 0) { document.getElementById("shop").innerText="No shop items"; return; }
+  const shopDiv = document.getElementById("shop");
+  
+  if (!items || items.length === 0) {
+    shopDiv.innerHTML = '<div class="empty-message">No items in shop</div>';
+    return;
+  }
 
-  document.getElementById("shop").innerHTML = items.map(item => `
-    <div class="card">
-      <b>${item.name}</b><br>
-      Type: ${item.type}<br>
-      Effect: ${item.effect_value}<br>
-      Price: ₹${item.price}<br>
-      <button onclick="buyItem('${item.id}', ${item.price})">Buy</button>
+  shopDiv.innerHTML = items.map(item => `
+    <div class="item-card">
+      <div class="item-name">${item.name}</div>
+      <div class="item-details">
+        <p>Type <span>${item.type}</span></p>
+        <p>Effect <span class="effect">+${item.effect_value}</span></p>
+        <p>Price <span class="price">₹${item.price.toLocaleString()}</span></p>
+      </div>
+      <button class="buy" onclick="buyItem('${item.id}', ${item.price})" 
+              ${player.cash < item.price ? 'disabled' : ''}>
+        ${player.cash < item.price ? '❌ Insufficient Funds' : '🛒 Buy Now'}
+      </button>
     </div>
   `).join('');
 }
 
-// 💰 BUY ITEM
+async function loadInventory() {
+  const { data: items } = await sb.from('player_items')
+    .select('item_id, quantity, items(name, type, effect_value)')
+    .eq('player_id', player.id);
+
+  const inventoryDiv = document.getElementById("inventory");
+  
+  if (!items || items.length === 0) {
+    inventoryDiv.innerHTML = '<div class="empty-message">Your inventory is empty. Visit the shop!</div>';
+    return;
+  }
+
+  inventoryDiv.innerHTML = items.map(i => {
+    const isBoost = (i.items.type === 'energy' && player.energy < 100) || 
+                    (i.items.type === 'success_boost');
+    
+    return `
+      <div class="item-card ${isBoost ? 'boost' : ''}">
+        <div class="item-name">${i.items.name}</div>
+        <div class="item-details">
+          <p>Quantity <span class="quantity">x${i.quantity}</span></p>
+          <p>Type <span>${i.items.type}</span></p>
+          <p>Effect <span class="effect">+${i.items.effect_value}</span></p>
+        </div>
+        <button class="use" onclick="useItem('${i.item_id}', '${i.items.type}', ${i.items.effect_value})"
+                ${i.items.type === 'energy' && player.energy >= 100 ? 'disabled' : ''}>
+          ${i.items.type === 'energy' && player.energy >= 100 ? '⚡ Full Energy' : '✨ Use Item'}
+        </button>
+      </div>
+    `;
+  }).join('');
+}
+
 async function buyItem(itemId, price) {
-  if (player.cash < price) { showFeedback("Not enough cash!", false); return; }
+  if (player.cash < price) { 
+    showFeedback("Not enough cash!", false); 
+    return; 
+  }
 
   await sb.from('players').update({ cash: player.cash - price }).eq('id', player.id);
   player.cash -= price;
@@ -80,60 +311,54 @@ async function buyItem(itemId, price) {
     .maybeSingle();
 
   if (existing) {
-    await sb.from('player_items').update({ quantity: existing.quantity + 1 }).eq('id', existing.id);
+    await sb.from('player_items')
+      .update({ quantity: existing.quantity + 1 })
+      .eq('id', existing.id);
   } else {
-    await sb.from('player_items').insert({ player_id: player.id, item_id: itemId, quantity: 1 });
+    await sb.from('player_items')
+      .insert({ player_id: player.id, item_id: itemId, quantity: 1 });
   }
 
-  showFeedback("Purchased item!", true);
+  showFeedback("✅ Purchase successful!", true);
+  loadShop();
   loadInventory();
 }
 
-// 🎒 LOAD INVENTORY
-async function loadInventory() {
-  const { data: items } = await sb.from('player_items')
-    .select('item_id, quantity, items(name,type,effect_value)')
-    .eq('player_id', player.id);
-
-  if (!items || items.length === 0) { document.getElementById("inventory").innerText="No items yet"; return; }
-
-  document.getElementById("inventory").innerHTML = items.map(i => {
-    const boostClass = (i.items.type==='energy' && player.energy>0) || (i.items.type==='success_boost' && player.success_boost>0) ? 'boost' : '';
-    return `
-      <div class="card ${boostClass}">
-        <b>${i.items.name}</b> x${i.quantity}<br>
-        Type: ${i.items.type}<br>
-        Effect: ${i.items.effect_value}<br>
-        <button onclick="useItem('${i.item_id}', '${i.items.type}', ${i.items.effect_value})">Use</button>
-      </div>
-    `;
-  }).join('');
-}
-
-// 🧪 USE ITEM
 async function useItem(itemId, type, value) {
   if (!player) return;
 
   let msg = "";
+  let updateData = {};
 
-  if (type==='energy') {
-    player.energy = (player.energy||0)+value;
-    await sb.from('players').update({ energy: player.energy }).eq('id', player.id);
+  if (type === 'energy') {
+    const newEnergy = Math.min(100, (player.energy || 0) + value);
+    updateData.energy = newEnergy;
+    player.energy = newEnergy;
     msg = `⚡ Energy +${value}`;
-  } else if (type==='success_boost') {
-    player.success_boost = (player.success_boost||0)+value;
-    await sb.from('players').update({ success_boost: player.success_boost }).eq('id', player.id);
-    msg = `⭐ Success Boost +${value}`;
+  } else if (type === 'success_boost') {
+    const newBoost = (player.success_boost || 0) + value;
+    updateData.success_boost = newBoost;
+    player.success_boost = newBoost;
+    msg = `⭐ Success Boost +${value}%`;
   }
 
+  await sb.from('players').update(updateData).eq('id', player.id);
+
   const { data: existing } = await sb.from('player_items')
-    .select('*').eq('player_id', player.id).eq('item_id', itemId).maybeSingle();
+    .select('*')
+    .eq('player_id', player.id)
+    .eq('item_id', itemId)
+    .maybeSingle();
 
   if (existing) {
-    if (existing.quantity>1) {
-      await sb.from('player_items').update({ quantity: existing.quantity-1 }).eq('id', existing.id);
+    if (existing.quantity > 1) {
+      await sb.from('player_items')
+        .update({ quantity: existing.quantity - 1 })
+        .eq('id', existing.id);
     } else {
-      await sb.from('player_items').delete().eq('id', existing.id);
+      await sb.from('player_items')
+        .delete()
+        .eq('id', existing.id);
     }
   }
 
@@ -141,18 +366,17 @@ async function useItem(itemId, type, value) {
   loadInventory();
 }
 
-// ⚡ Feedback
 function showFeedback(msg, success=true) {
   const f = document.getElementById("feedback");
-  f.style.color = success?'green':'red';
+  f.style.color = success ? '#4CAF50' : '#f44336';
   f.innerText = msg;
-  setTimeout(()=>f.innerText='', 3000);
+  setTimeout(() => f.innerText = '', 3000);
 }
 
-// 🔙 Back
-function goBack() { window.location.href="dashboard.html"; }
+function goBack() { 
+  window.location.href = "dashboard.html"; 
+}
 
-// Expose globally
 window.useItem = useItem;
 window.buyItem = buyItem;
 window.goBack = goBack;
