@@ -4,6 +4,7 @@
   <title>Rheoa RPG - Crime</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
+    /* Keep all existing Phase 2 styles */
     * {
       box-sizing: border-box;
       margin: 0;
@@ -168,6 +169,35 @@
       font-weight: bold;
     }
     
+    /* Stats summary for crime page */
+    .stats-summary {
+      display: flex;
+      justify-content: center;
+      gap: 30px;
+      margin-bottom: 20px;
+      padding: 15px;
+      background: white;
+      border-radius: 10px;
+      border: 2px solid black;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    
+    .stat-item {
+      text-align: center;
+    }
+    
+    .stat-label {
+      font-size: 0.9rem;
+      color: #666;
+    }
+    
+    .stat-value {
+      font-size: 1.3rem;
+      font-weight: bold;
+    }
+    
     @media (max-width: 600px) {
       body { padding: 10px; }
       
@@ -190,6 +220,12 @@
         padding: 12px 20px;
         font-size: 0.9rem;
       }
+      
+      .stats-summary {
+        flex-direction: column;
+        gap: 10px;
+        padding: 10px;
+      }
     }
   </style>
 </head>
@@ -199,6 +235,22 @@
 <div class="toast-container" id="toast-container"></div>
 
 <h1>🔫 Crime Activities</h1>
+
+<!-- Player Stats Summary -->
+<div id="playerStats" class="stats-summary" style="display: none;">
+  <div class="stat-item">
+    <div class="stat-label">💰 Cash</div>
+    <div class="stat-value" id="statCash">₹0</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-label">⚡ Energy</div>
+    <div class="stat-value" id="statEnergy">0/100</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-label">⭐ Boost</div>
+    <div class="stat-value" id="statBoost">0%</div>
+  </div>
+</div>
 
 <div id="crimes" class="crimes-grid">
   <div class="loading">Loading crimes...</div>
@@ -307,6 +359,16 @@ function stopConfetti() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 }
 
+// Update player stats display
+function updatePlayerStats() {
+  if (!player) return;
+  
+  document.getElementById('playerStats').style.display = 'flex';
+  document.getElementById('statCash').textContent = `₹${player.cash.toLocaleString()}`;
+  document.getElementById('statEnergy').textContent = `${player.energy}/100`;
+  document.getElementById('statBoost').textContent = `${player.success_boost || 0}%`;
+}
+
 async function loadCrimes() {
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return window.location.href = "index.html";
@@ -317,6 +379,7 @@ async function loadCrimes() {
     return; 
   }
   player = playerData;
+  updatePlayerStats();
 
   let { data: crimes } = await sb.from('crimes').select('*');
   if (!crimes || crimes.length === 0) {
@@ -354,6 +417,7 @@ async function loadCrimes() {
   });
 }
 
+// UPDATED: Now stores success/failure in database
 async function attemptCrime(id, baseRate, rewardCash, rewardXP, failPenalty, energyCost) {
   if (!player) return;
 
@@ -393,6 +457,7 @@ async function attemptCrime(id, baseRate, rewardCash, rewardXP, failPenalty, ene
   player.xp = newXP; 
   player.energy = newEnergy; 
   player.level = newLevel;
+  updatePlayerStats();
 
   if (newLevel > oldLevel) {
     showToast(`🎉 LEVEL UP! You are now level ${newLevel}!`, 'success', 4000);
@@ -401,6 +466,8 @@ async function attemptCrime(id, baseRate, rewardCash, rewardXP, failPenalty, ene
   }
 
   cooldowns[id] = Date.now();
+  
+  // UPDATED: Now stores success/failure
   const { data: record } = await sb.from('player_crimes')
     .select('*')
     .eq('player_id', player.id)
@@ -409,11 +476,19 @@ async function attemptCrime(id, baseRate, rewardCash, rewardXP, failPenalty, ene
     
   if (record) {
     await sb.from('player_crimes')
-      .update({ last_attempt: now })
+      .update({ 
+        last_attempt: now,
+        success: success  // Store whether it was success or failure
+      })
       .eq('id', record.id);
   } else {
     await sb.from('player_crimes')
-      .insert({ player_id: player.id, crime_id: id, last_attempt: now });
+      .insert({ 
+        player_id: player.id, 
+        crime_id: id, 
+        last_attempt: now,
+        success: success  // Store whether it was success or failure
+      });
   }
 
   loadCrimes();
