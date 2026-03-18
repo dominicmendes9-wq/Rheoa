@@ -38,11 +38,23 @@
       text-align: center; 
       background: white;
       transition: transform 0.2s, box-shadow 0.2s;
+      position: relative;
+      overflow: hidden;
     }
     
     .stat-card:hover {
       transform: translateY(-2px);
       box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    .stat-card.warning {
+      border-color: #ff9800;
+      background: #fff3e0;
+    }
+    
+    .stat-card.danger {
+      border-color: #f44336;
+      background: #ffebee;
     }
     
     .stat-card b {
@@ -55,6 +67,14 @@
       font-size: 1.3rem;
       font-weight: bold;
       color: #333;
+    }
+    
+    .stat-warning-badge {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      font-size: 1.2rem;
+      animation: pulse 1s infinite;
     }
     
     .boost { 
@@ -103,6 +123,18 @@
     #xpBar { background: #9c27b0; }
     #energyBar { background: #4CAF50; }
     
+    /* Stat warning indicators */
+    .stat-warning {
+      font-size: 0.7rem;
+      color: #ff9800;
+      margin-top: 5px;
+      font-weight: bold;
+    }
+    
+    .stat-danger {
+      color: #f44336;
+    }
+    
     /* Energy regeneration indicator */
     .regen-timer {
       font-size: 0.8rem;
@@ -119,6 +151,14 @@
       border-radius: 12px;
       font-size: 0.7rem;
       margin-left: 5px;
+    }
+    
+    .decay-info {
+      font-size: 0.7rem;
+      color: #666;
+      text-align: center;
+      margin-top: 5px;
+      font-style: italic;
     }
     
     .button-container {
@@ -281,6 +321,10 @@
       .regen-timer {
         font-size: 0.7rem;
       }
+      
+      .stat-warning-badge {
+        font-size: 1rem;
+      }
     }
   </style>
 </head>
@@ -323,6 +367,11 @@
   <div class="regen-timer" id="regenTimer"></div>
 </div>
 
+<!-- Stat Decay Info -->
+<div class="decay-info" id="decayInfo">
+  ⏰ Stats decay 5 points per hour while you're away
+</div>
+
 <div class="button-container">
   <button onclick="goTo('jobs.html')">💼 Jobs</button>
   <button onclick="goTo('crime.html')">🔫 Crime</button>
@@ -342,6 +391,7 @@ let player = null;
 let confettiAnimation = null;
 let playerChannel = null;
 let regenInterval = null;
+let decayCheckInterval = null;
 
 // Toast notification system
 function showToast(message, type = 'info', duration = 3000) {
@@ -430,6 +480,43 @@ function stopConfetti() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 }
 
+// STAT DECAY FUNCTIONS
+async function applyStatDecay() {
+  if (!player) return;
+  
+  try {
+    const { data, error } = await sb.rpc('decay_player_stats');
+    
+    if (error) throw error;
+    
+    if (data.success && data.decay_applied) {
+      // Update local player data
+      player.hunger = data.new_hunger;
+      player.happiness = data.new_happiness;
+      
+      // Show warnings based on stat levels
+      if (data.new_hunger < 30 && data.new_hunger > 10) {
+        showToast('⚠️ You are getting hungry! Time to eat something!', 'warning');
+      } else if (data.new_hunger <= 10) {
+        showToast('🔴 CRITICAL: You are starving! Eat immediately!', 'error');
+      }
+      
+      if (data.new_happiness < 30 && data.new_happiness > 10) {
+        showToast('😔 Your happiness is low! Have some fun!', 'warning');
+      } else if (data.new_happiness <= 10) {
+        showToast('🔴 CRITICAL: You are depressed! Cheer up!', 'error');
+      }
+      
+      // Update the display
+      renderStats();
+      
+      console.log(`Stat decay applied: ${data.hours_passed.toFixed(1)} hours passed`);
+    }
+  } catch (error) {
+    console.error('Error applying stat decay:', error);
+  }
+}
+
 // Regenerate energy function
 async function regenerateEnergy() {
   if (!player) return;
@@ -472,6 +559,40 @@ async function updateRegenInfo() {
   } catch (error) {
     console.error('Error getting regen info:', error);
   }
+}
+
+// Get stat warning class
+function getStatWarningClass(value, type) {
+  if (type === 'hunger') {
+    if (value <= 10) return 'danger';
+    if (value <= 30) return 'warning';
+  }
+  if (type === 'happiness') {
+    if (value <= 10) return 'danger';
+    if (value <= 30) return 'warning';
+  }
+  if (type === 'health') {
+    if (value <= 20) return 'danger';
+    if (value <= 50) return 'warning';
+  }
+  return '';
+}
+
+// Get warning emoji
+function getWarningEmoji(value, type) {
+  if (type === 'hunger') {
+    if (value <= 10) return '🔴';
+    if (value <= 30) return '⚠️';
+  }
+  if (type === 'happiness') {
+    if (value <= 10) return '😢';
+    if (value <= 30) return '😐';
+  }
+  if (type === 'health') {
+    if (value <= 20) return '🏥';
+    if (value <= 50) return '🤕';
+  }
+  return '';
 }
 
 // Set up realtime subscription
@@ -525,6 +646,9 @@ async function loadPlayer() {
   }
   player = playerData;
   
+  // Apply stat decay on load (this will reduce hunger/happiness based on time away)
+  await applyStatDecay();
+  
   // Regenerate energy on load
   await regenerateEnergy();
   
@@ -554,6 +678,15 @@ function renderStats() {
   else if (player.energy < 50) energyBar.style.background = '#ff9800';
   else energyBar.style.background = '#4CAF50';
 
+  // Get warning classes and emojis for stats
+  const hungerWarning = getStatWarningClass(player.hunger || 100, 'hunger');
+  const happinessWarning = getStatWarningClass(player.happiness || 100, 'happiness');
+  const healthWarning = getStatWarningClass(player.health || 100, 'health');
+  
+  const hungerEmoji = getWarningEmoji(player.hunger || 100, 'hunger');
+  const happinessEmoji = getWarningEmoji(player.happiness || 100, 'happiness');
+  const healthEmoji = getWarningEmoji(player.health || 100, 'health');
+
   statsDiv.innerHTML = `
     <div class="stat-card">
       <b>👤 Username</b>
@@ -571,23 +704,36 @@ function renderStats() {
       <b>⚡ Energy</b>
       <div class="value">${player.energy}/100</div>
     </div>
-    <div class="stat-card">
+    <div class="stat-card ${healthWarning}">
       <b>❤️ Health</b>
       <div class="value">${player.health || 100}</div>
+      ${healthEmoji ? `<span class="stat-warning-badge">${healthEmoji}</span>` : ''}
+      ${healthWarning ? `<div class="stat-${healthWarning}">${healthWarning === 'danger' ? 'Critical!' : 'Low!'}</div>` : ''}
     </div>
-    <div class="stat-card">
+    <div class="stat-card ${hungerWarning}">
       <b>🍽️ Hunger</b>
       <div class="value">${player.hunger || 100}</div>
+      ${hungerEmoji ? `<span class="stat-warning-badge">${hungerEmoji}</span>` : ''}
+      ${hungerWarning ? `<div class="stat-${hungerWarning}">${hungerWarning === 'danger' ? 'Starving!' : 'Hungry!'}</div>` : ''}
     </div>
-    <div class="stat-card">
+    <div class="stat-card ${happinessWarning}">
       <b>😊 Happiness</b>
       <div class="value">${player.happiness || 100}</div>
+      ${happinessEmoji ? `<span class="stat-warning-badge">${happinessEmoji}</span>` : ''}
+      ${happinessWarning ? `<div class="stat-${happinessWarning}">${happinessWarning === 'danger' ? 'Depressed!' : 'Unhappy!'}</div>` : ''}
     </div>
     <div class="stat-card boost">
       <b>⚡ Success Boost</b>
       <div class="value">${player.success_boost || 0}%</div>
     </div>
   `;
+  
+  // Update decay info with time
+  const lastDecay = player.last_decay ? new Date(player.last_decay) : new Date();
+  const hoursSinceDecay = Math.floor((new Date() - lastDecay) / (1000 * 60 * 60));
+  if (hoursSinceDecay > 0) {
+    document.getElementById('decayInfo').innerHTML = `⏰ Last login: ${hoursSinceDecay} hour${hoursSinceDecay > 1 ? 's' : ''} ago - Stats have decayed`;
+  }
   
   // Update regen info
   updateRegenInfo();
@@ -618,6 +764,9 @@ window.addEventListener('beforeunload', () => {
   if (regenInterval) {
     clearInterval(regenInterval);
   }
+  if (decayCheckInterval) {
+    clearInterval(decayCheckInterval);
+  }
 });
 
 // Start energy regeneration timer (check every 10 seconds)
@@ -630,13 +779,23 @@ function startRegenTimer() {
   }, 10000); // Check every 10 seconds
 }
 
+// Check for stat decay every 5 minutes (while player is active)
+function startDecayChecker() {
+  decayCheckInterval = setInterval(async () => {
+    if (player) {
+      await applyStatDecay();
+    }
+  }, 300000); // Check every 5 minutes
+}
+
 loadPlayer();
 startRegenTimer();
+startDecayChecker();
 
 // Welcome toast
 setTimeout(() => {
   if (player) {
-    showToast(`Welcome back, ${player.username}! Energy regenerates over time ⚡`, 'info');
+    showToast(`Welcome back, ${player.username}! Stats decay over time - keep them balanced! ⚖️`, 'info', 5000);
   }
 }, 1000);
 </script>
