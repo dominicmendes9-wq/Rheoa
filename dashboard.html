@@ -2,31 +2,204 @@
 <html>
 <head>
   <title>Rheoa RPG - Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body { font-family: 'Courier New', monospace; background: #f8f8f0; color: #222; padding: 20px; }
-    h1 { text-align:center; margin-bottom:20px; }
-    .stat-card { border:2px solid black; border-radius:10px; padding:15px; margin:10px; display:inline-block; width:200px; text-align:center; vertical-align:top; }
-    button { padding:8px 12px; margin:5px; border-radius:5px; cursor:pointer; }
-    #xpBarContainer { width: 300px; background:#ccc; border:1px solid #999; border-radius:10px; margin:5px auto; }
-    #xpBar { width:0%; height:20px; background:#9c27b0; border-radius:10px; }
-    #feedback { margin-top:15px; font-weight:bold; text-align:center; }
-    .boost { color: green; font-weight:bold; }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body { 
+      font-family: 'Courier New', monospace; 
+      background: #f8f8f0; 
+      color: #222; 
+      padding: 20px;
+      min-height: 100vh;
+    }
+    
+    h1 { 
+      text-align: center; 
+      margin-bottom: 30px;
+      font-size: clamp(1.5rem, 5vw, 2.5rem);
+    }
+    
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-bottom: 30px;
+    }
+    
+    .stat-card { 
+      border: 2px solid black; 
+      border-radius: 10px; 
+      padding: 15px; 
+      text-align: center; 
+      background: white;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .stat-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    .stat-card b {
+      font-size: 1.1rem;
+      display: block;
+      margin-bottom: 8px;
+    }
+    
+    .stat-card .value {
+      font-size: 1.3rem;
+      font-weight: bold;
+      color: #333;
+    }
+    
+    .boost { 
+      background: #e8f5e8; 
+      border-color: #4CAF50;
+    }
+    
+    .progress-container {
+      max-width: 500px;
+      margin: 20px auto;
+      padding: 0 15px;
+    }
+    
+    .progress-label {
+      font-weight: bold;
+      margin-bottom: 5px;
+      text-align: center;
+    }
+    
+    .progress-bar-bg {
+      width: 100%;
+      height: 25px;
+      background: #ccc;
+      border: 1px solid #999;
+      border-radius: 15px;
+      overflow: hidden;
+    }
+    
+    .progress-bar-fill {
+      height: 100%;
+      background: #9c27b0;
+      transition: width 0.3s ease;
+    }
+    
+    .button-container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 30px;
+      padding: 0 10px;
+    }
+    
+    button {
+      padding: 12px 24px;
+      font-size: 1rem;
+      font-family: 'Courier New', monospace;
+      font-weight: bold;
+      border: 2px solid black;
+      border-radius: 8px;
+      background: white;
+      cursor: pointer;
+      transition: all 0.2s;
+      min-width: 120px;
+      flex: 0 1 auto;
+    }
+    
+    button:hover {
+      background: #333;
+      color: white;
+      transform: scale(1.02);
+    }
+    
+    #feedback { 
+      margin-top: 20px; 
+      font-weight: bold; 
+      text-align: center;
+      font-size: 1.1rem;
+      padding: 10px;
+    }
+    
+    /* Mobile-specific styles */
+    @media (max-width: 600px) {
+      body { padding: 10px; }
+      
+      .stats-grid {
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+      
+      .stat-card {
+        padding: 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      
+      .stat-card b {
+        margin-bottom: 0;
+        font-size: 1rem;
+      }
+      
+      .button-container {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      
+      button {
+        width: 100%;
+        padding: 15px;
+        font-size: 1.1rem;
+      }
+      
+      .progress-container {
+        padding: 0 5px;
+      }
+    }
+    
+    /* Tablet-specific adjustments */
+    @media (min-width: 601px) and (max-width: 1024px) {
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      
+      .button-container {
+        flex-wrap: wrap;
+      }
+      
+      button {
+        flex: 1 1 calc(50% - 10px);
+      }
+    }
   </style>
 </head>
 <body>
 
-<h1>Dashboard</h1>
+<h1>📊 Dashboard</h1>
 
-<div id="stats"></div>
-<div id="xpBarContainer"><div id="xpBar"></div></div>
+<div class="stats-grid" id="stats"></div>
+
+<div class="progress-container">
+  <div class="progress-label">Level Progress</div>
+  <div class="progress-bar-bg">
+    <div class="progress-bar-fill" id="xpBar" style="width:0%"></div>
+  </div>
+</div>
+
 <div id="feedback"></div>
 
-<div style="text-align:center; margin-top:20px;">
-  <button onclick="goTo('jobs.html')">Jobs</button>
-  <button onclick="goTo('crime.html')">Crime</button>
-  <button onclick="goTo('inventory.html')">Inventory</button>
-  <button onclick="goTo('history.html')">History</button> 
-    <button onclick="logout()">Logout</button>
+<div class="button-container">
+  <button onclick="goTo('jobs.html')">💼 Jobs</button>
+  <button onclick="goTo('crime.html')">🔫 Crime</button>
+  <button onclick="goTo('inventory.html')">🎒 Inventory</button>
+  <button onclick="goTo('history.html')">📜 History</button> 
+  <button onclick="logout()" style="background:#f44336; color:white; border-color:#d32f2f;">🚪 Logout</button>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
@@ -38,54 +211,72 @@ const sb = window.supabase.createClient(
 
 let player = null;
 
-// 🌟 LOAD PLAYER
 async function loadPlayer() {
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return window.location.href="index.html";
 
   const { data: playerData } = await sb.from('players').select('*').eq('auth_id', user.id).single();
-  if (!playerData) { document.getElementById("stats").innerText="Player not found"; return; }
+  if (!playerData) { 
+    document.getElementById("stats").innerHTML = '<div class="stat-card">Player not found</div>'; 
+    return; 
+  }
   player = playerData;
-
   renderStats();
 }
 
-// 🎨 RENDER STATS
 function renderStats() {
   const statsDiv = document.getElementById("stats");
+  const nextLevelXP = Math.pow(player.level, 2) * 100;
+  const prevLevelXP = Math.pow(player.level - 1, 2) * 100;
+  const progress = ((player.xp - prevLevelXP) / (nextLevelXP - prevLevelXP)) * 100;
+  document.getElementById("xpBar").style.width = Math.min(100, Math.max(0, progress)) + '%';
 
   statsDiv.innerHTML = `
-    <div class="stat-card">Username<br><b>${player.username}</b></div>
-    <div class="stat-card">💰 Cash<br><b>₹${player.cash}</b></div>
-    <div class="stat-card">⭐ XP<br><b>${player.xp}</b></div>
-    <div class="stat-card">⚡ Energy<br><b>${player.energy}</b></div>
-    <div class="stat-card">❤️ Health<br><b>${player.health || 100}</b></div>
-    <div class="stat-card">🍽️ Hunger<br><b>${player.hunger || 100}</b></div>
-    <div class="stat-card">😊 Happiness<br><b>${player.happiness || 100}</b></div>
-    <div class="stat-card boost">⚡ Boost: ${player.success_boost || 0}%</div>
+    <div class="stat-card">
+      <b>👤 Username</b>
+      <div class="value">${player.username}</div>
+    </div>
+    <div class="stat-card">
+      <b>💰 Cash</b>
+      <div class="value">₹${player.cash.toLocaleString()}</div>
+    </div>
+    <div class="stat-card">
+      <b>⭐ XP</b>
+      <div class="value">${player.xp.toLocaleString()}</div>
+    </div>
+    <div class="stat-card">
+      <b>⚡ Energy</b>
+      <div class="value">${player.energy}/100</div>
+    </div>
+    <div class="stat-card">
+      <b>❤️ Health</b>
+      <div class="value">${player.health || 100}</div>
+    </div>
+    <div class="stat-card">
+      <b>🍽️ Hunger</b>
+      <div class="value">${player.hunger || 100}</div>
+    </div>
+    <div class="stat-card">
+      <b>😊 Happiness</b>
+      <div class="value">${player.happiness || 100}</div>
+    </div>
+    <div class="stat-card boost">
+      <b>⚡ Success Boost</b>
+      <div class="value">${player.success_boost || 0}%</div>
+    </div>
   `;
-
-  renderXPBar();
 }
 
-// 🟪 RENDER XP BAR
-function renderXPBar() {
-  const nextLevelXP = Math.pow(player.level,2)*100;
-  const prevLevelXP = Math.pow(player.level-1,2)*100;
-  const progress = ((player.xp - prevLevelXP)/(nextLevelXP - prevLevelXP))*100;
-  document.getElementById("xpBar").style.width = progress+'%';
-}
-
-// 🔄 LOGOUT
 async function logout() {
   await sb.auth.signOut();
-  window.location.href="index.html";
+  window.location.href = "index.html";
 }
 
-// 🔗 NAVIGATION
-function goTo(page) { window.location.href = page; }
+function goTo(page) { 
+  window.location.href = page; 
+}
 
-// AUTO REFRESH STATS EVERY 5s
+// Polling (to be replaced with Realtime in later phase)
 setInterval(async () => {
   if (!player) return;
   const { data: playerData } = await sb.from('players').select('*').eq('id', player.id).single();
