@@ -218,7 +218,7 @@
       text-decoration: underline;
     }
     
-    /* Toast Notification Styles (for consistency) */
+    /* Toast Notification Styles */
     .toast-container {
       position: fixed;
       top: 20px;
@@ -254,6 +254,26 @@
     
     .toast.fade-out {
       animation: slideOut 0.3s ease-out forwards;
+    }
+    
+    /* Loading state for button */
+    .login-btn.loading {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+    
+    .login-btn.loading .btn-text {
+      display: none;
+    }
+    
+    .login-btn.loading::after {
+      content: '';
+      width: 20px;
+      height: 20px;
+      border: 3px solid white;
+      border-top: 3px solid transparent;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
     }
     
     /* Mobile styles */
@@ -293,26 +313,6 @@
         padding: 12px 20px;
         font-size: 0.9rem;
       }
-    }
-    
-    /* Loading state for button */
-    .login-btn.loading {
-      opacity: 0.7;
-      cursor: not-allowed;
-    }
-    
-    .login-btn.loading .btn-text {
-      display: none;
-    }
-    
-    .login-btn.loading::after {
-      content: '';
-      width: 20px;
-      height: 20px;
-      border: 3px solid white;
-      border-top: 3px solid transparent;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
     }
   </style>
 </head>
@@ -362,28 +362,26 @@
         <span class="btn-text">🚀 Login with Google</span>
       </button>
       
-      <div class="status-message" id="status">
-        <div class="spinner"></div>
-        <span>Checking authentication...</span>
-      </div>
+      <p id="status" style="margin-top: 15px; color: #666;"></p>
     </div>
   </div>
   
   <div class="footer">
     <p>© 2024 Rheoa RPG. All rights reserved.</p>
-    <p>Ready to start your journey? <a href="#" onclick="document.getElementById('loginBtn').click()">Login now!</a></p>
+    <p>Ready to start your journey? <a href="#" onclick="document.getElementById('loginBtn').click(); return false;">Login now!</a></p>
   </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 
 <script>
+// ORIGINAL SUPABASE CONFIG - UNCHANGED
 const sb = window.supabase.createClient(
   "https://mtiwodvsrwvrujbhmmrn.supabase.co",
   "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
 );
 
-// Toast notification system
+// Toast notification system (UI enhancement only)
 function showToast(message, type = 'info', duration = 3000) {
   const container = document.getElementById('toast-container');
   const toast = document.createElement('div');
@@ -402,133 +400,43 @@ function showToast(message, type = 'info', duration = 3000) {
   }, duration);
 }
 
-// Show status message
-function showStatus(message, type = 'info', showSpinner = false) {
-  const statusEl = document.getElementById('status');
-  statusEl.className = `status-message ${type} show`;
-  
-  if (showSpinner) {
-    statusEl.innerHTML = `<div class="spinner"></div><span>${message}</span>`;
-  } else {
-    statusEl.innerHTML = `<span>${message}</span>`;
-  }
-}
-
-// Hide status
-function hideStatus() {
-  const statusEl = document.getElementById('status');
-  statusEl.className = 'status-message';
-  statusEl.innerHTML = '';
-}
-
-// Login function with loading state
+// ORIGINAL LOGIN FUNCTION - EXACTLY AS BEFORE
 async function login() {
-  const loginBtn = document.getElementById('loginBtn');
-  
-  try {
-    // Show loading state
-    loginBtn.classList.add('loading');
-    showStatus('Redirecting to Google...', 'info', true);
-    
-    // Perform login
-    const { error } = await sb.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: window.location.origin + "/dashboard.html"
-      }
-    });
-    
-    if (error) throw error;
-    
-  } catch (error) {
-    console.error('Login error:', error);
-    loginBtn.classList.remove('loading');
-    showStatus('Login failed. Please try again.', 'error');
-    showToast('❌ Login failed: ' + error.message, 'error');
-  }
-}
-
-// Check existing session with enhanced UI
-async function checkUser() {
-  try {
-    const { data: { user }, error } = await sb.auth.getUser();
-    
-    if (error) throw error;
-    
-    if (user) {
-      showStatus(`✓ Already logged in as ${user.email}`, 'success');
-      showToast(`Welcome back! Redirecting to dashboard...`, 'success');
-      
-      // Auto-redirect after 2 seconds
-      setTimeout(() => {
-        window.location.href = "dashboard.html";
-      }, 2000);
-    } else {
-      hideStatus();
+  await sb.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: "https://dominicmendes9-wq.github.io/Rheoa/dashboard.html"
     }
-  } catch (error) {
-    console.error('Auth check error:', error);
-    hideStatus();
-  }
+  });
 }
 
-// Handle auth state changes
-sb.auth.onAuthStateChange((event, session) => {
-  console.log('Auth event:', event);
-  
-  switch(event) {
-    case 'SIGNED_IN':
-      showToast('✅ Login successful! Welcome to Rheoa!', 'success');
-      setTimeout(() => {
-        window.location.href = "dashboard.html";
-      }, 1000);
-      break;
-      
-    case 'SIGNED_OUT':
-      showToast('👋 Logged out successfully', 'info');
-      break;
-      
-    case 'USER_UPDATED':
-      showToast('👤 User profile updated', 'info');
-      break;
-  }
-});
-
-// Event listeners
 document.getElementById("loginBtn").addEventListener("click", login);
 
-// Add keyboard support (Enter key on button)
-document.getElementById("loginBtn").addEventListener("keypress", (e) => {
-  if (e.key === 'Enter' || e.key === ' ') {
-    e.preventDefault();
-    login();
+// ORIGINAL AUTH STATE HANDLER - UNCHANGED
+sb.auth.onAuthStateChange((event, session) => {
+  if (event === "SIGNED_IN") {
+    showToast('✅ Login successful!', 'success');
+    window.location.href = "dashboard.html";
   }
 });
 
-// Check for existing session on load
+// ORIGINAL CHECK USER FUNCTION - UNCHANGED
+async function checkUser() {
+  const { data } = await sb.auth.getUser();
+
+  if (data.user) {
+    document.getElementById("status").innerText =
+      "Already logged in: " + data.user.email;
+    showToast(`Welcome back, ${data.user.email}!`, 'success');
+  }
+}
+
 checkUser();
 
-// Show welcome toast after a brief delay
+// Welcome toast
 setTimeout(() => {
   showToast('👋 Welcome to Rheoa RPG!', 'info', 4000);
 }, 500);
-
-// Add some particle effect on hover (optional)
-const loginBtn = document.getElementById('loginBtn');
-loginBtn.addEventListener('mouseenter', () => {
-  loginBtn.style.transform = 'translateY(-2px)';
-});
-
-loginBtn.addEventListener('mouseleave', () => {
-  loginBtn.style.transform = 'translateY(0)';
-});
-
-// Handle redirect after OAuth (in case of popup)
-const urlParams = new URLSearchParams(window.location.search);
-if (urlParams.get('error')) {
-  showStatus('Login error: ' + urlParams.get('error'), 'error');
-  showToast('❌ Login failed. Please try again.', 'error');
-}
 
 </script>
 
