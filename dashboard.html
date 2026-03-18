@@ -85,9 +85,11 @@
     
     .progress-bar-fill {
       height: 100%;
-      background: #9c27b0;
       transition: width 0.3s ease;
     }
+    
+    #xpBar { background: #9c27b0; }
+    #energyBar { background: #4CAF50; }
     
     .button-container {
       display: flex;
@@ -118,15 +120,55 @@
       transform: scale(1.02);
     }
     
-    #feedback { 
-      margin-top: 20px; 
-      font-weight: bold; 
-      text-align: center;
-      font-size: 1.1rem;
-      padding: 10px;
+    /* Toast Notification Styles */
+    .toast-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 9999;
     }
     
-    /* Mobile-specific styles */
+    .toast {
+      padding: 15px 25px;
+      margin-bottom: 10px;
+      border-radius: 8px;
+      color: white;
+      font-weight: bold;
+      animation: slideIn 0.3s ease-out;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      min-width: 250px;
+      max-width: 350px;
+    }
+    
+    .toast.success { background: #4CAF50; }
+    .toast.error { background: #f44336; }
+    .toast.info { background: #2196F3; }
+    
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    
+    @keyframes slideOut {
+      from { transform: translateX(0); opacity: 1; }
+      to { transform: translateX(100%); opacity: 0; }
+    }
+    
+    .toast.fade-out {
+      animation: slideOut 0.3s ease-out forwards;
+    }
+    
+    /* Confetti Canvas */
+    #confetti-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 9998;
+    }
+    
     @media (max-width: 600px) {
       body { padding: 10px; }
       
@@ -161,25 +203,20 @@
       .progress-container {
         padding: 0 5px;
       }
-    }
-    
-    /* Tablet-specific adjustments */
-    @media (min-width: 601px) and (max-width: 1024px) {
-      .stats-grid {
-        grid-template-columns: repeat(2, 1fr);
-      }
       
-      .button-container {
-        flex-wrap: wrap;
-      }
-      
-      button {
-        flex: 1 1 calc(50% - 10px);
+      .toast {
+        min-width: 200px;
+        max-width: 280px;
+        padding: 12px 20px;
+        font-size: 0.9rem;
       }
     }
   </style>
 </head>
 <body>
+
+<canvas id="confetti-canvas"></canvas>
+<div class="toast-container" id="toast-container"></div>
 
 <h1>📊 Dashboard</h1>
 
@@ -192,7 +229,12 @@
   </div>
 </div>
 
-<div id="feedback"></div>
+<div class="progress-container">
+  <div class="progress-label">Energy</div>
+  <div class="progress-bar-bg">
+    <div class="progress-bar-fill" id="energyBar" style="width:100%"></div>
+  </div>
+</div>
 
 <div class="button-container">
   <button onclick="goTo('jobs.html')">💼 Jobs</button>
@@ -210,6 +252,97 @@ const sb = window.supabase.createClient(
 );
 
 let player = null;
+let confettiAnimation = null;
+
+// Toast notification system
+function showToast(message, type = 'info', duration = 3000) {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.textContent = message;
+  
+  container.appendChild(toast);
+  
+  setTimeout(() => {
+    toast.classList.add('fade-out');
+    setTimeout(() => {
+      if (toast.parentNode) {
+        container.removeChild(toast);
+      }
+    }, 300);
+  }, duration);
+}
+
+// Confetti system
+function startConfetti() {
+  const canvas = document.getElementById('confetti-canvas');
+  const ctx = canvas.getContext('2d');
+  
+  function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+  
+  const particles = [];
+  const colors = ['#f44336', '#4CAF50', '#2196F3', '#FFC107', '#9C27B0', '#FF9800'];
+  
+  for (let i = 0; i < 100; i++) {
+    particles.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height - canvas.height,
+      size: Math.random() * 8 + 3,
+      speed: Math.random() * 4 + 2,
+      angle: Math.random() * Math.PI * 2,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      rotation: Math.random() * 360
+    });
+  }
+  
+  function animate() {
+    if (!ctx) return;
+    
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    let anyVisible = false;
+    particles.forEach(p => {
+      p.y += p.speed;
+      p.x += Math.sin(p.angle) * 0.5;
+      p.rotation += 2;
+      
+      if (p.y < canvas.height + 50) {
+        anyVisible = true;
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate((p.rotation * Math.PI) / 180);
+        ctx.fillStyle = p.color;
+        ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size);
+        ctx.restore();
+      } else if (p.y > canvas.height + 50 && anyVisible === false) {
+        p.y = -20;
+        p.x = Math.random() * canvas.width;
+      }
+    });
+    
+    if (anyVisible) {
+      confettiAnimation = requestAnimationFrame(animate);
+    }
+  }
+  
+  animate();
+}
+
+function stopConfetti() {
+  if (confettiAnimation) {
+    cancelAnimationFrame(confettiAnimation);
+    confettiAnimation = null;
+  }
+  const canvas = document.getElementById('confetti-canvas');
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
 
 async function loadPlayer() {
   const { data: { user } } = await sb.auth.getUser();
@@ -226,10 +359,22 @@ async function loadPlayer() {
 
 function renderStats() {
   const statsDiv = document.getElementById("stats");
+  
+  // Update XP Bar
   const nextLevelXP = Math.pow(player.level, 2) * 100;
   const prevLevelXP = Math.pow(player.level - 1, 2) * 100;
-  const progress = ((player.xp - prevLevelXP) / (nextLevelXP - prevLevelXP)) * 100;
-  document.getElementById("xpBar").style.width = Math.min(100, Math.max(0, progress)) + '%';
+  const xpProgress = ((player.xp - prevLevelXP) / (nextLevelXP - prevLevelXP)) * 100;
+  document.getElementById("xpBar").style.width = Math.min(100, Math.max(0, xpProgress)) + '%';
+  
+  // Update Energy Bar
+  const energyPercent = (player.energy / 100) * 100;
+  const energyBar = document.getElementById("energyBar");
+  energyBar.style.width = Math.min(100, Math.max(0, energyPercent)) + '%';
+  
+  // Color energy bar based on level
+  if (player.energy < 20) energyBar.style.background = '#f44336';
+  else if (player.energy < 50) energyBar.style.background = '#ff9800';
+  else energyBar.style.background = '#4CAF50';
 
   statsDiv.innerHTML = `
     <div class="stat-card">
@@ -267,26 +412,46 @@ function renderStats() {
   `;
 }
 
+function checkLevelUp(oldLevel, newLevel) {
+  if (newLevel > oldLevel) {
+    showToast(`🎉 LEVEL UP! You are now level ${newLevel}!`, 'success', 4000);
+    startConfetti();
+    setTimeout(stopConfetti, 3000);
+  }
+}
+
 async function logout() {
   await sb.auth.signOut();
-  window.location.href = "index.html";
+  showToast('Logged out successfully', 'info');
+  setTimeout(() => {
+    window.location.href = "index.html";
+  }, 1000);
 }
 
 function goTo(page) { 
   window.location.href = page; 
 }
 
-// Polling (to be replaced with Realtime in later phase)
+// Polling with toast notification for updates
 setInterval(async () => {
   if (!player) return;
   const { data: playerData } = await sb.from('players').select('*').eq('id', player.id).single();
   if (playerData) {
+    const oldLevel = player.level;
     player = playerData;
     renderStats();
+    checkLevelUp(oldLevel, player.level);
   }
 }, 5000);
 
 loadPlayer();
+
+// Welcome toast
+setTimeout(() => {
+  if (player) {
+    showToast(`Welcome back, ${player.username}!`, 'info');
+  }
+}, 1000);
 </script>
 
 </body>
