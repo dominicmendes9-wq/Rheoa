@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Rheoa RPG - History</title>
+  <title>Rheoa RPG - Crime History</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     * {
@@ -20,8 +20,88 @@
     
     h1 { 
       text-align: center; 
-      margin-bottom: 30px;
+      margin-bottom: 10px;
       font-size: clamp(1.5rem, 5vw, 2.5rem);
+    }
+    
+    .subtitle {
+      text-align: center;
+      color: #666;
+      margin-bottom: 30px;
+      font-style: italic;
+    }
+    
+    /* Stats Summary */
+    .stats-summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 15px;
+      max-width: 800px;
+      margin: 20px auto 30px;
+      padding: 20px;
+      background: white;
+      border-radius: 12px;
+      border: 2px solid black;
+    }
+    
+    .stat-card {
+      text-align: center;
+    }
+    
+    .stat-label {
+      font-size: 0.9rem;
+      color: #666;
+      margin-bottom: 5px;
+    }
+    
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+    
+    .stat-value.success { color: #4CAF50; }
+    .stat-value.fail { color: #f44336; }
+    
+    /* Filter Buttons */
+    .filter-container {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 30px;
+      flex-wrap: wrap;
+    }
+    
+    .filter-btn {
+      padding: 10px 20px;
+      font-family: 'Courier New', monospace;
+      font-weight: bold;
+      border: 2px solid black;
+      border-radius: 25px;
+      background: white;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .filter-btn:hover {
+      background: #333;
+      color: white;
+    }
+    
+    .filter-btn.active {
+      background: #333;
+      color: white;
+    }
+    
+    .filter-btn.success.active {
+      background: #4CAF50;
+      border-color: #4CAF50;
+      color: white;
+    }
+    
+    .filter-btn.fail.active {
+      background: #f44336;
+      border-color: #f44336;
+      color: white;
     }
     
     .history-grid {
@@ -75,7 +155,10 @@
     .crime-date {
       color: #666;
       font-size: 0.9rem;
-      margin-bottom: 10px;
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
     }
     
     .crime-result {
@@ -84,7 +167,7 @@
       padding: 8px 12px;
       border-radius: 6px;
       display: inline-block;
-      margin-bottom: 10px;
+      margin-bottom: 15px;
     }
     
     .crime-result.success {
@@ -98,20 +181,33 @@
     }
     
     .crime-details {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
       margin-top: 15px;
-      display: flex;
-      gap: 15px;
-      flex-wrap: wrap;
+      padding-top: 15px;
+      border-top: 1px dashed #ccc;
     }
     
     .crime-detail-item {
-      flex: 1;
-      min-width: 80px;
       text-align: center;
       padding: 8px;
       background: #f5f5f5;
       border-radius: 6px;
     }
+    
+    .detail-label {
+      font-size: 0.8rem;
+      color: #666;
+      margin-bottom: 3px;
+    }
+    
+    .detail-value {
+      font-weight: bold;
+    }
+    
+    .detail-value.reward { color: #4CAF50; }
+    .detail-value.penalty { color: #f44336; }
     
     .back-button {
       display: block;
@@ -208,7 +304,7 @@
       }
       
       .crime-details {
-        gap: 10px;
+        gap: 5px;
       }
       
       .back-button {
@@ -221,6 +317,16 @@
         padding: 12px 20px;
         font-size: 0.9rem;
       }
+      
+      .filter-container {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 0 10px;
+      }
+      
+      .filter-btn {
+        width: 100%;
+      }
     }
   </style>
 </head>
@@ -229,9 +335,37 @@
 <div class="toast-container" id="toast-container"></div>
 
 <h1>📜 Crime History</h1>
+<div class="subtitle">Track your criminal record</div>
+
+<!-- Stats Summary -->
+<div id="statsSummary" class="stats-summary" style="display: none;">
+  <div class="stat-card">
+    <div class="stat-label">Total Crimes</div>
+    <div class="stat-value" id="totalCrimes">0</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Success Rate</div>
+    <div class="stat-value" id="successRate">0%</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Successful</div>
+    <div class="stat-value success" id="successCount">0</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Failed</div>
+    <div class="stat-value fail" id="failCount">0</div>
+  </div>
+</div>
+
+<!-- Filter Buttons -->
+<div class="filter-container">
+  <button class="filter-btn active" onclick="filterHistory('all')" id="filterAll">📋 All</button>
+  <button class="filter-btn success" onclick="filterHistory('success')" id="filterSuccess">✅ Success</button>
+  <button class="filter-btn fail" onclick="filterHistory('fail')" id="filterFail">❌ Failed</button>
+</div>
 
 <div id="history" class="history-grid">
-  <div class="loading">Loading your history...</div>
+  <div class="loading">Loading your criminal record...</div>
 </div>
 
 <button class="back-button" onclick="goBack()">← Back to Dashboard</button>
@@ -244,6 +378,8 @@ const sb = window.supabase.createClient(
 );
 
 let player = null;
+let allHistory = [];
+let currentFilter = 'all';
 
 // Toast notification system
 function showToast(message, type = 'info', duration = 3000) {
@@ -264,6 +400,98 @@ function showToast(message, type = 'info', duration = 3000) {
   }, duration);
 }
 
+// Filter history
+function filterHistory(filter) {
+  currentFilter = filter;
+  
+  // Update active button styles
+  document.getElementById('filterAll').classList.remove('active');
+  document.getElementById('filterSuccess').classList.remove('active');
+  document.getElementById('filterFail').classList.remove('active');
+  
+  document.getElementById(`filter${filter === 'all' ? 'All' : filter.charAt(0).toUpperCase() + filter.slice(1)}`).classList.add('active');
+  
+  displayHistory();
+}
+
+// Calculate stats
+function calculateStats() {
+  const total = allHistory.length;
+  if (total === 0) return;
+  
+  const successCount = allHistory.filter(h => h.success === true).length;
+  const failCount = allHistory.filter(h => h.success === false).length;
+  const successRate = Math.round((successCount / total) * 100);
+  
+  document.getElementById('totalCrimes').textContent = total;
+  document.getElementById('successCount').textContent = successCount;
+  document.getElementById('failCount').textContent = failCount;
+  document.getElementById('successRate').textContent = `${successRate}%`;
+  document.getElementById('statsSummary').style.display = 'grid';
+}
+
+// Display history based on current filter
+function displayHistory() {
+  let filteredHistory = allHistory;
+  
+  if (currentFilter === 'success') {
+    filteredHistory = allHistory.filter(h => h.success === true);
+  } else if (currentFilter === 'fail') {
+    filteredHistory = allHistory.filter(h => h.success === false);
+  }
+  
+  const historyDiv = document.getElementById("history");
+  
+  if (filteredHistory.length === 0) {
+    if (allHistory.length === 0) {
+      historyDiv.innerHTML = '<div class="empty-history">No crimes attempted yet! Head to the Crime page to start your criminal career.</div>';
+    } else {
+      historyDiv.innerHTML = `<div class="empty-history">No ${currentFilter === 'success' ? 'successful' : 'failed'} crimes found</div>`;
+    }
+    return;
+  }
+
+  let html = "";
+  filteredHistory.forEach(h => {
+    const date = new Date(h.last_attempt).toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    
+    const resultClass = h.success ? 'success' : 'fail';
+    const resultText = h.success ? '✅ Success' : '❌ Failed';
+    const cashChange = h.success ? `+₹${h.crimes.reward_cash}` : `-₹${h.crimes.fail_penalty}`;
+    const xpChange = h.success ? `+${h.crimes.reward_xp} XP` : '0 XP';
+    
+    html += `
+      <div class="history-card ${resultClass}">
+        <div class="crime-name">🔫 ${h.crimes.name}</div>
+        <div class="crime-date">📅 ${date}</div>
+        <div class="crime-result ${resultClass}">${resultText}</div>
+        <div class="crime-details">
+          <div class="crime-detail-item">
+            <div class="detail-label">💰 Cash</div>
+            <div class="detail-value ${h.success ? 'reward' : 'penalty'}">${cashChange}</div>
+          </div>
+          <div class="crime-detail-item">
+            <div class="detail-label">⭐ XP</div>
+            <div class="detail-value ${h.success ? 'reward' : ''}">${xpChange}</div>
+          </div>
+          <div class="crime-detail-item">
+            <div class="detail-label">${h.success ? '🎯 Rate' : '💔 Loss'}</div>
+            <div class="detail-value">${h.success ? h.crimes.reward_cash/h.crimes.fail_penalty : '—'}</div>
+          </div>
+        </div>
+      </div>
+    `;
+  });
+
+  historyDiv.innerHTML = html;
+}
+
 async function loadHistory() {
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return window.location.href = "index.html";
@@ -281,6 +509,7 @@ async function loadHistory() {
       id,
       crime_id,
       last_attempt,
+      success,
       crimes (
         name,
         reward_cash,
@@ -298,52 +527,24 @@ async function loadHistory() {
     return;
   }
 
-  if (!history || history.length === 0) {
-    document.getElementById("history").innerHTML = '<div class="empty-history">No crimes attempted yet! Head to the Crime page to start your criminal career.</div>';
-    return;
+  allHistory = history || [];
+  calculateStats();
+  displayHistory();
+  
+  if (allHistory.length > 0) {
+    showToast(`Loaded ${allHistory.length} crime records`, 'info', 2000);
   }
-
-  let html = "";
-  history.forEach(h => {
-    const date = new Date(h.last_attempt).toLocaleString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-    
-    html += `
-      <div class="history-card">
-        <div class="crime-name">🔫 ${h.crimes.name}</div>
-        <div class="crime-date">📅 ${date}</div>
-        <div class="crime-details">
-          <div class="crime-detail-item">
-            <div>💰</div>
-            <div>+₹${h.crimes.reward_cash}</div>
-          </div>
-          <div class="crime-detail-item">
-            <div>⭐</div>
-            <div>+${h.crimes.reward_xp} XP</div>
-          </div>
-          <div class="crime-detail-item">
-            <div>❌</div>
-            <div>-₹${h.crimes.fail_penalty}</div>
-          </div>
-        </div>
-      </div>
-    `;
-  });
-
-  document.getElementById("history").innerHTML = html;
-  showToast(`Loaded ${history.length} crime records`, 'info', 2000);
 }
 
 function goBack() {
   window.location.href = "dashboard.html";
 }
 
-loadHistory();
+// Initialize filter buttons
+document.addEventListener('DOMContentLoaded', () => {
+  loadHistory();
+});
+
 </script>
 
 </body>
