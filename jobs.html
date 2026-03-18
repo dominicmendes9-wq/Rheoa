@@ -4,6 +4,7 @@
   <title>Rheoa RPG - Jobs</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
+    /* Same styles as crime.html but with job-specific colors */
     * {
       box-sizing: border-box;
       margin: 0;
@@ -168,6 +169,66 @@
       font-weight: bold;
     }
     
+    /* Stats summary */
+    .stats-summary {
+      display: flex;
+      justify-content: center;
+      gap: 30px;
+      margin-bottom: 20px;
+      padding: 15px;
+      background: white;
+      border-radius: 10px;
+      border: 2px solid black;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    
+    .stat-item {
+      text-align: center;
+    }
+    
+    .stat-label {
+      font-size: 0.9rem;
+      color: #666;
+    }
+    
+    .stat-value {
+      font-size: 1.3rem;
+      font-weight: bold;
+    }
+    
+    /* Realtime status */
+    .realtime-status {
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      padding: 5px 10px;
+      background: rgba(0,0,0,0.7);
+      color: white;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      z-index: 9997;
+    }
+    
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #4CAF50;
+      animation: pulse 2s infinite;
+    }
+    
+    .cooldown-timer {
+      font-size: 0.8rem;
+      color: #666;
+      margin-top: 5px;
+      text-align: center;
+    }
+    
     @media (max-width: 600px) {
       body { padding: 10px; }
       
@@ -190,6 +251,18 @@
         padding: 12px 20px;
         font-size: 0.9rem;
       }
+      
+      .stats-summary {
+        flex-direction: column;
+        gap: 10px;
+        padding: 10px;
+      }
+      
+      .realtime-status {
+        bottom: 5px;
+        right: 5px;
+        font-size: 0.7rem;
+      }
     }
   </style>
 </head>
@@ -198,7 +271,29 @@
 <canvas id="confetti-canvas"></canvas>
 <div class="toast-container" id="toast-container"></div>
 
+<!-- Realtime Status Indicator -->
+<div class="realtime-status" id="realtimeStatus">
+  <span class="status-dot"></span>
+  <span>Live Updates Active</span>
+</div>
+
 <h1>💼 Available Jobs</h1>
+
+<!-- Player Stats Summary -->
+<div id="playerStats" class="stats-summary" style="display: none;">
+  <div class="stat-item">
+    <div class="stat-label">💰 Cash</div>
+    <div class="stat-value" id="statCash">₹0</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-label">⚡ Energy</div>
+    <div class="stat-value" id="statEnergy">0/100</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-label">⭐ Boost</div>
+    <div class="stat-value" id="statBoost">0%</div>
+  </div>
+</div>
 
 <div id="jobs" class="jobs-grid">
   <div class="loading">Loading jobs...</div>
@@ -214,8 +309,10 @@ const sb = window.supabase.createClient(
 );
 
 let player = null;
-let cooldowns = {};
 let confettiAnimation = null;
+let playerChannel = null;
+let jobsChannel = null;
+let cooldownInterval = null;
 
 // Toast notification system
 function showToast(message, type = 'info', duration = 3000) {
@@ -307,16 +404,104 @@ function stopConfetti() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 }
 
+// Update player stats display
+function updatePlayerStats() {
+  if (!player) return;
+  
+  document.getElementById('playerStats').style.display = 'flex';
+  document.getElementById('statCash').textContent = `₹${player.cash.toLocaleString()}`;
+  document.getElementById('statEnergy').textContent = `${player.energy}/100`;
+  document.getElementById('statBoost').textContent = `${player.success_boost || 0}%`;
+}
+
+// Set up realtime subscriptions
+function setupRealtimeSubscriptions() {
+  if (!player) return;
+  
+  // Subscribe to player changes
+  if (playerChannel) playerChannel.unsubscribe();
+  
+  playerChannel = sb
+    .channel('player-updates')
+    .on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'players',
+        filter: `id=eq.${player.id}`
+      },
+      (payload) => {
+        const oldLevel = player.level;
+        player = payload.new;
+        updatePlayerStats();
+        
+        if (player.level > oldLevel) {
+          showToast(`🎉 LEVEL UP! You are now level ${player.level}!`, 'success', 4000);
+          startConfetti();
+          setTimeout(stopConfetti, 3000);
+        }
+      }
+    )
+    .subscribe();
+
+  // Subscribe to job cooldown changes
+  jobsChannel = sb
+    .channel('job-cooldowns')
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'player_jobs',
+        filter: `player_id=eq.${player.id}`
+      },
+      () => {
+        // Reload jobs to update cooldown buttons
+        loadJobs();
+      }
+    )
+    .subscribe((status) => {
+      if (status === 'SUBSCRIBED') {
+        document.getElementById('realtimeStatus').style.opacity = '1';
+      }
+    });
+}
+
+// Get cooldown from database
+async function getJobCooldown(jobId) {
+  const { data } = await sb
+    .from('player_jobs')
+    .select('next_available')
+    .eq('player_id', player.id)
+    .eq('job_id', jobId)
+    .maybeSingle();
+  
+  if (data && data.next_available) {
+    const now = new Date();
+    const nextAvailable = new Date(data.next_available);
+    const remaining = Math.max(0, (nextAvailable - now) / 1000);
+    return Math.ceil(remaining);
+  }
+  return 0;
+}
+
 async function loadJobs() {
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return window.location.href = "index.html";
 
   let { data: playerData } = await sb.from('players').select('*').eq('auth_id', user.id).single();
   if (!playerData) { 
-    document.getElementById("jobs").innerHTML = '<div class="loading">Player not found</div>'; 
+    document.getElementById("jobs").innerHTML = '<div class="stat-card">Player not found</div>'; 
     return; 
   }
   player = playerData;
+  updatePlayerStats();
+  
+  // Setup realtime if not already done
+  if (!playerChannel) {
+    setupRealtimeSubscriptions();
+  }
 
   let { data: jobs } = await sb.from('jobs').select('*');
   if (!jobs || jobs.length === 0) {
@@ -327,9 +512,9 @@ async function loadJobs() {
   const jobsDiv = document.getElementById("jobs");
   jobsDiv.innerHTML = "";
 
-  jobs.forEach(job => {
-    const cdKey = job.id;
-    const remaining = cooldowns[cdKey] ? Math.max(0, 30 - ((Date.now() - cooldowns[cdKey]) / 1000)) : 0;
+  // Load cooldowns for all jobs
+  for (const job of jobs) {
+    const remaining = await getJobCooldown(job.id);
     const xpBonus = Math.floor((player.success_boost || 0) * job.xp_reward / 100);
     const hasEnergy = player.energy >= job.energy_cost;
 
@@ -345,18 +530,26 @@ async function loadJobs() {
         <button id="jobBtn-${job.id}" 
                 onclick="doJob('${job.id}', ${job.salary}, ${job.energy_cost}, ${job.xp_reward})"
                 ${remaining > 0 || !hasEnergy ? 'disabled class="cooldown"' : ''}>
-          ${remaining > 0 ? `⏳ Wait ${Math.ceil(remaining)}s` : 
+          ${remaining > 0 ? `⏳ Wait ${remaining}s` : 
             !hasEnergy ? '⚡ Need Energy' : '💼 Work'}
         </button>
+        ${remaining > 0 ? `<div class="cooldown-timer">Ready in ${remaining}s</div>` : ''}
       </div>
     `;
-  });
+  }
 }
 
+// UPDATED: Now uses database cooldowns
 async function doJob(jobId, salary, energyCost, xpReward) {
   if (!player) return;
 
-  const now = new Date();
+  // Check cooldown from database
+  const remaining = await getJobCooldown(jobId);
+  if (remaining > 0) {
+    showToast(`⏳ Please wait ${remaining} seconds before working again!`, 'error');
+    return;
+  }
+
   if (player.energy < energyCost) { 
     showToast("❌ Not enough energy!", 'error'); 
     return; 
@@ -367,29 +560,19 @@ async function doJob(jobId, salary, energyCost, xpReward) {
   const newXP = player.xp + finalXP;
   const newEnergy = player.energy - energyCost;
   const newLevel = Math.floor(Math.sqrt(newXP / 100)) + 1;
-  const oldLevel = player.level;
 
+  // Update player
   await sb.from('players').update({ 
     cash: newCash, 
     xp: newXP, 
     energy: newEnergy, 
     level: newLevel 
   }).eq('id', player.id);
-  
-  player.cash = newCash; 
-  player.xp = newXP; 
-  player.energy = newEnergy; 
-  player.level = newLevel;
 
-  if (newLevel > oldLevel) {
-    showToast(`🎉 LEVEL UP! You are now level ${newLevel}!`, 'success', 4000);
-    startConfetti();
-    setTimeout(stopConfetti, 3000);
-  }
-  
-  showToast(`✅ Worked! +₹${salary.toLocaleString()} | +${finalXP} XP`, 'success');
+  // Update job record with cooldown
+  const now = new Date();
+  const nextAvailable = new Date(now.getTime() + 30 * 1000); // 30 seconds cooldown
 
-  cooldowns[jobId] = Date.now();
   const { data: record } = await sb.from('player_jobs')
     .select('*')
     .eq('player_id', player.id)
@@ -398,22 +581,48 @@ async function doJob(jobId, salary, energyCost, xpReward) {
     
   if (record) {
     await sb.from('player_jobs')
-      .update({ last_worked: now })
+      .update({ 
+        last_worked: now,
+        next_available: nextAvailable
+      })
       .eq('id', record.id);
   } else {
     await sb.from('player_jobs')
-      .insert({ player_id: player.id, job_id: jobId, last_worked: now });
+      .insert({ 
+        player_id: player.id, 
+        job_id: jobId, 
+        last_worked: now,
+        next_available: nextAvailable
+      });
   }
 
+  showToast(`✅ Worked! +₹${salary.toLocaleString()} | +${finalXP} XP`, 'success');
+  
+  // Reload jobs to show updated cooldown
   loadJobs();
+}
+
+// Cooldown countdown timer
+function startCooldownTimer() {
+  cooldownInterval = setInterval(() => {
+    loadJobs(); // Refresh to show updated cooldowns
+  }, 1000);
 }
 
 function goBack() { 
   window.location.href = "dashboard.html"; 
 }
 
-setInterval(() => loadJobs(), 1000);
+// Clean up on page unload
+window.addEventListener('beforeunload', () => {
+  if (playerChannel) playerChannel.unsubscribe();
+  if (jobsChannel) jobsChannel.unsubscribe();
+  if (cooldownInterval) clearInterval(cooldownInterval);
+});
+
+// Initialize
 loadJobs();
+startCooldownTimer();
 
 // Welcome toast
 setTimeout(() => {
