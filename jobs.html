@@ -26,7 +26,7 @@
     
     .jobs-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
       gap: 20px;
       padding: 10px;
       max-width: 1400px;
@@ -42,13 +42,36 @@
       display: flex;
       flex-direction: column;
       height: fit-content;
-      min-height: 360px; /* Fixed minimum height for consistency */
+      min-height: 380px;
       width: 100%;
+      position: relative;
     }
     
-    .job-card:hover {
+    .job-card.locked {
+      opacity: 0.8;
+      background: #f5f5f5;
+      border-color: #999;
+    }
+    
+    .job-card:hover:not(.locked) {
       transform: translateY(-3px);
       box-shadow: 0 6px 15px rgba(0,0,0,0.15);
+    }
+    
+    .level-badge {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: #2196F3;
+      color: white;
+      padding: 4px 8px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: bold;
+    }
+    
+    .level-badge.locked {
+      background: #f44336;
     }
     
     .job-card h3 {
@@ -60,6 +83,7 @@
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      padding-right: 60px;
     }
     
     .job-details {
@@ -85,6 +109,8 @@
     .xp { color: #9c27b0; }
     .energy { color: #2196F3; }
     .energy-warning { color: #f44336; font-weight: bold; }
+    .cooldown-badge { color: #ff9800; }
+    .level-req { color: #2196F3; }
     
     .button-container {
       margin-top: auto;
@@ -112,18 +138,19 @@
     }
     
     button.cooldown {
-      background: #ccc;
-      color: #666;
-      cursor: not-allowed;
-      border-color: #999;
+      background: #ff9800;
     }
     
     button.need-energy {
       background: #f44336;
     }
     
-    button.need-energy:hover:not(:disabled) {
-      background: #d32f2f;
+    button.level-locked {
+      background: #9c27b0;
+    }
+    
+    button:disabled {
+      cursor: not-allowed;
     }
     
     .back-button {
@@ -161,6 +188,7 @@
     .toast.success { background: #4CAF50; }
     .toast.error { background: #f44336; }
     .toast.info { background: #2196F3; }
+    .toast.warning { background: #ff9800; }
     
     @keyframes slideIn {
       from { transform: translateX(100%); opacity: 0; }
@@ -258,7 +286,6 @@
       border: 2px dashed #ccc;
     }
     
-    /* Bonus XP indicator */
     .bonus-badge {
       background: #9c27b0;
       color: white;
@@ -278,11 +305,12 @@
       
       .job-card {
         padding: 15px;
-        min-height: 340px;
+        min-height: 360px;
       }
       
       .job-card h3 {
         font-size: 1.2rem;
+        padding-right: 50px;
       }
       
       .job-details p {
@@ -325,6 +353,11 @@
         min-height: 44px;
         font-size: 1rem;
       }
+      
+      .level-badge {
+        font-size: 0.7rem;
+        padding: 2px 6px;
+      }
     }
   </style>
 </head>
@@ -352,8 +385,8 @@
     <div class="stat-value" id="statEnergy">0/100</div>
   </div>
   <div class="stat-item">
-    <div class="stat-label">⭐ Boost</div>
-    <div class="stat-value" id="statBoost">0%</div>
+    <div class="stat-label">⭐ Level</div>
+    <div class="stat-value" id="statLevel">1</div>
   </div>
 </div>
 
@@ -476,7 +509,7 @@ function updatePlayerStats() {
   
   document.getElementById('statCash').textContent = `₹${player.cash.toLocaleString()}`;
   document.getElementById('statEnergy').textContent = `${player.energy}/100`;
-  document.getElementById('statBoost').textContent = `${player.success_boost || 0}%`;
+  document.getElementById('statLevel').textContent = player.level;
 }
 
 // Set up realtime subscriptions
@@ -554,7 +587,12 @@ function getJobCooldown(jobId) {
   return jobCooldowns.get(jobId) || 0;
 }
 
-// Update button states only (no full rebuild)
+// Check if player meets level requirement
+function meetsLevelRequirement(jobMinLevel) {
+  return player && player.level >= jobMinLevel;
+}
+
+// Update button states only
 function updateCooldowns() {
   if (!player) return;
   
@@ -563,43 +601,63 @@ function updateCooldowns() {
   
   jobCards.forEach(card => {
     const jobId = card.dataset.jobId;
+    const minLevel = parseInt(card.dataset.minLevel);
+    const energyCost = parseInt(card.dataset.energyCost);
+    
     if (!jobId) return;
     
+    const meetsLevel = meetsLevelRequirement(minLevel);
     const remaining = jobCooldowns.get(jobId) || 0;
-    const energyCost = parseInt(card.dataset.energyCost);
     const hasEnergy = player.energy >= energyCost;
     const button = card.querySelector('button');
     
+    // Update card appearance based on level requirement
+    if (!meetsLevel) {
+      card.classList.add('locked');
+    } else {
+      card.classList.remove('locked');
+    }
+    
     if (button) {
-      if (remaining > 0) {
+      if (!meetsLevel) {
+        button.disabled = true;
+        button.classList.add('level-locked');
+        button.classList.remove('cooldown', 'need-energy');
+        button.textContent = `🔒 Need Level ${minLevel}`;
+      } else if (remaining > 0) {
         button.disabled = true;
         button.classList.add('cooldown');
-        button.classList.remove('need-energy');
+        button.classList.remove('need-energy', 'level-locked');
         button.textContent = `⏳ Wait ${remaining}s`;
       } else if (!hasEnergy) {
         button.disabled = true;
         button.classList.add('need-energy');
-        button.classList.remove('cooldown');
+        button.classList.remove('cooldown', 'level-locked');
         button.textContent = '⚡ Need Energy';
       } else {
         button.disabled = false;
-        button.classList.remove('cooldown', 'need-energy');
+        button.classList.remove('cooldown', 'need-energy', 'level-locked');
         button.textContent = '💼 Work';
       }
     }
   });
 }
 
-// Build job card HTML (stable structure)
-function buildJobCard(job, remaining) {
+// Build job card HTML
+function buildJobCard(job) {
+  const remaining = jobCooldowns.get(job.id) || 0;
   const xpBonus = Math.floor((player?.success_boost || 0) * job.xp_reward / 100);
   const totalXp = job.xp_reward + xpBonus;
   const hasEnergy = player?.energy >= job.energy_cost;
+  const meetsLevel = meetsLevelRequirement(job.min_level);
   
   let buttonClass = '';
   let buttonText = '';
   
-  if (remaining > 0) {
+  if (!meetsLevel) {
+    buttonClass = 'level-locked';
+    buttonText = `🔒 Need Level ${job.min_level}`;
+  } else if (remaining > 0) {
     buttonClass = 'cooldown';
     buttonText = `⏳ Wait ${remaining}s`;
   } else if (!hasEnergy) {
@@ -610,20 +668,27 @@ function buildJobCard(job, remaining) {
   }
   
   return `
-    <div class="job-card" data-job-id="${job.id}" data-energy-cost="${job.energy_cost}">
+    <div class="job-card ${!meetsLevel ? 'locked' : ''}" 
+         data-job-id="${job.id}" 
+         data-energy-cost="${job.energy_cost}"
+         data-min-level="${job.min_level}">
+      <span class="level-badge ${!meetsLevel ? 'locked' : ''}">
+        ${!meetsLevel ? '🔒' : '📋'} Lvl ${job.min_level}+
+      </span>
       <h3 title="${job.name}">${job.name}</h3>
       <div class="job-details">
         <p>💰 Salary <span class="salary">₹${job.salary.toLocaleString()}</span></p>
         <p>⭐ Base XP <span class="xp">${job.xp_reward} XP</span></p>
         ${xpBonus > 0 ? `<p>✨ Bonus <span class="xp">+${xpBonus} XP <span class="bonus-badge">Boost!</span></span></p>` : ''}
-        <p>⚡ Energy Cost <span class="${!hasEnergy ? 'energy-warning' : 'energy'}">${job.energy_cost}</span></p>
+        <p>⚡ Energy Cost <span class="${!hasEnergy && meetsLevel ? 'energy-warning' : 'energy'}">${job.energy_cost}</span></p>
         <p>📊 Total XP <span class="xp">${totalXp} XP</span></p>
+        <p>⏱️ Cooldown <span class="cooldown-badge">${job.cooldown_seconds}s</span></p>
       </div>
       <div class="button-container">
         <button id="jobBtn-${job.id}" 
                 onclick="attemptJob('${job.id}')"
                 class="${buttonClass}"
-                ${remaining > 0 || !hasEnergy ? 'disabled' : ''}>
+                ${!meetsLevel || remaining > 0 || !hasEnergy ? 'disabled' : ''}>
           ${buttonText}
         </button>
       </div>
@@ -652,7 +717,7 @@ async function loadJobs() {
       setupRealtimeSubscriptions();
     }
 
-    const { data: jobsData } = await sb.from('jobs').select('*').order('name');
+    const { data: jobsData } = await sb.from('jobs').select('*').order('min_level').order('name');
     if (!jobsData || jobsData.length === 0) {
       document.getElementById("jobs").innerHTML = '<div class="loading">No jobs available</div>';
       return;
@@ -681,10 +746,9 @@ async function loadJobs() {
     const jobsDiv = document.getElementById("jobs");
     jobsDiv.innerHTML = "";
 
-    // Build all cards at once (no incremental rendering)
+    // Build all cards sorted by level requirement
     jobs.forEach(job => {
-      const remaining = jobCooldowns.get(job.id) || 0;
-      jobsDiv.innerHTML += buildJobCard(job, remaining);
+      jobsDiv.innerHTML += buildJobCard(job);
     });
 
   } catch (error) {
@@ -694,9 +758,18 @@ async function loadJobs() {
   }
 }
 
-// UPDATED: Uses RPC for server-side logic
 async function attemptJob(jobId) {
   if (!player || isUpdating) return;
+
+  // Find the job
+  const job = jobs.find(j => j.id === jobId);
+  if (!job) return;
+
+  // Check level requirement
+  if (player.level < job.min_level) {
+    showToast(`🔒 Need level ${job.min_level} to work this job!`, 'warning');
+    return;
+  }
 
   // Check local cache first for immediate feedback
   const cachedCooldown = jobCooldowns.get(jobId) || 0;
@@ -724,6 +797,9 @@ async function attemptJob(jobId) {
           break;
         case 'Not enough energy':
           showToast(`❌ Need ${data.energy_needed} energy (you have ${data.energy_current})`, 'error');
+          break;
+        case 'Level too low':
+          showToast(`🔒 Need level ${data.required_level} (you are level ${data.current_level})`, 'warning');
           break;
         default:
           showToast(`❌ ${data.error}`, 'error');
@@ -753,24 +829,8 @@ async function attemptJob(jobId) {
       setTimeout(stopConfetti, 3000);
     }
 
-    // Update the job card button immediately (no card rebuild)
-    const jobCard = document.querySelector(`.job-card[data-job-id="${jobId}"]`);
-    if (jobCard) {
-      const button = jobCard.querySelector('button');
-      if (button) {
-        button.disabled = true;
-        button.classList.add('cooldown');
-        button.classList.remove('need-energy');
-        button.textContent = `⏳ Wait ${data.cooldown_seconds}s`;
-      }
-      
-      // Update energy cost color if energy changed
-      const energySpan = jobCard.querySelector('.energy, .energy-warning');
-      if (energySpan) {
-        const hasEnergy = player.energy >= parseInt(jobCard.dataset.energyCost);
-        energySpan.className = hasEnergy ? 'energy' : 'energy-warning';
-      }
-    }
+    // Update the job card button immediately
+    updateCooldowns();
 
   } catch (error) {
     console.error('Error attempting job:', error);
@@ -780,7 +840,7 @@ async function attemptJob(jobId) {
   }
 }
 
-// Cooldown countdown timer - updates cache and buttons only
+// Cooldown countdown timer
 function startCooldownTimer() {
   cooldownInterval = setInterval(() => {
     if (!player || isUpdating) return;
