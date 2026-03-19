@@ -262,6 +262,7 @@
       color: white;
       cursor: pointer;
       transition: all 0.2s;
+      text-align: center;
     }
     
     .back-button:hover {
@@ -269,36 +270,7 @@
       transform: scale(1.02);
     }
     
-    /* Toast Notifications */
-    .toast-container {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      z-index: 9999;
-    }
-    
-    .toast {
-      padding: 15px 25px;
-      margin-bottom: 10px;
-      border-radius: 8px;
-      color: white;
-      font-weight: bold;
-      animation: slideIn 0.3s ease-out;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      min-width: 250px;
-      max-width: 350px;
-    }
-    
-    .toast.success { background: #4CAF50; }
-    .toast.error { background: #f44336; }
-    .toast.info { background: #2196F3; }
-    .toast.achievement { background: #9c27b0; }
-    
-    @keyframes slideIn {
-      from { transform: translateX(100%); opacity: 0; }
-      to { transform: translateX(0); opacity: 1; }
-    }
-    
+    /* Toast container styles are now in toast.js */
     .empty-message {
       text-align: center;
       padding: 60px;
@@ -351,7 +323,7 @@
 </head>
 <body>
 
-<div class="toast-container" id="toast-container"></div>
+<!-- Toast container is created by toast.js, no need to include it here -->
 
 <h1>🏆 Achievements</h1>
 <div class="subtitle">Complete challenges and earn rewards</div>
@@ -390,35 +362,20 @@
 
 <button class="back-button" onclick="goBack()">← Back to Dashboard</button>
 
+<!-- Script includes: Supabase library + shared utilities -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<script src="supabase.js"></script>
+<script src="toast.js"></script>
+<script src="loading.js"></script>
+<script src="error-handler.js"></script>
+
 <script>
-const sb = window.supabase.createClient(
-  "https://mtiwodvsrwvrujbhmmrn.supabase.co",
-  "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
-);
+// Use the shared supabase client
+const sb = window.supabaseClient;
 
 let player = null;
 let allAchievements = [];
 let currentFilter = 'all';
-
-// Toast notification system
-function showToast(message, type = 'info', duration = 3000) {
-  const container = document.getElementById('toast-container');
-  const toast = document.createElement('div');
-  toast.className = `toast ${type}`;
-  toast.textContent = message;
-  
-  container.appendChild(toast);
-  
-  setTimeout(() => {
-    toast.classList.add('fade-out');
-    setTimeout(() => {
-      if (toast.parentNode) {
-        container.removeChild(toast);
-      }
-    }, 300);
-  }, duration);
-}
 
 // Filter achievements
 function filterAchievements(filter) {
@@ -514,10 +471,13 @@ function buildAchievementCard(achievement) {
 // Load player and achievements
 async function loadAchievements() {
   try {
-    const { data: { user } } = await sb.auth.getUser();
+    // Show loading state
+    document.getElementById('achievements').innerHTML = '<div class="loading">Loading achievements...</div>';
+    
+    const user = await window.getCurrentUser();
     if (!user) return window.location.href = "index.html";
 
-    const { data: playerData } = await sb.from('players').select('*').eq('auth_id', user.id).single();
+    const playerData = await window.getCurrentPlayer();
     if (!playerData) {
       document.getElementById('achievements').innerHTML = '<div class="error-message">Player not found</div>';
       return;
@@ -537,7 +497,7 @@ async function loadAchievements() {
     // Update stats
     const completed = allAchievements.filter(a => a.completed).length;
     const total = allAchievements.length;
-    const percent = Math.round((completed / total) * 100);
+    const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
     
     document.getElementById('completedCount').textContent = completed;
     document.getElementById('totalCount').textContent = total;
@@ -551,7 +511,9 @@ async function loadAchievements() {
     
   } catch (error) {
     console.error('Error loading achievements:', error);
-    document.getElementById('achievements').innerHTML = '<div class="error-message">Error loading achievements</div>';
+    const friendlyMessage = window.ErrorHandler.handleSupabaseError(error, 'Failed to load achievements');
+    document.getElementById('achievements').innerHTML = `<div class="error-message">${friendlyMessage}</div>`;
+    window.showToast(friendlyMessage, 'error');
   }
 }
 
@@ -566,11 +528,12 @@ async function checkNewAchievements() {
     
     if (unviewed && unviewed.length > 0) {
       unviewed.forEach(achievement => {
-        showToast(`🏆 Achievement Unlocked: ${achievement.name}!`, 'achievement', 5000);
+        window.showToast(`🏆 Achievement Unlocked: ${achievement.name}!`, 'achievement', 5000);
       });
     }
   } catch (error) {
     console.error('Error checking new achievements:', error);
+    // Non-critical error, don't show to user
   }
 }
 
@@ -593,16 +556,17 @@ async function claimAchievement(achievementId) {
         message = `⭐ +${data.reward_xp} XP claimed!`;
       }
       
-      showToast(message, 'success');
+      window.showToast(message, 'success');
       
       // Reload achievements to update claimed state
       await loadAchievements();
     } else {
-      showToast('Error claiming reward', 'error');
+      window.showToast(data.error || 'Failed to claim reward', 'error');
     }
   } catch (error) {
     console.error('Error claiming achievement:', error);
-    showToast('Error claiming reward', 'error');
+    const friendlyMessage = window.ErrorHandler.handleSupabaseError(error, 'Error claiming reward');
+    window.showToast(friendlyMessage, 'error');
   }
 }
 
@@ -610,12 +574,16 @@ function goBack() {
   window.location.href = "dashboard.html";
 }
 
-// Initialize
-loadAchievements();
+// Initialize with error handling
+window.ErrorHandler.withErrorHandling(
+  loadAchievements,
+  'achievements',
+  'Failed to load achievements'
+).catch(() => {});
 
 // Welcome toast
 setTimeout(() => {
-  showToast('Track your progress and earn rewards! 🏆', 'info');
+  window.showToast('Track your progress and earn rewards! 🏆', 'info');
 }, 1000);
 </script>
 
