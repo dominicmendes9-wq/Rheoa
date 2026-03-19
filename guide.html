@@ -1,8 +1,10 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <title>Rheoa RPG - How to Play</title>
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
   <style>
     * {
       box-sizing: border-box;
@@ -16,6 +18,7 @@
       color: #222; 
       padding: 20px;
       min-height: 100vh;
+      position: relative;
     }
     
     h1 { 
@@ -23,6 +26,7 @@
       margin-bottom: 10px;
       font-size: clamp(1.5rem, 5vw, 2.5rem);
       color: #333;
+      animation: fadeInDown 0.8s ease-out;
     }
     
     .subtitle {
@@ -31,6 +35,7 @@
       margin-bottom: 40px;
       font-style: italic;
       font-size: 1.1rem;
+      animation: fadeInUp 0.8s ease-out 0.2s both;
     }
     
     /* Quick Start Bar */
@@ -42,17 +47,47 @@
       margin-bottom: 40px;
       text-align: center;
       box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+      animation: glowPulse 2s infinite, slideInLeft 0.8s ease-out;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .quick-start::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+      animation: rotate 20s linear infinite;
+    }
+
+    @keyframes rotate {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes glowPulse {
+      0% { box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4); }
+      50% { box-shadow: 0 15px 40px rgba(102, 126, 234, 0.8); }
+      100% { box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4); }
     }
     
     .quick-start h2 {
       font-size: 2rem;
       margin-bottom: 15px;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+      position: relative;
+      z-index: 1;
     }
     
     .quick-start p {
       font-size: 1.2rem;
       margin-bottom: 25px;
       opacity: 0.95;
+      position: relative;
+      z-index: 1;
     }
     
     .start-button {
@@ -69,11 +104,37 @@
       transition: all 0.3s;
       text-decoration: none;
       box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+      position: relative;
+      overflow: hidden;
+      z-index: 1;
     }
     
     .start-button:hover {
-      transform: translateY(-2px);
+      transform: translateY(-2px) scale(1.05);
       box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+    }
+
+    .start-button:active {
+      transform: translateY(0) scale(0.95);
+    }
+
+    .start-button::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      border-radius: 50%;
+      background: rgba(102, 126, 234, 0.2);
+      transform: translate(-50%, -50%);
+      transition: width 0.6s, height 0.6s;
+      z-index: -1;
+    }
+
+    .start-button:hover::after {
+      width: 300px;
+      height: 300px;
     }
     
     /* Navigation Tabs */
@@ -83,6 +144,15 @@
       gap: 10px;
       margin-bottom: 30px;
       flex-wrap: wrap;
+      position: sticky;
+      top: 10px;
+      z-index: 100;
+      background: rgba(248, 248, 240, 0.95);
+      padding: 15px;
+      border-radius: 50px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      animation: slideInRight 0.8s ease-out 0.3s both;
     }
     
     .tab-btn {
@@ -95,16 +165,28 @@
       cursor: pointer;
       transition: all 0.2s;
       font-size: 1rem;
+      position: relative;
+      overflow: hidden;
     }
     
     .tab-btn:hover {
       background: #333;
       color: white;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
     }
     
     .tab-btn.active {
       background: #333;
       color: white;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+      50% { box-shadow: 0 4px 20px rgba(102, 126, 234, 0.6); }
+      100% { box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
     }
     
     /* Tab Content */
@@ -121,6 +203,26 @@
       from { opacity: 0; transform: translateY(10px); }
       to { opacity: 1; transform: translateY(0); }
     }
+
+    @keyframes fadeInDown {
+      from { opacity: 0; transform: translateY(-20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes slideInLeft {
+      from { opacity: 0; transform: translateX(-50px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    @keyframes slideInRight {
+      from { opacity: 0; transform: translateX(50px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
     
     /* Guide Sections */
     .guide-section {
@@ -129,6 +231,19 @@
       border-radius: 15px;
       padding: 30px;
       margin-bottom: 30px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+      transition: transform 0.2s, box-shadow 0.2s;
+      animation: fadeInScale 0.5s ease-out;
+    }
+
+    @keyframes fadeInScale {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .guide-section:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(0,0,0,0.1);
     }
     
     .section-title {
@@ -137,12 +252,30 @@
       color: #333;
       border-bottom: 3px solid #667eea;
       padding-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
     }
     
     .section-subtitle {
       font-size: 1.3rem;
       margin: 25px 0 15px;
       color: #444;
+      position: relative;
+      padding-left: 15px;
+    }
+
+    .section-subtitle::before {
+      content: '►';
+      position: absolute;
+      left: -5px;
+      color: #667eea;
+      animation: bounceRight 2s infinite;
+    }
+
+    @keyframes bounceRight {
+      0%, 100% { transform: translateX(0); }
+      50% { transform: translateX(3px); }
     }
     
     /* Cards Grid */
@@ -158,18 +291,32 @@
       border-radius: 12px;
       padding: 20px;
       background: #f8f9ff;
-      transition: transform 0.2s;
+      transition: all 0.2s;
+      cursor: pointer;
+      animation: fadeInCard 0.5s ease-out;
+    }
+
+    @keyframes fadeInCard {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
     }
     
     .feature-card:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+      transform: translateY(-5px) scale(1.02);
+      box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+      border-color: #764ba2;
     }
     
     .feature-icon {
       font-size: 2.5rem;
       text-align: center;
       margin-bottom: 15px;
+      animation: bounce 2s infinite;
+    }
+
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-5px); }
     }
     
     .feature-title {
@@ -199,11 +346,32 @@
       border-radius: 10px;
       padding: 20px;
       text-align: center;
+      transition: all 0.2s;
+      border: 1px solid transparent;
+      animation: fadeInStat 0.5s ease-out;
+    }
+
+    @keyframes fadeInStat {
+      from { opacity: 0; transform: scale(0.9); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .stat-explanation:hover {
+      border-color: #667eea;
+      transform: scale(1.02);
+      background: white;
+      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
     }
     
     .stat-icon {
       font-size: 2rem;
       margin-bottom: 10px;
+      animation: spin 10s linear infinite;
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
     }
     
     .stat-name {
@@ -222,6 +390,12 @@
     .faq-item {
       border-bottom: 2px solid #eee;
       padding: 20px 0;
+      animation: slideInFaq 0.5s ease-out;
+    }
+
+    @keyframes slideInFaq {
+      from { opacity: 0; transform: translateX(-20px); }
+      to { opacity: 1; transform: translateX(0); }
     }
     
     .faq-item:last-child {
@@ -237,10 +411,15 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      padding: 10px;
+      border-radius: 8px;
+      transition: all 0.2s;
     }
     
     .faq-question:hover {
       color: #667eea;
+      background: #f0f0f0;
+      transform: translateX(5px);
     }
     
     .faq-answer {
@@ -249,6 +428,13 @@
       padding-left: 20px;
       border-left: 3px solid #667eea;
       margin-top: 10px;
+      transition: all 0.3s;
+      animation: slideDown 0.3s ease-out;
+    }
+
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
     }
     
     .faq-answer.hidden {
@@ -279,12 +465,27 @@
       display: flex;
       align-items: center;
       gap: 15px;
+      transition: all 0.2s;
+      cursor: pointer;
+      animation: slideInTip 0.5s ease-out;
+    }
+
+    @keyframes slideInTip {
+      from { opacity: 0; transform: translateX(20px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    .tip-item:hover {
+      transform: translateX(10px) scale(1.02);
+      box-shadow: 0 5px 15px rgba(76, 175, 80, 0.3);
+      background: #d4edd4;
     }
     
     .tip-icon {
       font-size: 1.8rem;
       min-width: 40px;
       text-align: center;
+      animation: bounce 2s infinite;
     }
     
     .tip-text {
@@ -293,11 +494,20 @@
       line-height: 1.5;
     }
     
-    /* Table for Levels */
-    .levels-table {
+    /* Tables */
+    .levels-table, .stocks-table, .racing-table, .property-table, .customization-table {
       width: 100%;
       border-collapse: collapse;
       margin: 20px 0;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      animation: fadeInTable 0.5s ease-out;
+    }
+
+    @keyframes fadeInTable {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
     }
     
     .levels-table th {
@@ -306,90 +516,33 @@
       padding: 12px;
       font-weight: bold;
     }
+
+    .stocks-table th { background: #4CAF50; color: white; padding: 12px; }
+    .racing-table th { background: #f44336; color: white; padding: 12px; }
+    .property-table th { background: #8B4513; color: white; padding: 12px; }
+    .customization-table th { background: #9c27b0; color: white; padding: 12px; }
     
-    .levels-table td {
+    .levels-table td, .stocks-table td, .racing-table td, .property-table td, .customization-table td {
       padding: 10px 12px;
       border-bottom: 1px solid #ddd;
+      transition: background 0.2s;
     }
     
-    .levels-table tr:nth-child(even) {
+    .levels-table tr:nth-child(even),
+    .stocks-table tr:nth-child(even),
+    .racing-table tr:nth-child(even),
+    .property-table tr:nth-child(even),
+    .customization-table tr:nth-child(even) {
       background: #f5f5f5;
     }
     
-    .levels-table tr:hover {
+    .levels-table tr:hover td,
+    .stocks-table tr:hover td,
+    .racing-table tr:hover td,
+    .property-table tr:hover td,
+    .customization-table tr:hover td {
       background: #e8f0fe;
-    }
-    
-    /* Stock Market Table */
-    .stocks-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 20px 0;
-    }
-    
-    .stocks-table th {
-      background: #4CAF50;
-      color: white;
-      padding: 12px;
-    }
-    
-    .stocks-table td {
-      padding: 8px 12px;
-      border-bottom: 1px solid #ddd;
-    }
-    
-    /* Racing Table */
-    .racing-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 20px 0;
-    }
-    
-    .racing-table th {
-      background: #f44336;
-      color: white;
-      padding: 12px;
-    }
-    
-    .racing-table td {
-      padding: 8px 12px;
-      border-bottom: 1px solid #ddd;
-    }
-    
-    /* Property Table */
-    .property-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 20px 0;
-    }
-    
-    .property-table th {
-      background: #8B4513;
-      color: white;
-      padding: 12px;
-    }
-    
-    .property-table td {
-      padding: 8px 12px;
-      border-bottom: 1px solid #ddd;
-    }
-    
-    /* Customization Table */
-    .customization-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 20px 0;
-    }
-    
-    .customization-table th {
-      background: #9c27b0;
-      color: white;
-      padding: 12px;
-    }
-    
-    .customization-table td {
-      padding: 8px 12px;
-      border-bottom: 1px solid #ddd;
+      transform: scale(1.01);
     }
     
     /* Back Button */
@@ -407,16 +560,157 @@
       cursor: pointer;
       transition: all 0.2s;
       text-align: center;
+      animation: fadeInUp 0.8s ease-out 0.5s both;
+      position: relative;
+      overflow: hidden;
     }
     
     .back-button:hover {
       background: #555;
+      transform: scale(1.05) translateY(-2px);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    }
+
+    .back-button:active {
+      transform: scale(0.95);
+    }
+
+    .back-button::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.2);
+      transform: translate(-50%, -50%);
+      transition: width 0.6s, height 0.6s;
+    }
+
+    .back-button:hover::after {
+      width: 300px;
+      height: 300px;
+    }
+    
+    /* Scroll to top button */
+    .scroll-top {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: #667eea;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-size: 24px;
+      display: none;
+      justify-content: center;
+      align-items: center;
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+      transition: all 0.2s;
+      z-index: 1000;
+      animation: fadeInScale 0.3s ease-out;
+    }
+
+    .scroll-top:hover {
+      transform: scale(1.1);
+      background: #764ba2;
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+    }
+
+    .scroll-top.visible {
+      display: flex;
+    }
+
+    /* Search bar */
+    .search-container {
+      max-width: 400px;
+      margin: 20px auto;
+      position: relative;
+      animation: fadeInUp 0.8s ease-out 0.4s both;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 15px 20px;
+      font-family: 'Courier New', monospace;
+      font-size: 1rem;
+      border: 2px solid #667eea;
+      border-radius: 50px;
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    .search-input:focus {
+      box-shadow: 0 0 20px rgba(102, 126, 234, 0.3);
       transform: scale(1.02);
+    }
+
+    .search-button {
+      position: absolute;
+      right: 5px;
+      top: 5px;
+      padding: 10px 20px;
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      font-family: 'Courier New', monospace;
+      font-weight: bold;
+      transition: all 0.2s;
+    }
+
+    .search-button:hover {
+      background: #764ba2;
+      transform: scale(1.05);
+    }
+
+    /* Loading overlay */
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(255,255,255,0.9);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      backdrop-filter: blur(5px);
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    /* Print styles */
+    @media print {
+      .guide-tabs, .quick-start, .back-button, .scroll-top, .search-container {
+        display: none !important;
+      }
+      
+      .tab-content {
+        display: block !important;
+      }
+      
+      .guide-section {
+        break-inside: avoid;
+        page-break-inside: avoid;
+        box-shadow: none;
+      }
     }
     
     /* Responsive Design */
     @media (max-width: 600px) {
       body { padding: 10px; }
+      
+      .guide-tabs {
+        position: static;
+        border-radius: 15px;
+        padding: 10px;
+      }
       
       .quick-start {
         padding: 20px;
@@ -452,59 +746,106 @@
         text-align: center;
       }
       
-      .levels-table {
-        font-size: 0.9rem;
+      .tip-item:hover {
+        transform: translateY(-5px) scale(1.02);
       }
       
-      .stocks-table {
-        font-size: 0.9rem;
+      .levels-table, .stocks-table, .racing-table, .property-table, .customization-table {
+        font-size: 0.85rem;
       }
       
-      .racing-table {
-        font-size: 0.9rem;
+      .levels-table th, .stocks-table th, .racing-table th, .property-table th, .customization-table th {
+        padding: 8px 4px;
       }
       
-      .property-table {
-        font-size: 0.9rem;
+      .levels-table td, .stocks-table td, .racing-table td, .property-table td, .customization-table td {
+        padding: 6px 4px;
       }
-      
-      .customization-table {
-        font-size: 0.9rem;
+
+      .search-container {
+        margin: 10px auto;
+        padding: 0 10px;
       }
+    }
+
+    /* Keyboard focus styles */
+    .tab-btn:focus-visible,
+    .start-button:focus-visible,
+    .back-button:focus-visible,
+    .search-button:focus-visible,
+    .scroll-top:focus-visible {
+      outline: 3px solid #667eea;
+      outline-offset: 2px;
+    }
+
+    /* Highlight animation for search */
+    @keyframes highlight {
+      0%, 100% { background: white; }
+      50% { background: #fff3cd; }
+    }
+
+    .highlight {
+      animation: highlight 1s ease;
+    }
+
+    /* Progress bar */
+    .reading-progress {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 0%;
+      height: 3px;
+      background: linear-gradient(90deg, #667eea, #764ba2);
+      z-index: 1001;
+      transition: width 0.1s;
     }
   </style>
 </head>
 <body>
 
+<!-- Reading progress bar -->
+<div class="reading-progress" id="readingProgress"></div>
+
+<!-- Scroll to top button -->
+<button class="scroll-top" onclick="scrollToTop()" id="scrollTopBtn" aria-label="Scroll to top">↑</button>
+
 <h1>📚 How to Play Rheoa RPG</h1>
 <div class="subtitle">Your complete guide to becoming a criminal mastermind</div>
 
+<!-- Search Bar -->
+<div class="search-container">
+  <input type="text" class="search-input" id="searchInput" placeholder="🔍 Search guide..." onkeyup="if(event.key==='Enter') searchGuide()">
+  <button class="search-button" onclick="searchGuide()">Search</button>
+</div>
+
 <!-- Quick Start -->
-<div class="quick-start">
+<div class="quick-start" id="quickStartSection">
   <h2>🚀 Quick Start</h2>
-  <p>New here? Start with Jobs to earn safe money, then try Crimes for bigger rewards!</p>
-  <button class="start-button" onclick="goToDashboard()">Go to Dashboard</button>
+  <p id="quickStartText">New here? Start with Jobs to earn safe money, then try Crimes for bigger rewards!</p>
+  <button class="start-button" onclick="navigateToDashboard()" id="startBtn">
+    <span>Go to Dashboard</span>
+  </button>
 </div>
 
 <!-- Navigation Tabs -->
-<div class="guide-tabs">
-  <button class="tab-btn active" onclick="switchTab('basics')">📖 Basics</button>
-  <button class="tab-btn" onclick="switchTab('stats')">📊 Stats</button>
-  <button class="tab-btn" onclick="switchTab('features')">🎮 Features</button>
-  <button class="tab-btn" onclick="switchTab('levels')">⭐ Levels</button>
-  <button class="tab-btn" onclick="switchTab('items')">🎒 Items</button>
-  <button class="tab-btn" onclick="switchTab('pvp')">⚔️ PvP</button>
-  <button class="tab-btn" onclick="switchTab('gangs')">🏢 Gangs</button>
-  <button class="tab-btn" onclick="switchTab('market')">📈 Market</button>
-  <button class="tab-btn" onclick="switchTab('daily')">🎁 Daily</button>
-  <button class="tab-btn" onclick="switchTab('prestige')">🔄 Prestige</button>
-  <button class="tab-btn" onclick="switchTab('stocks')">📊 Stocks</button>
-  <button class="tab-btn" onclick="switchTab('racing')">🏁 Racing</button>
-  <button class="tab-btn" onclick="switchTab('property')">🏰 Property</button>
-  <button class="tab-btn" onclick="switchTab('customization')">🎨 Customization</button>
-  <button class="tab-btn" onclick="switchTab('exploration')">🌍 World Map</button>
-  <button class="tab-btn" onclick="switchTab('faq')">❓ FAQ</button>
-  <button class="tab-btn" onclick="switchTab('tips')">💡 Tips</button>
+<div class="guide-tabs" role="tablist">
+  <button class="tab-btn active" onclick="switchTab('basics', this)" role="tab" aria-selected="true">📖 Basics</button>
+  <button class="tab-btn" onclick="switchTab('stats', this)" role="tab" aria-selected="false">📊 Stats</button>
+  <button class="tab-btn" onclick="switchTab('features', this)" role="tab" aria-selected="false">🎮 Features</button>
+  <button class="tab-btn" onclick="switchTab('levels', this)" role="tab" aria-selected="false">⭐ Levels</button>
+  <button class="tab-btn" onclick="switchTab('items', this)" role="tab" aria-selected="false">🎒 Items</button>
+  <button class="tab-btn" onclick="switchTab('pvp', this)" role="tab" aria-selected="false">⚔️ PvP</button>
+  <button class="tab-btn" onclick="switchTab('gangs', this)" role="tab" aria-selected="false">🏢 Gangs</button>
+  <button class="tab-btn" onclick="switchTab('market', this)" role="tab" aria-selected="false">📈 Market</button>
+  <button class="tab-btn" onclick="switchTab('daily', this)" role="tab" aria-selected="false">🎁 Daily</button>
+  <button class="tab-btn" onclick="switchTab('prestige', this)" role="tab" aria-selected="false">🔄 Prestige</button>
+  <button class="tab-btn" onclick="switchTab('stocks', this)" role="tab" aria-selected="false">📊 Stocks</button>
+  <button class="tab-btn" onclick="switchTab('racing', this)" role="tab" aria-selected="false">🏁 Racing</button>
+  <button class="tab-btn" onclick="switchTab('property', this)" role="tab" aria-selected="false">🏰 Property</button>
+  <button class="tab-btn" onclick="switchTab('customization', this)" role="tab" aria-selected="false">🎨 Customization</button>
+  <button class="tab-btn" onclick="switchTab('exploration', this)" role="tab" aria-selected="false">🌍 World Map</button>
+  <button class="tab-btn" onclick="switchTab('faq', this)" role="tab" aria-selected="false">❓ FAQ</button>
+  <button class="tab-btn" onclick="switchTab('tips', this)" role="tab" aria-selected="false">💡 Tips</button>
 </div>
 
 <!-- Basics Tab -->
@@ -518,22 +859,22 @@
     
     <h3 class="section-subtitle">🎯 Getting Started</h3>
     <div class="features-grid">
-      <div class="feature-card">
+      <div class="feature-card" onclick="showToast('💡 Tip: Start with jobs to build safe income!', 'info')">
         <div class="feature-icon">💰</div>
         <div class="feature-title">Start with Jobs</div>
         <div class="feature-desc">Work legitimate jobs to build your initial capital safely. No risk, steady income.</div>
       </div>
-      <div class="feature-card">
+      <div class="feature-card" onclick="showToast('💡 Tip: Higher risk = higher reward!', 'warning')">
         <div class="feature-icon">🔫</div>
         <div class="feature-title">Move to Crimes</div>
         <div class="feature-desc">Once you have cash, try crimes for bigger rewards. Higher risk = higher reward!</div>
       </div>
-      <div class="feature-card">
+      <div class="feature-card" onclick="showToast('⚡ Energy regenerates at 1 per minute', 'info')">
         <div class="feature-icon">⚡</div>
         <div class="feature-title">Manage Energy</div>
         <div class="feature-desc">Every action costs energy. It regenerates 1 point per minute automatically.</div>
       </div>
-      <div class="feature-card">
+      <div class="feature-card" onclick="showToast('⭐ Level up to unlock better opportunities!', 'success')">
         <div class="feature-icon">⭐</div>
         <div class="feature-title">Level Up</div>
         <div class="feature-desc">Gain XP from jobs and crimes to level up and unlock better opportunities.</div>
@@ -567,42 +908,42 @@
     <h2 class="section-title">📊 Understanding Your Stats</h2>
     
     <div class="stats-container">
-      <div class="stat-explanation">
+      <div class="stat-explanation" onclick="showToast('💰 Cash is used for buying items and recovering from failed crimes', 'info')">
         <div class="stat-icon">💰</div>
         <div class="stat-name">Cash</div>
         <div class="stat-desc">Your money. Used to buy items and recover from failed crimes.</div>
       </div>
-      <div class="stat-explanation">
+      <div class="stat-explanation" onclick="showToast('⭐ XP determines your level', 'info')">
         <div class="stat-icon">⭐</div>
         <div class="stat-name">XP</div>
         <div class="stat-desc">Experience points. Gain from jobs and crimes to level up.</div>
       </div>
-      <div class="stat-explanation">
+      <div class="stat-explanation" onclick="showToast('⚡ Energy regenerates 1 per minute. Max 100.', 'info')">
         <div class="stat-icon">⚡</div>
         <div class="stat-name">Energy</div>
         <div class="stat-desc">Required for actions. Regenerates 1 per minute. Max 100.</div>
       </div>
-      <div class="stat-explanation">
+      <div class="stat-explanation" onclick="showToast('❤️ Restore health with items', 'warning')">
         <div class="stat-icon">❤️</div>
         <div class="stat-name">Health</div>
         <div class="stat-desc">Decreases from failed crimes and PvP battles. Restore with items.</div>
       </div>
-      <div class="stat-explanation">
+      <div class="stat-explanation" onclick="showToast('🍽️ Hunger increases 5 per hour. Eat to reduce.', 'warning')">
         <div class="stat-icon">🍽️</div>
         <div class="stat-name">Hunger</div>
         <div class="stat-desc">Increases over time (5 per hour). Eat to reduce.</div>
       </div>
-      <div class="stat-explanation">
+      <div class="stat-explanation" onclick="showToast('😊 Low happiness affects performance', 'warning')">
         <div class="stat-icon">😊</div>
         <div class="stat-name">Happiness</div>
         <div class="stat-desc">Decreases over time. Low happiness affects performance.</div>
       </div>
-      <div class="stat-explanation">
+      <div class="stat-explanation" onclick="showToast('✨ Success boost increases crime success rate', 'success')">
         <div class="stat-icon">⚡</div>
         <div class="stat-name">Success Boost</div>
         <div class="stat-desc">Increases crime success rate. From items, achievements, and prestige perks.</div>
       </div>
-      <div class="stat-explanation">
+      <div class="stat-explanation" onclick="showToast('🏆 Prestige level unlocks permanent bonuses', 'prestige')">
         <div class="stat-icon">🏆</div>
         <div class="stat-name">Prestige Level</div>
         <div class="stat-desc">Your overall progression. Higher prestige unlocks permanent bonuses.</div>
@@ -626,97 +967,97 @@
     <h2 class="section-title">🎮 Game Features</h2>
     
     <div class="features-grid">
-      <div class="feature-card">
+      <div class="feature-card" onclick="showToast('💼 Jobs provide safe, steady income', 'info')">
         <div class="feature-icon">💼</div>
         <div class="feature-title">Jobs</div>
         <div class="feature-desc">Safe, guaranteed income. Perfect for beginners. 30-second cooldown.</div>
       </div>
-      <div class="feature-card">
+      <div class="feature-card" onclick="showToast('🔫 Crimes are risky but rewarding', 'warning')">
         <div class="feature-icon">🔫</div>
         <div class="feature-title">Crimes</div>
         <div class="feature-desc">Risky but rewarding. Success chance varies. 60-second cooldown.</div>
       </div>
-      <div class="feature-card">
+      <div class="feature-card" onclick="showToast('🎒 Buy and use items to restore stats', 'info')">
         <div class="feature-icon">🎒</div>
         <div class="feature-title">Inventory & Shop</div>
         <div class="feature-desc">Buy and use items to restore stats and get boosts.</div>
       </div>
-      <div class="feature-card">
+      <div class="feature-card" onclick="showToast('📜 Track your crime record', 'info')">
         <div class="feature-icon">📜</div>
         <div class="feature-title">History</div>
         <div class="feature-desc">Track your crime record and success rate.</div>
       </div>
-      <div class="feature-card">
+      <div class="feature-card" onclick="showToast('🏆 Complete achievements for rewards', 'achievement')">
         <div class="feature-icon">🏆</div>
         <div class="feature-title">Achievements</div>
         <div class="feature-desc">Complete challenges to earn rewards and track progress.</div>
       </div>
-      <div class="feature-card">
+      <div class="feature-card" onclick="showToast('⚡ Energy regenerates even offline', 'info')">
         <div class="feature-icon">⚡</div>
         <div class="feature-title">Energy Regen</div>
         <div class="feature-desc">1 energy per minute, even while offline.</div>
       </div>
-      <div class="feature-card">
+      <div class="feature-card" onclick="showToast('⏰ Stats decay over time', 'warning')">
         <div class="feature-icon">⏰</div>
         <div class="feature-title">Stat Decay</div>
         <div class="feature-desc">Hunger and happiness decrease 5 points per hour.</div>
       </div>
-      <div class="feature-card">
+      <div class="feature-card" onclick="showToast('🔒 Higher level unlocks better content', 'info')">
         <div class="feature-icon">🔒</div>
         <div class="feature-title">Level Gating</div>
         <div class="feature-desc">Higher level crimes and jobs require minimum levels.</div>
       </div>
-      <div class="feature-card">
+      <div class="feature-card" onclick="showToast('🏆 Compete on leaderboards', 'achievement')">
         <div class="feature-icon">🏆</div>
         <div class="feature-title">Leaderboards</div>
         <div class="feature-desc">Compete with other players in various categories.</div>
       </div>
-      <div class="feature-card">
+      <div class="feature-card" onclick="showToast('⚔️ Fight other players in PvP', 'battle-win')">
         <div class="feature-icon">⚔️</div>
         <div class="feature-title">PvP Arena</div>
         <div class="feature-desc">Fight other players for cash, XP, and glory.</div>
       </div>
-      <div class="feature-card">
+      <div class="feature-card" onclick="showToast('🏢 Join or create gangs', 'info')">
         <div class="feature-icon">🏢</div>
         <div class="feature-title">Gangs</div>
         <div class="feature-desc">Join or create gangs to team up with other players.</div>
       </div>
-      <div class="feature-card">
+      <div class="feature-card" onclick="showToast('📈 Trade items with other players', 'info')">
         <div class="feature-icon">📈</div>
         <div class="feature-title">Market</div>
         <div class="feature-desc">Buy and sell items with other players.</div>
       </div>
-      <div class="feature-card">
+      <div class="feature-card" onclick="showToast('📊 Invest in stocks for profit', 'info')">
         <div class="feature-icon">📊</div>
         <div class="feature-title">Stock Market</div>
         <div class="feature-desc">Invest in stocks and earn dividends.</div>
       </div>
-      <div class="feature-card">
+      <div class="feature-card" onclick="showToast('🏁 Buy vehicles and race', 'info')">
         <div class="feature-icon">🏁</div>
         <div class="feature-title">Racing</div>
         <div class="feature-desc">Buy vehicles and compete in races.</div>
       </div>
-      <div class="feature-card">
+      <div class="feature-card" onclick="showToast('🏰 Own and upgrade properties', 'info')">
         <div class="feature-icon">🏰</div>
         <div class="feature-title">Properties</div>
         <div class="feature-desc">Buy and upgrade your criminal headquarters.</div>
       </div>
-      <div class="feature-card">
+      <div class="feature-card" onclick="showToast('🎨 Unlock cosmetic items', 'info')">
         <div class="feature-icon">🎨</div>
         <div class="feature-title">Customization</div>
         <div class="feature-desc">Unlock titles, avatars, and color schemes.</div>
       </div>
-      <div class="feature-card">
+      <div class="feature-card" onclick="showToast('🌍 Explore regions and discover secrets', 'discovery')">
         <div class="feature-icon">🌍</div>
         <div class="feature-title">World Map</div>
         <div class="feature-desc">Explore regions and discover secrets.</div>
       </div>
-      <div class="feature-card">
+      <div class="feature-card" onclick="showToast('🎁 Login daily for rewards', 'reward')">
         <div class="feature-icon">🎁</div>
         <div class="feature-title">Daily Rewards</div>
         <div class="feature-desc">Login every day for free rewards and streak bonuses.</div>
       </div>
-      <div class="feature-card">
+      <div class="feature-card" onclick="showToast('🔄 Reset for permanent bonuses', 'prestige')">
         <div class="feature-icon">🔄</div>
         <div class="feature-title">Prestige</div>
         <div class="feature-desc">Reset your progress for permanent powerful bonuses.</div>
@@ -1000,52 +1341,52 @@
     
     <h3 class="section-subtitle">Prestige Perks</h3>
     <div class="features-grid">
-      <div class="feature-card">
+      <div class="feature-card" onclick="showToast('⭐ XP Master: +5% XP per level', 'prestige')">
         <div class="feature-icon">⭐</div>
         <div class="feature-title">XP Master</div>
         <div class="feature-desc">+5% XP per level (max 10)</div>
       </div>
-      <div class="feature-card">
+      <div class="feature-card" onclick="showToast('💰 Cash Lord: +5% cash per level', 'prestige')">
         <div class="feature-icon">💰</div>
         <div class="feature-title">Cash Lord</div>
         <div class="feature-desc">+5% cash per level (max 10)</div>
       </div>
-      <div class="feature-card">
+      <div class="feature-card" onclick="showToast('⚡ Energy Surge: +10% energy regen', 'prestige')">
         <div class="feature-icon">⚡</div>
         <div class="feature-title">Energy Surge</div>
         <div class="feature-desc">+10% energy regen per level (max 5)</div>
       </div>
-      <div class="feature-card">
+      <div class="feature-card" onclick="showToast('🔫 Crime Genius: +2% crime success', 'prestige')">
         <div class="feature-icon">🔫</div>
         <div class="feature-title">Crime Genius</div>
         <div class="feature-desc">+2% crime success per level (max 10)</div>
       </div>
-      <div class="feature-card">
+      <div class="feature-card" onclick="showToast('⚔️ PvP Champion: +5% PvP power', 'prestige')">
         <div class="feature-icon">⚔️</div>
         <div class="feature-title">PvP Champion</div>
         <div class="feature-desc">+5% PvP power per level (max 5)</div>
       </div>
-      <div class="feature-card">
+      <div class="feature-card" onclick="showToast('📈 Market Tycoon: -10% market fees', 'prestige')">
         <div class="feature-icon">📈</div>
         <div class="feature-title">Market Tycoon</div>
         <div class="feature-desc">-10% market fees per level (max 5)</div>
       </div>
-      <div class="feature-card">
+      <div class="feature-card" onclick="showToast('💎 Rich Start: +10,000 starting cash', 'prestige')">
         <div class="feature-icon">💎</div>
         <div class="feature-title">Rich Start</div>
         <div class="feature-desc">+10,000 starting cash per level (max 5)</div>
       </div>
-      <div class="feature-card">
+      <div class="feature-card" onclick="showToast('🍀 Lucky Finder: +2% item find chance', 'prestige')">
         <div class="feature-icon">🍀</div>
         <div class="feature-title">Lucky Finder</div>
         <div class="feature-desc">+2% item find chance per level (max 5)</div>
       </div>
-      <div class="feature-card">
+      <div class="feature-card" onclick="showToast('🔥 Streak Master: +10% streak bonus', 'prestige')">
         <div class="feature-icon">🔥</div>
         <div class="feature-title">Streak Master</div>
         <div class="feature-desc">+10% streak bonus per level (max 5)</div>
       </div>
-      <div class="feature-card">
+      <div class="feature-card" onclick="showToast('👑 Prestige Master: +1 extra point', 'prestige')">
         <div class="feature-icon">👑</div>
         <div class="feature-title">Prestige Master</div>
         <div class="feature-desc">+1 extra point per prestige (max 3)</div>
@@ -1547,102 +1888,102 @@
     <h2 class="section-title">💡 Pro Tips & Strategies</h2>
     
     <div class="tips-list">
-      <div class="tip-item">
+      <div class="tip-item" onclick="showToast('💰 Start with jobs to build a cash buffer!', 'success')">
         <div class="tip-icon">💰</div>
         <div class="tip-text"><strong>Start with jobs</strong> - Build a cash buffer before attempting crimes. This protects you from bankruptcy on failed attempts.</div>
       </div>
       
-      <div class="tip-item">
+      <div class="tip-item" onclick="showToast('⚡ Save energy for better opportunities!', 'info')">
         <div class="tip-icon">⚡</div>
         <div class="tip-text"><strong>Use energy wisely</strong> - Don't waste energy on low-reward activities when you're close to leveling up. Save it for better opportunities.</div>
       </div>
       
-      <div class="tip-item">
+      <div class="tip-item" onclick="showToast('🍽️ Keep stats above 50% for optimal performance!', 'warning')">
         <div class="tip-icon">🍽️</div>
         <div class="tip-text"><strong>Keep stats balanced</strong> - Low hunger or happiness can affect your performance. Always keep them above 50% for optimal results.</div>
       </div>
       
-      <div class="tip-item">
+      <div class="tip-item" onclick="showToast('📊 Choose crimes that match your risk tolerance!', 'info')">
         <div class="tip-icon">📊</div>
         <div class="tip-text"><strong>Track success rates</strong> - Different crimes have different base success rates. Pick ones that match your risk tolerance.</div>
       </div>
       
-      <div class="tip-item">
+      <div class="tip-item" onclick="showToast('🏆 Check achievements regularly for easy rewards!', 'achievement')">
         <div class="tip-icon">🏆</div>
         <div class="tip-text"><strong>Check achievements</strong> - Regularly check your achievements page. You might be close to completing some without realizing it!</div>
       </div>
       
-      <div class="tip-item">
+      <div class="tip-item" onclick="showToast('⏰ Log in every few hours to manage stats!', 'info')">
         <div class="tip-icon">⏰</div>
         <div class="tip-text"><strong>Log in regularly</strong> - Energy regenerates and stats decay over time. Logging in every few hours helps you stay on top of your stats.</div>
       </div>
       
-      <div class="tip-item">
+      <div class="tip-item" onclick="showToast('🎒 Buy items in bulk when you have extra cash!', 'success')">
         <div class="tip-icon">🎒</div>
         <div class="tip-text"><strong>Stock up on items</strong> - Buy items in bulk when you have extra cash. You never know when you'll need a quick health restore or energy boost.</div>
       </div>
       
-      <div class="tip-item">
+      <div class="tip-item" onclick="showToast('📈 Aim for specific level milestones!', 'info')">
         <div class="tip-icon">📈</div>
         <div class="tip-text"><strong>Plan your progression</strong> - Aim for specific level milestones. Each new tier unlocks significantly better rewards.</div>
       </div>
       
-      <div class="tip-item">
+      <div class="tip-item" onclick="showToast('🍀 Use boost items before high-level crimes!', 'warning')">
         <div class="tip-icon">🍀</div>
         <div class="tip-text"><strong>Save boost items</strong> - Use temporary boost items before attempting high-level crimes for maximum benefit.</div>
       </div>
       
-      <div class="tip-item">
+      <div class="tip-item" onclick="showToast('📜 Focus on crimes you succeed at most!', 'success')">
         <div class="tip-icon">📜</div>
         <div class="tip-text"><strong>Learn from history</strong> - Check your crime history to see which crimes you succeed at most often. Focus on your strengths!</div>
       </div>
       
-      <div class="tip-item">
+      <div class="tip-item" onclick="showToast('⚔️ Target players with similar power in PvP!', 'battle-win')">
         <div class="tip-icon">⚔️</div>
         <div class="tip-text"><strong>PvP selectively</strong> - Check opponent power before attacking. Target players with similar or slightly lower power for best results.</div>
       </div>
       
-      <div class="tip-item">
+      <div class="tip-item" onclick="showToast('🏢 Join an active gang for better bonuses!', 'info')">
         <div class="tip-icon">🏢</div>
         <div class="tip-text"><strong>Join an active gang</strong> - Active gangs unlock more perks and provide better bonuses. Contribute to help your gang grow.</div>
       </div>
       
-      <div class="tip-item">
+      <div class="tip-item" onclick="showToast('📈 Buy low, sell high on the market!', 'info')">
         <div class="tip-icon">📈</div>
         <div class="tip-text"><strong>Watch market trends</strong> - Buy low, sell high. Check price history to identify profitable trading opportunities.</div>
       </div>
       
-      <div class="tip-item">
+      <div class="tip-item" onclick="showToast('📊 Diversify your stock investments!', 'warning')">
         <div class="tip-icon">📊</div>
         <div class="tip-text"><strong>Diversify your stocks</strong> - Don't put all your money in one stock. Spread investments across different sectors to manage risk.</div>
       </div>
       
-      <div class="tip-item">
+      <div class="tip-item" onclick="showToast('🏁 Upgrade your best vehicle first!', 'success')">
         <div class="tip-icon">🏁</div>
         <div class="tip-text"><strong>Upgrade your vehicle</strong> - Better stats increase your chances of winning races. Focus on upgrading your best vehicle first.</div>
       </div>
       
-      <div class="tip-item">
+      <div class="tip-item" onclick="showToast('🏰 Store cash in property for safety!', 'info')">
         <div class="tip-icon">🏰</div>
         <div class="tip-text"><strong>Store cash in property</strong> - Keep your wealth safe from failed crimes. Upgrade security to prevent robberies.</div>
       </div>
       
-      <div class="tip-item">
+      <div class="tip-item" onclick="showToast('🎨 Show off your rare titles and frames!', 'achievement')">
         <div class="tip-icon">🎨</div>
         <div class="tip-text"><strong>Show off your achievements</strong> - Equip rare titles and frames to let everyone know your accomplishments.</div>
       </div>
       
-      <div class="tip-item">
+      <div class="tip-item" onclick="showToast('🌍 Explore thoroughly for bonus XP and items!', 'discovery')">
         <div class="tip-icon">🌍</div>
         <div class="tip-text"><strong>Explore everything</strong> - Each region has unique secrets. Take time to explore thoroughly for bonus XP and items.</div>
       </div>
       
-      <div class="tip-item">
+      <div class="tip-item" onclick="showToast('🎁 Never miss a daily reward!', 'reward')">
         <div class="tip-icon">🎁</div>
         <div class="tip-text"><strong>Never miss a daily reward</strong> - The streak bonus makes daily rewards increasingly valuable. Set a reminder to log in every day!</div>
       </div>
       
-      <div class="tip-item">
+      <div class="tip-item" onclick="showToast('🔄 Wait for high stats before prestiging!', 'prestige')">
         <div class="tip-icon">🔄</div>
         <div class="tip-text"><strong>Prestige strategically</strong> - Wait until you have high stats before prestiging to maximize points. Early prestiges are faster, later prestiges give more total power.</div>
       </div>
@@ -1650,57 +1991,338 @@
   </div>
 </div>
 
-<button class="back-button" onclick="goToDashboard()">← Back to Dashboard</button>
+<button class="back-button" onclick="navigateToDashboard()">← Back to Dashboard</button>
+
+<!-- Include shared utilities -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase.js"></script>
+<script src="toast.js"></script>
+<script src="loading.js"></script>
+<script src="error-handler.js"></script>
 
 <script>
-// Tab switching
-function switchTab(tabName) {
-  // Hide all tabs
-  document.querySelectorAll('.tab-content').forEach(tab => {
-    tab.classList.remove('active');
-  });
-  
-  // Deactivate all buttons
-  document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.classList.remove('active');
-  });
-  
-  // Show selected tab
-  document.getElementById(tabName).classList.add('active');
-  
-  // Activate clicked button
-  event.target.classList.add('active');
-}
-
-// FAQ toggle
-function toggleFAQ(element) {
-  const answer = element.nextElementSibling;
-  const icon = element.querySelector('.toggle-icon');
-  
-  answer.classList.toggle('hidden');
-  element.classList.toggle('open');
-  
-  if (icon.textContent === '+') {
-    icon.textContent = '−';
-  } else {
-    icon.textContent = '+';
-  }
-}
-
-// Navigation
-function goToDashboard() {
-  window.location.href = "dashboard.html";
-}
-
-// Open first FAQ item by default (optional)
-window.addEventListener('load', () => {
-  const firstFAQ = document.querySelector('.faq-question');
-  if (firstFAQ) {
-    setTimeout(() => {
-      toggleFAQ(firstFAQ);
-    }, 500);
-  }
+// Initialize the page
+document.addEventListener('DOMContentLoaded', function() {
+    initializePage();
+    setupScrollToTop();
+    setupKeyboardNavigation();
+    setupReadingProgress();
+    loadUserGreeting();
+    loadLastVisitedTab();
 });
+
+// Page initialization
+async function initializePage() {
+    try {
+        // Show loading state for quick start
+        const quickStart = document.getElementById('quickStartSection');
+        quickStart.style.opacity = '0.7';
+        
+        // Check if user is logged in
+        const user = await getCurrentUser();
+        if (user) {
+            await updateQuickStartForUser(user);
+        }
+        
+        // Show welcome toast
+        if (window.showToast) {
+            setTimeout(() => {
+                showToast('Welcome to the Rheoa RPG Guide! 👋', 'info', 4000);
+            }, 500);
+        }
+    } catch (error) {
+        console.error('Initialization error:', error);
+        ErrorHandler.showError('quickStartSection', 'Failed to load user data');
+    } finally {
+        document.getElementById('quickStartSection').style.opacity = '1';
+    }
+}
+
+// Update quick start based on user status
+async function updateQuickStartForUser(user) {
+    return ErrorHandler.withErrorHandling(async () => {
+        const player = await getCurrentPlayer();
+        if (player) {
+            const quickStartText = document.getElementById('quickStartText');
+            quickStartText.textContent = `Welcome back, Commander! You're level ${player.level}. Ready to continue your criminal empire?`;
+            
+            // Show achievement toast for returning players
+            if (window.showToast) {
+                showToast(`Welcome back! You have ${player.energy} energy remaining ⚡`, 'info', 5000);
+            }
+        }
+    }, null, 'Failed to load player data');
+}
+
+// Tab switching with enhanced functionality
+function switchTab(tabName, button) {
+    // Hide all tabs
+    document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    
+    // Deactivate all buttons
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+        btn.setAttribute('aria-selected', 'false');
+    });
+    
+    // Show selected tab with animation
+    const selectedTab = document.getElementById(tabName);
+    selectedTab.classList.add('active');
+    
+    // Activate clicked button
+    button.classList.add('active');
+    button.setAttribute('aria-selected', 'true');
+    
+    // Save last visited tab
+    localStorage.setItem('lastGuideTab', tabName);
+    
+    // Scroll to top of tab
+    selectedTab.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    
+    // Show toast for tab change
+    if (window.showToast) {
+        const tabDisplayNames = {
+            'basics': 'Basics', 'stats': 'Stats', 'features': 'Features', 'levels': 'Levels',
+            'items': 'Items', 'pvp': 'PvP', 'gangs': 'Gangs', 'market': 'Market',
+            'daily': 'Daily Rewards', 'prestige': 'Prestige', 'stocks': 'Stocks',
+            'racing': 'Racing', 'property': 'Property', 'customization': 'Customization',
+            'exploration': 'World Map', 'faq': 'FAQ', 'tips': 'Tips'
+        };
+        showToast(`📖 Viewing: ${tabDisplayNames[tabName] || tabName}`, 'info', 2000);
+    }
+}
+
+// FAQ toggle with animation
+function toggleFAQ(element) {
+    const answer = element.nextElementSibling;
+    const icon = element.querySelector('.toggle-icon');
+    
+    answer.classList.toggle('hidden');
+    element.classList.toggle('open');
+    
+    if (icon.textContent === '+') {
+        icon.textContent = '−';
+        trackFAQView(element.textContent.trim());
+    } else {
+        icon.textContent = '+';
+    }
+}
+
+// Track FAQ views
+function trackFAQView(question) {
+    console.log('FAQ viewed:', question);
+    // You could send this to analytics
+}
+
+// Navigation with loading state
+async function navigateToDashboard() {
+    const startBtn = document.getElementById('startBtn');
+    const originalText = startBtn.innerHTML;
+    
+    try {
+        // Show loading state
+        startBtn.innerHTML = '<span>Loading...</span>';
+        startBtn.disabled = true;
+        
+        // Check if user is logged in
+        const user = await getCurrentUser();
+        
+        if (user) {
+            showToast('Redirecting to your dashboard...', 'info', 2000);
+        } else {
+            showToast('Please log in to continue', 'warning', 3000);
+        }
+        
+        // Simulate slight delay for better UX
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Navigate
+        window.location.href = "dashboard.html";
+    } catch (error) {
+        console.error('Navigation error:', error);
+        showToast('Error navigating to dashboard', 'error', 3000);
+        startBtn.innerHTML = originalText;
+        startBtn.disabled = false;
+    }
+}
+
+// Scroll to top functionality
+function setupScrollToTop() {
+    const scrollBtn = document.getElementById('scrollTopBtn');
+    
+    window.addEventListener('scroll', () => {
+        if (window.scrollY > 300) {
+            scrollBtn.classList.add('visible');
+        } else {
+            scrollBtn.classList.remove('visible');
+        }
+    });
+}
+
+function scrollToTop() {
+    window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+    });
+}
+
+// Reading progress bar
+function setupReadingProgress() {
+    const progressBar = document.getElementById('readingProgress');
+    
+    window.addEventListener('scroll', () => {
+        const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+        const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+        const scrolled = (winScroll / height) * 100;
+        progressBar.style.width = scrolled + '%';
+    });
+}
+
+// Keyboard navigation
+function setupKeyboardNavigation() {
+    document.addEventListener('keydown', (e) => {
+        // Ctrl + Arrow keys for tab navigation
+        if (e.ctrlKey) {
+            const tabs = Array.from(document.querySelectorAll('.tab-btn'));
+            const currentIndex = tabs.findIndex(tab => tab.classList.contains('active'));
+            
+            if (e.key === 'ArrowRight' && currentIndex < tabs.length - 1) {
+                e.preventDefault();
+                const nextTab = tabs[currentIndex + 1];
+                const tabName = nextTab.getAttribute('onclick').match(/'([^']+)'/)[1];
+                switchTab(tabName, nextTab);
+            } else if (e.key === 'ArrowLeft' && currentIndex > 0) {
+                e.preventDefault();
+                const prevTab = tabs[currentIndex - 1];
+                const tabName = prevTab.getAttribute('onclick').match(/'([^']+)'/)[1];
+                switchTab(tabName, prevTab);
+            }
+        }
+        
+        // Escape key to scroll to top
+        if (e.key === 'Escape') {
+            scrollToTop();
+        }
+        
+        // Ctrl + F for search focus
+        if (e.ctrlKey && e.key === 'f') {
+            e.preventDefault();
+            document.getElementById('searchInput').focus();
+        }
+    });
+}
+
+// Load last visited tab
+function loadLastVisitedTab() {
+    const lastTab = localStorage.getItem('lastGuideTab');
+    if (lastTab) {
+        const tabButton = Array.from(document.querySelectorAll('.tab-btn')).find(
+            btn => btn.getAttribute('onclick')?.includes(lastTab)
+        );
+        if (tabButton) {
+            switchTab(lastTab, tabButton);
+        }
+    }
+}
+
+// Load user greeting
+async function loadUserGreeting() {
+    try {
+        const user = await getCurrentUser();
+        if (user) {
+            const player = await getCurrentPlayer();
+            if (player) {
+                // Update any user-specific elements
+                console.log('User loaded:', player.username);
+            }
+        }
+    } catch (error) {
+        console.error('Error loading user:', error);
+    }
+}
+
+// Search functionality
+function searchGuide() {
+    const query = document.getElementById('searchInput').value.trim();
+    if (!query || query.length < 2) {
+        showToast('Please enter at least 2 characters to search', 'warning', 3000);
+        return;
+    }
+    
+    const allContent = document.querySelectorAll('.guide-section');
+    let results = [];
+    let firstResult = null;
+    
+    // Remove previous highlights
+    document.querySelectorAll('.highlight').forEach(el => {
+        el.classList.remove('highlight');
+    });
+    
+    allContent.forEach(section => {
+        const text = section.textContent.toLowerCase();
+        if (text.includes(query.toLowerCase())) {
+            results.push(section);
+            if (!firstResult) firstResult = section;
+        }
+    });
+    
+    if (results.length > 0) {
+        showToast(`Found ${results.length} result${results.length > 1 ? 's' : ''} for "${query}"`, 'success', 3000);
+        
+        // Find which tab contains the first result and switch to it
+        const parentTab = firstResult.closest('.tab-content');
+        if (parentTab) {
+            const tabId = parentTab.id;
+            const tabButton = Array.from(document.querySelectorAll('.tab-btn')).find(
+                btn => btn.getAttribute('onclick')?.includes(tabId)
+            );
+            if (tabButton) {
+                switchTab(tabId, tabButton);
+            }
+        }
+        
+        // Highlight the first result
+        setTimeout(() => {
+            firstResult.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            firstResult.classList.add('highlight');
+            
+            // Highlight search terms within the result
+            const regex = new RegExp(`(${query})`, 'gi');
+            const walker = document.createTreeWalker(
+                firstResult,
+                NodeFilter.SHOW_TEXT,
+                null,
+                false
+            );
+            
+            const nodesToReplace = [];
+            while (walker.nextNode()) {
+                const node = walker.currentNode;
+                if (node.textContent.match(regex) && node.parentElement?.tagName !== 'SCRIPT') {
+                    nodesToReplace.push(node);
+                }
+            }
+            
+            nodesToReplace.forEach(node => {
+                const span = document.createElement('span');
+                span.innerHTML = node.textContent.replace(regex, '<mark style="background: #ffd700; padding: 2px; border-radius: 3px;">$1</mark>');
+                node.parentNode.replaceChild(span, node);
+            });
+        }, 500);
+    } else {
+        showToast(`No results found for "${query}"`, 'warning', 3000);
+    }
+}
+
+// Export functions for global use
+window.switchTab = switchTab;
+window.toggleFAQ = toggleFAQ;
+window.navigateToDashboard = navigateToDashboard;
+window.scrollToTop = scrollToTop;
+window.searchGuide = searchGuide;
+window.showToast = showToast;
 </script>
 
 </body>
