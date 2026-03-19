@@ -272,31 +272,7 @@
       transform: scale(1.02);
     }
     
-    /* Toast Notifications */
-    .toast-container {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      z-index: 9999;
-    }
-    
-    .toast {
-      padding: 15px 25px;
-      margin-bottom: 10px;
-      border-radius: 8px;
-      color: white;
-      font-weight: bold;
-      animation: slideIn 0.3s ease-out;
-    }
-    
-    .toast.success { background: #4CAF50; }
-    .toast.error { background: #f44336; }
-    .toast.info { background: #2196F3; }
-    
-    @keyframes slideIn {
-      from { transform: translateX(100%); opacity: 0; }
-      to { transform: translateX(0); opacity: 1; }
-    }
+    /* Toast container styles are now in toast.js - removing duplicate */
     
     .spinner {
       display: inline-block;
@@ -338,7 +314,7 @@
 </head>
 <body>
 
-<div class="toast-container" id="toast-container"></div>
+<!-- Toast container is created by toast.js, removed static container -->
 
 <h1>🎨 Customization</h1>
 <div class="subtitle">Personalize your criminal empire</div>
@@ -428,12 +404,16 @@
 
 <button class="back-button" onclick="goToDashboard()">← Back to Dashboard</button>
 
+<!-- Script includes: Supabase library + shared utilities -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<script src="supabase.js"></script>
+<script src="toast.js"></script>
+<script src="loading.js"></script>
+<script src="error-handler.js"></script>
+
 <script>
-const sb = window.supabase.createClient(
-  "https://mtiwodvsrwvrujbhmmrn.supabase.co",
-  "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
-);
+// Use the shared supabase client
+const sb = window.supabaseClient;
 
 let currentPlayer = null;
 let customization = null;
@@ -448,52 +428,31 @@ let allFrames = [];
 let allBadges = [];
 let allColors = [];
 
-// Toast notification
-function showToast(message, type = 'info', duration = 3000) {
-  const container = document.getElementById('toast-container');
-  const toast = document.createElement('div');
-  toast.className = `toast ${type}`;
-  toast.textContent = message;
-  
-  container.appendChild(toast);
-  
-  setTimeout(() => {
-    toast.classList.add('fade-out');
-    setTimeout(() => {
-      if (toast.parentNode) {
-        container.removeChild(toast);
-      }
-    }, 300);
-  }, duration);
-}
-
 // Load player data
 async function loadPlayerData() {
   try {
-    const { data: { user } } = await sb.auth.getUser();
+    const user = await window.getCurrentUser();
     if (!user) {
       window.location.href = "index.html";
       return;
     }
     
-    const { data: player, error } = await sb
-      .from('players')
-      .select('*')
-      .eq('auth_id', user.id)
-      .single();
-    
-    if (error) throw error;
-    
-    if (player) {
-      currentPlayer = player;
-      await loadCustomization();
-      await loadOwnedItems();
-      await loadAllItems();
-      updatePreview();
+    const player = await window.getCurrentPlayer();
+    if (!player) {
+      window.showToast('Player not found', 'error');
+      return;
     }
+    
+    currentPlayer = player;
+    await loadCustomization();
+    await loadOwnedItems();
+    await loadAllItems();
+    updatePreview();
+    
   } catch (error) {
     console.error('Error loading player:', error);
-    showToast('Error loading data', 'error');
+    const friendlyMessage = window.ErrorHandler.handleSupabaseError(error, 'Error loading data');
+    window.showToast(friendlyMessage, 'error');
   }
 }
 
@@ -517,6 +476,7 @@ async function loadCustomization() {
     document.getElementById('previewSection').style.display = 'block';
   } catch (error) {
     console.error('Error loading customization:', error);
+    window.showToast('Error loading customization', 'error');
   }
 }
 
@@ -524,41 +484,48 @@ async function loadCustomization() {
 async function loadOwnedItems() {
   try {
     // Load owned titles
-    const { data: titles } = await sb
+    const { data: titles, error: titlesError } = await sb
       .from('player_titles')
       .select('title_id, equipped')
       .eq('player_id', currentPlayer.id);
+    if (titlesError) throw titlesError;
     ownedTitles = titles || [];
     
     // Load owned avatars
-    const { data: avatars } = await sb
+    const { data: avatars, error: avatarsError } = await sb
       .from('player_avatars')
       .select('avatar_id, equipped')
       .eq('player_id', currentPlayer.id);
+    if (avatarsError) throw avatarsError;
     ownedAvatars = avatars || [];
     
     // Load owned frames
-    const { data: frames } = await sb
+    const { data: frames, error: framesError } = await sb
       .from('player_frames')
       .select('frame_id, equipped')
       .eq('player_id', currentPlayer.id);
+    if (framesError) throw framesError;
     ownedFrames = frames || [];
     
     // Load owned badges
-    const { data: badges } = await sb
+    const { data: badges, error: badgesError } = await sb
       .from('player_badges')
       .select('badge_id, equipped')
       .eq('player_id', currentPlayer.id);
+    if (badgesError) throw badgesError;
     ownedBadges = badges || [];
     
     // Load owned colors
-    const { data: colors } = await sb
+    const { data: colors, error: colorsError } = await sb
       .from('player_color_schemes')
       .select('color_scheme_id, equipped')
       .eq('player_id', currentPlayer.id);
+    if (colorsError) throw colorsError;
     ownedColors = colors || [];
+    
   } catch (error) {
     console.error('Error loading owned items:', error);
+    window.showToast('Error loading your items', 'error');
   }
 }
 
@@ -566,47 +533,54 @@ async function loadOwnedItems() {
 async function loadAllItems() {
   try {
     // Load all titles
-    const { data: titles } = await sb
+    const { data: titles, error: titlesError } = await sb
       .from('title_options')
       .select('*')
       .order('rarity');
+    if (titlesError) throw titlesError;
     allTitles = titles || [];
     renderTitles();
     
     // Load all avatars
-    const { data: avatars } = await sb
+    const { data: avatars, error: avatarsError } = await sb
       .from('avatar_options')
       .select('*')
       .order('price');
+    if (avatarsError) throw avatarsError;
     allAvatars = avatars || [];
     renderAvatars();
     
     // Load all frames
-    const { data: frames } = await sb
+    const { data: frames, error: framesError } = await sb
       .from('frame_options')
       .select('*')
       .order('price');
+    if (framesError) throw framesError;
     allFrames = frames || [];
     renderFrames();
     
     // Load all badges
-    const { data: badges } = await sb
+    const { data: badges, error: badgesError } = await sb
       .from('badge_options')
       .select('*')
       .order('rarity');
+    if (badgesError) throw badgesError;
     allBadges = badges || [];
     renderBadges();
     
     // Load all colors
-    const { data: colors } = await sb
+    const { data: colors, error: colorsError } = await sb
       .from('color_schemes')
       .select('*')
       .order('rarity');
+    if (colorsError) throw colorsError;
     allColors = colors || [];
     renderColors();
     renderShop();
+    
   } catch (error) {
     console.error('Error loading items:', error);
+    window.showToast('Error loading items', 'error');
   }
 }
 
@@ -832,7 +806,7 @@ async function equipTitle(titleId) {
     if (error) throw error;
     
     if (data.success) {
-      showToast(data.message, 'success');
+      window.showToast(data.message, 'success');
       await loadCustomization();
       await loadOwnedItems();
       renderTitles();
@@ -840,7 +814,8 @@ async function equipTitle(titleId) {
     }
   } catch (error) {
     console.error('Error equipping title:', error);
-    showToast('Failed to equip title', 'error');
+    const friendlyMessage = window.ErrorHandler.handleSupabaseError(error, 'Failed to equip title');
+    window.showToast(friendlyMessage, 'error');
   }
 }
 
@@ -854,7 +829,7 @@ async function equipAvatar(avatarId) {
     if (error) throw error;
     
     if (data.success) {
-      showToast(data.message, 'success');
+      window.showToast(data.message, 'success');
       await loadCustomization();
       await loadOwnedItems();
       renderAvatars();
@@ -862,7 +837,8 @@ async function equipAvatar(avatarId) {
     }
   } catch (error) {
     console.error('Error equipping avatar:', error);
-    showToast('Failed to equip avatar', 'error');
+    const friendlyMessage = window.ErrorHandler.handleSupabaseError(error, 'Failed to equip avatar');
+    window.showToast(friendlyMessage, 'error');
   }
 }
 
@@ -876,7 +852,7 @@ async function equipFrame(frameId) {
     if (error) throw error;
     
     if (data.success) {
-      showToast(data.message, 'success');
+      window.showToast(data.message, 'success');
       await loadCustomization();
       await loadOwnedItems();
       renderFrames();
@@ -884,7 +860,8 @@ async function equipFrame(frameId) {
     }
   } catch (error) {
     console.error('Error equipping frame:', error);
-    showToast('Failed to equip frame', 'error');
+    const friendlyMessage = window.ErrorHandler.handleSupabaseError(error, 'Failed to equip frame');
+    window.showToast(friendlyMessage, 'error');
   }
 }
 
@@ -898,7 +875,7 @@ async function equipColor(colorId) {
     if (error) throw error;
     
     if (data.success) {
-      showToast(data.message, 'success');
+      window.showToast(data.message, 'success');
       await loadCustomization();
       await loadOwnedItems();
       renderColors();
@@ -906,7 +883,8 @@ async function equipColor(colorId) {
     }
   } catch (error) {
     console.error('Error applying color scheme:', error);
-    showToast('Failed to apply color scheme', 'error');
+    const friendlyMessage = window.ErrorHandler.handleSupabaseError(error, 'Failed to apply color scheme');
+    window.showToast(friendlyMessage, 'error');
   }
 }
 
@@ -921,7 +899,7 @@ async function purchaseItem(type, itemId) {
     if (error) throw error;
     
     if (data.success) {
-      showToast(data.message, 'success');
+      window.showToast(data.message, 'success');
       await loadPlayerData(); // Refresh cash
       await loadOwnedItems();
       renderShop();
@@ -933,7 +911,8 @@ async function purchaseItem(type, itemId) {
     }
   } catch (error) {
     console.error('Error purchasing item:', error);
-    showToast('Failed to purchase item', 'error');
+    const friendlyMessage = window.ErrorHandler.handleSupabaseError(error, 'Failed to purchase item');
+    window.showToast(friendlyMessage, 'error');
   }
 }
 
@@ -956,8 +935,13 @@ function goToDashboard() {
   window.location.href = "dashboard.html";
 }
 
-// Initialize
-loadPlayerData();
+// Initialize with error handling
+window.ErrorHandler.withErrorHandling(
+  loadPlayerData,
+  null,
+  'Failed to load customization data'
+).catch(() => {});
+
 </script>
 
 </body>
