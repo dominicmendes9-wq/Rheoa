@@ -166,44 +166,7 @@
       background: #555;
     }
     
-    /* Toast Notification Styles */
-    .toast-container {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      z-index: 9999;
-    }
-    
-    .toast {
-      padding: 15px 25px;
-      margin-bottom: 10px;
-      border-radius: 8px;
-      color: white;
-      font-weight: bold;
-      animation: slideIn 0.3s ease-out;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      min-width: 250px;
-      max-width: 350px;
-    }
-    
-    .toast.success { background: #4CAF50; }
-    .toast.error { background: #f44336; }
-    .toast.info { background: #2196F3; }
-    .toast.warning { background: #ff9800; }
-    
-    @keyframes slideIn {
-      from { transform: translateX(100%); opacity: 0; }
-      to { transform: translateX(0); opacity: 1; }
-    }
-    
-    @keyframes slideOut {
-      from { transform: translateX(0); opacity: 1; }
-      to { transform: translateX(100%); opacity: 0; }
-    }
-    
-    .toast.fade-out {
-      animation: slideOut 0.3s ease-out forwards;
-    }
+    /* Toast container styles are now in toast.js - removing duplicate styles */
     
     /* Confetti Canvas */
     #confetti-canvas {
@@ -406,7 +369,7 @@
 <body>
 
 <canvas id="confetti-canvas"></canvas>
-<div class="toast-container" id="toast-container"></div>
+<!-- Toast container is created by toast.js, removing static container -->
 
 <!-- Realtime Status Indicator -->
 <div class="realtime-status" id="realtimeStatus">
@@ -431,12 +394,16 @@
 
 <button class="back-button" onclick="goBack()">← Back to Dashboard</button>
 
+<!-- Script includes: Supabase library + shared utilities -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<script src="supabase.js"></script>
+<script src="toast.js"></script>
+<script src="loading.js"></script>
+<script src="error-handler.js"></script>
+
 <script>
-const sb = window.supabase.createClient(
-  "https://mtiwodvsrwvrujbhmmrn.supabase.co",
-  "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
-);
+// Use the shared supabase client
+const sb = window.supabaseClient;
 
 let player = null;
 let crimes = [];
@@ -449,26 +416,7 @@ let decayCheckInterval = null;
 let isUpdating = false;
 let crimeCooldowns = new Map();
 
-// Toast notification system
-function showToast(message, type = 'info', duration = 3000) {
-  const container = document.getElementById('toast-container');
-  const toast = document.createElement('div');
-  toast.className = `toast ${type}`;
-  toast.textContent = message;
-  
-  container.appendChild(toast);
-  
-  setTimeout(() => {
-    toast.classList.add('fade-out');
-    setTimeout(() => {
-      if (toast.parentNode) {
-        container.removeChild(toast);
-      }
-    }, 300);
-  }, duration);
-}
-
-// Confetti system
+// Confetti system (kept as is since it's specific to this page)
 function startConfetti() {
   const canvas = document.getElementById('confetti-canvas');
   const ctx = canvas.getContext('2d');
@@ -552,15 +500,15 @@ async function applyStatDecay() {
       
       // Show warnings based on stat levels
       if (data.new_hunger < 30 && data.new_hunger > 10) {
-        showToast('⚠️ You are getting hungry! Time to eat something!', 'warning');
+        window.showToast('⚠️ You are getting hungry! Time to eat something!', 'warning');
       } else if (data.new_hunger <= 10) {
-        showToast('🔴 CRITICAL: You are starving! Eat immediately!', 'error');
+        window.showToast('🔴 CRITICAL: You are starving! Eat immediately!', 'error');
       }
       
       if (data.new_happiness < 30 && data.new_happiness > 10) {
-        showToast('😔 Your happiness is low! Have some fun!', 'warning');
+        window.showToast('😔 Your happiness is low! Have some fun!', 'warning');
       } else if (data.new_happiness <= 10) {
-        showToast('🔴 CRITICAL: You are depressed! Cheer up!', 'error');
+        window.showToast('🔴 CRITICAL: You are depressed! Cheer up!', 'error');
       }
       
       // Update the display
@@ -603,7 +551,7 @@ async function regenerateEnergy() {
       // Update local player data
       player.energy = data.new_energy;
       updatePlayerStats();
-      showToast(`⚡ +${data.energy_added} energy regenerated!`, 'info', 2000);
+      window.showToast(`⚡ +${data.energy_added} energy regenerated!`, 'info', 2000);
       updateCooldowns(); // Update button states
     }
   } catch (error) {
@@ -704,7 +652,7 @@ function setupRealtimeSubscriptions() {
         updatePlayerStats();
         
         if (player.level > oldLevel) {
-          showToast(`🎉 LEVEL UP! You are now level ${player.level}!`, 'success', 4000);
+          window.showToast(`🎉 LEVEL UP! You are now level ${player.level}!`, 'success', 4000);
           startConfetti();
           setTimeout(stopConfetti, 3000);
         }
@@ -868,10 +816,10 @@ async function loadCrimes() {
   if (isUpdating) return;
   
   try {
-    const { data: { user } } = await sb.auth.getUser();
+    const user = await window.getCurrentUser();
     if (!user) return window.location.href = "index.html";
 
-    const { data: playerData } = await sb.from('players').select('*').eq('auth_id', user.id).single();
+    const playerData = await window.getCurrentPlayer();
     if (!playerData) { 
       document.getElementById("crimes").innerHTML = '<div class="error-message">Player not found</div>'; 
       return; 
@@ -891,7 +839,9 @@ async function loadCrimes() {
       setupRealtimeSubscriptions();
     }
 
-    const { data: crimesData } = await sb.from('crimes').select('*').order('min_level').order('name');
+    const { data: crimesData, error: crimesError } = await sb.from('crimes').select('*').order('min_level').order('name');
+    if (crimesError) throw crimesError;
+    
     if (!crimesData || crimesData.length === 0) {
       document.getElementById("crimes").innerHTML = '<div class="loading">No crimes available</div>';
       return;
@@ -901,10 +851,12 @@ async function loadCrimes() {
 
     // Load cooldowns for all crimes
     crimeCooldowns.clear();
-    const { data: cooldowns } = await sb
+    const { data: cooldowns, error: cooldownError } = await sb
       .from('player_crimes')
       .select('crime_id, next_available')
       .eq('player_id', player.id);
+
+    if (cooldownError) throw cooldownError;
 
     if (cooldowns) {
       const now = new Date();
@@ -927,8 +879,9 @@ async function loadCrimes() {
 
   } catch (error) {
     console.error('Error loading crimes:', error);
-    document.getElementById("crimes").innerHTML = '<div class="error-message">Error loading crimes. Please refresh.</div>';
-    showToast('Error loading crimes', 'error');
+    const friendlyMessage = window.ErrorHandler.handleSupabaseError(error, 'Error loading crimes');
+    document.getElementById("crimes").innerHTML = `<div class="error-message">${friendlyMessage}. Please refresh.</div>`;
+    window.showToast(friendlyMessage, 'error');
   }
 }
 
@@ -941,14 +894,14 @@ async function attemptCrime(crimeId) {
 
   // Check level requirement
   if (player.level < crime.min_level) {
-    showToast(`🔒 Need level ${crime.min_level} to attempt this crime!`, 'warning');
+    window.showToast(`🔒 Need level ${crime.min_level} to attempt this crime!`, 'warning');
     return;
   }
 
   // Check local cache first for immediate feedback
   const cachedCooldown = crimeCooldowns.get(crimeId) || 0;
   if (cachedCooldown > 0) {
-    showToast(`⏳ Please wait ${cachedCooldown} seconds before trying again!`, 'error');
+    window.showToast(`⏳ Please wait ${cachedCooldown} seconds before trying again!`, 'error');
     return;
   }
 
@@ -967,16 +920,16 @@ async function attemptCrime(crimeId) {
       switch (data.error) {
         case 'On cooldown':
           crimeCooldowns.set(crimeId, Math.ceil(data.cooldown_remaining));
-          showToast(`⏳ Please wait ${Math.ceil(data.cooldown_remaining)}s`, 'error');
+          window.showToast(`⏳ Please wait ${Math.ceil(data.cooldown_remaining)}s`, 'error');
           break;
         case 'Not enough energy':
-          showToast(`❌ Need ${data.energy_needed} energy (you have ${data.energy_current})`, 'error');
+          window.showToast(`❌ Need ${data.energy_needed} energy (you have ${data.energy_current})`, 'error');
           break;
         case 'Level too low':
-          showToast(`🔒 Need level ${data.required_level} (you are level ${data.current_level})`, 'warning');
+          window.showToast(`🔒 Need level ${data.required_level} (you are level ${data.current_level})`, 'warning');
           break;
         default:
-          showToast(`❌ ${data.error}`, 'error');
+          window.showToast(`❌ ${data.error}`, 'error');
       }
       return;
     }
@@ -998,14 +951,14 @@ async function attemptCrime(crimeId) {
     
     // Show result toast
     if (data.crime_success) {
-      showToast(`✅ Success! +₹${data.cash_change.toLocaleString()}, +${data.xp_change} XP`, 'success');
+      window.showToast(`✅ Success! +₹${data.cash_change.toLocaleString()}, +${data.xp_change} XP`, 'success');
     } else {
-      showToast(`❌ Failed! Lost ₹${Math.abs(data.cash_change).toLocaleString()}`, 'error');
+      window.showToast(`❌ Failed! Lost ₹${Math.abs(data.cash_change).toLocaleString()}`, 'error');
     }
     
     // Show level up if applicable
     if (data.leveled_up) {
-      showToast(`🎉 LEVEL UP! You are now level ${data.new_level}!`, 'success', 4000);
+      window.showToast(`🎉 LEVEL UP! You are now level ${data.new_level}!`, 'success', 4000);
       startConfetti();
       setTimeout(stopConfetti, 3000);
     }
@@ -1015,7 +968,8 @@ async function attemptCrime(crimeId) {
 
   } catch (error) {
     console.error('Error attempting crime:', error);
-    showToast('Error processing crime', 'error');
+    const friendlyMessage = window.ErrorHandler.handleSupabaseError(error, 'Error processing crime');
+    window.showToast(friendlyMessage, 'error');
   } finally {
     isUpdating = false;
   }
@@ -1076,8 +1030,13 @@ window.addEventListener('beforeunload', () => {
   if (decayCheckInterval) clearInterval(decayCheckInterval);
 });
 
-// Initialize
-loadCrimes();
+// Initialize with error handling
+window.ErrorHandler.withErrorHandling(
+  loadCrimes,
+  'crimes',
+  'Failed to load crimes'
+).catch(() => {});
+
 startCooldownTimer();
 startRegenTimer();
 startDecayChecker();
@@ -1085,7 +1044,7 @@ startDecayChecker();
 // Welcome toast
 setTimeout(() => {
   if (player) {
-    showToast(`Ready to do some crimes, ${player?.username}? Stats decay over time - stay balanced! ⚖️`, 'info', 5000);
+    window.showToast(`Ready to do some crimes, ${player?.username}? Stats decay over time - stay balanced! ⚖️`, 'info', 5000);
   }
 }, 1000);
 </script>
