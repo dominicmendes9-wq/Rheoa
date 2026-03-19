@@ -32,6 +32,40 @@
       font-style: italic;
     }
     
+    /* Player Stats Bar */
+    .player-stats {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+      color: white;
+      padding: 15px 25px;
+      border-radius: 10px;
+      margin-bottom: 30px;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+    
+    .stat-group {
+      display: flex;
+      gap: 30px;
+      flex-wrap: wrap;
+    }
+    
+    .stat {
+      text-align: center;
+    }
+    
+    .stat-label {
+      font-size: 0.8rem;
+      opacity: 0.9;
+    }
+    
+    .stat-value {
+      font-size: 1.3rem;
+      font-weight: bold;
+    }
+    
     /* Racing Tabs */
     .racing-tabs {
       display: flex;
@@ -61,6 +95,15 @@
       background: #f44336;
       color: white;
       border-color: #f44336;
+    }
+    
+    /* Tab Content */
+    .tab-content {
+      display: none;
+    }
+    
+    .tab-content.active {
+      display: block;
     }
     
     /* Garage Section */
@@ -223,12 +266,14 @@
     
     .race-participants {
       margin: 15px 0;
+      max-height: 150px;
+      overflow-y: auto;
     }
     
     .participant-item {
       display: flex;
       justify-content: space-between;
-      padding: 5px 0;
+      padding: 8px 0;
       border-bottom: 1px dashed #eee;
     }
     
@@ -253,56 +298,54 @@
       cursor: not-allowed;
     }
     
-    /* Betting Section */
-    .betting-section {
-      background: white;
-      border: 3px solid #4CAF50;
-      border-radius: 15px;
+    /* Shop Grid */
+    .shop-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+    }
+    
+    .shop-card {
+      border: 2px solid #f44336;
+      border-radius: 10px;
       padding: 20px;
-      margin-top: 30px;
+      background: white;
+      text-align: center;
     }
     
-    .betting-title {
+    .shop-price {
+      font-size: 1.5rem;
+      font-weight: bold;
       color: #4CAF50;
+      margin: 15px 0;
     }
     
-    .bet-controls {
-      display: flex;
-      gap: 15px;
-      flex-wrap: wrap;
-      margin: 20px 0;
-    }
-    
-    .bet-input {
-      flex: 1;
-      min-width: 200px;
-      padding: 10px;
-      font-family: 'Courier New', monospace;
-      border: 2px solid #ddd;
-      border-radius: 8px;
-    }
-    
-    .bet-btn {
-      padding: 10px 20px;
+    .shop-btn {
+      width: 100%;
+      padding: 12px;
       background: #4CAF50;
       color: white;
       border: none;
-      border-radius: 8px;
-      font-weight: bold;
+      border-radius: 5px;
       cursor: pointer;
+      font-weight: bold;
     }
     
-    .bet-btn:hover {
+    .shop-btn:hover:not(:disabled) {
       background: #45a049;
     }
     
-    /* Leaderboard */
+    .shop-btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    
+    /* Leaderboard Table */
     .leaderboard-section {
       background: white;
       border: 3px solid #f44336;
       border-radius: 15px;
       overflow: hidden;
-      margin-top: 30px;
     }
     
     .leaderboard-header {
@@ -334,36 +377,97 @@
       background: #fff5f5;
     }
     
-    /* Shop Section */
-    .shop-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-      gap: 20px;
+    /* History List */
+    .history-list {
+      max-height: 400px;
+      overflow-y: auto;
     }
     
-    .shop-card {
-      border: 2px solid #f44336;
-      border-radius: 10px;
+    .history-item {
+      border-bottom: 1px solid #eee;
       padding: 15px;
-      background: white;
-      text-align: center;
     }
     
-    .shop-price {
+    .history-header {
+      display: flex;
+      justify-content: space-between;
+      font-weight: bold;
+    }
+    
+    .history-details {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 5px;
+      color: #666;
+    }
+    
+    .profit { color: #4CAF50; }
+    .loss { color: #f44336; }
+    
+    /* Bet Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+    }
+    
+    .modal-content {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      padding: 30px;
+      border-radius: 15px;
+      border: 3px solid #4CAF50;
+      max-width: 400px;
+      width: 90%;
+    }
+    
+    .modal-title {
       font-size: 1.3rem;
       font-weight: bold;
+      margin-bottom: 20px;
       color: #4CAF50;
-      margin: 10px 0;
     }
     
-    .shop-btn {
+    .modal-input {
       width: 100%;
       padding: 10px;
-      background: #4CAF50;
-      color: white;
+      margin: 15px 0;
+      font-family: 'Courier New', monospace;
+      border: 2px solid #ddd;
+      border-radius: 5px;
+    }
+    
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    
+    .modal-btn {
+      flex: 1;
+      padding: 10px;
       border: none;
       border-radius: 5px;
       cursor: pointer;
+      font-weight: bold;
+    }
+    
+    .modal-btn.confirm {
+      background: #4CAF50;
+      color: white;
+    }
+    
+    .modal-btn.cancel {
+      background: #f44336;
+      color: white;
     }
     
     /* Back Button */
@@ -408,7 +512,7 @@
     .toast.success { background: #4CAF50; }
     .toast.error { background: #f44336; }
     .toast.info { background: #2196F3; }
-    .toast.race { background: #f44336; }
+    .toast.warning { background: #ff9800; }
     
     @keyframes slideIn {
       from { transform: translateX(100%); opacity: 0; }
@@ -430,7 +534,22 @@
       100% { transform: rotate(360deg); }
     }
     
+    .empty-message {
+      text-align: center;
+      padding: 40px;
+      color: #666;
+    }
+    
     @media (max-width: 600px) {
+      .player-stats {
+        flex-direction: column;
+        text-align: center;
+      }
+      
+      .stat-group {
+        justify-content: center;
+      }
+      
       .racing-tabs {
         flex-direction: column;
       }
@@ -452,6 +571,24 @@
 <h1>🏁 Racing & Competitions</h1>
 <div class="subtitle">Speed, skill, and high stakes!</div>
 
+<!-- Player Stats -->
+<div class="player-stats" id="playerStats" style="display: none;">
+  <div class="stat-group">
+    <div class="stat">
+      <div class="stat-label">💰 Cash</div>
+      <div class="stat-value" id="playerCash">₹0</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">⭐ Level</div>
+      <div class="stat-value" id="playerLevel">1</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">🚗 Vehicles</div>
+      <div class="stat-value" id="vehicleCount">0</div>
+    </div>
+  </div>
+</div>
+
 <!-- Racing Tabs -->
 <div class="racing-tabs">
   <button class="tab-btn active" onclick="switchTab('races')">🏁 Races</button>
@@ -462,9 +599,9 @@
 </div>
 
 <!-- Races Tab -->
-<div id="races" class="tab-content" style="display: block;">
+<div id="races" class="tab-content active">
   <div class="races-grid" id="racesGrid">
-    <div style="text-align: center; grid-column: 1/-1; padding: 40px;">
+    <div class="empty-message">
       <div class="spinner"></div>
       <p>Loading races...</p>
     </div>
@@ -472,11 +609,11 @@
 </div>
 
 <!-- Garage Tab -->
-<div id="garage" class="tab-content" style="display: none;">
+<div id="garage" class="tab-content">
   <div class="garage-section">
     <div class="section-title">🔧 My Vehicles</div>
     <div class="vehicles-grid" id="vehiclesGrid">
-      <div style="text-align: center; grid-column: 1/-1; padding: 40px;">
+      <div class="empty-message">
         <div class="spinner"></div>
         <p>Loading vehicles...</p>
       </div>
@@ -485,11 +622,11 @@
 </div>
 
 <!-- Shop Tab -->
-<div id="shop" class="tab-content" style="display: none;">
+<div id="shop" class="tab-content">
   <div class="garage-section">
     <div class="section-title">🏪 Vehicle Shop</div>
     <div class="shop-grid" id="shopGrid">
-      <div style="text-align: center; grid-column: 1/-1; padding: 40px;">
+      <div class="empty-message">
         <div class="spinner"></div>
         <p>Loading vehicles...</p>
       </div>
@@ -498,10 +635,10 @@
 </div>
 
 <!-- Leaderboard Tab -->
-<div id="leaderboard" class="tab-content" style="display: none;">
+<div id="leaderboard" class="tab-content">
   <div class="leaderboard-section">
     <div class="leaderboard-header">🏆 Racing Champions</div>
-    <table class="leaderboard-table" id="leaderboardTable">
+    <table class="leaderboard-table">
       <thead>
         <tr>
           <th>Rank</th>
@@ -514,7 +651,7 @@
       </thead>
       <tbody id="leaderboardBody">
         <tr>
-          <td colspan="6" style="text-align: center; padding: 40px;">
+          <td colspan="6" class="empty-message">
             <div class="spinner"></div>
             <p>Loading leaderboard...</p>
           </td>
@@ -525,11 +662,11 @@
 </div>
 
 <!-- History Tab -->
-<div id="history" class="tab-content" style="display: none;">
+<div id="history" class="tab-content">
   <div class="garage-section">
     <div class="section-title">📜 Race History</div>
     <div class="history-list" id="historyList">
-      <div style="text-align: center; padding: 40px;">
+      <div class="empty-message">
         <div class="spinner"></div>
         <p>Loading history...</p>
       </div>
@@ -537,16 +674,16 @@
   </div>
 </div>
 
-<!-- Betting Modal -->
-<div id="betModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
-  <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; border-radius: 15px; border: 3px solid #4CAF50; max-width: 400px; width: 90%;">
-    <h3 style="margin-bottom: 20px;">Place Bet</h3>
+<!-- Bet Modal -->
+<div id="betModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-title">Place Bet</div>
     <p id="betParticipantInfo"></p>
-    <input type="number" id="betAmount" class="bet-input" style="width: 100%; margin: 15px 0;" placeholder="Bet amount" min="100">
+    <input type="number" id="betAmount" class="modal-input" placeholder="Bet amount" min="100" value="100">
     <p id="potentialPayout">Potential payout: ₹0</p>
-    <div style="display: flex; gap: 10px; margin-top: 20px;">
-      <button class="bet-btn" onclick="confirmBet()">Confirm</button>
-      <button class="bet-btn" style="background: #f44336;" onclick="closeBetModal()">Cancel</button>
+    <div class="modal-actions">
+      <button class="modal-btn confirm" onclick="confirmBet()">Confirm</button>
+      <button class="modal-btn cancel" onclick="closeBetModal()">Cancel</button>
     </div>
   </div>
 </div>
@@ -592,16 +729,22 @@ function showToast(message, type = 'info', duration = 3000) {
 async function loadPlayerData() {
   try {
     const { data: { user } } = await sb.auth.getUser();
-    if (!user) return window.location.href = "index.html";
+    if (!user) {
+      window.location.href = "index.html";
+      return;
+    }
     
-    const { data: player } = await sb
+    const { data: player, error } = await sb
       .from('players')
       .select('*')
       .eq('auth_id', user.id)
       .single();
     
+    if (error) throw error;
+    
     if (player) {
       currentPlayer = player;
+      updatePlayerStats();
       await loadVehicles();
       await loadRaces();
       await loadVehicleTypes();
@@ -610,13 +753,22 @@ async function loadPlayerData() {
     }
   } catch (error) {
     console.error('Error loading player:', error);
+    showToast('Error loading player data', 'error');
   }
+}
+
+// Update player stats display
+function updatePlayerStats() {
+  document.getElementById('playerStats').style.display = 'flex';
+  document.getElementById('playerCash').textContent = `₹${currentPlayer.cash.toLocaleString()}`;
+  document.getElementById('playerLevel').textContent = currentPlayer.level;
+  document.getElementById('vehicleCount').textContent = vehicles.length;
 }
 
 // Load vehicles
 async function loadVehicles() {
   try {
-    const { data } = await sb
+    const { data, error } = await sb
       .from('player_vehicles')
       .select(`
         *,
@@ -624,65 +776,75 @@ async function loadVehicles() {
       `)
       .eq('player_id', currentPlayer.id);
     
+    if (error) throw error;
+    
     vehicles = data || [];
+    document.getElementById('vehicleCount').textContent = vehicles.length;
     renderVehicles();
   } catch (error) {
     console.error('Error loading vehicles:', error);
+    showToast('Error loading vehicles', 'error');
   }
 }
 
 // Load races
 async function loadRaces() {
   try {
-    const { data } = await sb
+    const { data, error } = await sb
       .from('races')
       .select(`
         *,
         race_participants (
-          *,
-          player:players (username),
-          vehicle:player_vehicles (
-            *,
-            vehicle_types (*)
-          )
+          id,
+          player_id,
+          bet_amount,
+          player:players (username)
         )
       `)
       .in('status', ['open', 'upcoming'])
       .order('start_time');
     
+    if (error) throw error;
+    
     races = data || [];
     renderRaces();
   } catch (error) {
     console.error('Error loading races:', error);
+    showToast('Error loading races', 'error');
   }
 }
 
 // Load vehicle types
 async function loadVehicleTypes() {
   try {
-    const { data } = await sb
+    const { data, error } = await sb
       .from('vehicle_types')
       .select('*')
       .order('price');
+    
+    if (error) throw error;
     
     vehicleTypes = data || [];
     renderShop();
   } catch (error) {
     console.error('Error loading vehicle types:', error);
+    showToast('Error loading vehicles', 'error');
   }
 }
 
 // Load leaderboard
 async function loadLeaderboard() {
   try {
-    const { data } = await sb
+    const { data, error } = await sb
       .from('racing_leaderboard')
       .select(`
         *,
-        players (username)
+        players!inner (username)
       `)
       .order('total_earnings', { ascending: false })
       .limit(20);
+    
+    if (error) throw error;
     
     leaderboard = data || [];
     renderLeaderboard();
@@ -694,15 +856,17 @@ async function loadLeaderboard() {
 // Load race history
 async function loadRaceHistory() {
   try {
-    const { data } = await sb
+    const { data, error } = await sb
       .from('race_history')
       .select(`
         *,
-        races (*)
+        races!inner (name)
       `)
       .eq('player_id', currentPlayer.id)
       .order('created_at', { ascending: false })
       .limit(20);
+    
+    if (error) throw error;
     
     raceHistory = data || [];
     renderHistory();
@@ -716,13 +880,21 @@ function renderVehicles() {
   const grid = document.getElementById('vehiclesGrid');
   
   if (!vehicles.length) {
-    grid.innerHTML = '<div style="text-align: center; grid-column: 1/-1; padding: 40px;">No vehicles yet. Buy one from the shop!</div>';
+    grid.innerHTML = '<div class="empty-message">No vehicles yet. Buy one from the shop!</div>';
     return;
   }
   
   grid.innerHTML = vehicles.map(v => {
     const type = v.vehicle_types;
-    const conditionClass = v.condition > 70 ? 'condition-good' : v.condition > 30 ? 'condition-warning' : 'condition-critical';
+    if (!type) return '';
+    
+    const conditionClass = v.condition > 70 ? 'condition-good' : 
+                          v.condition > 30 ? 'condition-warning' : 'condition-critical';
+    
+    const speed = type.base_speed + (v.speed_level - 1) * 5;
+    const accel = type.base_acceleration + (v.acceleration_level - 1) * 5;
+    const handling = type.base_handling + (v.handling_level - 1) * 5;
+    const nitro = type.base_nitro + (v.nitro_level - 1) * 5;
     
     return `
       <div class="vehicle-card">
@@ -732,26 +904,26 @@ function renderVehicles() {
         </div>
         <div class="vehicle-stats">
           <div>
-            <div>Speed: ${type.base_speed + (v.speed_level - 1) * 5}</div>
-            <div class="stat-bar"><div class="stat-fill" style="width: ${((type.base_speed + (v.speed_level - 1) * 5) / 100) * 100}%"></div></div>
+            <div>Speed: ${speed}</div>
+            <div class="stat-bar"><div class="stat-fill" style="width: ${speed}%"></div></div>
           </div>
           <div>
-            <div>Acceleration: ${type.base_acceleration + (v.acceleration_level - 1) * 5}</div>
-            <div class="stat-bar"><div class="stat-fill" style="width: ${((type.base_acceleration + (v.acceleration_level - 1) * 5) / 100) * 100}%"></div></div>
+            <div>Acceleration: ${accel}</div>
+            <div class="stat-bar"><div class="stat-fill" style="width: ${accel}%"></div></div>
           </div>
           <div>
-            <div>Handling: ${type.base_handling + (v.handling_level - 1) * 5}</div>
-            <div class="stat-bar"><div class="stat-fill" style="width: ${((type.base_handling + (v.handling_level - 1) * 5) / 100) * 100}%"></div></div>
+            <div>Handling: ${handling}</div>
+            <div class="stat-bar"><div class="stat-fill" style="width: ${handling}%"></div></div>
           </div>
           <div>
-            <div>Nitro: ${type.base_nitro + (v.nitro_level - 1) * 5}</div>
-            <div class="stat-bar"><div class="stat-fill" style="width: ${((type.base_nitro + (v.nitro_level - 1) * 5) / 100) * 100}%"></div></div>
+            <div>Nitro: ${nitro}</div>
+            <div class="stat-bar"><div class="stat-fill" style="width: ${nitro}%"></div></div>
           </div>
         </div>
         <div class="vehicle-condition ${conditionClass}">
           Condition: ${v.condition}% ${v.condition < 50 ? '(Needs repair!)' : ''}
         </div>
-        <div style="display: flex; gap: 10px; margin-top: 10px;">
+        <div style="display: flex; justify-content: space-around; margin-top: 10px;">
           <div>Wins: ${v.wins}</div>
           <div>Losses: ${v.losses}</div>
           <div>Earnings: ₹${v.total_earnings.toLocaleString()}</div>
@@ -766,7 +938,7 @@ function renderRaces() {
   const grid = document.getElementById('racesGrid');
   
   if (!races.length) {
-    grid.innerHTML = '<div style="text-align: center; grid-column: 1/-1; padding: 40px;">No races available</div>';
+    grid.innerHTML = '<div class="empty-message">No races available</div>';
     return;
   }
   
@@ -774,6 +946,7 @@ function renderRaces() {
     const participants = race.race_participants || [];
     const startTime = new Date(race.start_time).toLocaleString();
     const hasJoined = participants.some(p => p.player_id === currentPlayer.id);
+    const totalPrize = (race.prize_pool || 0) + (race.base_prize || 0);
     
     return `
       <div class="race-card">
@@ -781,7 +954,7 @@ function renderRaces() {
           <span class="race-name">${race.name}</span>
           <span class="race-type">${race.race_type}</span>
         </div>
-        <p>${race.description}</p>
+        <p>${race.description || ''}</p>
         <div class="race-details">
           <div class="detail-item">
             <div class="detail-label">Track Length</div>
@@ -789,38 +962,40 @@ function renderRaces() {
           </div>
           <div class="detail-item">
             <div class="detail-label">Entry Fee</div>
-            <div class="detail-value">₹${race.entry_fee.toLocaleString()}</div>
+            <div class="detail-value">₹${race.entry_fee?.toLocaleString() || 0}</div>
           </div>
           <div class="detail-item">
             <div class="detail-label">Min Level</div>
             <div class="detail-value">${race.min_level}</div>
           </div>
           <div class="detail-item">
-            <div class="detail-label">Participants</div>
-            <div class="detail-value">${participants.length}/${race.max_participants}</div>
+            <div class="detail-label">Start Time</div>
+            <div class="detail-value">${startTime}</div>
           </div>
         </div>
         <div class="prize-pool">
-          🏆 Prize Pool: ₹${(race.prize_pool + race.base_prize).toLocaleString()}
+          🏆 Prize Pool: ₹${totalPrize.toLocaleString()}
         </div>
         <div class="race-participants">
-          <strong>Participants:</strong>
+          <strong>Participants (${participants.length}/${race.max_participants}):</strong>
           ${participants.map(p => `
             <div class="participant-item">
               <span>${p.player?.username || 'Unknown'}</span>
-              <span>
+              ${p.player_id !== currentPlayer.id ? `
                 <button class="bet-btn" style="padding: 2px 8px; font-size: 0.8rem;" 
-                        onclick="openBetModal('${race.id}', '${p.id}', '${p.player?.username}')">
+                        onclick="openBetModal('${race.id}', '${p.id}', '${p.player?.username || 'Unknown'}')">
                   Bet
                 </button>
-              </span>
+              ` : '<span>(You)</span>'}
             </div>
           `).join('')}
         </div>
         <button class="join-btn" 
                 onclick="joinRace('${race.id}')"
-                ${hasJoined || participants.length >= race.max_participants ? 'disabled' : ''}>
-          ${hasJoined ? 'Already Joined' : 'Join Race'}
+                ${hasJoined || participants.length >= race.max_participants || !vehicles.length ? 'disabled' : ''}>
+          ${!vehicles.length ? 'Need a Vehicle' : 
+            hasJoined ? 'Already Joined' : 
+            participants.length >= race.max_participants ? 'Race Full' : 'Join Race'}
         </button>
       </div>
     `;
@@ -831,10 +1006,15 @@ function renderRaces() {
 function renderShop() {
   const grid = document.getElementById('shopGrid');
   
+  if (!vehicleTypes.length) {
+    grid.innerHTML = '<div class="empty-message">No vehicles available</div>';
+    return;
+  }
+  
   grid.innerHTML = vehicleTypes.map(vt => `
     <div class="shop-card">
       <h3>${vt.name}</h3>
-      <p>${vt.description}</p>
+      <p>${vt.description || ''}</p>
       <div class="vehicle-stats" style="margin: 10px 0;">
         <div>Speed: ${vt.base_speed}</div>
         <div>Acceleration: ${vt.base_acceleration}</div>
@@ -856,7 +1036,7 @@ function renderLeaderboard() {
   const tbody = document.getElementById('leaderboardBody');
   
   if (!leaderboard.length) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px;">No data yet</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" class="empty-message">No data yet</td></tr>';
     return;
   }
   
@@ -872,7 +1052,7 @@ function renderLeaderboard() {
         <td>${entry.total_races}</td>
         <td>${entry.total_wins}</td>
         <td>${winRate}%</td>
-        <td>₹${entry.total_earnings.toLocaleString()}</td>
+        <td>₹${entry.total_earnings?.toLocaleString() || 0}</td>
       </tr>
     `;
   }).join('');
@@ -883,26 +1063,59 @@ function renderHistory() {
   const list = document.getElementById('historyList');
   
   if (!raceHistory.length) {
-    list.innerHTML = '<div style="text-align: center; padding: 40px;">No race history yet</div>';
+    list.innerHTML = '<div class="empty-message">No race history yet</div>';
     return;
   }
   
   list.innerHTML = raceHistory.map(h => `
-    <div style="border-bottom: 1px solid #eee; padding: 15px;">
-      <div style="display: flex; justify-content: space-between;">
-        <span><strong>${h.races.name}</strong></span>
+    <div class="history-item">
+      <div class="history-header">
+        <span><strong>${h.races?.name || 'Unknown Race'}</strong></span>
         <span class="${h.position === 1 ? 'profit' : h.position <= 4 ? 'condition-warning' : 'loss'}">
-          ${h.position === 1 ? '🏆 1st' : h.position === 2 ? '🥈 2nd' : h.position === 3 ? '🥉 3rd' : h.position + 'th'}
+          ${h.position === 1 ? '🏆 1st' : 
+            h.position === 2 ? '🥈 2nd' : 
+            h.position === 3 ? '🥉 3rd' : 
+            h.position + 'th'}
         </span>
       </div>
-      <div style="display: flex; justify-content: space-between; margin-top: 5px; color: #666;">
+      <div class="history-details">
         <span>${new Date(h.created_at).toLocaleDateString()}</span>
         <span class="${h.earnings > 0 ? 'profit' : ''}">
-          ${h.earnings > 0 ? '+' : ''}₹${h.earnings.toLocaleString()}
+          ${h.earnings > 0 ? '+' : ''}₹${h.earnings?.toLocaleString() || 0}
         </span>
       </div>
     </div>
   `).join('');
+}
+
+// Buy vehicle
+async function buyVehicle(vehicleTypeId) {
+  const nickname = prompt('Give your vehicle a nickname (optional):', '');
+  
+  try {
+    const { data, error } = await sb.rpc('buy_vehicle', {
+      p_vehicle_type_id: vehicleTypeId,
+      p_nickname: nickname || null
+    });
+    
+    if (error) {
+      console.error('RPC Error:', error);
+      showToast(error.message || 'Failed to buy vehicle', 'error');
+      return;
+    }
+    
+    if (data.success) {
+      showToast(data.message, 'success');
+      await loadVehicles();
+      await loadPlayerData(); // Refresh cash
+      switchTab('garage');
+    } else {
+      showToast(data.error || 'Failed to buy vehicle', 'error');
+    }
+  } catch (error) {
+    console.error('Error buying vehicle:', error);
+    showToast('Failed to buy vehicle: ' + error.message, 'error');
+  }
 }
 
 // Join race
@@ -912,7 +1125,7 @@ async function joinRace(raceId) {
     return;
   }
   
-  // If multiple vehicles, let player choose (simplified - use first vehicle)
+  // Use the first vehicle for now (could add vehicle selection later)
   const vehicleId = vehicles[0].id;
   
   try {
@@ -921,43 +1134,22 @@ async function joinRace(raceId) {
       p_vehicle_id: vehicleId
     });
     
-    if (error) throw error;
+    if (error) {
+      console.error('RPC Error:', error);
+      showToast(error.message || 'Failed to join race', 'error');
+      return;
+    }
     
     if (data.success) {
       showToast(data.message, 'success');
       await loadRaces();
       await loadPlayerData(); // Refresh cash
     } else {
-      showToast(data.error, 'error');
+      showToast(data.error || 'Failed to join race', 'error');
     }
   } catch (error) {
     console.error('Error joining race:', error);
     showToast('Failed to join race', 'error');
-  }
-}
-
-// Buy vehicle
-async function buyVehicle(vehicleTypeId) {
-  const nickname = prompt('Give your vehicle a nickname (optional):');
-  
-  try {
-    const { data, error } = await sb.rpc('buy_vehicle', {
-      p_vehicle_type_id: vehicleTypeId,
-      p_nickname: nickname || null
-    });
-    
-    if (error) throw error;
-    
-    if (data.success) {
-      showToast(data.message, 'success');
-      await loadVehicles();
-      await loadPlayerData(); // Refresh cash
-    } else {
-      showToast(data.error, 'error');
-    }
-  } catch (error) {
-    console.error('Error buying vehicle:', error);
-    showToast('Failed to buy vehicle', 'error');
   }
 }
 
@@ -968,6 +1160,8 @@ function openBetModal(raceId, participantId, participantName) {
   
   document.getElementById('betParticipantInfo').innerHTML = 
     `Betting on: <strong>${participantName}</strong>`;
+  document.getElementById('betAmount').value = 100;
+  document.getElementById('potentialPayout').textContent = 'Potential payout: ₹200';
   document.getElementById('betModal').style.display = 'block';
 }
 
@@ -996,6 +1190,11 @@ async function confirmBet() {
     return;
   }
   
+  if (amount > currentPlayer.cash) {
+    showToast('Not enough cash', 'error');
+    return;
+  }
+  
   try {
     const { data, error } = await sb.rpc('place_bet', {
       p_race_id: selectedRace,
@@ -1003,33 +1202,53 @@ async function confirmBet() {
       p_amount: amount
     });
     
-    if (error) throw error;
+    if (error) {
+      console.error('RPC Error:', error);
+      showToast(error.message || 'Failed to place bet', 'error');
+      closeBetModal();
+      return;
+    }
     
     if (data.success) {
       showToast(data.message, 'success');
       closeBetModal();
       await loadPlayerData(); // Refresh cash
     } else {
-      showToast(data.error, 'error');
+      showToast(data.error || 'Failed to place bet', 'error');
+      closeBetModal();
     }
   } catch (error) {
     console.error('Error placing bet:', error);
     showToast('Failed to place bet', 'error');
+    closeBetModal();
   }
 }
 
 // Switch tabs
 function switchTab(tabName) {
   document.querySelectorAll('.tab-content').forEach(tab => {
-    tab.style.display = 'none';
+    tab.classList.remove('active');
   });
   
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.classList.remove('active');
   });
   
-  document.getElementById(tabName).style.display = 'block';
+  document.getElementById(tabName).classList.add('active');
   event.target.classList.add('active');
+  
+  // Refresh data when switching tabs
+  if (tabName === 'garage') {
+    loadVehicles();
+  } else if (tabName === 'races') {
+    loadRaces();
+  } else if (tabName === 'shop') {
+    loadVehicleTypes();
+  } else if (tabName === 'leaderboard') {
+    loadLeaderboard();
+  } else if (tabName === 'history') {
+    loadRaceHistory();
+  }
 }
 
 // Navigation
@@ -1042,7 +1261,8 @@ loadPlayerData();
 
 // Refresh races every 30 seconds
 setInterval(() => {
-  if (document.querySelector('.tab-btn.active').textContent.includes('Races')) {
+  const activeTab = document.querySelector('.tab-btn.active');
+  if (activeTab && activeTab.textContent.includes('Races')) {
     loadRaces();
   }
 }, 30000);
