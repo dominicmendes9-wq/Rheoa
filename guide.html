@@ -320,6 +320,78 @@
       background: #e8f0fe;
     }
     
+    /* Stock Market Table */
+    .stocks-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+    }
+    
+    .stocks-table th {
+      background: #4CAF50;
+      color: white;
+      padding: 12px;
+    }
+    
+    .stocks-table td {
+      padding: 8px 12px;
+      border-bottom: 1px solid #ddd;
+    }
+    
+    /* Racing Table */
+    .racing-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+    }
+    
+    .racing-table th {
+      background: #f44336;
+      color: white;
+      padding: 12px;
+    }
+    
+    .racing-table td {
+      padding: 8px 12px;
+      border-bottom: 1px solid #ddd;
+    }
+    
+    /* Property Table */
+    .property-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+    }
+    
+    .property-table th {
+      background: #8B4513;
+      color: white;
+      padding: 12px;
+    }
+    
+    .property-table td {
+      padding: 8px 12px;
+      border-bottom: 1px solid #ddd;
+    }
+    
+    /* Customization Table */
+    .customization-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+    }
+    
+    .customization-table th {
+      background: #9c27b0;
+      color: white;
+      padding: 12px;
+    }
+    
+    .customization-table td {
+      padding: 8px 12px;
+      border-bottom: 1px solid #ddd;
+    }
+    
     /* Back Button */
     .back-button {
       display: block;
@@ -384,8 +456,20 @@
         font-size: 0.9rem;
       }
       
-      .levels-table th, .levels-table td {
-        padding: 8px 5px;
+      .stocks-table {
+        font-size: 0.9rem;
+      }
+      
+      .racing-table {
+        font-size: 0.9rem;
+      }
+      
+      .property-table {
+        font-size: 0.9rem;
+      }
+      
+      .customization-table {
+        font-size: 0.9rem;
       }
     }
   </style>
@@ -414,6 +498,11 @@
   <button class="tab-btn" onclick="switchTab('market')">📈 Market</button>
   <button class="tab-btn" onclick="switchTab('daily')">🎁 Daily</button>
   <button class="tab-btn" onclick="switchTab('prestige')">🔄 Prestige</button>
+  <button class="tab-btn" onclick="switchTab('stocks')">📊 Stocks</button>
+  <button class="tab-btn" onclick="switchTab('racing')">🏁 Racing</button>
+  <button class="tab-btn" onclick="switchTab('property')">🏰 Property</button>
+  <button class="tab-btn" onclick="switchTab('customization')">🎨 Customization</button>
+  <button class="tab-btn" onclick="switchTab('exploration')">🌍 World Map</button>
   <button class="tab-btn" onclick="switchTab('faq')">❓ FAQ</button>
   <button class="tab-btn" onclick="switchTab('tips')">💡 Tips</button>
 </div>
@@ -461,6 +550,11 @@
       <li><strong>Join a Gang</strong> - Team up with other players</li>
       <li><strong>Battle in PvP</strong> - Fight other players for loot</li>
       <li><strong>Trade on Market</strong> - Buy and sell items with players</li>
+      <li><strong>Invest in Stocks</strong> - Play the stock market for profit</li>
+      <li><strong>Race in Competitions</strong> - Win races and earn prizes</li>
+      <li><strong>Buy Property</strong> - Own and upgrade your criminal headquarters</li>
+      <li><strong>Customize Your Profile</strong> - Unlock titles, avatars, and cosmetics</li>
+      <li><strong>Explore the World</strong> - Discover new regions and secrets</li>
       <li><strong>Collect Daily Rewards</strong> - Login every day for bonuses</li>
       <li><strong>Prestige</strong> - Reset your progress for permanent power</li>
     </ol>
@@ -593,6 +687,31 @@
         <div class="feature-desc">Buy and sell items with other players.</div>
       </div>
       <div class="feature-card">
+        <div class="feature-icon">📊</div>
+        <div class="feature-title">Stock Market</div>
+        <div class="feature-desc">Invest in stocks and earn dividends.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🏁</div>
+        <div class="feature-title">Racing</div>
+        <div class="feature-desc">Buy vehicles and compete in races.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🏰</div>
+        <div class="feature-title">Properties</div>
+        <div class="feature-desc">Buy and upgrade your criminal headquarters.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🎨</div>
+        <div class="feature-title">Customization</div>
+        <div class="feature-desc">Unlock titles, avatars, and color schemes.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🌍</div>
+        <div class="feature-title">World Map</div>
+        <div class="feature-desc">Explore regions and discover secrets.</div>
+      </div>
+      <div class="feature-card">
         <div class="feature-icon">🎁</div>
         <div class="feature-title">Daily Rewards</div>
         <div class="feature-desc">Login every day for free rewards and streak bonuses.</div>
@@ -632,27 +751,27 @@
       <tr>
         <td>10</td>
         <td>8,100</td>
-        <td>Advanced crimes & jobs, Prestige available</td>
+        <td>Advanced crimes & jobs, Prestige available, Basic properties</td>
       </tr>
       <tr>
         <td>15</td>
         <td>19,600</td>
-        <td>Expert crimes & jobs</td>
+        <td>Expert crimes & jobs, Stock market access</td>
       </tr>
       <tr>
         <td>20</td>
         <td>36,100</td>
-        <td>Master crimes & jobs</td>
+        <td>Master crimes & jobs, Racing unlocked</td>
       </tr>
       <tr>
         <td>25</td>
         <td>57,600</td>
-        <td>Legendary crimes & jobs</td>
+        <td>Legendary crimes & jobs, Luxury properties</td>
       </tr>
       <tr>
         <td>30</td>
         <td>84,100</td>
-        <td>Mythical crimes & jobs</td>
+        <td>Mythical crimes & jobs, All regions unlocked</td>
       </tr>
     </table>
     
@@ -661,6 +780,8 @@
       <li><strong>Higher rewards</strong> - More cash and XP per action</li>
       <li><strong>New crimes</strong> - Access to more lucrative criminal activities</li>
       <li><strong>Better jobs</strong> - Higher paying legitimate work</li>
+      <li><strong>Property access</strong> - Buy better properties as you level up</li>
+      <li><strong>Region access</strong> - Explore dangerous new areas</li>
       <li><strong>Prestige eligibility</strong> - Reach level 10 to unlock prestige mode</li>
     </ul>
   </div>
@@ -787,7 +908,7 @@
 <!-- Market Tab -->
 <div id="market" class="tab-content">
   <div class="guide-section">
-    <h2 class="section-title">📈 Market System</h2>
+    <h2 class="section-title">📈 Item Market</h2>
     
     <p style="margin-bottom: 20px;">Trade items with other players in a dynamic player-driven economy!</p>
     
@@ -857,7 +978,7 @@
   <div class="guide-section">
     <h2 class="section-title">🔄 Prestige System</h2>
     
-    <p style="margin-bottom: 20px;">Reset your progress for永久 powerful bonuses! Available at level 10.</p>
+    <p style="margin-bottom: 20px;">Reset your progress for permanent powerful bonuses! Available at level 10.</p>
     
     <h3 class="section-subtitle">How Prestige Works</h3>
     <ul style="margin-left: 20px; line-height: 1.8; margin-bottom: 20px;">
@@ -933,6 +1054,310 @@
   </div>
 </div>
 
+<!-- Stocks Tab -->
+<div id="stocks" class="tab-content">
+  <div class="guide-section">
+    <h2 class="section-title">📊 Stock Market</h2>
+    
+    <p style="margin-bottom: 20px;">Invest in stocks and grow your wealth through the market!</p>
+    
+    <h3 class="section-subtitle">Available Stocks</h3>
+    <table class="stocks-table">
+      <tr>
+        <th>Symbol</th>
+        <th>Company</th>
+        <th>Sector</th>
+        <th>Volatility</th>
+        <th>Dividend</th>
+      </tr>
+      <tr>
+        <td>TECH</td>
+        <td>TechnoCorp</td>
+        <td>Technology</td>
+        <td>High</td>
+        <td>1.5%</td>
+      </tr>
+      <tr>
+        <td>BANK</td>
+        <td>Criminal Bank</td>
+        <td>Finance</td>
+        <td>Medium</td>
+        <td>2.0%</td>
+      </tr>
+      <tr>
+        <td>PHARM</td>
+        <td>Black Market Pharma</td>
+        <td>Healthcare</td>
+        <td>High</td>
+        <td>0.5%</td>
+      </tr>
+      <tr>
+        <td>ENERGY</td>
+        <td>Shadow Energy</td>
+        <td>Energy</td>
+        <td>Low</td>
+        <td>3.0%</td>
+      </tr>
+      <tr>
+        <td>WEAPON</td>
+        <td>Arms Dealer Inc</td>
+        <td>Industrial</td>
+        <td>Very High</td>
+        <td>1.0%</td>
+      </tr>
+    </table>
+    
+    <h3 class="section-subtitle">Trading Rules</h3>
+    <ul style="margin-left: 20px; line-height: 1.8;">
+      <li><strong>Brokerage Fee</strong> - 1% fee on all trades</li>
+      <li><strong>Dividends</strong> - Paid randomly to shareholders</li>
+      <li><strong>Price Updates</strong> - Stock prices change every hour</li>
+      <li><strong>Separate Trading Balance</strong> - Transfer funds between main cash and trading account</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Racing Tab -->
+<div id="racing" class="tab-content">
+  <div class="guide-section">
+    <h2 class="section-title">🏁 Racing & Competitions</h2>
+    
+    <p style="margin-bottom: 20px;">Buy vehicles and compete in races for cash and glory!</p>
+    
+    <h3 class="section-subtitle">Vehicle Types</h3>
+    <table class="racing-table">
+      <tr>
+        <th>Vehicle</th>
+        <th>Speed</th>
+        <th>Acceleration</th>
+        <th>Handling</th>
+        <th>Nitro</th>
+        <th>Price</th>
+      </tr>
+      <tr>
+        <td>Scooter</td>
+        <td>40</td>
+        <td>50</td>
+        <td>70</td>
+        <td>30</td>
+        <td>₹5,000</td>
+      </tr>
+      <tr>
+        <td>Sports Bike</td>
+        <td>80</td>
+        <td>85</td>
+        <td>75</td>
+        <td>60</td>
+        <td>₹50,000</td>
+      </tr>
+      <tr>
+        <td>Muscle Car</td>
+        <td>75</td>
+        <td>90</td>
+        <td>45</td>
+        <td>70</td>
+        <td>₹75,000</td>
+      </tr>
+      <tr>
+        <td>Supercar</td>
+        <td>95</td>
+        <td>85</td>
+        <td>80</td>
+        <td>80</td>
+        <td>₹200,000</td>
+      </tr>
+    </table>
+    
+    <h3 class="section-subtitle">Race Types</h3>
+    <ul style="margin-left: 20px; line-height: 1.8;">
+      <li><strong>Street Race</strong> - City streets, balanced difficulty</li>
+      <li><strong>Drag Race</strong> - Straight line, pure speed</li>
+      <li><strong>Circuit Race</strong> - Professional track, requires handling</li>
+      <li><strong>Off-road</strong> - Rough terrain, needs good suspension</li>
+      <li><strong>Tournament</strong> - Multi-race event with big prizes</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Property Tab -->
+<div id="property" class="tab-content">
+  <div class="guide-section">
+    <h2 class="section-title">🏰 Player Properties</h2>
+    
+    <p style="margin-bottom: 20px;">Own and upgrade your criminal headquarters!</p>
+    
+    <h3 class="section-subtitle">Property Types</h3>
+    <table class="property-table">
+      <tr>
+        <th>Property</th>
+        <th>Class</th>
+        <th>Security</th>
+        <th>Storage</th>
+        <th>Rooms</th>
+        <th>Price</th>
+        <th>Level</th>
+      </tr>
+      <tr>
+        <td>Starter Apartment</td>
+        <td>Apartment</td>
+        <td>2</td>
+        <td>100</td>
+        <td>2</td>
+        <td>₹50,000</td>
+        <td>1</td>
+      </tr>
+      <tr>
+        <td>Safe House</td>
+        <td>Hideout</td>
+        <td>4</td>
+        <td>150</td>
+        <td>3</td>
+        <td>₹150,000</td>
+        <td>5</td>
+      </tr>
+      <tr>
+        <td>Luxury Mansion</td>
+        <td>Mansion</td>
+        <td>5</td>
+        <td>400</td>
+        <td>8</td>
+        <td>₹1,500,000</td>
+        <td>25</td>
+      </tr>
+      <tr>
+        <td>Fortified Compound</td>
+        <td>Compound</td>
+        <td>9</td>
+        <td>500</td>
+        <td>10</td>
+        <td>₹2,500,000</td>
+        <td>30</td>
+      </tr>
+    </table>
+    
+    <h3 class="section-subtitle">Property Features</h3>
+    <ul style="margin-left: 20px; line-height: 1.8;">
+      <li><strong>Safe Room</strong> - 20% robbery reduction</li>
+      <li><strong>Shooting Range</strong> - +3% crime success</li>
+      <li><strong>Secret Vault</strong> - +200% cash storage</li>
+      <li><strong>Garage</strong> - Store multiple vehicles</li>
+      <li><strong>Drug Lab</strong> - Passive income</li>
+      <li><strong>Private Gym</strong> - +50% health regen</li>
+    </ul>
+    
+    <h3 class="section-subtitle">Robbery System</h3>
+    <ul style="margin-left: 20px; line-height: 1.8;">
+      <li>Store cash safely in your property</li>
+      <li>Other players can attempt to rob you</li>
+      <li>Higher security = lower robbery chance</li>
+      <li>Safe room feature reduces success rate</li>
+      <li>Failed robbery costs the attacker</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Customization Tab -->
+<div id="customization" class="tab-content">
+  <div class="guide-section">
+    <h2 class="section-title">🎨 Customization</h2>
+    
+    <p style="margin-bottom: 20px;">Personalize your profile with unique cosmetics!</p>
+    
+    <h3 class="section-subtitle">Title Rarities</h3>
+    <table class="customization-table">
+      <tr>
+        <th>Rarity</th>
+        <th>Example Titles</th>
+        <th>How to Get</th>
+      </tr>
+      <tr>
+        <td>Common</td>
+        <td>Criminal, Petty Thief</td>
+        <td>Starting, easy achievements</td>
+      </tr>
+      <tr>
+        <td>Rare</td>
+        <td>Burglar, PvP Champion</td>
+        <td>50 crimes, 50 PvP wins</td>
+      </tr>
+      <tr>
+        <td>Epic</td>
+        <td>Master Thief, CEO</td>
+        <td>100 crimes, 1000 jobs</td>
+      </tr>
+      <tr>
+        <td>Legendary</td>
+        <td>Crime Lord, Undisputed</td>
+        <td>500 crimes, 500 PvP wins</td>
+      </tr>
+      <tr>
+        <td>Mythic</td>
+        <td>Billionaire, Prestige 25</td>
+        <td>₹1B earned, Prestige 25</td>
+      </tr>
+    </table>
+    
+    <h3 class="section-subtitle">Customization Options</h3>
+    <ul style="margin-left: 20px; line-height: 1.8;">
+      <li><strong>Titles</strong> - Display your achievements</li>
+      <li><strong>Avatars</strong> - Unique profile pictures</li>
+      <li><strong>Frames</strong> - Decorative borders</li>
+      <li><strong>Badges</strong> - Show off accomplishments</li>
+      <li><strong>Color Schemes</strong> - Customize the game's look</li>
+    </ul>
+    
+    <h3 class="section-subtitle">Unlock Methods</h3>
+    <ul style="margin-left: 20px; line-height: 1.8;">
+      <li><strong>Level</strong> - Reach certain levels</li>
+      <li><strong>Prestige</strong> - Prestige milestones</li>
+      <li><strong>Achievement</strong> - Complete specific achievements</li>
+      <li><strong>Event</strong> - Limited-time events</li>
+      <li><strong>Purchase</strong> - Buy with in-game cash</li>
+    </ul>
+  </div>
+</div>
+
+<!-- World Map Tab -->
+<div id="exploration" class="tab-content">
+  <div class="guide-section">
+    <h2 class="section-title">🌍 World Map & Exploration</h2>
+    
+    <p style="margin-bottom: 20px;">Explore different regions, discover secrets, and expand your territory!</p>
+    
+    <h3 class="section-subtitle">Regions</h3>
+    <ul style="margin-left: 20px; line-height: 1.8; margin-bottom: 20px;">
+      <li><strong>Criminal Bay</strong> - Starting area, low danger</li>
+      <li><strong>Shadow District</strong> - Medium danger, better rewards</li>
+      <li><strong>Industrial Zone</strong> - High danger, smuggling operations</li>
+      <li><strong>The Docks</strong> - International connections</li>
+      <li><strong>Underground Bunker</strong> - Military technology</li>
+      <li><strong>Criminal HQ</strong> - Heart of organized crime</li>
+      <li><strong>The Swamps</strong> - Hidden contraband</li>
+      <li><strong>Ghost Town</strong> - Rumors of treasure</li>
+      <li><strong>The Arena</strong> - Underground fighting</li>
+      <li><strong>Forgotten Temple</strong> - Ancient mysteries</li>
+    </ul>
+    
+    <h3 class="section-subtitle">Exploration Mechanics</h3>
+    <ul style="margin-left: 20px; line-height: 1.8;">
+      <li><strong>Discover Regions</strong> - Find new areas to operate</li>
+      <li><strong>Exploration Progress</strong> - Each region can be explored up to 100%</li>
+      <li><strong>Hidden Discoveries</strong> - Find secret caches, vantage points, and lore</li>
+      <li><strong>XP Rewards</strong> - Gain experience for discoveries</li>
+      <li><strong>Travel System</strong> - Move between connected regions</li>
+      <li><strong>Region-Specific Content</strong> - Different crimes and jobs per region</li>
+    </ul>
+    
+    <h3 class="section-subtitle">Travel Rules</h3>
+    <ul style="margin-left: 20px; line-height: 1.8;">
+      <li><strong>Travel Time</strong> - Each route takes time</li>
+      <li><strong>Travel Cost</strong> - Pay to move between regions</li>
+      <li><strong>Level Requirements</strong> - Some routes need higher level</li>
+      <li><strong>Discovery Required</strong> - Must discover region before traveling</li>
+    </ul>
+  </div>
+</div>
+
 <!-- FAQ Tab -->
 <div id="faq" class="tab-content">
   <div class="guide-section">
@@ -969,6 +1394,7 @@
         - Permanent boosts from achievements<br>
         - Training Manual items for permanent boost<br>
         - Prestige perks (Crime Genius)<br>
+        - Property features (Shooting Range)<br>
         - Higher level also unlocks easier crimes
       </div>
     </div>
@@ -979,7 +1405,7 @@
         <span class="toggle-icon">+</span>
       </div>
       <div class="faq-answer hidden">
-        Crimes and jobs have minimum level requirements. Check the level badge on each card. You need to reach that level by gaining XP from easier activities first.
+        Crimes and jobs have minimum level requirements. Check the level badge on each card. You need to reach that level by gaining XP from easier activities first. Some may also be region-locked until you discover certain areas.
       </div>
     </div>
     
@@ -1035,6 +1461,56 @@
     
     <div class="faq-item">
       <div class="faq-question" onclick="toggleFAQ(this)">
+        How do stocks work?
+        <span class="toggle-icon">+</span>
+      </div>
+      <div class="faq-answer hidden">
+        The stock market lets you invest in companies. You need to transfer cash to your trading balance first. Stock prices change based on volatility and market news. Some stocks pay dividends. You can track your portfolio value and profit/loss.
+      </div>
+    </div>
+    
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFAQ(this)">
+        How does racing work?
+        <span class="toggle-icon">+</span>
+      </div>
+      <div class="faq-answer hidden">
+        First, buy a vehicle from the shop. Each vehicle has different stats (speed, acceleration, handling, nitro). Join races that match your level. Race outcomes depend on your vehicle stats and a bit of luck. Winners earn cash from the prize pool.
+      </div>
+    </div>
+    
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFAQ(this)">
+        What can I do with a property?
+        <span class="toggle-icon">+</span>
+      </div>
+      <div class="faq-answer hidden">
+        Properties let you store cash safely away from your main wallet. You can upgrade security to prevent robberies, increase storage capacity, and add special features like safe rooms, shooting ranges, and drug labs for passive income. Other players can try to rob you!
+      </div>
+    </div>
+    
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFAQ(this)">
+        How do I unlock customization items?
+        <span class="toggle-icon">+</span>
+      </div>
+      <div class="faq-answer hidden">
+        Titles, avatars, frames, and color schemes are unlocked through achievements, prestige levels, special events, or by purchasing them with in-game cash. Once unlocked, you can equip them from the Customization page to personalize your profile.
+      </div>
+    </div>
+    
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFAQ(this)">
+        What is the world map for?
+        <span class="toggle-icon">+</span>
+      </div>
+      <div class="faq-answer hidden">
+        The world map lets you explore different regions. Each region has its own unique crimes, jobs, and items. You can discover hidden secrets, find special caches, and unlock new areas as you level up. Travel between regions costs cash and time.
+      </div>
+    </div>
+    
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFAQ(this)">
         What are daily rewards?
         <span class="toggle-icon">+</span>
       </div>
@@ -1059,7 +1535,7 @@
         <span class="toggle-icon">+</span>
       </div>
       <div class="faq-answer hidden">
-        Yes! The game is fully responsive and works on all devices. The interface adapts to your screen size for the best experience on phone, tablet, or desktop.
+        Yes! The game is fully responsive and works on all devices. The interface adapts to your screen size for the best experience on phone, tablet, or desktop. The map is especially designed for touch interaction on mobile.
       </div>
     </div>
   </div>
@@ -1134,6 +1610,31 @@
       <div class="tip-item">
         <div class="tip-icon">📈</div>
         <div class="tip-text"><strong>Watch market trends</strong> - Buy low, sell high. Check price history to identify profitable trading opportunities.</div>
+      </div>
+      
+      <div class="tip-item">
+        <div class="tip-icon">📊</div>
+        <div class="tip-text"><strong>Diversify your stocks</strong> - Don't put all your money in one stock. Spread investments across different sectors to manage risk.</div>
+      </div>
+      
+      <div class="tip-item">
+        <div class="tip-icon">🏁</div>
+        <div class="tip-text"><strong>Upgrade your vehicle</strong> - Better stats increase your chances of winning races. Focus on upgrading your best vehicle first.</div>
+      </div>
+      
+      <div class="tip-item">
+        <div class="tip-icon">🏰</div>
+        <div class="tip-text"><strong>Store cash in property</strong> - Keep your wealth safe from failed crimes. Upgrade security to prevent robberies.</div>
+      </div>
+      
+      <div class="tip-item">
+        <div class="tip-icon">🎨</div>
+        <div class="tip-text"><strong>Show off your achievements</strong> - Equip rare titles and frames to let everyone know your accomplishments.</div>
+      </div>
+      
+      <div class="tip-item">
+        <div class="tip-icon">🌍</div>
+        <div class="tip-text"><strong>Explore everything</strong> - Each region has unique secrets. Take time to explore thoroughly for bonus XP and items.</div>
       </div>
       
       <div class="tip-item">
