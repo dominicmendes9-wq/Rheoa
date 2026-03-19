@@ -1,8 +1,10 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <title>Rheoa RPG - PvP Arena</title>
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
   <style>
     * {
       box-sizing: border-box;
@@ -16,6 +18,7 @@
       color: #222; 
       padding: 20px;
       min-height: 100vh;
+      position: relative;
     }
     
     h1 { 
@@ -23,6 +26,13 @@
       margin-bottom: 10px;
       font-size: clamp(1.5rem, 5vw, 2.5rem);
       color: #f44336;
+      text-shadow: 2px 2px 0 #d32f2f;
+      animation: glow 2s infinite;
+    }
+
+    @keyframes glow {
+      0%, 100% { text-shadow: 2px 2px 0 #d32f2f; }
+      50% { text-shadow: 4px 4px 0 #d32f2f; }
     }
     
     .subtitle {
@@ -30,6 +40,12 @@
       color: #666;
       margin-bottom: 30px;
       font-style: italic;
+      animation: fadeInUp 0.6s ease-out 0.1s both;
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
     }
     
     /* Player Stats */
@@ -37,23 +53,36 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
       color: white;
-      padding: 20px;
+      padding: 20px 25px;
       border-radius: 15px;
       margin-bottom: 30px;
       flex-wrap: wrap;
       gap: 15px;
+      animation: slideInDown 0.6s ease-out;
+      box-shadow: 0 5px 15px rgba(244, 67, 54, 0.3);
+    }
+
+    @keyframes slideInDown {
+      from { opacity: 0; transform: translateY(-20px); }
+      to { opacity: 1; transform: translateY(0); }
     }
     
     .stat-group {
       display: flex;
-      gap: 20px;
+      gap: 30px;
       flex-wrap: wrap;
     }
     
     .stat {
       text-align: center;
+      transition: transform 0.2s;
+      cursor: pointer;
+    }
+
+    .stat:hover {
+      transform: scale(1.1);
     }
     
     .stat-label {
@@ -67,19 +96,33 @@
     }
     
     .rank-badge {
-      background: #ffd700;
+      background: linear-gradient(135deg, #ffd700, #ffb300);
       color: #333;
-      padding: 5px 15px;
-      border-radius: 25px;
+      padding: 8px 20px;
+      border-radius: 30px;
       font-weight: bold;
+      font-size: 1.1rem;
+      box-shadow: 0 2px 10px rgba(255, 215, 0, 0.3);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
     }
     
     /* Main Container */
     .pvp-container {
       display: grid;
-      grid-template-columns: 1fr 300px;
+      grid-template-columns: 1fr 350px;
       gap: 20px;
       margin-bottom: 30px;
+      animation: fadeIn 0.6s ease-out 0.2s both;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
     }
     
     /* Opponent List */
@@ -88,14 +131,18 @@
       border: 3px solid black;
       border-radius: 15px;
       overflow: hidden;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
     }
     
     .section-header {
-      background: #333;
+      background: linear-gradient(135deg, #333, #222);
       color: white;
       padding: 15px;
       font-weight: bold;
       font-size: 1.2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
     
     .opponent-list {
@@ -105,26 +152,48 @@
     
     .opponent-card {
       display: grid;
-      grid-template-columns: 40px 1fr 100px;
+      grid-template-columns: 60px 1fr 100px;
       padding: 15px;
       border-bottom: 1px solid #eee;
       align-items: center;
-      transition: background 0.2s;
+      transition: all 0.3s;
       cursor: pointer;
+      animation: rowFadeIn 0.5s ease-out;
+      animation-fill-mode: both;
+    }
+
+    .opponent-card:nth-child(1) { animation-delay: 0.1s; }
+    .opponent-card:nth-child(2) { animation-delay: 0.15s; }
+    .opponent-card:nth-child(3) { animation-delay: 0.2s; }
+    .opponent-card:nth-child(4) { animation-delay: 0.25s; }
+    .opponent-card:nth-child(5) { animation-delay: 0.3s; }
+    .opponent-card:nth-child(6) { animation-delay: 0.35s; }
+    .opponent-card:nth-child(7) { animation-delay: 0.4s; }
+    .opponent-card:nth-child(8) { animation-delay: 0.45s; }
+    .opponent-card:nth-child(9) { animation-delay: 0.5s; }
+    .opponent-card:nth-child(10) { animation-delay: 0.55s; }
+
+    @keyframes rowFadeIn {
+      from { opacity: 0; transform: translateX(-10px); }
+      to { opacity: 1; transform: translateX(0); }
     }
     
     .opponent-card:hover {
       background: #f5f5f5;
+      transform: translateX(5px);
+      box-shadow: -5px 0 0 #f44336;
     }
     
     .opponent-card.selected {
-      background: #e3f2fd;
-      border-left: 5px solid #2196F3;
+      background: linear-gradient(90deg, #ffebee, #ffcdd2);
+      border-left: 5px solid #f44336;
+      font-weight: bold;
     }
     
     .opponent-rank {
       font-weight: bold;
       color: #ff9800;
+      font-size: 1.1rem;
     }
     
     .opponent-info {
@@ -145,6 +214,7 @@
       text-align: right;
       font-weight: bold;
       color: #f44336;
+      font-size: 1.1rem;
     }
     
     /* Battle Panel */
@@ -152,35 +222,48 @@
       background: white;
       border: 3px solid black;
       border-radius: 15px;
-      padding: 20px;
+      padding: 25px;
       position: sticky;
       top: 20px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+      animation: slideInRight 0.6s ease-out;
+    }
+
+    @keyframes slideInRight {
+      from { opacity: 0; transform: translateX(20px); }
+      to { opacity: 1; transform: translateX(0); }
     }
     
     .selected-opponent {
       text-align: center;
       padding: 20px;
       background: #f5f5f5;
-      border-radius: 10px;
+      border-radius: 12px;
       margin-bottom: 20px;
     }
     
     .selected-avatar {
-      width: 80px;
-      height: 80px;
-      background: #f44336;
+      width: 100px;
+      height: 100px;
+      background: linear-gradient(135deg, #f44336, #d32f2f);
       color: white;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 2rem;
+      font-size: 3rem;
       font-weight: bold;
-      margin: 0 auto 10px;
+      margin: 0 auto 15px;
+      animation: bounce 2s infinite;
+    }
+
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-5px); }
     }
     
     .selected-name {
-      font-size: 1.3rem;
+      font-size: 1.5rem;
       font-weight: bold;
     }
     
@@ -192,15 +275,21 @@
     .battle-stats {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 10px;
+      gap: 15px;
       margin: 20px 0;
       text-align: center;
     }
     
     .battle-stat {
-      padding: 10px;
+      padding: 15px;
       background: #f5f5f5;
-      border-radius: 8px;
+      border-radius: 10px;
+      transition: all 0.2s;
+    }
+
+    .battle-stat:hover {
+      transform: scale(1.05);
+      background: #e0e0e0;
     }
     
     .battle-stat-label {
@@ -209,28 +298,49 @@
     }
     
     .battle-stat-value {
-      font-size: 1.2rem;
+      font-size: 1.3rem;
       font-weight: bold;
     }
     
     .attack-btn {
       width: 100%;
-      padding: 15px;
-      font-size: 1.2rem;
+      padding: 18px;
+      font-size: 1.3rem;
       font-family: 'Courier New', monospace;
       font-weight: bold;
       border: none;
-      border-radius: 10px;
-      background: #f44336;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #f44336, #d32f2f);
       color: white;
       cursor: pointer;
-      transition: all 0.2s;
+      transition: all 0.3s;
       margin: 10px 0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .attack-btn::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.2);
+      transform: translate(-50%, -50%);
+      transition: width 0.6s, height 0.6s;
+    }
+
+    .attack-btn:hover::after:not(:disabled) {
+      width: 300px;
+      height: 300px;
     }
     
     .attack-btn:hover:not(:disabled) {
-      background: #d32f2f;
-      transform: scale(1.02);
+      background: linear-gradient(135deg, #d32f2f, #b71c1c);
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: 0 10px 25px rgba(244, 67, 54, 0.4);
     }
     
     .attack-btn:disabled {
@@ -241,8 +351,12 @@
     .cooldown-info {
       text-align: center;
       color: #ff9800;
-      font-size: 0.9rem;
+      font-size: 1rem;
       margin-top: 10px;
+      padding: 10px;
+      background: #fff3e0;
+      border-radius: 8px;
+      animation: pulse 2s infinite;
     }
     
     /* Battle History */
@@ -251,6 +365,12 @@
       border: 3px solid black;
       border-radius: 15px;
       margin-top: 30px;
+      animation: slideInUp 0.6s ease-out 0.3s both;
+    }
+
+    @keyframes slideInUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
     }
     
     .history-list {
@@ -260,19 +380,34 @@
     
     .history-item {
       display: grid;
-      grid-template-columns: 80px 1fr 80px;
-      padding: 12px 15px;
+      grid-template-columns: 100px 1fr 100px;
+      padding: 15px;
       border-bottom: 1px solid #eee;
       align-items: center;
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+
+    .history-item:hover {
+      background: #f5f5f5;
+      transform: translateX(5px);
     }
     
     .history-result {
       text-align: center;
       font-weight: bold;
+      padding: 5px 10px;
+      border-radius: 5px;
     }
     
-    .history-result.win { color: #4CAF50; }
-    .history-result.loss { color: #f44336; }
+    .history-result.win { 
+      color: #4CAF50;
+      background: #e8f5e8;
+    }
+    .history-result.loss { 
+      color: #f44336;
+      background: #ffebee;
+    }
     
     .history-details {
       text-align: center;
@@ -281,6 +416,7 @@
     .history-loot {
       text-align: right;
       font-weight: bold;
+      font-size: 1.1rem;
     }
     
     .history-loot.win { color: #4CAF50; }
@@ -291,45 +427,73 @@
       background: white;
       border: 3px solid black;
       border-radius: 15px;
-      padding: 20px;
+      padding: 25px;
       margin-top: 30px;
       text-align: center;
+      animation: slideInUp 0.6s ease-out 0.35s both;
     }
     
     .queue-btn {
-      padding: 15px 30px;
+      padding: 15px 40px;
       font-size: 1.2rem;
       font-family: 'Courier New', monospace;
       font-weight: bold;
       border: none;
-      border-radius: 10px;
-      background: #4CAF50;
+      border-radius: 50px;
+      background: linear-gradient(135deg, #4CAF50, #45a049);
       color: white;
       cursor: pointer;
-      transition: all 0.2s;
-      margin: 10px;
+      transition: all 0.3s;
+      margin: 15px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .queue-btn::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.2);
+      transform: translate(-50%, -50%);
+      transition: width 0.6s, height 0.6s;
+    }
+
+    .queue-btn:hover::after {
+      width: 300px;
+      height: 300px;
     }
     
     .queue-btn:hover {
-      background: #45a049;
+      transform: translateY(-2px) scale(1.05);
+      box-shadow: 0 5px 20px rgba(76, 175, 80, 0.4);
     }
     
     .queue-btn.cancel {
-      background: #f44336;
+      background: linear-gradient(135deg, #f44336, #d32f2f);
+    }
+    
+    .queue-btn.cancel:hover {
+      box-shadow: 0 5px 20px rgba(244, 67, 54, 0.4);
     }
     
     .queue-status {
       margin-top: 15px;
-      padding: 10px;
+      padding: 15px;
       background: #e3f2fd;
-      border-radius: 8px;
+      border-radius: 10px;
+      font-weight: bold;
+      color: #1976D2;
     }
     
     /* Loading Spinner */
     .spinner {
       display: inline-block;
-      width: 20px;
-      height: 20px;
+      width: 24px;
+      height: 24px;
       border: 3px solid #f3f3f3;
       border-top: 3px solid #f44336;
       border-radius: 50%;
@@ -355,42 +519,143 @@
       background: #666;
       color: white;
       cursor: pointer;
-      transition: all 0.2s;
+      transition: all 0.3s;
       text-align: center;
+      position: relative;
+      overflow: hidden;
+      animation: fadeInUp 0.6s ease-out 0.5s both;
     }
     
     .back-button:hover {
       background: #555;
-      transform: scale(1.02);
+      transform: scale(1.05) translateY(-2px);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+
+    .back-button::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.2);
+      transform: translate(-50%, -50%);
+      transition: width 0.6s, height 0.6s;
+    }
+
+    .back-button:hover::after {
+      width: 300px;
+      height: 300px;
     }
     
-    /* Toast Notifications */
-    .toast-container {
+    /* Scroll to top button */
+    .scroll-top {
       position: fixed;
-      top: 20px;
+      bottom: 20px;
       right: 20px;
-      z-index: 9999;
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: #f44336;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-size: 24px;
+      display: none;
+      justify-content: center;
+      align-items: center;
+      box-shadow: 0 4px 15px rgba(244, 67, 54, 0.4);
+      transition: all 0.2s;
+      z-index: 1000;
+      animation: fadeInScale 0.3s ease-out;
     }
-    
-    .toast {
-      padding: 15px 25px;
-      margin-bottom: 10px;
-      border-radius: 8px;
+
+    .scroll-top:hover {
+      transform: scale(1.1);
+      background: #d32f2f;
+    }
+
+    .scroll-top.visible {
+      display: flex;
+    }
+
+    @keyframes fadeInScale {
+      from { opacity: 0; transform: scale(0.5); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    /* Progress bar */
+    .reading-progress {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 0%;
+      height: 3px;
+      background: linear-gradient(90deg, #f44336, #ff9800, #4CAF50);
+      z-index: 1001;
+      transition: width 0.1s;
+    }
+
+    /* Realtime status */
+    .realtime-status {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      padding: 8px 15px;
+      background: rgba(0,0,0,0.8);
+      color: white;
+      border-radius: 30px;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      z-index: 9997;
+      backdrop-filter: blur(5px);
+      border: 1px solid rgba(255,255,255,0.2);
+      animation: slideInLeft 0.5s ease-out;
+    }
+
+    @keyframes slideInLeft {
+      from { opacity: 0; transform: translateX(-20px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #4CAF50;
+      animation: pulse 2s infinite;
+    }
+
+    /* Battle result animation */
+    .battle-result {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      padding: 30px;
+      border-radius: 15px;
       color: white;
       font-weight: bold;
-      animation: slideIn 0.3s ease-out;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      font-size: 2rem;
+      text-align: center;
+      z-index: 9999;
+      animation: resultPop 0.5s ease-out;
     }
-    
-    .toast.success { background: #4CAF50; }
-    .toast.error { background: #f44336; }
-    .toast.info { background: #2196F3; }
-    .toast.battle-win { background: #4CAF50; }
-    .toast.battle-loss { background: #f44336; }
-    
-    @keyframes slideIn {
-      from { transform: translateX(100%); opacity: 0; }
-      to { transform: translateX(0); opacity: 1; }
+
+    @keyframes resultPop {
+      from { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+      to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    }
+
+    /* Empty state */
+    .empty-message {
+      text-align: center;
+      padding: 40px;
+      color: #666;
     }
     
     @media (max-width: 900px) {
@@ -410,10 +675,49 @@
       .stat-group {
         justify-content: center;
       }
+
+      .realtime-status {
+        bottom: 10px;
+        left: 10px;
+        padding: 5px 10px;
+        font-size: 0.75rem;
+      }
+
+      .scroll-top {
+        bottom: 10px;
+        right: 10px;
+        width: 40px;
+        height: 40px;
+        font-size: 20px;
+      }
+    }
+
+    /* Print styles */
+    @media print {
+      .attack-btn, .queue-btn, .back-button, .realtime-status, .scroll-top {
+        display: none !important;
+      }
+      
+      .opponent-card {
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
     }
   </style>
 </head>
 <body>
+
+<!-- Reading progress bar -->
+<div class="reading-progress" id="readingProgress"></div>
+
+<!-- Scroll to top button -->
+<button class="scroll-top" onclick="scrollToTop()" id="scrollTopBtn" aria-label="Scroll to top">↑</button>
+
+<!-- Realtime Status Indicator -->
+<div class="realtime-status" id="realtimeStatus">
+  <span class="status-dot"></span>
+  <span id="realtimeText">PvP Arena Active</span>
+</div>
 
 <div class="toast-container" id="toast-container"></div>
 
@@ -423,15 +727,15 @@
 <!-- Player Stats -->
 <div id="playerStats" class="player-stats" style="display: none;">
   <div class="stat-group">
-    <div class="stat">
-      <div class="stat-label">Your Rank</div>
-      <div class="stat-value" id="playerRank">-</div>
+    <div class="stat" onclick="showStatDetails('rank')">
+      <div class="stat-label">Rank Points</div>
+      <div class="stat-value" id="playerRank">1000</div>
     </div>
-    <div class="stat">
+    <div class="stat" onclick="showStatDetails('record')">
       <div class="stat-label">W/L</div>
       <div class="stat-value" id="playerWL">0-0</div>
     </div>
-    <div class="stat">
+    <div class="stat" onclick="showStatDetails('streak')">
       <div class="stat-label">Streak</div>
       <div class="stat-value" id="playerStreak">0</div>
     </div>
@@ -443,9 +747,12 @@
 <div class="pvp-container">
   <!-- Opponents List -->
   <div class="opponents-section">
-    <div class="section-header">🔍 Find Opponents</div>
+    <div class="section-header">
+      <span>🔍 Find Opponents</span>
+      <span id="opponentCount">0 players</span>
+    </div>
     <div class="opponent-list" id="opponentList">
-      <div style="text-align: center; padding: 40px;">
+      <div class="empty-message">
         <div class="spinner" style="margin: 0 auto 10px;"></div>
         <p>Loading opponents...</p>
       </div>
@@ -455,7 +762,7 @@
   <!-- Battle Panel -->
   <div class="battle-panel" id="battlePanel">
     <div class="selected-opponent" id="selectedOpponent">
-      <div class="selected-avatar">?</div>
+      <div class="selected-avatar">⚔️</div>
       <div class="selected-name">Select an Opponent</div>
       <div class="selected-title">Choose a player to fight</div>
     </div>
@@ -476,6 +783,10 @@
     </button>
     
     <div id="cooldownInfo" class="cooldown-info"></div>
+    
+    <div style="margin-top: 15px; text-align: center; color: #666; font-size: 0.9rem;">
+      ⚡ Costs 20 Energy
+    </div>
   </div>
 </div>
 
@@ -483,13 +794,13 @@
 <div class="history-section">
   <div class="section-header">📜 Battle History</div>
   <div class="history-list" id="battleHistory">
-    <div style="text-align: center; padding: 40px;">Loading history...</div>
+    <div class="empty-message">Loading history...</div>
   </div>
 </div>
 
 <!-- Matchmaking -->
 <div class="matchmaking-section">
-  <h3>🎮 Quick Match</h3>
+  <h3 style="margin-bottom: 15px;">🎮 Quick Match</h3>
   <button class="queue-btn" id="queueBtn" onclick="toggleQueue()">
     Join Matchmaking Queue
   </button>
@@ -497,16 +808,28 @@
     <span class="spinner"></span>
     Searching for opponent...
   </div>
+  <p style="margin-top: 15px; color: #666;">Get matched with players of similar rank</p>
 </div>
 
 <button class="back-button" onclick="goToDashboard()">← Back to Dashboard</button>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<!-- Battle Result Modal -->
+<div id="resultModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999;">
+  <div class="battle-result" id="battleResultContent">
+    <!-- Content will be filled dynamically -->
+  </div>
+</div>
+
+<!-- Include shared utilities -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase.js"></script>
+<script src="toast.js"></script>
+<script src="loading.js"></script>
+<script src="error-handler.js"></script>
+
 <script>
-const sb = window.supabase.createClient(
-  "https://mtiwodvsrwvrujbhmmrn.supabase.co",
-  "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
-);
+// Initialize Supabase client
+const sb = window.supabaseClient;
 
 let currentPlayer = null;
 let currentStats = null;
@@ -514,349 +837,635 @@ let selectedOpponent = null;
 let opponents = [];
 let battleHistory = [];
 let queueInterval = null;
+let pvpChannel = null;
+let refreshInterval = null;
 
-// Toast notification
-function showToast(message, type = 'info', duration = 3000) {
-  const container = document.getElementById('toast-container');
-  const toast = document.createElement('div');
-  toast.className = `toast ${type}`;
-  toast.textContent = message;
-  
-  container.appendChild(toast);
-  
-  setTimeout(() => {
-    toast.classList.add('fade-out');
-    setTimeout(() => {
-      if (toast.parentNode) {
-        container.removeChild(toast);
-      }
-    }, 300);
-  }, duration);
+// Page initialization
+document.addEventListener('DOMContentLoaded', async function() {
+    await initializePage();
+    setupScrollToTop();
+    setupReadingProgress();
+    setupKeyboardNavigation();
+    setupRealtimeSubscription();
+});
+
+// Initialize page
+async function initializePage() {
+    return ErrorHandler.withErrorHandling(async () => {
+        // Check authentication
+        const user = await getCurrentUser();
+        if (!user) {
+            showToast('Please log in to access PvP Arena', 'warning', 3000);
+            setTimeout(() => {
+                window.location.href = "index.html";
+            }, 2000);
+            return;
+        }
+
+        // Load player data
+        await loadPlayerData();
+        
+        // Show welcome toast
+        showToast('⚔️ Welcome to the PvP Arena!', 'info', 3000);
+
+    }, null, 'Failed to initialize PvP arena');
 }
 
 // Load player data
 async function loadPlayerData() {
-  try {
-    const { data: { user } } = await sb.auth.getUser();
-    if (!user) return window.location.href = "index.html";
-    
-    const { data: player } = await sb
-      .from('players')
-      .select('*')
-      .eq('auth_id', user.id)
-      .single();
-    
-    if (player) {
-      currentPlayer = player;
-      await loadPvPStats();
-      await loadOpponents();
-      await loadBattleHistory();
-    }
-  } catch (error) {
-    console.error('Error loading player:', error);
-  }
+    return ErrorHandler.withErrorHandling(async () => {
+        const user = await getCurrentUser();
+        if (!user) return;
+        
+        const { data: player, error } = await sb
+            .from('players')
+            .select('*')
+            .eq('auth_id', user.id)
+            .single();
+        
+        if (error) throw error;
+        
+        if (player) {
+            currentPlayer = player;
+            await loadPvPStats();
+            await loadOpponents();
+            await loadBattleHistory();
+        }
+    }, null, 'Error loading player data');
 }
 
 // Load PvP stats
 async function loadPvPStats() {
-  try {
-    const { data } = await sb
-      .from('pvp_stats')
-      .select('*')
-      .eq('player_id', currentPlayer.id)
-      .single();
-    
-    if (data) {
-      currentStats = data;
-      updatePlayerStatsDisplay();
-    }
-  } catch (error) {
-    console.error('Error loading PvP stats:', error);
-  }
+    return ErrorHandler.withErrorHandling(async () => {
+        const { data, error } = await sb
+            .from('pvp_stats')
+            .select('*')
+            .eq('player_id', currentPlayer.id)
+            .single();
+        
+        if (error && error.code !== 'PGRST116') throw error;
+        
+        // Create default stats if none exist
+        if (!data) {
+            currentStats = {
+                wins: 0,
+                losses: 0,
+                rank_points: 1000,
+                rank_title: 'Rookie',
+                current_streak: 0,
+                best_streak: 0
+            };
+        } else {
+            currentStats = data;
+        }
+        
+        updatePlayerStatsDisplay();
+    }, null, 'Error loading PvP stats');
 }
 
 // Update player stats display
 function updatePlayerStatsDisplay() {
-  document.getElementById('playerStats').style.display = 'flex';
-  document.getElementById('playerRank').textContent = currentStats.rank_points;
-  document.getElementById('playerWL').textContent = `${currentStats.wins}-${currentStats.losses}`;
-  document.getElementById('playerStreak').textContent = currentStats.current_streak;
-  document.getElementById('playerTitle').textContent = currentStats.rank_title;
-  
-  // Update power
-  const power = currentPlayer.health + Math.floor(currentStats.rank_points / 10);
-  document.getElementById('yourPower').textContent = power;
+    document.getElementById('playerStats').style.display = 'flex';
+    document.getElementById('playerRank').textContent = currentStats.rank_points;
+    document.getElementById('playerWL').textContent = `${currentStats.wins}-${currentStats.losses}`;
+    document.getElementById('playerStreak').textContent = currentStats.current_streak;
+    
+    // Update title based on rank points
+    const title = getRankTitle(currentStats.rank_points);
+    document.getElementById('playerTitle').textContent = title;
+    
+    // Update power
+    const power = (currentPlayer.health || 100) + Math.floor(currentStats.rank_points / 10);
+    document.getElementById('yourPower').textContent = power;
+}
+
+// Get rank title based on points
+function getRankTitle(points) {
+    if (points < 1100) return 'Rookie';
+    if (points < 1200) return 'Scrapper';
+    if (points < 1300) return 'Brawler';
+    if (points < 1400) return 'Fighter';
+    if (points < 1500) return 'Warrior';
+    if (points < 1600) return 'Gladiator';
+    if (points < 1700) return 'Champion';
+    if (points < 1800) return 'Master';
+    if (points < 1900) return 'Grandmaster';
+    if (points < 2000) return 'Legend';
+    if (points < 2100) return 'Mythic';
+    return 'Godlike';
 }
 
 // Load opponents
 async function loadOpponents() {
-  try {
-    // Get other players with their stats
-    const { data } = await sb
-      .from('pvp_stats')
-      .select(`
-        *,
-        players!inner (
-          id,
-          username,
-          health,
-          energy
-        )
-      `)
-      .neq('player_id', currentPlayer.id)
-      .order('rank_points', { ascending: false })
-      .limit(20);
-    
-    opponents = data || [];
-    renderOpponents();
-  } catch (error) {
-    console.error('Error loading opponents:', error);
-  }
+    return ErrorHandler.withErrorHandling(async () => {
+        // Get other players with their stats
+        const { data, error } = await sb
+            .from('pvp_stats')
+            .select(`
+                *,
+                players!inner (
+                    id,
+                    username,
+                    health,
+                    energy,
+                    level
+                )
+            `)
+            .neq('player_id', currentPlayer.id)
+            .order('rank_points', { ascending: false })
+            .limit(20);
+        
+        if (error) throw error;
+        
+        opponents = data || [];
+        document.getElementById('opponentCount').textContent = `${opponents.length} players`;
+        renderOpponents();
+    }, 'opponentList', 'Error loading opponents');
 }
 
 // Render opponents list
 function renderOpponents() {
-  const list = document.getElementById('opponentList');
-  
-  if (opponents.length === 0) {
-    list.innerHTML = '<div style="text-align: center; padding: 40px;">No opponents found</div>';
-    return;
-  }
-  
-  list.innerHTML = opponents.map(opp => {
-    const power = opp.players.health + Math.floor(opp.rank_points / 10);
-    const isSelected = selectedOpponent && selectedOpponent.player_id === opp.player_id;
+    const list = document.getElementById('opponentList');
     
-    return `
-      <div class="opponent-card ${isSelected ? 'selected' : ''}" 
-           onclick="selectOpponent('${opp.player_id}')">
-        <div class="opponent-rank">#${opp.rank_points}</div>
-        <div class="opponent-info">
-          <span class="opponent-name">${opp.players.username}</span>
-          <span class="opponent-title">${opp.rank_title}</span>
-        </div>
-        <div class="opponent-power">⚡${power}</div>
-      </div>
-    `;
-  }).join('');
+    if (opponents.length === 0) {
+        list.innerHTML = '<div class="empty-message">No opponents available</div>';
+        return;
+    }
+    
+    list.innerHTML = opponents.map(opp => {
+        const power = (opp.players.health || 100) + Math.floor(opp.rank_points / 10);
+        const isSelected = selectedOpponent && selectedOpponent.player_id === opp.player_id;
+        const winRate = opp.wins + opp.losses > 0 
+            ? Math.round((opp.wins / (opp.wins + opp.losses)) * 100) 
+            : 0;
+        
+        return `
+            <div class="opponent-card ${isSelected ? 'selected' : ''}" 
+                 onclick="selectOpponent('${opp.player_id}')">
+                <div class="opponent-rank">#${opp.rank_points}</div>
+                <div class="opponent-info">
+                    <span class="opponent-name">${opp.players.username}</span>
+                    <span class="opponent-title">${opp.rank_title} • ${winRate}% WR</span>
+                </div>
+                <div class="opponent-power">⚡${power}</div>
+            </div>
+        `;
+    }).join('');
 }
 
 // Select opponent
 function selectOpponent(playerId) {
-  selectedOpponent = opponents.find(o => o.player_id === playerId);
-  
-  if (selectedOpponent) {
-    const panel = document.getElementById('selectedOpponent');
-    const power = selectedOpponent.players.health + Math.floor(selectedOpponent.rank_points / 10);
+    selectedOpponent = opponents.find(o => o.player_id === playerId);
     
-    panel.innerHTML = `
-      <div class="selected-avatar">${selectedOpponent.players.username.charAt(0).toUpperCase()}</div>
-      <div class="selected-name">${selectedOpponent.players.username}</div>
-      <div class="selected-title">${selectedOpponent.rank_title}</div>
-    `;
-    
-    document.getElementById('enemyPower').textContent = power;
-    document.getElementById('attackBtn').disabled = false;
-    
-    // Check cooldown
-    checkCooldown(selectedOpponent.player_id);
-  }
+    if (selectedOpponent) {
+        const panel = document.getElementById('selectedOpponent');
+        const power = (selectedOpponent.players.health || 100) + Math.floor(selectedOpponent.rank_points / 10);
+        
+        panel.innerHTML = `
+            <div class="selected-avatar">${selectedOpponent.players.username.charAt(0).toUpperCase()}</div>
+            <div class="selected-name">${selectedOpponent.players.username}</div>
+            <div class="selected-title">${selectedOpponent.rank_title} • Level ${selectedOpponent.players.level}</div>
+        `;
+        
+        document.getElementById('enemyPower').textContent = power;
+        document.getElementById('attackBtn').disabled = false;
+        
+        // Check cooldown
+        checkCooldown(selectedOpponent.player_id);
+        
+        // Show selection toast
+        showToast(`Selected opponent: ${selectedOpponent.players.username}`, 'info', 2000);
+    }
 }
 
 // Check if opponent is on cooldown
 async function checkCooldown(defenderId) {
-  try {
-    const { data } = await sb
-      .from('pvp_battles')
-      .select('cooldown_until')
-      .eq('attacker_id', currentPlayer.id)
-      .eq('defender_id', defenderId)
-      .eq('status', 'completed')
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single();
-    
-    if (data && data.cooldown_until) {
-      const cooldown = new Date(data.cooldown_until);
-      const now = new Date();
-      
-      if (cooldown > now) {
-        const minutes = Math.ceil((cooldown - now) / (1000 * 60));
-        document.getElementById('cooldownInfo').textContent = 
-          `⏳ Can't attack again for ${minutes} minutes`;
-        document.getElementById('attackBtn').disabled = true;
-      } else {
+    return ErrorHandler.withErrorHandling(async () => {
+        const { data, error } = await sb
+            .from('pvp_battles')
+            .select('cooldown_until')
+            .eq('attacker_id', currentPlayer.id)
+            .eq('defender_id', defenderId)
+            .eq('status', 'completed')
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+        
+        if (error) throw error;
+        
+        if (data && data.cooldown_until) {
+            const cooldown = new Date(data.cooldown_until);
+            const now = new Date();
+            
+            if (cooldown > now) {
+                const minutes = Math.ceil((cooldown - now) / (1000 * 60));
+                const seconds = Math.ceil((cooldown - now) / 1000) % 60;
+                document.getElementById('cooldownInfo').textContent = 
+                    `⏳ Cooldown: ${minutes}m ${seconds}s remaining`;
+                document.getElementById('attackBtn').disabled = true;
+                
+                // Start countdown
+                startCooldownCountdown(cooldown);
+                return;
+            }
+        }
+        
         document.getElementById('cooldownInfo').textContent = '';
-      }
-    }
-  } catch (error) {
-    // No cooldown found
-    document.getElementById('cooldownInfo').textContent = '';
-  }
+        document.getElementById('attackBtn').disabled = false;
+        
+    }, null, 'Error checking cooldown');
+}
+
+// Start cooldown countdown
+function startCooldownCountdown(endTime) {
+    const interval = setInterval(() => {
+        const now = new Date();
+        const remaining = endTime - now;
+        
+        if (remaining <= 0) {
+            clearInterval(interval);
+            document.getElementById('cooldownInfo').textContent = '';
+            document.getElementById('attackBtn').disabled = false;
+            showToast('✅ Cooldown expired! You can attack again.', 'info', 3000);
+            return;
+        }
+        
+        const minutes = Math.floor(remaining / (1000 * 60));
+        const seconds = Math.floor((remaining % (1000 * 60)) / 1000);
+        document.getElementById('cooldownInfo').textContent = 
+            `⏳ Cooldown: ${minutes}m ${seconds}s remaining`;
+    }, 1000);
 }
 
 // Initiate battle
 async function initiateBattle() {
-  if (!selectedOpponent) {
-    showToast('Select an opponent first!', 'error');
-    return;
-  }
-  
-  if (currentPlayer.energy < 20) {
-    showToast('Need 20 energy to battle!', 'error');
-    return;
-  }
-  
-  const btn = document.getElementById('attackBtn');
-  btn.disabled = true;
-  btn.textContent = '⚔️ Fighting...';
-  
-  try {
-    const { data, error } = await sb.rpc('initiate_battle', {
-      p_defender_id: selectedOpponent.player_id
-    });
-    
-    if (error) throw error;
-    
-    if (data.success) {
-      if (data.attacker_wins) {
-        showToast(`🎉 Victory! Won ₹${data.loot_amount} and ${data.xp_reward} XP!`, 'battle-win', 5000);
-      } else {
-        showToast(`💔 Defeat! Lost ₹${data.loot_amount}!`, 'battle-loss', 5000);
-      }
-      
-      // Reload all data
-      await loadPlayerData();
-      await loadBattleHistory();
-      
-      // Reselect opponent to update cooldown
-      selectOpponent(selectedOpponent.player_id);
-    } else {
-      showToast(data.error || 'Battle failed!', 'error');
+    if (!selectedOpponent) {
+        showToast('Select an opponent first!', 'error');
+        return;
     }
-  } catch (error) {
-    console.error('Battle error:', error);
-    showToast('Error during battle!', 'error');
-  } finally {
-    btn.disabled = false;
-    btn.textContent = '⚔️ ATTACK!';
-  }
+    
+    if (currentPlayer.energy < 20) {
+        showToast('❌ Need 20 energy to battle!', 'error');
+        return;
+    }
+    
+    const btn = document.getElementById('attackBtn');
+    btn.disabled = true;
+    btn.textContent = '⚔️ Fighting...';
+    
+    return ErrorHandler.withErrorHandling(async () => {
+        const { data, error } = await sb.rpc('initiate_battle', {
+            p_defender_id: selectedOpponent.player_id
+        });
+        
+        if (error) throw error;
+        
+        if (data.success) {
+            // Show battle result animation
+            showBattleResult(data.attacker_wins, data.loot_amount, data.xp_reward);
+            
+            if (data.attacker_wins) {
+                showToast(`🎉 Victory! Won ₹${data.loot_amount.toLocaleString()} and ${data.xp_reward} XP!`, 'battle-win', 5000);
+            } else {
+                showToast(`💔 Defeat! Lost ₹${data.loot_amount.toLocaleString()}!`, 'battle-loss', 5000);
+            }
+            
+            // Update realtime text
+            document.getElementById('realtimeText').textContent = data.attacker_wins ? 'Victory!' : 'Defeat!';
+            setTimeout(() => {
+                document.getElementById('realtimeText').textContent = 'PvP Arena Active';
+            }, 3000);
+            
+            // Reload all data
+            await loadPlayerData();
+            await loadBattleHistory();
+            await loadOpponents(); // Refresh opponent list
+            
+            // Reselect opponent to update cooldown
+            if (selectedOpponent) {
+                selectOpponent(selectedOpponent.player_id);
+            }
+        } else {
+            showToast(data.error || 'Battle failed!', 'error');
+        }
+    }, null, 'Error during battle').finally(() => {
+        btn.disabled = false;
+        btn.textContent = '⚔️ ATTACK!';
+    });
+}
+
+// Show battle result animation
+function showBattleResult(won, loot, xp) {
+    const modal = document.getElementById('resultModal');
+    const content = document.getElementById('battleResultContent');
+    
+    content.style.background = won 
+        ? 'linear-gradient(135deg, #4CAF50, #45a049)' 
+        : 'linear-gradient(135deg, #f44336, #d32f2f)';
+    
+    content.innerHTML = `
+        <div style="font-size: 5rem; margin-bottom: 20px;">${won ? '🏆' : '💔'}</div>
+        <h2 style="margin-bottom: 15px;">${won ? 'VICTORY!' : 'DEFEAT!'}</h2>
+        <p style="font-size: 1.2rem; margin-bottom: 10px;">${won ? '+' : '-'}₹${loot.toLocaleString()}</p>
+        ${won ? `<p style="font-size: 1.2rem;">+${xp} XP</p>` : ''}
+        <button class="queue-btn" onclick="closeBattleResult()" style="margin-top: 20px;">Continue</button>
+    `;
+    
+    modal.style.display = 'block';
+    
+    // Auto close after 3 seconds
+    setTimeout(closeBattleResult, 3000);
+}
+
+// Close battle result
+function closeBattleResult() {
+    document.getElementById('resultModal').style.display = 'none';
 }
 
 // Load battle history
 async function loadBattleHistory() {
-  try {
-    const { data } = await sb
-      .from('pvp_battles')
-      .select(`
-        *,
-        attacker:players!pvp_battles_attacker_id_fkey (username),
-        defender:players!pvp_battles_defender_id_fkey (username)
-      `)
-      .or(`attacker_id.eq.${currentPlayer.id},defender_id.eq.${currentPlayer.id}`)
-      .order('created_at', { ascending: false })
-      .limit(20);
-    
-    battleHistory = data || [];
-    renderBattleHistory();
-  } catch (error) {
-    console.error('Error loading battle history:', error);
-  }
+    return ErrorHandler.withErrorHandling(async () => {
+        const { data, error } = await sb
+            .from('pvp_battles')
+            .select(`
+                *,
+                attacker:players!pvp_battles_attacker_id_fkey (username),
+                defender:players!pvp_battles_defender_id_fkey (username)
+            `)
+            .or(`attacker_id.eq.${currentPlayer.id},defender_id.eq.${currentPlayer.id}`)
+            .order('created_at', { ascending: false })
+            .limit(20);
+        
+        if (error) throw error;
+        
+        battleHistory = data || [];
+        renderBattleHistory();
+    }, 'battleHistory', 'Error loading battle history');
 }
 
 // Render battle history
 function renderBattleHistory() {
-  const historyEl = document.getElementById('battleHistory');
-  
-  if (battleHistory.length === 0) {
-    historyEl.innerHTML = '<div style="text-align: center; padding: 40px;">No battles yet</div>';
-    return;
-  }
-  
-  historyEl.innerHTML = battleHistory.map(battle => {
+    const historyEl = document.getElementById('battleHistory');
+    
+    if (battleHistory.length === 0) {
+        historyEl.innerHTML = '<div class="empty-message">No battles yet</div>';
+        return;
+    }
+    
+    historyEl.innerHTML = battleHistory.map((battle, index) => {
+        const isAttacker = battle.attacker_id === currentPlayer.id;
+        const opponentName = isAttacker ? battle.defender?.username : battle.attacker?.username;
+        const won = battle.winner_id === currentPlayer.id;
+        const date = new Date(battle.created_at).toLocaleString();
+        
+        return `
+            <div class="history-item" onclick="showBattleDetails(${index})">
+                <div class="history-result ${won ? 'win' : 'loss'}">
+                    ${won ? 'WIN' : 'LOSS'}
+                </div>
+                <div class="history-details">
+                    <strong>vs ${opponentName || 'Unknown'}</strong><br>
+                    <small>${date}</small>
+                </div>
+                <div class="history-loot ${won ? 'win' : 'loss'}">
+                    ${won ? '+' : '-'}₹${battle.loot_amount.toLocaleString()}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// Show battle details
+function showBattleDetails(index) {
+    const battle = battleHistory[index];
+    if (!battle) return;
+    
     const isAttacker = battle.attacker_id === currentPlayer.id;
-    const opponentName = isAttacker ? battle.defender.username : battle.attacker.username;
+    const opponentName = isAttacker ? battle.defender?.username : battle.attacker?.username;
     const won = battle.winner_id === currentPlayer.id;
     
-    return `
-      <div class="history-item">
-        <div class="history-result ${won ? 'win' : 'loss'}">
-          ${won ? 'WIN' : 'LOSS'}
-        </div>
-        <div class="history-details">
-          vs <strong>${opponentName}</strong><br>
-          <small>${new Date(battle.created_at).toLocaleDateString()}</small>
-        </div>
-        <div class="history-loot ${won ? 'win' : 'loss'}">
-          ${won ? '+' : '-'}₹${battle.loot_amount}
-        </div>
-      </div>
-    `;
-  }).join('');
+    showToast(`
+        ⚔️ Battle Details
+        ${won ? 'Victory' : 'Defeat'} against ${opponentName || 'Unknown'}
+        Date: ${new Date(battle.created_at).toLocaleString()}
+        ${won ? '+' : '-'}₹${battle.loot_amount.toLocaleString()}
+        ${won ? `+${battle.xp_reward} XP` : ''}
+        Rank change: ${won ? '+' : '-'}${Math.abs(battle.rank_change || 15)}
+    `, won ? 'success' : 'error', 5000);
+}
+
+// Setup realtime subscription
+function setupRealtimeSubscription() {
+    if (!currentPlayer) return;
+    
+    if (pvpChannel) pvpChannel.unsubscribe();
+    
+    pvpChannel = sb
+        .channel('pvp-updates')
+        .on(
+            'postgres_changes',
+            {
+                event: 'INSERT',
+                schema: 'public',
+                table: 'pvp_battles',
+                filter: `defender_id=eq.${currentPlayer.id}`
+            },
+            async (payload) => {
+                showToast('🔔 Someone attacked you! Check battle history.', 'warning', 4000);
+                await loadBattleHistory();
+                await loadPvPStats();
+            }
+        )
+        .subscribe((status) => {
+            if (status === 'SUBSCRIBED') {
+                document.getElementById('realtimeStatus').style.opacity = '1';
+            }
+        });
 }
 
 // Matchmaking queue
 async function toggleQueue() {
-  const btn = document.getElementById('queueBtn');
-  const status = document.getElementById('queueStatus');
-  
-  if (btn.classList.contains('cancel')) {
-    // Leave queue
-    await sb.from('pvp_queue').delete().eq('player_id', currentPlayer.id);
-    btn.classList.remove('cancel');
-    btn.textContent = 'Join Matchmaking Queue';
-    status.style.display = 'none';
-    if (queueInterval) clearInterval(queueInterval);
-  } else {
-    // Join queue
-    await sb.from('pvp_queue').upsert({
-      player_id: currentPlayer.id,
-      rank_points: currentStats.rank_points,
-      status: 'searching'
-    });
+    const btn = document.getElementById('queueBtn');
+    const status = document.getElementById('queueStatus');
     
-    btn.classList.add('cancel');
-    btn.textContent = 'Leave Queue';
-    status.style.display = 'block';
-    
-    // Check for match every 5 seconds
-    queueInterval = setInterval(checkForMatch, 5000);
-  }
+    if (btn.classList.contains('cancel')) {
+        // Leave queue
+        await sb.from('pvp_queue').delete().eq('player_id', currentPlayer.id);
+        btn.classList.remove('cancel');
+        btn.textContent = 'Join Matchmaking Queue';
+        status.style.display = 'none';
+        if (queueInterval) clearInterval(queueInterval);
+        showToast('Left matchmaking queue', 'info', 2000);
+    } else {
+        // Check if player can queue
+        if (currentPlayer.energy < 20) {
+            showToast('Need 20 energy to queue!', 'error');
+            return;
+        }
+        
+        // Join queue
+        await sb.from('pvp_queue').upsert({
+            player_id: currentPlayer.id,
+            rank_points: currentStats.rank_points,
+            status: 'searching'
+        });
+        
+        btn.classList.add('cancel');
+        btn.textContent = 'Leave Queue';
+        status.style.display = 'block';
+        showToast('Joined matchmaking queue', 'success', 2000);
+        
+        // Check for match every 5 seconds
+        queueInterval = setInterval(checkForMatch, 5000);
+    }
 }
 
-// Check for match (simplified)
+// Check for match
 async function checkForMatch() {
-  try {
-    const { data } = await sb
-      .from('pvp_queue')
-      .select('*')
-      .neq('player_id', currentPlayer.id)
-      .order('rank_points', { ascending: false })
-      .limit(1)
-      .single();
-    
-    if (data) {
-      // Found a match! (In reality, you'd want more sophisticated matchmaking)
-      showToast('🎮 Match found! Select opponent manually for now.', 'success');
-      // For now, just notify - we can implement auto-battle later
+    return ErrorHandler.withErrorHandling(async () => {
+        // Find a player with similar rank
+        const range = 100; // Look for players within 100 rank points
+        const { data, error } = await sb
+            .from('pvp_queue')
+            .select(`
+                *,
+                players!inner (
+                    id,
+                    username,
+                    energy
+                )
+            `)
+            .neq('player_id', currentPlayer.id)
+            .gte('rank_points', currentStats.rank_points - range)
+            .lte('rank_points', currentStats.rank_points + range)
+            .eq('status', 'searching')
+            .limit(1)
+            .maybeSingle();
+        
+        if (error) throw error;
+        
+        if (data) {
+            // Found a match!
+            showToast(`🎮 Match found with ${data.players.username}!`, 'success', 4000);
+            
+            // Select the opponent automatically
+            selectOpponent(data.player_id);
+            
+            // Leave queue
+            await toggleQueue();
+            
+            // Highlight the opponent in the list
+            const opponentElement = document.querySelector(`[onclick*="'${data.player_id}'"]`);
+            if (opponentElement) {
+                opponentElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+    }, null, 'Error checking matchmaking');
+}
+
+// Show stat details
+function showStatDetails(stat) {
+    switch(stat) {
+        case 'rank':
+            showToast(`🏆 Rank Points: ${currentStats.rank_points}\nWin battles to increase your rank!`, 'info', 4000);
+            break;
+        case 'record':
+            const total = currentStats.wins + currentStats.losses;
+            const winRate = total > 0 ? Math.round((currentStats.wins / total) * 100) : 0;
+            showToast(`📊 Record: ${currentStats.wins}W - ${currentStats.losses}L\nWin Rate: ${winRate}%`, 'info', 4000);
+            break;
+        case 'streak':
+            showToast(`🔥 Current Streak: ${currentStats.current_streak}\nBest Streak: ${currentStats.best_streak || 0}`, 'info', 4000);
+            break;
     }
-  } catch (error) {
-    // No match found
-  }
 }
 
 // Navigation
 function goToDashboard() {
-  window.location.href = "dashboard.html";
+    showToast('Returning to dashboard...', 'info', 1000);
+    setTimeout(() => {
+        window.location.href = "dashboard.html";
+    }, 500);
 }
 
-// Initialize
-loadPlayerData();
+// Scroll to top functionality
+function setupScrollToTop() {
+    const scrollBtn = document.getElementById('scrollTopBtn');
+    
+    window.addEventListener('scroll', () => {
+        if (window.scrollY > 300) {
+            scrollBtn.classList.add('visible');
+        } else {
+            scrollBtn.classList.remove('visible');
+        }
+    });
+}
+
+function scrollToTop() {
+    window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+    });
+}
+
+// Reading progress bar
+function setupReadingProgress() {
+    const progressBar = document.getElementById('readingProgress');
+    
+    window.addEventListener('scroll', () => {
+        const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+        const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+        const scrolled = (winScroll / height) * 100;
+        progressBar.style.width = scrolled + '%';
+    });
+}
+
+// Keyboard navigation
+function setupKeyboardNavigation() {
+    document.addEventListener('keydown', (e) => {
+        // Space to attack when opponent selected
+        if (e.key === ' ' && selectedOpponent && !document.getElementById('attackBtn').disabled) {
+            e.preventDefault();
+            initiateBattle();
+        }
+        
+        // Q for queue toggle
+        if (e.key === 'q' || e.key === 'Q') {
+            e.preventDefault();
+            toggleQueue();
+        }
+        
+        // Esc to close modals
+        if (e.key === 'Escape') {
+            closeBattleResult();
+        }
+        
+        // R to refresh
+        if (e.key === 'r' || e.key === 'R') {
+            if (!e.ctrlKey && !e.metaKey) {
+                e.preventDefault();
+                loadOpponents();
+                showToast('Refreshing opponents...', 'info', 1000);
+            }
+        }
+    });
+}
 
 // Clean up
 window.addEventListener('beforeunload', () => {
-  if (queueInterval) clearInterval(queueInterval);
+    if (queueInterval) clearInterval(queueInterval);
+    if (pvpChannel) pvpChannel.unsubscribe();
 });
+
+// Export functions for global use
+window.selectOpponent = selectOpponent;
+window.initiateBattle = initiateBattle;
+window.toggleQueue = toggleQueue;
+window.goToDashboard = goToDashboard;
+window.scrollToTop = scrollToTop;
+window.closeBattleResult = closeBattleResult;
+window.showStatDetails = showStatDetails;
+window.showBattleDetails = showBattleDetails;
 </script>
 
 </body>
