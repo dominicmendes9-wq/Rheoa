@@ -323,32 +323,7 @@
       transform: scale(1.02);
     }
     
-    /* Toast Notifications */
-    .toast-container {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      z-index: 9999;
-    }
-    
-    .toast {
-      padding: 15px 25px;
-      margin-bottom: 10px;
-      border-radius: 8px;
-      color: white;
-      font-weight: bold;
-      animation: slideIn 0.3s ease-out;
-    }
-    
-    .toast.success { background: #4CAF50; }
-    .toast.error { background: #f44336; }
-    .toast.info { background: #2196F3; }
-    .toast.reward { background: #ffd700; color: #333; }
-    
-    @keyframes slideIn {
-      from { transform: translateX(100%); opacity: 0; }
-      to { transform: translateX(0); opacity: 1; }
-    }
+    /* Toast container styles are now in toast.js - removing duplicate */
     
     /* Spinner */
     .spinner {
@@ -395,7 +370,7 @@
 </head>
 <body>
 
-<div class="toast-container" id="toast-container"></div>
+<!-- Toast container is created by toast.js, removed static container -->
 
 <h1>🎁 Daily Rewards</h1>
 <div class="subtitle">Login every day to claim amazing prizes!</div>
@@ -453,12 +428,16 @@
 
 <button class="back-button" onclick="goToDashboard()">← Back to Dashboard</button>
 
+<!-- Script includes: Supabase library + shared utilities -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<script src="supabase.js"></script>
+<script src="toast.js"></script>
+<script src="loading.js"></script>
+<script src="error-handler.js"></script>
+
 <script>
-const sb = window.supabase.createClient(
-  "https://mtiwodvsrwvrujbhmmrn.supabase.co",
-  "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
-);
+// Use the shared supabase client
+const sb = window.supabaseClient;
 
 let currentPlayer = null;
 let rewardStatus = null;
@@ -467,45 +446,27 @@ let claimHistory = [];
 let timerInterval = null;
 let monthlySpecial = null;
 
-// Toast notification
-function showToast(message, type = 'info', duration = 3000) {
-  const container = document.getElementById('toast-container');
-  const toast = document.createElement('div');
-  toast.className = `toast ${type}`;
-  toast.textContent = message;
-  
-  container.appendChild(toast);
-  
-  setTimeout(() => {
-    toast.classList.add('fade-out');
-    setTimeout(() => {
-      if (toast.parentNode) {
-        container.removeChild(toast);
-      }
-    }, 300);
-  }, duration);
-}
-
 // Load player data
 async function loadPlayerData() {
   try {
-    const { data: { user } } = await sb.auth.getUser();
+    const user = await window.getCurrentUser();
     if (!user) return window.location.href = "index.html";
     
-    const { data: player } = await sb
-      .from('players')
-      .select('*')
-      .eq('auth_id', user.id)
-      .single();
-    
-    if (player) {
-      currentPlayer = player;
-      await loadRewardStatus();
-      await loadDailyRewards();
-      await loadClaimHistory();
+    const player = await window.getCurrentPlayer();
+    if (!player) {
+      window.showToast('Player not found', 'error');
+      return;
     }
+    
+    currentPlayer = player;
+    await loadRewardStatus();
+    await loadDailyRewards();
+    await loadClaimHistory();
+    
   } catch (error) {
     console.error('Error loading player:', error);
+    const friendlyMessage = window.ErrorHandler.handleSupabaseError(error, 'Error loading rewards');
+    window.showToast(friendlyMessage, 'error');
   }
 }
 
@@ -528,38 +489,46 @@ async function loadRewardStatus() {
     }
   } catch (error) {
     console.error('Error loading reward status:', error);
+    const friendlyMessage = window.ErrorHandler.handleSupabaseError(error, 'Error loading reward status');
+    window.showToast(friendlyMessage, 'error');
   }
 }
 
 // Load daily rewards
 async function loadDailyRewards() {
   try {
-    const { data } = await sb
+    const { data, error } = await sb
       .from('daily_rewards')
       .select('*')
       .order('day_number');
+    
+    if (error) throw error;
     
     dailyRewards = data || [];
     renderRewardsGrid();
   } catch (error) {
     console.error('Error loading daily rewards:', error);
+    window.showToast('Error loading rewards', 'error');
   }
 }
 
 // Load claim history
 async function loadClaimHistory() {
   try {
-    const { data } = await sb
+    const { data, error } = await sb
       .from('player_claimed_rewards')
       .select('*')
       .eq('player_id', currentPlayer.id)
       .order('claim_date', { ascending: false })
       .limit(20);
     
+    if (error) throw error;
+    
     claimHistory = data || [];
     renderClaimHistory();
   } catch (error) {
     console.error('Error loading claim history:', error);
+    // Non-critical error, don't show toast
   }
 }
 
@@ -714,7 +683,7 @@ function renderClaimHistory() {
 // Claim reward
 async function claimReward() {
   if (!rewardStatus || !rewardStatus.can_claim) {
-    showToast('No reward available yet!', 'error');
+    window.showToast('No reward available yet!', 'error');
     return;
   }
   
@@ -728,15 +697,15 @@ async function claimReward() {
     if (error) throw error;
     
     if (data.success) {
-      showToast(`✨ ${data.message}! Streak: ${data.streak} days 🔥`, 'reward', 5000);
+      window.showToast(`✨ ${data.message}! Streak: ${data.streak} days 🔥`, 'reward', 5000);
       
       // Show bonus message for streak milestones
       if (data.streak % 7 === 0) {
-        showToast(`🎉 WEEKLY BONUS! 2x multiplier applied!`, 'success', 4000);
+        window.showToast(`🎉 WEEKLY BONUS! 2x multiplier applied!`, 'success', 4000);
       }
       
       if (data.is_monthly_special) {
-        showToast(`🎊 SPECIAL MONTHLY REWARD!`, 'reward', 4000);
+        window.showToast(`🎊 SPECIAL MONTHLY REWARD!`, 'reward', 4000);
       }
       
       // Reload data
@@ -744,25 +713,31 @@ async function claimReward() {
       await loadClaimHistory();
       
       // Update player stats in background
-      const { data: player } = await sb
+      const { data: player, error: playerError } = await sb
         .from('players')
         .select('*')
         .eq('id', currentPlayer.id)
         .single();
       
+      if (playerError) throw playerError;
+      
       if (player) {
         currentPlayer = player;
       }
+      
+      btn.disabled = false;
+      btn.textContent = rewardStatus?.can_claim ? '🎁 CLAIM NOW!' : '🎁 CLAIM REWARD';
     } else {
-      showToast(data.error || 'Failed to claim reward', 'error');
+      window.showToast(data.error || 'Failed to claim reward', 'error');
       btn.disabled = false;
       btn.textContent = '🎁 CLAIM NOW!';
     }
   } catch (error) {
     console.error('Error claiming reward:', error);
-    showToast('Error claiming reward', 'error');
+    const friendlyMessage = window.ErrorHandler.handleSupabaseError(error, 'Error claiming reward');
+    window.showToast(friendlyMessage, 'error');
     btn.disabled = false;
-    btn.textContent = '🎁 CLAIM NOW!';
+    btn.textContent = rewardStatus?.can_claim ? '🎁 CLAIM NOW!' : '🎁 CLAIM REWARD';
   }
 }
 
@@ -776,8 +751,12 @@ window.addEventListener('beforeunload', () => {
   if (timerInterval) clearInterval(timerInterval);
 });
 
-// Initialize
-loadPlayerData();
+// Initialize with error handling
+window.ErrorHandler.withErrorHandling(
+  loadPlayerData,
+  null,
+  'Failed to load daily rewards'
+).catch(() => {});
 </script>
 
 </body>
