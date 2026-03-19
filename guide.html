@@ -409,6 +409,11 @@
   <button class="tab-btn" onclick="switchTab('features')">🎮 Features</button>
   <button class="tab-btn" onclick="switchTab('levels')">⭐ Levels</button>
   <button class="tab-btn" onclick="switchTab('items')">🎒 Items</button>
+  <button class="tab-btn" onclick="switchTab('pvp')">⚔️ PvP</button>
+  <button class="tab-btn" onclick="switchTab('gangs')">🏢 Gangs</button>
+  <button class="tab-btn" onclick="switchTab('market')">📈 Market</button>
+  <button class="tab-btn" onclick="switchTab('daily')">🎁 Daily</button>
+  <button class="tab-btn" onclick="switchTab('prestige')">🔄 Prestige</button>
   <button class="tab-btn" onclick="switchTab('faq')">❓ FAQ</button>
   <button class="tab-btn" onclick="switchTab('tips')">💡 Tips</button>
 </div>
@@ -453,7 +458,11 @@
       <li><strong>Earn Cash & XP</strong> - Build your wealth and experience</li>
       <li><strong>Buy Items</strong> - Purchase helpful items from the shop</li>
       <li><strong>Level Up</strong> - Unlock new crimes and jobs</li>
-      <li><strong>Repeat</strong> - Aim for higher levels and bigger crimes</li>
+      <li><strong>Join a Gang</strong> - Team up with other players</li>
+      <li><strong>Battle in PvP</strong> - Fight other players for loot</li>
+      <li><strong>Trade on Market</strong> - Buy and sell items with players</li>
+      <li><strong>Collect Daily Rewards</strong> - Login every day for bonuses</li>
+      <li><strong>Prestige</strong> - Reset your progress for permanent power</li>
     </ol>
   </div>
 </div>
@@ -482,7 +491,7 @@
       <div class="stat-explanation">
         <div class="stat-icon">❤️</div>
         <div class="stat-name">Health</div>
-        <div class="stat-desc">Decreases from failed crimes. Restore with items.</div>
+        <div class="stat-desc">Decreases from failed crimes and PvP battles. Restore with items.</div>
       </div>
       <div class="stat-explanation">
         <div class="stat-icon">🍽️</div>
@@ -497,7 +506,12 @@
       <div class="stat-explanation">
         <div class="stat-icon">⚡</div>
         <div class="stat-name">Success Boost</div>
-        <div class="stat-desc">Increases crime success rate. From items and achievements.</div>
+        <div class="stat-desc">Increases crime success rate. From items, achievements, and prestige perks.</div>
+      </div>
+      <div class="stat-explanation">
+        <div class="stat-icon">🏆</div>
+        <div class="stat-name">Prestige Level</div>
+        <div class="stat-desc">Your overall progression. Higher prestige unlocks permanent bonuses.</div>
       </div>
     </div>
     
@@ -507,7 +521,7 @@
       <li><span style="color: #f44336;">🔴 Red border</span> - Stat is below 10% (critical)</li>
       <li><strong>Hunger</strong> - Eat food items to restore</li>
       <li><strong>Happiness</strong> - Use entertainment items</li>
-      <li><strong>Health</strong> - Use first aid items after failed crimes</li>
+      <li><strong>Health</strong> - Use first aid items after failed crimes or PvP</li>
     </ul>
   </div>
 </div>
@@ -558,6 +572,36 @@
         <div class="feature-title">Level Gating</div>
         <div class="feature-desc">Higher level crimes and jobs require minimum levels.</div>
       </div>
+      <div class="feature-card">
+        <div class="feature-icon">🏆</div>
+        <div class="feature-title">Leaderboards</div>
+        <div class="feature-desc">Compete with other players in various categories.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">⚔️</div>
+        <div class="feature-title">PvP Arena</div>
+        <div class="feature-desc">Fight other players for cash, XP, and glory.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🏢</div>
+        <div class="feature-title">Gangs</div>
+        <div class="feature-desc">Join or create gangs to team up with other players.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📈</div>
+        <div class="feature-title">Market</div>
+        <div class="feature-desc">Buy and sell items with other players.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🎁</div>
+        <div class="feature-title">Daily Rewards</div>
+        <div class="feature-desc">Login every day for free rewards and streak bonuses.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔄</div>
+        <div class="feature-title">Prestige</div>
+        <div class="feature-desc">Reset your progress for permanent powerful bonuses.</div>
+      </div>
     </div>
   </div>
 </div>
@@ -588,7 +632,7 @@
       <tr>
         <td>10</td>
         <td>8,100</td>
-        <td>Advanced crimes & jobs</td>
+        <td>Advanced crimes & jobs, Prestige available</td>
       </tr>
       <tr>
         <td>15</td>
@@ -617,7 +661,7 @@
       <li><strong>Higher rewards</strong> - More cash and XP per action</li>
       <li><strong>New crimes</strong> - Access to more lucrative criminal activities</li>
       <li><strong>Better jobs</strong> - Higher paying legitimate work</li>
-      <li><strong>Prestige</strong> - Show off your level to other players</li>
+      <li><strong>Prestige eligibility</strong> - Reach level 10 to unlock prestige mode</li>
     </ul>
   </div>
 </div>
@@ -630,7 +674,6 @@
     <h3 class="section-subtitle">⚡ Energy Items</h3>
     <ul style="margin-left: 20px; line-height: 1.8; margin-bottom: 20px;">
       <li><strong>Energy Drink</strong> - Restores 20 energy instantly</li>
-      <li><strong>Restoration Pack</strong> - Full energy restore</li>
     </ul>
     
     <h3 class="section-subtitle">❤️ Health Items</h3>
@@ -669,6 +712,227 @@
   </div>
 </div>
 
+<!-- PvP Tab -->
+<div id="pvp" class="tab-content">
+  <div class="guide-section">
+    <h2 class="section-title">⚔️ Player vs Player Combat</h2>
+    
+    <p style="margin-bottom: 20px;">Challenge other players to battles and prove your superiority!</p>
+    
+    <h3 class="section-subtitle">Battle Mechanics</h3>
+    <ul style="margin-left: 20px; line-height: 1.8; margin-bottom: 20px;">
+      <li><strong>Energy Cost</strong> - 20 energy per battle</li>
+      <li><strong>Health Loss</strong> - Both players lose 10 health</li>
+      <li><strong>Loot</strong> - Winner takes 5% of defender's cash</li>
+      <li><strong>XP Reward</strong> - 50 XP for participating</li>
+      <li><strong>Cooldown</strong> - Can't attack same player for 1 hour</li>
+    </ul>
+    
+    <h3 class="section-subtitle">Ranking System</h3>
+    <ul style="margin-left: 20px; line-height: 1.8; margin-bottom: 20px;">
+      <li><strong>Rank Points</strong> - Start at 1000, gain/lose based on opponent strength</li>
+      <li><strong>Rank Titles</strong> - Rookie → Scrapper → Brawler → Fighter → Warrior → Gladiator → Champion → Master → Grandmaster → Legend → Mythic → Godlike</li>
+      <li><strong>Win/Loss Record</strong> - Tracks your PvP performance</li>
+      <li><strong>Streaks</strong> - Consecutive wins earn bonus bragging rights</li>
+    </ul>
+    
+    <h3 class="section-subtitle">Tips for PvP</h3>
+    <ul style="margin-left: 20px; line-height: 1.8;">
+      <li><strong>Check opponent power</strong> - Compare health and rank before attacking</li>
+      <li><strong>Save energy</strong> - Make sure you have enough energy for the battle</li>
+      <li><strong>Watch cooldowns</strong> - Can't farm the same player repeatedly</li>
+      <li><strong>Build a streak</strong> - Consecutive wins increase your rank faster</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Gangs Tab -->
+<div id="gangs" class="tab-content">
+  <div class="guide-section">
+    <h2 class="section-title">🏢 Gang System</h2>
+    
+    <p style="margin-bottom: 20px;">Join forces with other players to form powerful gangs!</p>
+    
+    <h3 class="section-subtitle">Gang Features</h3>
+    <ul style="margin-left: 20px; line-height: 1.8; margin-bottom: 20px;">
+      <li><strong>Create a Gang</strong> - Form your own team with unique name and tag</li>
+      <li><strong>Gang Levels</strong> - Level up your gang through collective effort</li>
+      <li><strong>Member Roles</strong> - Leader, Co-leader, Captain, Member, Recruit</li>
+      <li><strong>Invite System</strong> - Send invites to other players</li>
+      <li><strong>Join Requests</strong> - Players can request to join your gang</li>
+      <li><strong>Gang Chat</strong> - Real-time communication with members</li>
+    </ul>
+    
+    <h3 class="section-subtitle">Gang Perks</h3>
+    <ul style="margin-left: 20px; line-height: 1.8; margin-bottom: 20px;">
+      <li><strong>XP Boost</strong> - Extra XP for all members</li>
+      <li><strong>Cash Boost</strong> - More cash from jobs</li>
+      <li><strong>Energy Regen</strong> - Faster energy regeneration</li>
+      <li><strong>Crime Boost</strong> - Higher success rates</li>
+      <li><strong>PvP Power</strong> - Stronger in player battles</li>
+      <li><strong>Market Fee Reduction</strong> - Pay less on market trades</li>
+    </ul>
+    
+    <h3 class="section-subtitle">Member Roles & Permissions</h3>
+    <ul style="margin-left: 20px; line-height: 1.8;">
+      <li><strong>👑 Leader</strong> - Full control, can promote/demote, disband gang</li>
+      <li><strong>⚔️ Co-leader</strong> - Can invite, accept requests, manage members</li>
+      <li><strong>🎯 Captain</strong> - Can invite new members</li>
+      <li><strong>👤 Member</strong> - Standard member with chat access</li>
+      <li><strong>🔰 Recruit</strong> - Limited permissions during trial period</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Market Tab -->
+<div id="market" class="tab-content">
+  <div class="guide-section">
+    <h2 class="section-title">📈 Market System</h2>
+    
+    <p style="margin-bottom: 20px;">Trade items with other players in a dynamic player-driven economy!</p>
+    
+    <h3 class="section-subtitle">How to Use the Market</h3>
+    <ul style="margin-left: 20px; line-height: 1.8; margin-bottom: 20px;">
+      <li><strong>Buying</strong> - Browse active listings and purchase items</li>
+      <li><strong>Selling</strong> - List your items for sale at your desired price</li>
+      <li><strong>Favorites</strong> - Save items you're interested in</li>
+      <li><strong>Price History</strong> - Track item prices over time</li>
+    </ul>
+    
+    <h3 class="section-subtitle">Market Fees</h3>
+    <ul style="margin-left: 20px; line-height: 1.8; margin-bottom: 20px;">
+      <li><strong>Listing Fee</strong> - 5% fee to list items (prevents spam)</li>
+      <li><strong>Transaction Fee</strong> - 2% fee on sales (market upkeep)</li>
+      <li><strong>Listing Duration</strong> - 7 days before automatic expiry</li>
+    </ul>
+    
+    <h3 class="section-subtitle">Tips for Trading</h3>
+    <ul style="margin-left: 20px; line-height: 1.8;">
+      <li><strong>Check price history</strong> - Don't overpay or undersell</li>
+      <li><strong>Watch for deals</strong> - Some players sell below market value</li>
+      <li><strong>Factor in fees</strong> - Remember the 5% listing fee when pricing</li>
+      <li><strong>Be patient</strong> - Rare items take time to sell at good prices</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Daily Rewards Tab -->
+<div id="daily" class="tab-content">
+  <div class="guide-section">
+    <h2 class="section-title">🎁 Daily Rewards</h2>
+    
+    <p style="margin-bottom: 20px;">Login every day to claim amazing prizes and build your streak!</p>
+    
+    <h3 class="section-subtitle">30-Day Reward Cycle</h3>
+    <ul style="margin-left: 20px; line-height: 1.8; margin-bottom: 20px;">
+      <li><strong>Day 1-30</strong> - Different rewards each day</li>
+      <li><strong>Weekly Bonus</strong> - Every 7 days gives 2x multiplier</li>
+      <li><strong>Monthly Specials</strong> - Holiday and event rewards</li>
+    </ul>
+    
+    <h3 class="section-subtitle">Reward Types</h3>
+    <ul style="margin-left: 20px; line-height: 1.8; margin-bottom: 20px;">
+      <li><strong>💰 Cash</strong> - Direct money rewards</li>
+      <li><strong>⭐ XP</strong> - Experience points</li>
+      <li><strong>⚡ Energy</strong> - Energy refills</li>
+      <li><strong>❤️ Health</strong> - Health restoration</li>
+      <li><strong>🍽️ Hunger</strong> - Hunger reduction</li>
+      <li><strong>😊 Happiness</strong> - Happiness boost</li>
+      <li><strong>✨ Boost</strong> - Permanent success rate boost</li>
+      <li><strong>📦 Items</strong> - Physical item rewards</li>
+    </ul>
+    
+    <h3 class="section-subtitle">Streak Bonuses</h3>
+    <ul style="margin-left: 20px; line-height: 1.8;">
+      <li><strong>🔥 Current Streak</strong> - Number of consecutive days</li>
+      <li><strong>💪 Max Streak</strong> - Your personal best</li>
+      <li><strong>🎯 Streak Protection</strong> - Only resets if you miss a full day</li>
+      <li><strong>✨ Weekly Bonus</strong> - 2x multiplier every 7 days</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Prestige Tab -->
+<div id="prestige" class="tab-content">
+  <div class="guide-section">
+    <h2 class="section-title">🔄 Prestige System</h2>
+    
+    <p style="margin-bottom: 20px;">Reset your progress for永久 powerful bonuses! Available at level 10.</p>
+    
+    <h3 class="section-subtitle">How Prestige Works</h3>
+    <ul style="margin-left: 20px; line-height: 1.8; margin-bottom: 20px;">
+      <li><strong>Reset Progress</strong> - Lose all levels, XP, cash, and items</li>
+      <li><strong>Earn Points</strong> - Gain Prestige Points based on your accomplishments</li>
+      <li><strong>Permanent Perks</strong> - Spend points on account-wide buffs</li>
+      <li><strong>Scaling Difficulty</strong> - Each prestige requires more effort</li>
+    </ul>
+    
+    <h3 class="section-subtitle">Prestige Point Calculation</h3>
+    <ul style="margin-left: 20px; line-height: 1.8; margin-bottom: 20px;">
+      <li><strong>Level</strong> - 1 point per 5 levels</li>
+      <li><strong>XP</strong> - 1 point per 10,000 XP</li>
+      <li><strong>Cash</strong> - 1 point per 100,000 cash</li>
+      <li><strong>Crimes</strong> - 1 point per 100 crimes</li>
+      <li><strong>Jobs</strong> - 1 point per 100 jobs</li>
+      <li><strong>Maximum</strong> - Capped at 100 points per prestige</li>
+    </ul>
+    
+    <h3 class="section-subtitle">Prestige Perks</h3>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">⭐</div>
+        <div class="feature-title">XP Master</div>
+        <div class="feature-desc">+5% XP per level (max 10)</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">💰</div>
+        <div class="feature-title">Cash Lord</div>
+        <div class="feature-desc">+5% cash per level (max 10)</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">⚡</div>
+        <div class="feature-title">Energy Surge</div>
+        <div class="feature-desc">+10% energy regen per level (max 5)</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔫</div>
+        <div class="feature-title">Crime Genius</div>
+        <div class="feature-desc">+2% crime success per level (max 10)</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">⚔️</div>
+        <div class="feature-title">PvP Champion</div>
+        <div class="feature-desc">+5% PvP power per level (max 5)</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📈</div>
+        <div class="feature-title">Market Tycoon</div>
+        <div class="feature-desc">-10% market fees per level (max 5)</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">💎</div>
+        <div class="feature-title">Rich Start</div>
+        <div class="feature-desc">+10,000 starting cash per level (max 5)</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🍀</div>
+        <div class="feature-title">Lucky Finder</div>
+        <div class="feature-desc">+2% item find chance per level (max 5)</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔥</div>
+        <div class="feature-title">Streak Master</div>
+        <div class="feature-desc">+10% streak bonus per level (max 5)</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">👑</div>
+        <div class="feature-title">Prestige Master</div>
+        <div class="feature-desc">+1 extra point per prestige (max 3)</div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- FAQ Tab -->
 <div id="faq" class="tab-content">
   <div class="guide-section">
@@ -680,7 +944,7 @@
         <span class="toggle-icon">+</span>
       </div>
       <div class="faq-answer hidden">
-        Energy regenerates automatically at a rate of 1 point per minute. You can also use Energy Drink items to restore energy instantly. The energy bar shows a timer for when your next energy point will regenerate.
+        Energy regenerates automatically at a rate of 1 point per minute. You can also use Energy Drink items to restore energy instantly. The energy bar shows a timer for when your next energy point will regenerate. Prestige perks can increase your energy regeneration rate.
       </div>
     </div>
     
@@ -704,6 +968,7 @@
         - Using temporary boost items (Energy Drink, Lucky Charm)<br>
         - Permanent boosts from achievements<br>
         - Training Manual items for permanent boost<br>
+        - Prestige perks (Crime Genius)<br>
         - Higher level also unlocks easier crimes
       </div>
     </div>
@@ -735,6 +1000,56 @@
       </div>
       <div class="faq-answer hidden">
         Achievements are milestones you can complete, like committing 100 crimes or earning ₹1,000,000. When you complete them, you earn cash and XP rewards. Check the Achievements page to track your progress!
+      </div>
+    </div>
+    
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFAQ(this)">
+        How does PvP work?
+        <span class="toggle-icon">+</span>
+      </div>
+      <div class="faq-answer hidden">
+        PvP battles cost 20 energy. Both players lose 10 health. The winner takes 5% of the defender's cash and earns 50 XP. You can't attack the same player for 1 hour. Your rank points determine your title and matchmaking.
+      </div>
+    </div>
+    
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFAQ(this)">
+        What are the benefits of joining a gang?
+        <span class="toggle-icon">+</span>
+      </div>
+      <div class="faq-answer hidden">
+        Gangs provide permanent passive bonuses to all members, including XP boosts, cash boosts, energy regeneration, crime success rate, PvP power, and market fee reductions. You also get access to gang chat and can participate in gang activities.
+      </div>
+    </div>
+    
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFAQ(this)">
+        How does the market work?
+        <span class="toggle-icon">+</span>
+      </div>
+      <div class="faq-answer hidden">
+        The market allows you to buy and sell items with other players. Listings cost a 5% fee and last 7 days. You can buy any quantity from listings. Price history helps you determine fair prices.
+      </div>
+    </div>
+    
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFAQ(this)">
+        What are daily rewards?
+        <span class="toggle-icon">+</span>
+      </div>
+      <div class="faq-answer hidden">
+        Daily rewards give you free items and resources every day you log in. Your streak increases with consecutive logins, and every 7 days you get a 2x bonus. There are also special monthly rewards on holidays!
+      </div>
+    </div>
+    
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFAQ(this)">
+        What is Prestige mode?
+        <span class="toggle-icon">+</span>
+      </div>
+      <div class="faq-answer hidden">
+        Prestige mode becomes available at level 10. When you prestige, you reset your level, XP, cash, and items, but earn Prestige Points based on your accomplishments. These points can be spent on permanent perks that boost all your future gameplay. Each prestige level makes you permanently stronger!
       </div>
     </div>
     
@@ -804,6 +1119,31 @@
       <div class="tip-item">
         <div class="tip-icon">📜</div>
         <div class="tip-text"><strong>Learn from history</strong> - Check your crime history to see which crimes you succeed at most often. Focus on your strengths!</div>
+      </div>
+      
+      <div class="tip-item">
+        <div class="tip-icon">⚔️</div>
+        <div class="tip-text"><strong>PvP selectively</strong> - Check opponent power before attacking. Target players with similar or slightly lower power for best results.</div>
+      </div>
+      
+      <div class="tip-item">
+        <div class="tip-icon">🏢</div>
+        <div class="tip-text"><strong>Join an active gang</strong> - Active gangs unlock more perks and provide better bonuses. Contribute to help your gang grow.</div>
+      </div>
+      
+      <div class="tip-item">
+        <div class="tip-icon">📈</div>
+        <div class="tip-text"><strong>Watch market trends</strong> - Buy low, sell high. Check price history to identify profitable trading opportunities.</div>
+      </div>
+      
+      <div class="tip-item">
+        <div class="tip-icon">🎁</div>
+        <div class="tip-text"><strong>Never miss a daily reward</strong> - The streak bonus makes daily rewards increasingly valuable. Set a reminder to log in every day!</div>
+      </div>
+      
+      <div class="tip-item">
+        <div class="tip-icon">🔄</div>
+        <div class="tip-text"><strong>Prestige strategically</strong> - Wait until you have high stats before prestiging to maximize points. Early prestiges are faster, later prestiges give more total power.</div>
       </div>
     </div>
   </div>
