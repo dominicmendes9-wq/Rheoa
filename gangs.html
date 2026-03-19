@@ -482,31 +482,7 @@
       transform: scale(1.02);
     }
     
-    /* Toast Notifications */
-    .toast-container {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      z-index: 9999;
-    }
-    
-    .toast {
-      padding: 15px 25px;
-      margin-bottom: 10px;
-      border-radius: 8px;
-      color: white;
-      font-weight: bold;
-      animation: slideIn 0.3s ease-out;
-    }
-    
-    .toast.success { background: #4CAF50; }
-    .toast.error { background: #f44336; }
-    .toast.info { background: #2196F3; }
-    
-    @keyframes slideIn {
-      from { transform: translateX(100%); opacity: 0; }
-      to { transform: translateX(0); opacity: 1; }
-    }
+    /* Toast container styles are now in toast.js - removing duplicate */
     
     @media (max-width: 900px) {
       .gangs-container {
@@ -517,7 +493,7 @@
 </head>
 <body>
 
-<div class="toast-container" id="toast-container"></div>
+<!-- Toast container is created by toast.js, removed static container -->
 
 <h1>🏢 Gangs</h1>
 <div class="subtitle">Join forces with other players!</div>
@@ -619,12 +595,16 @@
 
 <button class="back-button" onclick="goToDashboard()">← Back to Dashboard</button>
 
+<!-- Script includes: Supabase library + shared utilities -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<script src="supabase.js"></script>
+<script src="toast.js"></script>
+<script src="loading.js"></script>
+<script src="error-handler.js"></script>
+
 <script>
-const sb = window.supabase.createClient(
-  "https://mtiwodvsrwvrujbhmmrn.supabase.co",
-  "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
-);
+// Use the shared supabase client
+const sb = window.supabaseClient;
 
 let currentPlayer = null;
 let currentGang = null;
@@ -635,44 +615,26 @@ let unlockedPerks = [];
 let chatMessages = [];
 let chatSubscription = null;
 
-// Toast notification
-function showToast(message, type = 'info', duration = 3000) {
-  const container = document.getElementById('toast-container');
-  const toast = document.createElement('div');
-  toast.className = `toast ${type}`;
-  toast.textContent = message;
-  
-  container.appendChild(toast);
-  
-  setTimeout(() => {
-    toast.classList.add('fade-out');
-    setTimeout(() => {
-      if (toast.parentNode) {
-        container.removeChild(toast);
-      }
-    }, 300);
-  }, duration);
-}
-
 // Load player data
 async function loadPlayerData() {
   try {
-    const { data: { user } } = await sb.auth.getUser();
+    const user = await window.getCurrentUser();
     if (!user) return window.location.href = "index.html";
     
-    const { data: player } = await sb
-      .from('players')
-      .select('*')
-      .eq('auth_id', user.id)
-      .single();
-    
-    if (player) {
-      currentPlayer = player;
-      await loadPlayerGang();
-      await loadPendingInvites();
+    const player = await window.getCurrentPlayer();
+    if (!player) {
+      window.showToast('Player not found', 'error');
+      return;
     }
+    
+    currentPlayer = player;
+    await loadPlayerGang();
+    await loadPendingInvites();
+    
   } catch (error) {
     console.error('Error loading player:', error);
+    const friendlyMessage = window.ErrorHandler.handleSupabaseError(error, 'Error loading data');
+    window.showToast(friendlyMessage, 'error');
   }
 }
 
@@ -680,24 +642,28 @@ async function loadPlayerData() {
 async function loadPlayerGang() {
   try {
     // Check if player is in a gang
-    const { data: membership } = await sb
+    const { data: membership, error: membershipError } = await sb
       .from('gang_members')
       .select('gang_id, role')
       .eq('player_id', currentPlayer.id)
-      .single();
+      .maybeSingle();
+    
+    if (membershipError) throw membershipError;
     
     if (membership) {
       // Load gang details
-      const { data: gang } = await sb
+      const { data: gang, error: gangError } = await sb
         .from('gangs')
         .select('*')
         .eq('id', membership.gang_id)
         .single();
       
+      if (gangError) throw gangError;
+      
       currentGang = gang;
       
       // Load members
-      const { data: members } = await sb
+      const { data: members, error: membersError } = await sb
         .from('gang_members')
         .select(`
           *,
@@ -708,6 +674,8 @@ async function loadPlayerGang() {
         `)
         .eq('gang_id', membership.gang_id)
         .order('role', { ascending: true });
+      
+      if (membersError) throw membersError;
       
       gangMembers = members || [];
       
@@ -727,6 +695,7 @@ async function loadPlayerGang() {
     }
   } catch (error) {
     console.error('Error loading gang:', error);
+    window.showToast('Error loading gang data', 'error');
   }
 }
 
@@ -774,7 +743,7 @@ function updateGangSidebar() {
     <div class="gang-stats">
       <div class="gang-stat">
         <div class="gang-stat-label">Your Role</div>
-        <div class="gang-stat-value">${getRoleBadge(gangMembers.find(m => m.player_id === currentPlayer.id).role)}</div>
+        <div class="gang-stat-value">${getRoleBadge(gangMembers.find(m => m.player_id === currentPlayer.id)?.role || 'member')}</div>
       </div>
     </div>
   `;
@@ -805,8 +774,8 @@ function updateMembersList() {
     <div class="member-item">
       <div class="member-rank">#${index + 1}</div>
       <div>
-        <div class="member-name">${member.players.username}</div>
-        <div style="font-size: 0.8rem; color: #666;">Lvl ${member.players.level}</div>
+        <div class="member-name">${member.players?.username || 'Unknown'}</div>
+        <div style="font-size: 0.8rem; color: #666;">Lvl ${member.players?.level || 0}</div>
       </div>
       <div>${getRoleBadge(member.role)}</div>
     </div>
@@ -816,23 +785,28 @@ function updateMembersList() {
 // Load gang perks
 async function loadGangPerks() {
   try {
-    const { data: perks } = await sb
+    const { data: perks, error: perksError } = await sb
       .from('gang_perks')
       .select('*')
       .order('level_required');
     
+    if (perksError) throw perksError;
+    
     gangPerks = perks || [];
     
-    const { data: unlocked } = await sb
+    const { data: unlocked, error: unlockedError } = await sb
       .from('gang_unlocked_perks')
       .select('perk_id')
       .eq('gang_id', currentGang.id);
+    
+    if (unlockedError) throw unlockedError;
     
     unlockedPerks = (unlocked || []).map(u => u.perk_id);
     
     renderPerks();
   } catch (error) {
     console.error('Error loading perks:', error);
+    window.showToast('Error loading perks', 'error');
   }
 }
 
@@ -847,7 +821,7 @@ function renderPerks() {
   
   container.innerHTML = gangPerks.map(perk => {
     const isUnlocked = unlockedPerks.includes(perk.id);
-    const canUnlock = currentGang.level >= perk.level_required && !isUnlocked;
+    const canUnlock = currentGang && currentGang.level >= perk.level_required && !isUnlocked;
     
     return `
       <div class="perk-card ${isUnlocked ? 'unlocked' : ''}">
@@ -869,7 +843,7 @@ function renderPerks() {
 // Load pending invites
 async function loadPendingInvites() {
   try {
-    const { data: invites } = await sb
+    const { data: invites, error } = await sb
       .from('gang_invites')
       .select(`
         *,
@@ -885,10 +859,13 @@ async function loadPendingInvites() {
       .eq('player_id', currentPlayer.id)
       .eq('status', 'pending');
     
+    if (error) throw error;
+    
     pendingInvites = invites || [];
     renderInvites();
   } catch (error) {
     console.error('Error loading invites:', error);
+    window.showToast('Error loading invites', 'error');
   }
 }
 
@@ -904,9 +881,9 @@ function renderInvites() {
   container.innerHTML = pendingInvites.map(invite => `
     <div class="invite-item">
       <div class="invite-info">
-        <div class="invite-gang">[${invite.gangs.tag}] ${invite.gangs.name}</div>
+        <div class="invite-gang">[${invite.gangs?.tag || '??'}] ${invite.gangs?.name || 'Unknown'}</div>
         <div class="invite-meta">
-          Level ${invite.gangs.level} • Invited by ${invite.players.username}
+          Level ${invite.gangs?.level || 0} • Invited by ${invite.players?.username || 'Unknown'}
         </div>
       </div>
       <div class="invite-actions">
@@ -924,12 +901,12 @@ async function createGang() {
   const description = document.getElementById('gangDescription').value.trim();
   
   if (!name || !tag) {
-    showToast('Please fill in all fields', 'error');
+    window.showToast('Please fill in all fields', 'error');
     return;
   }
   
   if (tag.length < 2 || tag.length > 4) {
-    showToast('Tag must be 2-4 characters', 'error');
+    window.showToast('Tag must be 2-4 characters', 'error');
     return;
   }
   
@@ -943,15 +920,16 @@ async function createGang() {
     if (error) throw error;
     
     if (data.success) {
-      showToast('Gang created successfully!', 'success');
+      window.showToast('Gang created successfully!', 'success');
       await loadPlayerGang();
       switchTab('overview');
     } else {
-      showToast(data.error || 'Failed to create gang', 'error');
+      window.showToast(data.error || 'Failed to create gang', 'error');
     }
   } catch (error) {
     console.error('Error creating gang:', error);
-    showToast('Error creating gang', 'error');
+    const friendlyMessage = window.ErrorHandler.handleSupabaseError(error, 'Error creating gang');
+    window.showToast(friendlyMessage, 'error');
   }
 }
 
@@ -965,30 +943,34 @@ async function acceptInvite(inviteId) {
     if (error) throw error;
     
     if (data.success) {
-      showToast('Joined gang!', 'success');
+      window.showToast('Joined gang!', 'success');
       await loadPlayerGang();
       switchTab('overview');
     } else {
-      showToast(data.error || 'Failed to join', 'error');
+      window.showToast(data.error || 'Failed to join', 'error');
     }
   } catch (error) {
     console.error('Error accepting invite:', error);
-    showToast('Error joining gang', 'error');
+    const friendlyMessage = window.ErrorHandler.handleSupabaseError(error, 'Error joining gang');
+    window.showToast(friendlyMessage, 'error');
   }
 }
 
 // Decline invite
 async function declineInvite(inviteId) {
   try {
-    await sb
+    const { error } = await sb
       .from('gang_invites')
       .update({ status: 'declined' })
       .eq('id', inviteId);
     
-    showToast('Invite declined', 'info');
+    if (error) throw error;
+    
+    window.showToast('Invite declined', 'info');
     await loadPendingInvites();
   } catch (error) {
     console.error('Error declining invite:', error);
+    window.showToast('Error declining invite', 'error');
   }
 }
 
@@ -999,7 +981,7 @@ async function searchGangs() {
   if (!searchTerm) return;
   
   try {
-    const { data } = await sb
+    const { data, error } = await sb
       .from('gangs')
       .select(`
         *,
@@ -1008,6 +990,8 @@ async function searchGangs() {
       .or(`name.ilike.%${searchTerm}%,tag.ilike.%${searchTerm}%`)
       .limit(20);
     
+    if (error) throw error;
+    
     const results = document.getElementById('searchResults');
     
     if (!data || data.length === 0) {
@@ -1015,17 +999,21 @@ async function searchGangs() {
       return;
     }
     
-    results.innerHTML = data.map(gang => `
-      <div class="gang-result">
-        <div class="gang-result-info">
-          <div class="gang-result-name">[${gang.tag}] ${gang.name}</div>
-          <div>Level ${gang.level} • ${gang.gang_members[0].count}/${gang.max_members} members</div>
+    results.innerHTML = data.map(gang => {
+      const memberCount = gang.gang_members?.[0]?.count || 0;
+      return `
+        <div class="gang-result">
+          <div class="gang-result-info">
+            <div class="gang-result-name">[${gang.tag}] ${gang.name}</div>
+            <div>Level ${gang.level} • ${memberCount}/${gang.max_members} members</div>
+          </div>
+          <button class="request-btn" onclick="requestToJoin('${gang.id}')">Request</button>
         </div>
-        <button class="request-btn" onclick="requestToJoin('${gang.id}')">Request</button>
-      </div>
-    `).join('');
+      `;
+    }).join('');
   } catch (error) {
     console.error('Error searching gangs:', error);
+    window.showToast('Error searching gangs', 'error');
   }
 }
 
@@ -1041,10 +1029,11 @@ async function requestToJoin(gangId) {
     
     if (error) throw error;
     
-    showToast('Join request sent!', 'success');
+    window.showToast('Join request sent!', 'success');
   } catch (error) {
     console.error('Error requesting to join:', error);
-    showToast('Error sending request', 'error');
+    const friendlyMessage = window.ErrorHandler.handleSupabaseError(error, 'Error sending request');
+    window.showToast(friendlyMessage, 'error');
   }
 }
 
@@ -1078,7 +1067,7 @@ function subscribeToChat() {
 // Load chat messages
 async function loadChatMessages() {
   try {
-    const { data } = await sb
+    const { data, error } = await sb
       .from('gang_messages')
       .select(`
         *,
@@ -1090,10 +1079,13 @@ async function loadChatMessages() {
       .order('created_at', { ascending: false })
       .limit(50);
     
+    if (error) throw error;
+    
     chatMessages = (data || []).reverse();
     renderChatMessages();
   } catch (error) {
     console.error('Error loading chat:', error);
+    window.showToast('Error loading chat', 'error');
   }
 }
 
@@ -1103,7 +1095,7 @@ function renderChatMessages() {
   
   container.innerHTML = chatMessages.map(msg => `
     <div class="chat-message">
-      <span class="chat-sender">${msg.players.username}</span>
+      <span class="chat-sender">${msg.players?.username || 'Unknown'}</span>
       <span class="chat-time">${new Date(msg.created_at).toLocaleTimeString()}</span>
       <div class="chat-text">${msg.message}</div>
     </div>
@@ -1121,7 +1113,7 @@ async function sendChatMessage() {
   if (!message || !currentGang) return;
   
   try {
-    await sb
+    const { error } = await sb
       .from('gang_messages')
       .insert({
         gang_id: currentGang.id,
@@ -1129,10 +1121,19 @@ async function sendChatMessage() {
         message: message
       });
     
+    if (error) throw error;
+    
     input.value = '';
   } catch (error) {
     console.error('Error sending message:', error);
+    window.showToast('Error sending message', 'error');
   }
+}
+
+// Unlock perk
+async function unlockPerk(perkId) {
+  // This function needs to be implemented in your backend
+  window.showToast('Perk unlocking not implemented yet', 'info');
 }
 
 // Switch tabs
@@ -1179,7 +1180,11 @@ document.getElementById('searchInput')?.addEventListener('input', () => {
 });
 
 // Initialize
-loadPlayerData();
+window.ErrorHandler.withErrorHandling(
+  loadPlayerData,
+  null,
+  'Failed to load gangs'
+).catch(() => {});
 
 // Clean up
 window.addEventListener('beforeunload', () => {
