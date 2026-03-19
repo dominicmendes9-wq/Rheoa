@@ -1,8 +1,10 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <title>Rheoa RPG - Crime History</title>
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
   <style>
     * {
       box-sizing: border-box;
@@ -16,12 +18,14 @@
       color: #222; 
       padding: 20px;
       min-height: 100vh;
+      position: relative;
     }
     
     h1 { 
       text-align: center; 
       margin-bottom: 10px;
       font-size: clamp(1.5rem, 5vw, 2.5rem);
+      animation: fadeInDown 0.6s ease-out;
     }
     
     .subtitle {
@@ -29,6 +33,17 @@
       color: #666;
       margin-bottom: 30px;
       font-style: italic;
+      animation: fadeInUp 0.6s ease-out 0.1s both;
+    }
+
+    @keyframes fadeInDown {
+      from { opacity: 0; transform: translateY(-20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
     }
     
     /* Stats Summary */
@@ -42,10 +57,24 @@
       background: white;
       border-radius: 12px;
       border: 2px solid black;
+      animation: slideIn 0.5s ease-out;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(-20px); }
+      to { opacity: 1; transform: translateX(0); }
     }
     
     .stat-card {
       text-align: center;
+      padding: 10px;
+      transition: transform 0.2s;
+      cursor: pointer;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-2px);
     }
     
     .stat-label {
@@ -69,27 +98,38 @@
       gap: 10px;
       margin-bottom: 30px;
       flex-wrap: wrap;
+      animation: fadeIn 0.6s ease-out 0.2s both;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
     }
     
     .filter-btn {
-      padding: 10px 20px;
+      padding: 12px 25px;
       font-family: 'Courier New', monospace;
       font-weight: bold;
       border: 2px solid black;
       border-radius: 25px;
       background: white;
       cursor: pointer;
-      transition: all 0.2s;
+      transition: all 0.3s;
+      position: relative;
+      overflow: hidden;
     }
     
     .filter-btn:hover {
       background: #333;
       color: white;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
     }
     
     .filter-btn.active {
       background: #333;
       color: white;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
     }
     
     .filter-btn.success.active {
@@ -103,10 +143,28 @@
       border-color: #f44336;
       color: white;
     }
+
+    .filter-btn::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.2);
+      transform: translate(-50%, -50%);
+      transition: width 0.6s, height 0.6s;
+    }
+
+    .filter-btn:active::after {
+      width: 200px;
+      height: 200px;
+    }
     
     .history-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
       gap: 20px;
       padding: 10px;
       max-width: 1400px;
@@ -118,14 +176,39 @@
       border-radius: 12px; 
       padding: 20px; 
       background: white;
-      transition: transform 0.2s;
+      transition: all 0.3s;
       position: relative;
       overflow: hidden;
+      animation: cardFadeIn 0.5s ease-out;
+      cursor: pointer;
+    }
+
+    .history-card:nth-child(odd) {
+      animation: cardFadeInLeft 0.5s ease-out;
+    }
+
+    .history-card:nth-child(even) {
+      animation: cardFadeInRight 0.5s ease-out;
+    }
+
+    @keyframes cardFadeIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    @keyframes cardFadeInLeft {
+      from { opacity: 0; transform: translateX(-20px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    @keyframes cardFadeInRight {
+      from { opacity: 0; transform: translateX(20px); }
+      to { opacity: 1; transform: translateX(0); }
     }
     
     .history-card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      transform: translateY(-5px) scale(1.02);
+      box-shadow: 0 8px 25px rgba(0,0,0,0.15);
     }
     
     .history-card::before {
@@ -138,11 +221,11 @@
     }
     
     .history-card.success::before {
-      background: #4CAF50;
+      background: linear-gradient(90deg, #4CAF50, #8BC34A);
     }
     
     .history-card.fail::before {
-      background: #f44336;
+      background: linear-gradient(90deg, #f44336, #ff9800);
     }
     
     .crime-name {
@@ -150,6 +233,9 @@
       font-weight: bold;
       margin-bottom: 10px;
       padding-right: 30px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
     
     .crime-date {
@@ -164,20 +250,28 @@
     .crime-result {
       font-size: 1.1rem;
       font-weight: bold;
-      padding: 8px 12px;
+      padding: 8px 15px;
       border-radius: 6px;
       display: inline-block;
       margin-bottom: 15px;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.02); }
     }
     
     .crime-result.success {
       background: #e8f5e8;
       color: #2e7d32;
+      border-left: 4px solid #4CAF50;
     }
     
     .crime-result.fail {
       background: #ffebee;
       color: #c62828;
+      border-left: 4px solid #f44336;
     }
     
     .crime-details {
@@ -191,15 +285,21 @@
     
     .crime-detail-item {
       text-align: center;
-      padding: 8px;
+      padding: 10px;
       background: #f5f5f5;
-      border-radius: 6px;
+      border-radius: 8px;
+      transition: all 0.2s;
+    }
+
+    .crime-detail-item:hover {
+      background: #e0e0e0;
+      transform: scale(1.05);
     }
     
     .detail-label {
       font-size: 0.8rem;
       color: #666;
-      margin-bottom: 3px;
+      margin-bottom: 5px;
     }
     
     .detail-value {
@@ -212,7 +312,7 @@
     .back-button {
       display: block;
       width: 200px;
-      margin: 30px auto;
+      margin: 40px auto;
       padding: 12px 24px;
       font-size: 1rem;
       font-family: 'Courier New', monospace;
@@ -222,12 +322,38 @@
       background: #666;
       color: white;
       cursor: pointer;
-      transition: all 0.2s;
+      transition: all 0.3s;
+      position: relative;
+      overflow: hidden;
+      animation: fadeInUp 0.6s ease-out 0.4s both;
     }
     
     .back-button:hover {
       background: #555;
-      transform: scale(1.02);
+      transform: scale(1.05) translateY(-2px);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+
+    .back-button:active {
+      transform: scale(0.95);
+    }
+
+    .back-button::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.2);
+      transform: translate(-50%, -50%);
+      transition: width 0.6s, height 0.6s;
+    }
+
+    .back-button:hover::after {
+      width: 300px;
+      height: 300px;
     }
     
     .empty-history {
@@ -239,6 +365,7 @@
       border-radius: 12px;
       border: 2px dashed #ccc;
       grid-column: 1 / -1;
+      animation: fadeIn 0.5s ease-out;
     }
     
     .loading {
@@ -248,43 +375,138 @@
       font-size: 1.2rem;
       grid-column: 1 / -1;
     }
-    
-    /* Toast Notification Styles */
-    .toast-container {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      z-index: 9999;
+
+    /* Search bar */
+    .search-container {
+      max-width: 400px;
+      margin: 20px auto;
+      position: relative;
+      animation: fadeIn 0.6s ease-out 0.15s both;
     }
-    
-    .toast {
-      padding: 15px 25px;
-      margin-bottom: 10px;
-      border-radius: 8px;
+
+    .search-input {
+      width: 100%;
+      padding: 12px 20px;
+      font-family: 'Courier New', monospace;
+      font-size: 1rem;
+      border: 2px solid #667eea;
+      border-radius: 50px;
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    .search-input:focus {
+      box-shadow: 0 0 20px rgba(102, 126, 234, 0.3);
+      transform: scale(1.02);
+    }
+
+    .search-button {
+      position: absolute;
+      right: 5px;
+      top: 5px;
+      padding: 7px 20px;
+      background: #667eea;
       color: white;
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      font-family: 'Courier New', monospace;
       font-weight: bold;
-      animation: slideIn 0.3s ease-out;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      min-width: 250px;
-      max-width: 350px;
+      transition: all 0.2s;
     }
-    
-    .toast.success { background: #4CAF50; }
-    .toast.error { background: #f44336; }
-    .toast.info { background: #2196F3; }
-    
-    @keyframes slideIn {
-      from { transform: translateX(100%); opacity: 0; }
-      to { transform: translateX(0); opacity: 1; }
+
+    .search-button:hover {
+      background: #764ba2;
+      transform: scale(1.05);
     }
-    
-    @keyframes slideOut {
-      from { transform: translateX(0); opacity: 1; }
-      to { transform: translateX(100%); opacity: 0; }
+
+    /* Export button */
+    .export-btn {
+      padding: 10px 20px;
+      background: #9c27b0;
+      color: white;
+      border: none;
+      border-radius: 25px;
+      font-family: 'Courier New', monospace;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
     }
-    
-    .toast.fade-out {
-      animation: slideOut 0.3s ease-out forwards;
+
+    .export-btn:hover {
+      background: #7b1fa2;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 10px rgba(156, 39, 176, 0.3);
+    }
+
+    .export-btn:active {
+      transform: translateY(0);
+    }
+
+    /* Timeline view */
+    .timeline-toggle {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin: 20px 0;
+    }
+
+    .timeline-btn {
+      padding: 8px 16px;
+      background: white;
+      border: 2px solid #667eea;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .timeline-btn.active {
+      background: #667eea;
+      color: white;
+    }
+
+    .timeline-btn:hover {
+      background: #764ba2;
+      color: white;
+    }
+
+    /* Scroll to top button */
+    .scroll-top {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: #667eea;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-size: 24px;
+      display: none;
+      justify-content: center;
+      align-items: center;
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+      transition: all 0.2s;
+      z-index: 1000;
+      animation: fadeInScale 0.3s ease-out;
+    }
+
+    .scroll-top:hover {
+      transform: scale(1.1);
+      background: #764ba2;
+    }
+
+    .scroll-top.visible {
+      display: flex;
+    }
+
+    @keyframes fadeInScale {
+      from { opacity: 0; transform: scale(0.5); }
+      to { opacity: 1; transform: scale(1); }
     }
     
     @media (max-width: 600px) {
@@ -311,50 +533,99 @@
         width: 100%;
       }
       
-      .toast {
-        min-width: 200px;
-        max-width: 280px;
-        padding: 12px 20px;
-        font-size: 0.9rem;
-      }
-      
       .filter-container {
-        flex-direction: column;
-        align-items: stretch;
-        padding: 0 10px;
+        flex-direction: row;
+        flex-wrap: wrap;
+        padding: 0 5px;
       }
       
       .filter-btn {
-        width: 100%;
+        flex: 1;
+        min-width: 100px;
+        padding: 10px;
       }
+
+      .search-container {
+        margin: 15px auto;
+        padding: 0 10px;
+      }
+
+      .export-btn {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+
+    /* Print styles */
+    @media print {
+      .filter-container, .search-container, .export-btn, .back-button, .scroll-top {
+        display: none !important;
+      }
+      
+      .history-card {
+        break-inside: avoid;
+        page-break-inside: avoid;
+        border: 1px solid #000;
+        box-shadow: none;
+      }
+    }
+
+    /* Progress bar */
+    .reading-progress {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 0%;
+      height: 3px;
+      background: linear-gradient(90deg, #667eea, #764ba2, #4CAF50, #f44336);
+      z-index: 1001;
+      transition: width 0.1s;
     }
   </style>
 </head>
 <body>
+
+<!-- Reading progress bar -->
+<div class="reading-progress" id="readingProgress"></div>
+
+<!-- Scroll to top button -->
+<button class="scroll-top" onclick="scrollToTop()" id="scrollTopBtn" aria-label="Scroll to top">↑</button>
 
 <div class="toast-container" id="toast-container"></div>
 
 <h1>📜 Crime History</h1>
 <div class="subtitle">Track your criminal record</div>
 
+<!-- Search Bar -->
+<div class="search-container">
+  <input type="text" class="search-input" id="searchInput" placeholder="🔍 Search crimes..." onkeyup="if(event.key==='Enter') searchHistory()">
+  <button class="search-button" onclick="searchHistory()">Search</button>
+</div>
+
 <!-- Stats Summary -->
 <div id="statsSummary" class="stats-summary" style="display: none;">
-  <div class="stat-card">
+  <div class="stat-card" onclick="filterHistory('all')">
     <div class="stat-label">Total Crimes</div>
     <div class="stat-value" id="totalCrimes">0</div>
   </div>
-  <div class="stat-card">
+  <div class="stat-card" onclick="filterHistory('all')">
     <div class="stat-label">Success Rate</div>
     <div class="stat-value" id="successRate">0%</div>
   </div>
-  <div class="stat-card">
+  <div class="stat-card" onclick="filterHistory('success')">
     <div class="stat-label">Successful</div>
     <div class="stat-value success" id="successCount">0</div>
   </div>
-  <div class="stat-card">
+  <div class="stat-card" onclick="filterHistory('fail')">
     <div class="stat-label">Failed</div>
     <div class="stat-value fail" id="failCount">0</div>
   </div>
+</div>
+
+<!-- Timeline/Grid Toggle -->
+<div class="timeline-toggle">
+  <button class="timeline-btn active" onclick="toggleView('grid')" id="gridViewBtn">📊 Grid View</button>
+  <button class="timeline-btn" onclick="toggleView('timeline')" id="timelineViewBtn">📅 Timeline</button>
 </div>
 
 <!-- Filter Buttons -->
@@ -364,188 +635,594 @@
   <button class="filter-btn fail" onclick="filterHistory('fail')" id="filterFail">❌ Failed</button>
 </div>
 
-<div id="history" class="history-grid">
-  <div class="loading">Loading your criminal record...</div>
+<!-- Export Button -->
+<div style="text-align: center; margin: 20px 0;">
+  <button class="export-btn" onclick="exportHistory()">
+    📥 Export History (CSV)
+  </button>
 </div>
+
+<!-- History Container -->
+<div id="history" class="history-grid">
+  <div class="loading">
+    <div class="loading-spinner">
+      <div class="spinner"></div>
+      <p>Loading your criminal record...</p>
+    </div>
+  </div>
+</div>
+
+<!-- Timeline Container (hidden by default) -->
+<div id="timeline" class="timeline-container" style="display: none;"></div>
 
 <button class="back-button" onclick="goBack()">← Back to Dashboard</button>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<!-- Include shared utilities -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase.js"></script>
+<script src="toast.js"></script>
+<script src="loading.js"></script>
+<script src="error-handler.js"></script>
+
 <script>
-const sb = window.supabase.createClient(
-  "https://mtiwodvsrwvrujbhmmrn.supabase.co",
-  "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
-);
+// Initialize Supabase client
+const sb = window.supabaseClient;
 
 let player = null;
 let allHistory = [];
 let currentFilter = 'all';
+let currentView = 'grid';
 
-// Toast notification system
-function showToast(message, type = 'info', duration = 3000) {
-  const container = document.getElementById('toast-container');
-  const toast = document.createElement('div');
-  toast.className = `toast ${type}`;
-  toast.textContent = message;
-  
-  container.appendChild(toast);
-  
-  setTimeout(() => {
-    toast.classList.add('fade-out');
-    setTimeout(() => {
-      if (toast.parentNode) {
-        container.removeChild(toast);
-      }
-    }, 300);
-  }, duration);
+// Page initialization
+document.addEventListener('DOMContentLoaded', async function() {
+    await initializePage();
+    setupScrollToTop();
+    setupReadingProgress();
+    setupKeyboardNavigation();
+});
+
+// Initialize page
+async function initializePage() {
+    return ErrorHandler.withErrorHandling(async () => {
+        // Check authentication
+        const user = await getCurrentUser();
+        if (!user) {
+            showToast('Please log in to view history', 'warning', 3000);
+            setTimeout(() => {
+                window.location.href = "index.html";
+            }, 2000);
+            return;
+        }
+
+        // Load player data
+        player = await getCurrentPlayer();
+        if (!player) {
+            showToast('Player data not found', 'error');
+            return;
+        }
+
+        // Load history
+        await loadHistory();
+        
+        // Show welcome toast
+        showToast(`Welcome back, ${player.username || 'Commander'}!`, 'success', 3000);
+    }, 'history', 'Failed to initialize page');
+}
+
+// Load history from database
+async function loadHistory() {
+    return ErrorHandler.withErrorHandling(async () => {
+        const { data: history, error } = await sb
+            .from('player_crimes')
+            .select(`
+                id,
+                crime_id,
+                last_attempt,
+                success,
+                crimes (
+                    name,
+                    reward_cash,
+                    reward_xp,
+                    fail_penalty,
+                    level_required,
+                    energy_cost
+                )
+            `)
+            .eq('player_id', player.id)
+            .order('last_attempt', { ascending: false });
+
+        if (error) throw error;
+
+        allHistory = history || [];
+        calculateStats();
+        displayHistory();
+        
+        if (allHistory.length > 0) {
+            showToast(`📊 Loaded ${allHistory.length} crime records`, 'info', 2000);
+        }
+    }, 'history', 'Error loading history');
+}
+
+// Calculate statistics
+function calculateStats() {
+    const total = allHistory.length;
+    if (total === 0) return;
+    
+    const successCount = allHistory.filter(h => h.success === true).length;
+    const failCount = allHistory.filter(h => h.success === false).length;
+    const successRate = Math.round((successCount / total) * 100);
+    
+    document.getElementById('totalCrimes').textContent = total;
+    document.getElementById('successCount').textContent = successCount;
+    document.getElementById('failCount').textContent = failCount;
+    document.getElementById('successRate').textContent = `${successRate}%`;
+    document.getElementById('statsSummary').style.display = 'grid';
 }
 
 // Filter history
 function filterHistory(filter) {
-  currentFilter = filter;
-  
-  // Update active button styles
-  document.getElementById('filterAll').classList.remove('active');
-  document.getElementById('filterSuccess').classList.remove('active');
-  document.getElementById('filterFail').classList.remove('active');
-  
-  document.getElementById(`filter${filter === 'all' ? 'All' : filter.charAt(0).toUpperCase() + filter.slice(1)}`).classList.add('active');
-  
-  displayHistory();
+    currentFilter = filter;
+    
+    // Update active button styles
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    document.getElementById(`filter${filter === 'all' ? 'All' : filter.charAt(0).toUpperCase() + filter.slice(1)}`).classList.add('active');
+    
+    displayHistory();
+    showToast(`Showing: ${filter === 'all' ? 'All crimes' : filter === 'success' ? 'Successful crimes' : 'Failed crimes'}`, 'info', 1500);
 }
 
-// Calculate stats
-function calculateStats() {
-  const total = allHistory.length;
-  if (total === 0) return;
-  
-  const successCount = allHistory.filter(h => h.success === true).length;
-  const failCount = allHistory.filter(h => h.success === false).length;
-  const successRate = Math.round((successCount / total) * 100);
-  
-  document.getElementById('totalCrimes').textContent = total;
-  document.getElementById('successCount').textContent = successCount;
-  document.getElementById('failCount').textContent = failCount;
-  document.getElementById('successRate').textContent = `${successRate}%`;
-  document.getElementById('statsSummary').style.display = 'grid';
-}
-
-// Display history based on current filter
-function displayHistory() {
-  let filteredHistory = allHistory;
-  
-  if (currentFilter === 'success') {
-    filteredHistory = allHistory.filter(h => h.success === true);
-  } else if (currentFilter === 'fail') {
-    filteredHistory = allHistory.filter(h => h.success === false);
-  }
-  
-  const historyDiv = document.getElementById("history");
-  
-  if (filteredHistory.length === 0) {
-    if (allHistory.length === 0) {
-      historyDiv.innerHTML = '<div class="empty-history">No crimes attempted yet! Head to the Crime page to start your criminal career.</div>';
-    } else {
-      historyDiv.innerHTML = `<div class="empty-history">No ${currentFilter === 'success' ? 'successful' : 'failed'} crimes found</div>`;
+// Search history
+function searchHistory() {
+    const query = document.getElementById('searchInput').value.trim().toLowerCase();
+    if (!query || query.length < 2) {
+        showToast('Please enter at least 2 characters', 'warning', 2000);
+        return;
     }
-    return;
-  }
 
-  let html = "";
-  filteredHistory.forEach(h => {
+    const filtered = allHistory.filter(h => 
+        h.crimes.name.toLowerCase().includes(query) ||
+        new Date(h.last_attempt).toLocaleString().toLowerCase().includes(query)
+    );
+
+    if (filtered.length > 0) {
+        displayFilteredHistory(filtered);
+        showToast(`Found ${filtered.length} results for "${query}"`, 'success', 2000);
+    } else {
+        showToast(`No results found for "${query}"`, 'warning', 2000);
+    }
+}
+
+// Display filtered history
+function displayFilteredHistory(history) {
+    const historyDiv = document.getElementById("history");
+    
+    if (history.length === 0) {
+        historyDiv.innerHTML = '<div class="empty-history">No matching records found</div>';
+        return;
+    }
+
+    let html = "";
+    history.forEach(h => {
+        html += createHistoryCard(h);
+    });
+
+    historyDiv.innerHTML = html;
+}
+
+// Create history card HTML
+function createHistoryCard(h) {
     const date = new Date(h.last_attempt).toLocaleString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
     });
     
     const resultClass = h.success ? 'success' : 'fail';
     const resultText = h.success ? '✅ Success' : '❌ Failed';
     const cashChange = h.success ? `+₹${h.crimes.reward_cash}` : `-₹${h.crimes.fail_penalty}`;
     const xpChange = h.success ? `+${h.crimes.reward_xp} XP` : '0 XP';
+    const riskReward = h.success ? (h.crimes.reward_cash / h.crimes.fail_penalty).toFixed(1) : '—';
     
-    html += `
-      <div class="history-card ${resultClass}">
-        <div class="crime-name">🔫 ${h.crimes.name}</div>
-        <div class="crime-date">📅 ${date}</div>
-        <div class="crime-result ${resultClass}">${resultText}</div>
-        <div class="crime-details">
-          <div class="crime-detail-item">
-            <div class="detail-label">💰 Cash</div>
-            <div class="detail-value ${h.success ? 'reward' : 'penalty'}">${cashChange}</div>
-          </div>
-          <div class="crime-detail-item">
-            <div class="detail-label">⭐ XP</div>
-            <div class="detail-value ${h.success ? 'reward' : ''}">${xpChange}</div>
-          </div>
-          <div class="crime-detail-item">
-            <div class="detail-label">${h.success ? '🎯 Rate' : '💔 Loss'}</div>
-            <div class="detail-value">${h.success ? h.crimes.reward_cash/h.crimes.fail_penalty : '—'}</div>
-          </div>
+    return `
+        <div class="history-card ${resultClass}" onclick="showCrimeDetails(${h.id})">
+            <div class="crime-name">
+                <span>🔫 ${h.crimes.name}</span>
+                <span style="font-size: 0.8rem; color: #666;">(Lvl ${h.crimes.level_required})</span>
+            </div>
+            <div class="crime-date">📅 ${date}</div>
+            <div class="crime-result ${resultClass}">${resultText}</div>
+            <div class="crime-details">
+                <div class="crime-detail-item">
+                    <div class="detail-label">💰 Cash</div>
+                    <div class="detail-value ${h.success ? 'reward' : 'penalty'}">${cashChange}</div>
+                </div>
+                <div class="crime-detail-item">
+                    <div class="detail-label">⭐ XP</div>
+                    <div class="detail-value ${h.success ? 'reward' : ''}">${xpChange}</div>
+                </div>
+                <div class="crime-detail-item">
+                    <div class="detail-label">⚡ Energy</div>
+                    <div class="detail-value">${h.crimes.energy_cost}</div>
+                </div>
+                <div class="crime-detail-item">
+                    <div class="detail-label">Risk/Reward</div>
+                    <div class="detail-value ${h.success ? 'reward' : ''}">${riskReward}</div>
+                </div>
+            </div>
         </div>
-      </div>
     `;
-  });
-
-  historyDiv.innerHTML = html;
 }
 
-async function loadHistory() {
-  const { data: { user } } = await sb.auth.getUser();
-  if (!user) return window.location.href = "index.html";
+// Display history based on current filter
+function displayHistory() {
+    let filteredHistory = allHistory;
+    
+    if (currentFilter === 'success') {
+        filteredHistory = allHistory.filter(h => h.success === true);
+    } else if (currentFilter === 'fail') {
+        filteredHistory = allHistory.filter(h => h.success === false);
+    }
+    
+    const historyDiv = document.getElementById("history");
+    
+    if (filteredHistory.length === 0) {
+        if (allHistory.length === 0) {
+            historyDiv.innerHTML = '<div class="empty-history">🎯 No crimes attempted yet! Head to the Crime page to start your criminal career.</div>';
+        } else {
+            historyDiv.innerHTML = `<div class="empty-history">No ${currentFilter === 'success' ? 'successful' : 'failed'} crimes found</div>`;
+        }
+        return;
+    }
 
-  const { data: playerData } = await sb.from('players').select('*').eq('auth_id', user.id).single();
-  if (!playerData) { 
-    document.getElementById("history").innerHTML = '<div class="empty-history">Player not found</div>'; 
-    return; 
-  }
-  player = playerData;
+    let html = "";
+    filteredHistory.forEach(h => {
+        html += createHistoryCard(h);
+    });
 
-  const { data: history, error } = await sb
-    .from('player_crimes')
-    .select(`
-      id,
-      crime_id,
-      last_attempt,
-      success,
-      crimes (
-        name,
-        reward_cash,
-        reward_xp,
-        fail_penalty
-      )
-    `)
-    .eq('player_id', player.id)
-    .order('last_attempt', { ascending: false });
-
-  if (error) {
-    document.getElementById("history").innerHTML = '<div class="empty-history">Error loading history</div>';
-    console.error(error);
-    showToast('Error loading history', 'error');
-    return;
-  }
-
-  allHistory = history || [];
-  calculateStats();
-  displayHistory();
-  
-  if (allHistory.length > 0) {
-    showToast(`Loaded ${allHistory.length} crime records`, 'info', 2000);
-  }
+    historyDiv.innerHTML = html;
 }
 
+// Show crime details in toast
+function showCrimeDetails(crimeId) {
+    const crime = allHistory.find(h => h.id === crimeId);
+    if (!crime) return;
+    
+    const date = new Date(crime.last_attempt).toLocaleString();
+    const result = crime.success ? '✅ Success' : '❌ Failed';
+    const cash = crime.success ? `+₹${crime.crimes.reward_cash}` : `-₹${crime.crimes.fail_penalty}`;
+    
+    showToast(`
+        ${crime.crimes.name} - ${result}
+        📅 ${date}
+        💰 ${cash} | ⭐ ${crime.success ? '+' + crime.crimes.reward_xp : '0'} XP
+    `, crime.success ? 'success' : 'error', 5000);
+}
+
+// Toggle between grid and timeline view
+function toggleView(view) {
+    currentView = view;
+    
+    document.getElementById('gridViewBtn').classList.toggle('active', view === 'grid');
+    document.getElementById('timelineViewBtn').classList.toggle('active', view === 'timeline');
+    
+    if (view === 'grid') {
+        document.getElementById('history').style.display = 'grid';
+        document.getElementById('timeline').style.display = 'none';
+    } else {
+        document.getElementById('history').style.display = 'none';
+        document.getElementById('timeline').style.display = 'block';
+        renderTimeline();
+    }
+}
+
+// Render timeline view
+function renderTimeline() {
+    const timeline = document.getElementById('timeline');
+    let html = '<div class="timeline">';
+    
+    // Group by date
+    const grouped = allHistory.reduce((acc, crime) => {
+        const date = new Date(crime.last_attempt).toLocaleDateString();
+        if (!acc[date]) acc[date] = [];
+        acc[date].push(crime);
+        return acc;
+    }, {});
+    
+    Object.keys(grouped).sort((a, b) => new Date(b) - new Date(a)).forEach(date => {
+        const crimes = grouped[date];
+        const successCount = crimes.filter(c => c.success).length;
+        const failCount = crimes.filter(c => !c.success).length;
+        
+        html += `
+            <div class="timeline-date">
+                <div class="timeline-date-header">
+                    <span>📅 ${date}</span>
+                    <span class="timeline-stats">
+                        ✅ ${successCount} | ❌ ${failCount}
+                    </span>
+                </div>
+                <div class="timeline-events">
+        `;
+        
+        crimes.forEach(crime => {
+            const time = new Date(crime.last_attempt).toLocaleTimeString();
+            html += `
+                <div class="timeline-event ${crime.success ? 'success' : 'fail'}" onclick="showCrimeDetails(${crime.id})">
+                    <span class="timeline-time">${time}</span>
+                    <span class="timeline-crime">${crime.crimes.name}</span>
+                    <span class="timeline-result">${crime.success ? '✅' : '❌'}</span>
+                </div>
+            `;
+        });
+        
+        html += '</div></div>';
+    });
+    
+    html += '</div>';
+    timeline.innerHTML = html;
+}
+
+// Export history as CSV
+function exportHistory() {
+    if (allHistory.length === 0) {
+        showToast('No history to export', 'warning', 2000);
+        return;
+    }
+
+    const headers = ['Date', 'Crime', 'Result', 'Cash Change', 'XP Change', 'Energy Cost', 'Level Required'];
+    const csvData = allHistory.map(h => [
+        new Date(h.last_attempt).toLocaleString(),
+        h.crimes.name,
+        h.success ? 'Success' : 'Fail',
+        h.success ? `+${h.crimes.reward_cash}` : `-${h.crimes.fail_penalty}`,
+        h.success ? `+${h.crimes.reward_xp}` : '0',
+        h.crimes.energy_cost,
+        h.crimes.level_required
+    ]);
+
+    const csv = [headers, ...csvData].map(row => row.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `crime_history_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+    
+    showToast(`📥 Exported ${allHistory.length} records`, 'success', 3000);
+}
+
+// Navigation
 function goBack() {
-  window.location.href = "dashboard.html";
+    showToast('Returning to dashboard...', 'info', 1000);
+    setTimeout(() => {
+        window.location.href = "dashboard.html";
+    }, 500);
 }
 
-// Initialize filter buttons
-document.addEventListener('DOMContentLoaded', () => {
-  loadHistory();
-});
+// Scroll to top functionality
+function setupScrollToTop() {
+    const scrollBtn = document.getElementById('scrollTopBtn');
+    
+    window.addEventListener('scroll', () => {
+        if (window.scrollY > 300) {
+            scrollBtn.classList.add('visible');
+        } else {
+            scrollBtn.classList.remove('visible');
+        }
+    });
+}
 
+function scrollToTop() {
+    window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+    });
+}
+
+// Reading progress bar
+function setupReadingProgress() {
+    const progressBar = document.getElementById('readingProgress');
+    
+    window.addEventListener('scroll', () => {
+        const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+        const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+        const scrolled = (winScroll / height) * 100;
+        progressBar.style.width = scrolled + '%';
+    });
+}
+
+// Keyboard navigation
+function setupKeyboardNavigation() {
+    document.addEventListener('keydown', (e) => {
+        // 1, 2, 3 for filters
+        if (e.key === '1') {
+            e.preventDefault();
+            filterHistory('all');
+        } else if (e.key === '2') {
+            e.preventDefault();
+            filterHistory('success');
+        } else if (e.key === '3') {
+            e.preventDefault();
+            filterHistory('fail');
+        }
+        
+        // G for grid, T for timeline
+        if (e.key === 'g' || e.key === 'G') {
+            e.preventDefault();
+            toggleView('grid');
+        } else if (e.key === 't' || e.key === 'T') {
+            e.preventDefault();
+            toggleView('timeline');
+        }
+        
+        // Ctrl + F for search
+        if (e.ctrlKey && e.key === 'f') {
+            e.preventDefault();
+            document.getElementById('searchInput').focus();
+        }
+        
+        // E for export
+        if (e.key === 'e' || e.key === 'E') {
+            if (!e.ctrlKey && !e.metaKey) {
+                e.preventDefault();
+                exportHistory();
+            }
+        }
+        
+        // Esc to clear search
+        if (e.key === 'Escape') {
+            document.getElementById('searchInput').value = '';
+            displayHistory();
+        }
+    });
+}
+
+// Export functions for global use
+window.filterHistory = filterHistory;
+window.searchHistory = searchHistory;
+window.toggleView = toggleView;
+window.exportHistory = exportHistory;
+window.goBack = goBack;
+window.scrollToTop = scrollToTop;
+window.showCrimeDetails = showCrimeDetails;
 </script>
+
+<!-- Add timeline styles -->
+<style>
+    .timeline-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    .timeline-date {
+        margin-bottom: 30px;
+        animation: fadeIn 0.5s ease-out;
+    }
+
+    .timeline-date-header {
+        background: #667eea;
+        color: white;
+        padding: 10px 15px;
+        border-radius: 8px;
+        margin-bottom: 10px;
+        display: flex;
+        justify-content: space-between;
+        font-weight: bold;
+    }
+
+    .timeline-events {
+        padding-left: 20px;
+        border-left: 3px solid #667eea;
+    }
+
+    .timeline-event {
+        padding: 10px 15px;
+        margin: 10px 0;
+        background: white;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        border: 1px solid #eee;
+    }
+
+    .timeline-event:hover {
+        transform: translateX(5px);
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+
+    .timeline-event.success {
+        border-left: 4px solid #4CAF50;
+    }
+
+    .timeline-event.fail {
+        border-left: 4px solid #f44336;
+    }
+
+    .timeline-time {
+        font-size: 0.9rem;
+        color: #666;
+        min-width: 80px;
+    }
+
+    .timeline-crime {
+        flex: 1;
+        font-weight: bold;
+    }
+
+    .timeline-result {
+        font-size: 1.2rem;
+        min-width: 30px;
+        text-align: center;
+    }
+
+    .timeline-stats {
+        background: rgba(255,255,255,0.2);
+        padding: 3px 10px;
+        border-radius: 15px;
+        font-size: 0.9rem;
+    }
+
+    .loading-spinner {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 40px;
+    }
+
+    .spinner {
+        width: 50px;
+        height: 50px;
+        border: 5px solid #f3f3f3;
+        border-top: 5px solid #667eea;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-bottom: 15px;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    @media (max-width: 600px) {
+        .timeline-event {
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+        
+        .timeline-time {
+            min-width: 100%;
+            font-size: 0.8rem;
+        }
+        
+        .timeline-crime {
+            font-size: 1rem;
+        }
+        
+        .timeline-date-header {
+            flex-direction: column;
+            gap: 5px;
+            text-align: center;
+        }
+        
+        .timeline-stats {
+            display: inline-block;
+            margin: 0 auto;
+        }
+    }
+</style>
 
 </body>
 </html>
