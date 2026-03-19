@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Rheoa RPG - Prestige System</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body { 
+      font-family: 'Courier New', monospace; 
+      background: #f8f8f0; 
+      color: #222; 
+      padding: 20px;
+      min-height: 100vh;
+    }
+    
+    h1 { 
+      text-align: center; 
+      margin-bottom: 10px;
+      font-size: clamp(1.5rem, 5vw, 2.5rem);
+      color: #9c27b0;
+      text-shadow: 2px 2px 0 #7b1fa2;
+    }
+    
+    .subtitle {
+      text-align: center;
+      color: #666;
+      margin-bottom: 30px;
+      font-style: italic;
+    }
+    
+    /* Prestige Banner */
+    .prestige-banner {
+      background: linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%);
+      color: white;
+      padding: 30px;
+      border-radius: 15px;
+      margin-bottom: 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 20px;
+      box-shadow: 0 10px 20px rgba(156, 39, 176, 0.3);
+    }
+    
+    .prestige-level {
+      text-align: center;
+    }
+    
+    .prestige-label {
+      font-size: 0.9rem;
+      opacity: 0.9;
+    }
+    
+    .prestige-value {
+      font-size: 3rem;
+      font-weight: bold;
+      line-height: 1;
+    }
+    
+    .prestige-points {
+      display: flex;
+      gap: 30px;
+    }
+    
+    .points-item {
+      text-align: center;
+    }
+    
+    .points-value {
+      font-size: 2rem;
+      font-weight: bold;
+    }
+    
+    /* Stats Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-bottom: 30px;
+    }
+    
+    .stat-card {
+      background: white;
+      border: 2px solid #9c27b0;
+      border-radius: 10px;
+      padding: 15px;
+      text-align: center;
+    }
+    
+    .stat-label {
+      color: #666;
+      font-size: 0.9rem;
+    }
+    
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #9c27b0;
+    }
+    
+    .stat-note {
+      font-size: 0.8rem;
+      color: #4CAF50;
+      margin-top: 5px;
+    }
+    
+    /* Prestige Button */
+    .prestige-button-container {
+      text-align: center;
+      margin: 40px 0;
+    }
+    
+    .prestige-btn {
+      padding: 20px 60px;
+      font-size: 2rem;
+      font-family: 'Courier New', monospace;
+      font-weight: bold;
+      border: none;
+      border-radius: 50px;
+      background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+      color: white;
+      cursor: pointer;
+      transition: all 0.3s;
+      box-shadow: 0 10px 20px rgba(244, 67, 54, 0.3);
+    }
+    
+    .prestige-btn:hover:not(:disabled) {
+      transform: translateY(-3px) scale(1.05);
+      box-shadow: 0 15px 30px rgba(244, 67, 54, 0.4);
+    }
+    
+    .prestige-btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+    
+    .prestige-btn.pulse {
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+    
+    .warning-text {
+      color: #f44336;
+      font-weight: bold;
+      margin-top: 10px;
+    }
+    
+    /* Perks Section */
+    .perks-section {
+      margin: 40px 0;
+    }
+    
+    .section-title {
+      font-size: 1.8rem;
+      margin-bottom: 20px;
+      color: #333;
+      border-bottom: 3px solid #9c27b0;
+      padding-bottom: 10px;
+    }
+    
+    .perks-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+    }
+    
+    .perk-card {
+      background: white;
+      border: 3px solid #9c27b0;
+      border-radius: 15px;
+      padding: 20px;
+      transition: all 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .perk-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 20px rgba(156, 39, 176, 0.2);
+    }
+    
+    .perk-card.owned {
+      border-color: #4CAF50;
+      background: #f0fff0;
+    }
+    
+    .perk-card.maxed {
+      border-color: #ff9800;
+      background: #fff3e0;
+    }
+    
+    .perk-icon {
+      font-size: 3rem;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    
+    .perk-name {
+      font-size: 1.3rem;
+      font-weight: bold;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    
+    .perk-description {
+      color: #666;
+      text-align: center;
+      margin-bottom: 15px;
+      min-height: 60px;
+    }
+    
+    .perk-level {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 15px 0;
+    }
+    
+    .level-text {
+      font-weight: bold;
+    }
+    
+    .level-badge {
+      background: #9c27b0;
+      color: white;
+      padding: 3px 10px;
+      border-radius: 15px;
+      font-size: 0.9rem;
+    }
+    
+    .level-badge.owned {
+      background: #4CAF50;
+    }
+    
+    .level-badge.maxed {
+      background: #ff9800;
+    }
+    
+    .perk-value {
+      font-size: 1.2rem;
+      font-weight: bold;
+      color: #4CAF50;
+      text-align: center;
+      margin: 10px 0;
+    }
+    
+    .perk-cost {
+      text-align: center;
+      color: #f44336;
+      font-weight: bold;
+      margin: 10px 0;
+    }
+    
+    .purchase-btn {
+      width: 100%;
+      padding: 12px;
+      font-family: 'Courier New', monospace;
+      font-weight: bold;
+      border: none;
+      border-radius: 8px;
+      background: #4CAF50;
+      color: white;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .purchase-btn:hover:not(:disabled) {
+      background: #45a049;
+    }
+    
+    .purchase-btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    
+    /* History Section */
+    .history-section {
+      background: white;
+      border: 3px solid black;
+      border-radius: 15px;
+      overflow: hidden;
+      margin-top: 30px;
+    }
+    
+    .history-header {
+      background: #333;
+      color: white;
+      padding: 15px;
+      font-weight: bold;
+      font-size: 1.2rem;
+    }
+    
+    .history-list {
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    
+    .history-item {
+      display: grid;
+      grid-template-columns: 120px 1fr 120px;
+      padding: 12px 15px;
+      border-bottom: 1px solid #eee;
+      align-items: center;
+    }
+    
+    .history-date {
+      color: #666;
+    }
+    
+    .history-detail {
+      text-align: center;
+    }
+    
+    .history-points {
+      text-align: right;
+      font-weight: bold;
+      color: #9c27b0;
+    }
+    
+    /* Leaderboard Preview */
+    .leaderboard-preview {
+      background: #f5f5f5;
+      border: 2px solid #9c27b0;
+      border-radius: 10px;
+      padding: 15px;
+      margin: 20px 0;
+    }
+    
+    .preview-title {
+      font-weight: bold;
+      margin-bottom: 10px;
+      color: #9c27b0;
+    }
+    
+    /* Back Button */
+    .back-button {
+      display: block;
+      width: 200px;
+      margin: 40px auto;
+      padding: 12px 24px;
+      font-family: 'Courier New', monospace;
+      font-weight: bold;
+      border: 2px solid black;
+      border-radius: 8px;
+      background: #666;
+      color: white;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+    }
+    
+    .back-button:hover {
+      background: #555;
+      transform: scale(1.02);
+    }
+    
+    /* Toast Notifications */
+    .toast-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 9999;
+    }
+    
+    .toast {
+      padding: 15px 25px;
+      margin-bottom: 10px;
+      border-radius: 8px;
+      color: white;
+      font-weight: bold;
+      animation: slideIn 0.3s ease-out;
+    }
+    
+    .toast.success { background: #4CAF50; }
+    .toast.error { background: #f44336; }
+    .toast.info { background: #2196F3; }
+    .toast.prestige { background: #9c27b0; }
+    
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    
+    /* Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+    }
+    
+    .modal-content {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      padding: 30px;
+      border-radius: 15px;
+      border: 3px solid #9c27b0;
+      max-width: 500px;
+      width: 90%;
+    }
+    
+    .modal-title {
+      font-size: 1.8rem;
+      font-weight: bold;
+      color: #f44336;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    
+    .modal-warning {
+      background: #ffebee;
+      border: 2px solid #f44336;
+      border-radius: 10px;
+      padding: 15px;
+      margin: 20px 0;
+    }
+    
+    .modal-actions {
+      display: flex;
+      gap: 15px;
+      margin-top: 30px;
+    }
+    
+    .modal-btn {
+      flex: 1;
+      padding: 12px;
+      font-family: 'Courier New', monospace;
+      font-weight: bold;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    
+    .modal-btn.confirm {
+      background: #f44336;
+      color: white;
+    }
+    
+    .modal-btn.cancel {
+      background: #666;
+      color: white;
+    }
+    
+    .spinner {
+      display: inline-block;
+      width: 30px;
+      height: 30px;
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #9c27b0;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    @media (max-width: 600px) {
+      .prestige-banner {
+        flex-direction: column;
+        text-align: center;
+      }
+      
+      .prestige-points {
+        flex-direction: column;
+        gap: 10px;
+      }
+      
+      .history-item {
+        grid-template-columns: 80px 1fr 80px;
+        font-size: 0.9rem;
+      }
+      
+      .perks-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="toast-container" id="toast-container"></div>
+
+<h1>🔄 Prestige System</h1>
+<div class="subtitle">Reset your progress for永久 powerful bonuses</div>
+
+<!-- Prestige Banner -->
+<div class="prestige-banner" id="prestigeBanner">
+  <div class="prestige-level">
+    <div class="prestige-label">Prestige Level</div>
+    <div class="prestige-value" id="prestigeLevel">0</div>
+  </div>
+  <div class="prestige-points">
+    <div class="points-item">
+      <div class="prestige-label">Total Points</div>
+      <div class="points-value" id="totalPoints">0</div>
+    </div>
+    <div class="points-item">
+      <div class="prestige-label">Available</div>
+      <div class="points-value" id="availablePoints">0</div>
+    </div>
+  </div>
+</div>
+
+<!-- Current Stats -->
+<div class="stats-grid" id="statsGrid">
+  <div class="stat-card">
+    <div class="stat-label">Current Level</div>
+    <div class="stat-value" id="currentLevel">0</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Total XP</div>
+    <div class="stat-value" id="totalXP">0</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Total Cash</div>
+    <div class="stat-value" id="totalCash">₹0</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Crimes</div>
+    <div class="stat-value" id="totalCrimes">0</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Jobs</div>
+    <div class="stat-value" id="totalJobs">0</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Potential Points</div>
+    <div class="stat-value" id="potentialPoints">0</div>
+    <div class="stat-note">if you prestige now</div>
+  </div>
+</div>
+
+<!-- Prestige Button -->
+<div class="prestige-button-container">
+  <button class="prestige-btn" id="prestigeBtn" onclick="showPrestigeModal()" disabled>
+    🔄 PRESTIGE
+  </button>
+  <div id="prestigeWarning" class="warning-text"></div>
+</div>
+
+<!-- Active Bonuses Preview -->
+<div class="leaderboard-preview" id="bonusPreview">
+  <div class="preview-title">✨ Your Active Bonuses</div>
+  <div id="bonuses" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;">
+    Loading bonuses...
+  </div>
+</div>
+
+<!-- Perks Section -->
+<div class="perks-section">
+  <h2 class="section-title">💪 Prestige Perks</h2>
+  <div class="perks-grid" id="perksGrid">
+    <div style="text-align: center; grid-column: 1/-1; padding: 40px;">
+      <div class="spinner"></div>
+      <p>Loading perks...</p>
+    </div>
+  </div>
+</div>
+
+<!-- History Section -->
+<div class="history-section">
+  <div class="history-header">📜 Prestige History</div>
+  <div class="history-list" id="historyList">
+    <div style="text-align: center; padding: 40px;">No prestige history yet</div>
+  </div>
+</div>
+
+<!-- Prestige Confirmation Modal -->
+<div id="prestigeModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-title">⚠️ WARNING ⚠️</div>
+    <div class="modal-warning">
+      <p style="font-weight: bold; margin-bottom: 10px;">You will lose:</p>
+      <ul style="margin-left: 20px; line-height: 1.8;">
+        <li>All levels and XP</li>
+        <li>All cash</li>
+        <li>All items in inventory</li>
+        <li>Crime and job history</li>
+      </ul>
+    </div>
+    <p style="margin: 20px 0;">But you will gain <span id="modalPoints" style="font-weight: bold; color: #9c27b0;">0</span> Prestige Points!</p>
+    <div class="modal-actions">
+      <button class="modal-btn confirm" onclick="performPrestige()">Yes, Prestige!</button>
+      <button class="modal-btn cancel" onclick="closeModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<button class="back-button" onclick="goToDashboard()">← Back to Dashboard</button>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<script>
+const sb = window.supabase.createClient(
+  "https://mtiwodvsrwvrujbhmmrn.supabase.co",
+  "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
+);
+
+let currentPlayer = null;
+let prestigeInfo = null;
+let perks = [];
+let playerPerks = [];
+
+// Toast notification
+function showToast(message, type = 'info', duration = 3000) {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.textContent = message;
+  
+  container.appendChild(toast);
+  
+  setTimeout(() => {
+    toast.classList.add('fade-out');
+    setTimeout(() => {
+      if (toast.parentNode) {
+        container.removeChild(toast);
+      }
+    }, 300);
+  }, duration);
+}
+
+// Load prestige info
+async function loadPrestigeInfo() {
+  try {
+    const { data: { user } } = await sb.auth.getUser();
+    if (!user) return window.location.href = "index.html";
+    
+    const { data, error } = await sb.rpc('get_prestige_info');
+    
+    if (error) throw error;
+    
+    if (data.success) {
+      prestigeInfo = data;
+      updateUI();
+      await loadPerks();
+      await loadBonuses();
+    }
+  } catch (error) {
+    console.error('Error loading prestige info:', error);
+  }
+}
+
+// Load perks
+async function loadPerks() {
+  try {
+    // Get all perks
+    const { data: allPerks } = await sb
+      .from('prestige_perks')
+      .select('*')
+      .order('cost_per_level');
+    
+    perks = allPerks || [];
+    
+    // Get player's purchased perks
+    const { data: purchased } = await sb
+      .from('player_prestige_perks')
+      .select('*')
+      .eq('player_id', prestigeInfo.current_prestige ? 'player_id' : '');
+    
+    playerPerks = purchased || [];
+    
+    renderPerks();
+  } catch (error) {
+    console.error('Error loading perks:', error);
+  }
+}
+
+// Load active bonuses
+async function loadBonuses() {
+  try {
+    const { data, error } = await sb.rpc('get_player_bonuses', {
+      p_player_id: prestigeInfo.current_prestige ? 'player_id' : ''
+    });
+    
+    if (error) throw error;
+    
+    const bonuses = document.getElementById('bonuses');
+    bonuses.innerHTML = '';
+    
+    const bonusMap = {
+      xp_boost: { icon: '⭐', name: 'XP Boost' },
+      cash_boost: { icon: '💰', name: 'Cash Boost' },
+      energy_regen: { icon: '⚡', name: 'Energy Regen' },
+      crime_boost: { icon: '🔫', name: 'Crime Boost' },
+      pvp_boost: { icon: '⚔️', name: 'PvP Boost' },
+      market_fee_reduction: { icon: '📈', name: 'Market Fee' },
+      starting_cash: { icon: '💎', name: 'Starting Cash' },
+      item_find_chance: { icon: '🍀', name: 'Item Find' },
+      streak_bonus: { icon: '🔥', name: 'Streak Bonus' },
+      prestige_master: { icon: '👑', name: 'Prestige Master' }
+    };
+    
+    for (const [key, value] of Object.entries(data)) {
+      if (value > 0) {
+        const info = bonusMap[key] || { icon: '✨', name: key };
+        bonuses.innerHTML += `
+          <div style="background: #f0f0f0; padding: 8px; border-radius: 5px; text-align: center;">
+            <span style="font-size: 1.2rem;">${info.icon}</span>
+            <div><strong>${info.name}</strong></div>
+            <div>+${value}%</div>
+          </div>
+        `;
+      }
+    }
+    
+    if (bonuses.innerHTML === '') {
+      bonuses.innerHTML = '<div style="grid-column: 1/-1; text-align: center;">No active bonuses</div>';
+    }
+  } catch (error) {
+    console.error('Error loading bonuses:', error);
+  }
+}
+
+// Update UI
+function updateUI() {
+  if (!prestigeInfo) return;
+  
+  document.getElementById('prestigeLevel').textContent = prestigeInfo.current_prestige;
+  document.getElementById('totalPoints').textContent = prestigeInfo.total_points;
+  document.getElementById('availablePoints').textContent = prestigeInfo.unspent_points;
+  
+  document.getElementById('currentLevel').textContent = prestigeInfo.current_stats.level;
+  document.getElementById('totalXP').textContent = prestigeInfo.current_stats.xp.toLocaleString();
+  document.getElementById('totalCash').textContent = `₹${prestigeInfo.current_stats.cash.toLocaleString()}`;
+  document.getElementById('totalCrimes').textContent = prestigeInfo.current_stats.crimes;
+  document.getElementById('totalJobs').textContent = prestigeInfo.current_stats.jobs;
+  document.getElementById('potentialPoints').textContent = prestigeInfo.potential_points;
+  
+  const prestigeBtn = document.getElementById('prestigeBtn');
+  const warning = document.getElementById('prestigeWarning');
+  
+  if (prestigeInfo.can_prestige) {
+    prestigeBtn.disabled = false;
+    prestigeBtn.classList.add('pulse');
+    warning.textContent = '';
+  } else {
+    prestigeBtn.disabled = true;
+    prestigeBtn.classList.remove('pulse');
+    warning.textContent = 'Need to reach level 10 to prestige!';
+  }
+  
+  renderHistory();
+}
+
+// Render perks
+function renderPerks() {
+  const grid = document.getElementById('perksGrid');
+  
+  if (!perks.length) return;
+  
+  grid.innerHTML = perks.map(perk => {
+    const playerPerk = playerPerks.find(p => p.perk_id === perk.id);
+    const currentLevel = playerPerk ? playerPerk.current_level : 0;
+    const isOwned = currentLevel > 0;
+    const isMaxed = currentLevel >= perk.max_level;
+    const nextLevelCost = perk.cost_per_level * (currentLevel + 1);
+    const canAfford = prestigeInfo.unspent_points >= nextLevelCost;
+    const currentValue = perk.perk_value * currentLevel;
+    const nextValue = perk.perk_value * (currentLevel + 1);
+    
+    let statusClass = '';
+    if (isMaxed) statusClass = 'maxed';
+    else if (isOwned) statusClass = 'owned';
+    
+    return `
+      <div class="perk-card ${statusClass}">
+        <div class="perk-icon">${perk.icon || '✨'}</div>
+        <div class="perk-name">${perk.name}</div>
+        <div class="perk-description">${perk.description}</div>
+        <div class="perk-level">
+          <span class="level-text">Level</span>
+          <span class="level-badge ${statusClass}">${currentLevel}/${perk.max_level}</span>
+        </div>
+        <div class="perk-value">
+          Current: +${currentValue}%
+          ${!isMaxed ? `<br>Next: +${nextValue}%` : ''}
+        </div>
+        ${!isMaxed ? `
+          <div class="perk-cost">Cost: ${nextLevelCost} points</div>
+          <button class="purchase-btn" 
+                  onclick="purchasePerk('${perk.id}')"
+                  ${!canAfford ? 'disabled' : ''}>
+            ${canAfford ? 'Upgrade' : 'Not enough points'}
+          </button>
+        ` : '<div style="text-align: center; color: #ff9800;">MAXED</div>'}
+      </div>
+    `;
+  }).join('');
+}
+
+// Render history
+function renderHistory() {
+  const list = document.getElementById('historyList');
+  
+  if (!prestigeInfo.history || prestigeInfo.history.length === 0) {
+    list.innerHTML = '<div style="text-align: center; padding: 40px;">No prestige history yet</div>';
+    return;
+  }
+  
+  list.innerHTML = prestigeInfo.history.map(item => {
+    const date = new Date(item.created_at).toLocaleDateString();
+    
+    return `
+      <div class="history-item">
+        <div class="history-date">${date}</div>
+        <div class="history-detail">
+          Prestige ${item.prestige_level} <br>
+          <small>from level ${item.old_level}</small>
+        </div>
+        <div class="history-points">+${item.points_earned} pts</div>
+      </div>
+    `;
+  }).join('');
+}
+
+// Show prestige confirmation modal
+function showPrestigeModal() {
+  if (!prestigeInfo || !prestigeInfo.can_prestige) return;
+  
+  document.getElementById('modalPoints').textContent = prestigeInfo.potential_points;
+  document.getElementById('prestigeModal').style.display = 'block';
+}
+
+// Close modal
+function closeModal() {
+  document.getElementById('prestigeModal').style.display = 'none';
+}
+
+// Perform prestige
+async function performPrestige() {
+  closeModal();
+  
+  const btn = document.getElementById('prestigeBtn');
+  btn.disabled = true;
+  btn.textContent = '🔄 PRESTIGING...';
+  
+  try {
+    const { data, error } = await sb.rpc('perform_prestige');
+    
+    if (error) throw error;
+    
+    if (data.success) {
+      showToast(data.message, 'prestige', 6000);
+      showToast(`✨ Earned ${data.points_earned} Prestige Points!`, 'success', 4000);
+      
+      // Reload all data
+      await loadPrestigeInfo();
+    } else {
+      showToast(data.error || 'Prestige failed', 'error');
+    }
+  } catch (error) {
+    console.error('Error prestiging:', error);
+    showToast('Error during prestige', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🔄 PRESTIGE';
+  }
+}
+
+// Purchase perk
+async function purchasePerk(perkId) {
+  try {
+    const { data, error } = await sb.rpc('purchase_prestige_perk', {
+      p_perk_id: perkId
+    });
+    
+    if (error) throw error;
+    
+    if (data.success) {
+      showToast(data.message, 'success');
+      await loadPrestigeInfo();
+      await loadPerks();
+      await loadBonuses();
+    } else {
+      showToast(data.error || 'Purchase failed', 'error');
+    }
+  } catch (error) {
+    console.error('Error purchasing perk:', error);
+    showToast('Error purchasing perk', 'error');
+  }
+}
+
+// Navigation
+function goToDashboard() {
+  window.location.href = "dashboard.html";
+}
+
+// Initialize
+loadPrestigeInfo();
+</script>
+
+</body>
+</html>
