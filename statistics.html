@@ -338,6 +338,7 @@
     .toast.success { background: #4CAF50; }
     .toast.error { background: #f44336; }
     .toast.info { background: #2196F3; }
+    .toast.warning { background: #ff9800; }
     
     @keyframes slideIn {
       from { transform: translateX(100%); opacity: 0; }
@@ -357,6 +358,12 @@
     @keyframes spin {
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
+    }
+    
+    .empty-message {
+      text-align: center;
+      padding: 40px;
+      color: #666;
     }
     
     @media (max-width: 600px) {
@@ -520,6 +527,7 @@ let hourlyActivity = [];
 let milestones = [];
 let comparisons = [];
 let charts = {};
+let isBackfilling = false;
 
 // Toast notification
 function showToast(message, type = 'info', duration = 3000) {
@@ -538,6 +546,35 @@ function showToast(message, type = 'info', duration = 3000) {
       }
     }, 300);
   }, duration);
+}
+
+// Ensure statistics exist for player (backfill if needed)
+async function ensureStatistics() {
+  if (isBackfilling) return;
+  
+  try {
+    isBackfilling = true;
+    showToast('📊 Analyzing your historical data...', 'info', 3000);
+    
+    const { data, error } = await sb.rpc('ensure_player_statistics');
+    
+    if (error) {
+      console.error('Error ensuring statistics:', error);
+      showToast('Error loading statistics', 'error');
+      return;
+    }
+    
+    if (data.success) {
+      if (data.message.includes('generated')) {
+        showToast('📊 Your historical statistics have been calculated!', 'success', 4000);
+      }
+    }
+  } catch (error) {
+    console.error('Error in ensureStatistics:', error);
+    showToast('Error processing statistics', 'error');
+  } finally {
+    isBackfilling = false;
+  }
 }
 
 // Load player data
@@ -559,12 +596,20 @@ async function loadPlayerData() {
     
     if (player) {
       currentPlayer = player;
+      
+      // First, ensure statistics exist (this will backfill if needed)
+      await ensureStatistics();
+      
+      // Then load all stats
       await loadPlayerStats();
       await loadDailyActivity();
       await loadHourlyActivity();
       await loadMilestones();
       await loadComparisons();
+      
+      // Render everything
       renderOverview();
+      renderHeatmap();
     }
   } catch (error) {
     console.error('Error loading player:', error);
@@ -618,7 +663,6 @@ async function loadHourlyActivity() {
     if (error) throw error;
     
     hourlyActivity = data || [];
-    renderHeatmap();
   } catch (error) {
     console.error('Error loading hourly activity:', error);
   }
@@ -671,12 +715,15 @@ function renderOverview() {
 function renderOverviewCards() {
   const container = document.getElementById('overviewCards');
   
-  if (!playerStats) {
-    container.innerHTML = '<div class="empty-message">No statistics available yet</div>';
+  if (!playerStats || Object.keys(playerStats).length === 0) {
+    container.innerHTML = '<div class="empty-message">No statistics available yet. Start playing to see your stats!</div>';
     return;
   }
   
-  const totalActions = playerStats.crimes_attempted + playerStats.jobs_completed + playerStats.pvp_battles;
+  const totalActions = (playerStats.crimes_attempted || 0) + 
+                      (playerStats.jobs_completed || 0) + 
+                      (playerStats.pvp_battles || 0);
+  
   const successRate = playerStats.crimes_attempted > 0 
     ? ((playerStats.crimes_succeeded / playerStats.crimes_attempted) * 100).toFixed(1)
     : 0;
@@ -709,7 +756,7 @@ function renderOverviewCards() {
 function renderKPIStats() {
   const container = document.getElementById('kpiStats');
   
-  if (!playerStats) {
+  if (!playerStats || Object.keys(playerStats).length === 0) {
     container.innerHTML = '<div class="empty-message">No statistics available</div>';
     return;
   }
@@ -807,7 +854,8 @@ function renderSuccessChart() {
         label: 'Success Rate %',
         data: successRates,
         borderColor: '#2196F3',
-        tension: 0.1
+        tension: 0.1,
+        fill: false
       }]
     },
     options: {
@@ -868,11 +916,14 @@ function renderMilestones() {
       'prestige': '🔄'
     };
     
+    const date = new Date(m.achieved_at).toLocaleDateString();
+    const value = m.milestone_type === 'cash' ? `₹${m.milestone_value.toLocaleString()}` : m.milestone_value;
+    
     return `
       <div class="timeline-item">
-        <div class="timeline-date">${new Date(m.achieved_at).toLocaleDateString()}</div>
+        <div class="timeline-date">${date}</div>
         <div class="timeline-title">
-          ${icons[m.milestone_type] || '🏆'} ${m.milestone_type}: ${m.milestone_value}
+          ${icons[m.milestone_type] || '🏆'} ${m.milestone_type}: ${value}
         </div>
       </div>
     `;
@@ -914,8 +965,12 @@ function switchTab(tabName) {
   // Render specific tab content
   if (tabName === 'activity') {
     renderActivityStats();
+    renderDailyActivityChart();
+    renderActivityTypeChart();
   } else if (tabName === 'financial') {
     renderFinancialStats();
+    renderCashFlowChart();
+    renderIncomeChart();
   }
 }
 
@@ -943,6 +998,57 @@ function renderActivityStats() {
   `;
 }
 
+// Render daily activity chart
+function renderDailyActivityChart() {
+  const ctx = document.getElementById('dailyActivityChart').getContext('2d');
+  
+  const last7Days = dailyActivity.slice(0, 7).reverse();
+  
+  if (charts.daily) charts.daily.destroy();
+  
+  charts.daily = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: last7Days.map(day => new Date(day.activity_date).toLocaleDateString()),
+      datasets: [{
+        label: 'Actions',
+        data: last7Days.map(day => (day.crimes_attempted || 0) + (day.jobs_completed || 0) + (day.pvp_battles || 0)),
+        backgroundColor: '#2196F3'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false
+    }
+  });
+}
+
+// Render activity type chart
+function renderActivityTypeChart() {
+  const ctx = document.getElementById('activityTypeChart').getContext('2d');
+  
+  if (charts.type) charts.type.destroy();
+  
+  charts.type = new Chart(ctx, {
+    type: 'pie',
+    data: {
+      labels: ['Crimes', 'Jobs', 'PvP'],
+      datasets: [{
+        data: [
+          playerStats?.crimes_attempted || 0,
+          playerStats?.jobs_completed || 0,
+          playerStats?.pvp_battles || 0
+        ],
+        backgroundColor: ['#f44336', '#4CAF50', '#ff9800']
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false
+    }
+  });
+}
+
 // Render financial stats
 function renderFinancialStats() {
   const container = document.getElementById('financialStats');
@@ -965,6 +1071,61 @@ function renderFinancialStats() {
       <div class="stat-value">₹${playerStats?.biggest_cash_gain?.toLocaleString() || 0}</div>
     </div>
   `;
+}
+
+// Render cash flow chart
+function renderCashFlowChart() {
+  const ctx = document.getElementById('cashFlowChart').getContext('2d');
+  
+  const last30Days = dailyActivity.slice(0, 30).reverse();
+  
+  if (charts.cash) charts.cash.destroy();
+  
+  charts.cash = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: last30Days.map(day => new Date(day.activity_date).toLocaleDateString()),
+      datasets: [{
+        label: 'Cash Earned',
+        data: last30Days.map(day => day.cash_earned || 0),
+        borderColor: '#4CAF50',
+        tension: 0.1
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false
+    }
+  });
+}
+
+// Render income chart
+function renderIncomeChart() {
+  const ctx = document.getElementById('incomeChart').getContext('2d');
+  
+  // Calculate income by source (approximate)
+  const crimeIncome = playerStats?.crimes_succeeded * 1000 || 0;
+  const jobIncome = playerStats?.jobs_completed * 500 || 0;
+  const pvpIncome = playerStats?.pvp_wins * 2000 || 0;
+  const marketIncome = playerStats?.market_profit || 0;
+  
+  if (charts.income) charts.income.destroy();
+  
+  charts.income = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['Crimes', 'Jobs', 'PvP', 'Market'],
+      datasets: [{
+        label: 'Income',
+        data: [crimeIncome, jobIncome, pvpIncome, marketIncome],
+        backgroundColor: ['#f44336', '#4CAF50', '#ff9800', '#2196F3']
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false
+    }
+  });
 }
 
 // Helper functions
