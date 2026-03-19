@@ -270,32 +270,7 @@
       font-weight: bold;
     }
     
-    /* Toast Notifications */
-    .toast-container {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      z-index: 9999;
-    }
-    
-    .toast {
-      padding: 15px 25px;
-      margin-bottom: 10px;
-      border-radius: 8px;
-      color: white;
-      font-weight: bold;
-      animation: slideIn 0.3s ease-out;
-    }
-    
-    .toast.success { background: #4CAF50; }
-    .toast.error { background: #f44336; }
-    .toast.info { background: #2196F3; }
-    .toast.discovery { background: #9c27b0; }
-    
-    @keyframes slideIn {
-      from { transform: translateX(100%); opacity: 0; }
-      to { transform: translateX(0); opacity: 1; }
-    }
+    /* Toast container styles are now in toast.js - removing duplicate */
     
     /* Back Button */
     .back-button {
@@ -348,7 +323,7 @@
 </head>
 <body>
 
-<div class="toast-container" id="toast-container"></div>
+<!-- Toast container is created by toast.js, removed static container -->
 
 <h1>🌍 World Map</h1>
 <div class="subtitle">Explore regions, discover secrets, and expand your empire</div>
@@ -387,12 +362,16 @@
 
 <button class="back-button" onclick="goToDashboard()">← Back to Dashboard</button>
 
+<!-- Script includes: Supabase library + shared utilities -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<script src="supabase.js"></script>
+<script src="toast.js"></script>
+<script src="loading.js"></script>
+<script src="error-handler.js"></script>
+
 <script>
-const sb = window.supabase.createClient(
-  "https://mtiwodvsrwvrujbhmmrn.supabase.co",
-  "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
-);
+// Use the shared supabase client
+const sb = window.supabaseClient;
 
 let currentPlayer = null;
 let map = null;
@@ -403,53 +382,32 @@ let connections = [];
 let currentRegion = null;
 let markers = [];
 
-// Toast notification
-function showToast(message, type = 'info', duration = 3000) {
-  const container = document.getElementById('toast-container');
-  const toast = document.createElement('div');
-  toast.className = `toast ${type}`;
-  toast.textContent = message;
-  
-  container.appendChild(toast);
-  
-  setTimeout(() => {
-    toast.classList.add('fade-out');
-    setTimeout(() => {
-      if (toast.parentNode) {
-        container.removeChild(toast);
-      }
-    }, 300);
-  }, duration);
-}
-
 // Load player data
 async function loadPlayerData() {
   try {
-    const { data: { user } } = await sb.auth.getUser();
+    const user = await window.getCurrentUser();
     if (!user) {
       window.location.href = "index.html";
       return;
     }
     
-    const { data: player, error } = await sb
-      .from('players')
-      .select('*')
-      .eq('auth_id', user.id)
-      .single();
-    
-    if (error) throw error;
-    
-    if (player) {
-      currentPlayer = player;
-      await loadRegions();
-      await loadPlayerExploration();
-      await loadConnections();
-      updatePlayerStats();
-      initMap();
+    const player = await window.getCurrentPlayer();
+    if (!player) {
+      window.showToast('Player not found', 'error');
+      return;
     }
+    
+    currentPlayer = player;
+    await loadRegions();
+    await loadPlayerExploration();
+    await loadConnections();
+    updatePlayerStats();
+    initMap();
+    
   } catch (error) {
     console.error('Error loading player:', error);
-    showToast('Error loading data', 'error');
+    const friendlyMessage = window.ErrorHandler.handleSupabaseError(error, 'Error loading data');
+    window.showToast(friendlyMessage, 'error');
   }
 }
 
@@ -466,6 +424,8 @@ async function loadRegions() {
     regions = data || [];
   } catch (error) {
     console.error('Error loading regions:', error);
+    const friendlyMessage = window.ErrorHandler.handleSupabaseError(error, 'Error loading regions');
+    window.showToast(friendlyMessage, 'error');
   }
 }
 
@@ -505,6 +465,7 @@ async function loadConnections() {
     connections = data || [];
   } catch (error) {
     console.error('Error loading connections:', error);
+    window.showToast('Error loading travel connections', 'error');
   }
 }
 
@@ -584,17 +545,23 @@ async function selectRegion(region) {
   // Load discoveries for this region
   let regionDiscoveries = [];
   if (isDiscovered) {
-    const { data } = await sb
-      .from('player_discoveries')
-      .select(`
-        *,
-        discovery:exploration_discoveries(*)
-      `)
-      .eq('player_id', currentPlayer.id)
-      .in('discovery_id', 
-        sb.from('exploration_discoveries').select('id').eq('region_id', region.id)
-      );
-    regionDiscoveries = data || [];
+    try {
+      const { data, error } = await sb
+        .from('player_discoveries')
+        .select(`
+          *,
+          discovery:exploration_discoveries(*)
+        `)
+        .eq('player_id', currentPlayer.id)
+        .in('discovery_id', 
+          sb.from('exploration_discoveries').select('id').eq('region_id', region.id)
+        );
+      
+      if (error) throw error;
+      regionDiscoveries = data || [];
+    } catch (error) {
+      console.error('Error loading discoveries:', error);
+    }
   }
   
   // Get travel options
@@ -725,15 +692,15 @@ async function discoverRegion(regionId) {
     if (error) throw error;
     
     if (data.success) {
-      showToast(data.message, 'success');
+      window.showToast(data.message, 'success');
       
       if (data.xp_gained > 0) {
-        showToast(`✨ Gained ${data.xp_gained} XP!`, 'info');
+        window.showToast(`✨ Gained ${data.xp_gained} XP!`, 'info');
       }
       
       if (data.discoveries && data.discoveries.length > 0) {
         data.discoveries.forEach(d => {
-          showToast(`🔍 Discovered: ${d}!`, 'discovery');
+          window.showToast(`🔍 Discovered: ${d}!`, 'discovery');
         });
       }
       
@@ -743,7 +710,8 @@ async function discoverRegion(regionId) {
     }
   } catch (error) {
     console.error('Error discovering region:', error);
-    showToast('Failed to discover region', 'error');
+    const friendlyMessage = window.ErrorHandler.handleSupabaseError(error, 'Failed to discover region');
+    window.showToast(friendlyMessage, 'error');
   }
 }
 
@@ -758,12 +726,12 @@ async function exploreRegion(regionId) {
     
     if (data.success) {
       if (data.xp_gained > 0) {
-        showToast(`✨ Gained ${data.xp_gained} XP!`, 'info');
+        window.showToast(`✨ Gained ${data.xp_gained} XP!`, 'info');
       }
       
       if (data.discoveries && data.discoveries.length > 0) {
         data.discoveries.forEach(d => {
-          showToast(`🔍 Discovered: ${d}!`, 'discovery');
+          window.showToast(`🔍 Discovered: ${d}!`, 'discovery');
         });
       }
       
@@ -773,7 +741,8 @@ async function exploreRegion(regionId) {
     }
   } catch (error) {
     console.error('Error exploring region:', error);
-    showToast('Failed to explore', 'error');
+    const friendlyMessage = window.ErrorHandler.handleSupabaseError(error, 'Failed to explore');
+    window.showToast(friendlyMessage, 'error');
   }
 }
 
@@ -782,7 +751,7 @@ async function unlockRegion(regionId) {
   const region = regions.find(r => r.id === regionId);
   
   if (currentPlayer.cash < region.unlock_cost) {
-    showToast('Not enough cash!', 'error');
+    window.showToast('Not enough cash!', 'error');
     return;
   }
   
@@ -794,12 +763,13 @@ async function unlockRegion(regionId) {
     
     if (error) throw error;
     
-    showToast(`🔓 Unlocked ${region.name}!`, 'success');
+    window.showToast(`🔓 Unlocked ${region.name}!`, 'success');
     await loadPlayerData();
     selectRegion(region);
   } catch (error) {
     console.error('Error unlocking region:', error);
-    showToast('Failed to unlock region', 'error');
+    const friendlyMessage = window.ErrorHandler.handleSupabaseError(error, 'Failed to unlock region');
+    window.showToast(friendlyMessage, 'error');
   }
 }
 
@@ -808,7 +778,7 @@ async function travelTo(connectionId) {
   const connection = connections.find(c => c.id === connectionId);
   
   if (currentPlayer.cash < connection.travel_cost) {
-    showToast('Not enough cash for travel!', 'error');
+    window.showToast('Not enough cash for travel!', 'error');
     return;
   }
   
@@ -825,7 +795,7 @@ async function travelTo(connectionId) {
     const dest = connection.from_region_id === currentRegion.id ? 
                  connection.to_region : connection.from_region;
     
-    showToast(`🚗 Traveling to ${dest.name}...`, 'info', 2000);
+    window.showToast(`🚗 Traveling to ${dest.name}...`, 'info', 2000);
     
     setTimeout(async () => {
       await loadPlayerData();
@@ -837,7 +807,8 @@ async function travelTo(connectionId) {
     
   } catch (error) {
     console.error('Error traveling:', error);
-    showToast('Travel failed', 'error');
+    const friendlyMessage = window.ErrorHandler.handleSupabaseError(error, 'Travel failed');
+    window.showToast(friendlyMessage, 'error');
   }
 }
 
@@ -857,8 +828,12 @@ function goToDashboard() {
   window.location.href = "dashboard.html";
 }
 
-// Initialize
-loadPlayerData();
+// Initialize with error handling
+window.ErrorHandler.withErrorHandling(
+  loadPlayerData,
+  null,
+  'Failed to load world map'
+).catch(() => {});
 </script>
 
 </body>
