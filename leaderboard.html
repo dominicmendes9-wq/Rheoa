@@ -1,8 +1,10 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <title>Rheoa RPG - Leaderboards</title>
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
   <style>
     * {
       box-sizing: border-box;
@@ -16,6 +18,7 @@
       color: #222; 
       padding: 20px;
       min-height: 100vh;
+      position: relative;
     }
     
     h1 { 
@@ -23,6 +26,7 @@
       margin-bottom: 10px;
       font-size: clamp(1.5rem, 5vw, 2.5rem);
       color: #333;
+      animation: fadeInDown 0.6s ease-out;
     }
     
     .subtitle {
@@ -30,6 +34,17 @@
       color: #666;
       margin-bottom: 30px;
       font-style: italic;
+      animation: fadeInUp 0.6s ease-out 0.1s both;
+    }
+
+    @keyframes fadeInDown {
+      from { opacity: 0; transform: translateY(-20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
     }
     
     /* Category Tabs */
@@ -39,6 +54,12 @@
       gap: 10px;
       margin-bottom: 30px;
       flex-wrap: wrap;
+      animation: fadeIn 0.6s ease-out 0.2s both;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
     }
     
     .tab-btn {
@@ -49,25 +70,63 @@
       border-radius: 30px;
       background: white;
       cursor: pointer;
-      transition: all 0.2s;
+      transition: all 0.3s;
       font-size: 1rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .tab-btn::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.2);
+      transform: translate(-50%, -50%);
+      transition: width 0.6s, height 0.6s;
+    }
+
+    .tab-btn:hover::after {
+      width: 200px;
+      height: 200px;
     }
     
     .tab-btn:hover {
       background: #333;
       color: white;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
     }
     
     .tab-btn.active {
       background: #333;
       color: white;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
     }
     
-    .tab-btn.crimes.active { background: #f44336; border-color: #f44336; }
-    .tab-btn.jobs.active { background: #2196F3; border-color: #2196F3; }
-    .tab-btn.cash.active { background: #4CAF50; border-color: #4CAF50; }
-    .tab-btn.level.active { background: #9c27b0; border-color: #9c27b0; }
-    .tab-btn.success.active { background: #ff9800; border-color: #ff9800; }
+    .tab-btn.crimes.active { 
+      background: linear-gradient(135deg, #f44336, #d32f2f); 
+      border-color: #f44336;
+    }
+    .tab-btn.jobs.active { 
+      background: linear-gradient(135deg, #2196F3, #1976D2); 
+      border-color: #2196F3;
+    }
+    .tab-btn.cash.active { 
+      background: linear-gradient(135deg, #4CAF50, #388E3C); 
+      border-color: #4CAF50;
+    }
+    .tab-btn.level.active { 
+      background: linear-gradient(135deg, #9c27b0, #7b1fa2); 
+      border-color: #9c27b0;
+    }
+    .tab-btn.success.active { 
+      background: linear-gradient(135deg, #ff9800, #f57c00); 
+      border-color: #ff9800;
+    }
     
     /* Leaderboard Container */
     .leaderboard-container {
@@ -78,17 +137,24 @@
       border-radius: 15px;
       overflow: hidden;
       box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      animation: slideInUp 0.6s ease-out 0.3s both;
+    }
+
+    @keyframes slideInUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
     }
     
     /* Leaderboard Header */
     .leaderboard-header {
       display: grid;
       grid-template-columns: 80px 1fr 120px;
-      background: #333;
+      background: linear-gradient(135deg, #333, #222);
       color: white;
       padding: 15px;
       font-weight: bold;
       font-size: 1.1rem;
+      border-bottom: 2px solid #000;
     }
     
     /* Leaderboard Row */
@@ -98,27 +164,69 @@
       padding: 12px 15px;
       border-bottom: 1px solid #eee;
       align-items: center;
-      transition: background 0.2s;
+      transition: all 0.2s;
+      animation: rowFadeIn 0.5s ease-out;
+      animation-fill-mode: both;
+    }
+
+    .leaderboard-row:nth-child(2) { animation-delay: 0.1s; }
+    .leaderboard-row:nth-child(3) { animation-delay: 0.2s; }
+    .leaderboard-row:nth-child(4) { animation-delay: 0.3s; }
+    .leaderboard-row:nth-child(5) { animation-delay: 0.4s; }
+    .leaderboard-row:nth-child(6) { animation-delay: 0.5s; }
+    .leaderboard-row:nth-child(7) { animation-delay: 0.6s; }
+    .leaderboard-row:nth-child(8) { animation-delay: 0.7s; }
+    .leaderboard-row:nth-child(9) { animation-delay: 0.8s; }
+    .leaderboard-row:nth-child(10) { animation-delay: 0.9s; }
+
+    @keyframes rowFadeIn {
+      from { opacity: 0; transform: translateX(-10px); }
+      to { opacity: 1; transform: translateX(0); }
     }
     
     .leaderboard-row:hover {
       background: #f5f5f5;
+      transform: translateX(5px);
+      box-shadow: -5px 0 0 #667eea;
     }
     
     .leaderboard-row.current-player {
-      background: #e3f2fd;
+      background: linear-gradient(90deg, #e3f2fd, #bbdefb);
       border-left: 5px solid #2196F3;
       font-weight: bold;
+      box-shadow: 0 2px 10px rgba(33, 150, 243, 0.3);
+    }
+
+    .leaderboard-row.current-player:hover {
+      background: linear-gradient(90deg, #bbdefb, #90caf9);
     }
     
     .rank {
       font-size: 1.2rem;
       font-weight: bold;
+      display: flex;
+      align-items: center;
+      gap: 5px;
     }
     
-    .rank-1 { color: #FFD700; } /* Gold */
-    .rank-2 { color: #C0C0C0; } /* Silver */
-    .rank-3 { color: #CD7F32; } /* Bronze */
+    .rank-1 { 
+      color: #FFD700; 
+      text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+      animation: glow 2s infinite;
+    }
+    .rank-2 { 
+      color: #C0C0C0;
+      text-shadow: 0 0 10px rgba(192, 192, 192, 0.3);
+    }
+    .rank-3 { 
+      color: #CD7F32;
+      text-shadow: 0 0 10px rgba(205, 127, 50, 0.3);
+    }
+
+    @keyframes glow {
+      0%, 100% { text-shadow: 0 0 10px rgba(255, 215, 0, 0.3); }
+      50% { text-shadow: 0 0 20px rgba(255, 215, 0, 0.6); }
+    }
     
     .player-info {
       display: flex;
@@ -127,15 +235,22 @@
     }
     
     .player-avatar {
-      width: 30px;
-      height: 30px;
-      background: #9c27b0;
+      width: 35px;
+      height: 35px;
+      background: linear-gradient(135deg, #9c27b0, #7b1fa2);
       color: white;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
       font-weight: bold;
+      font-size: 1.1rem;
+      transition: all 0.2s;
+    }
+
+    .leaderboard-row:hover .player-avatar {
+      transform: scale(1.1) rotate(360deg);
+      transition: transform 0.5s;
     }
     
     .player-name {
@@ -146,14 +261,16 @@
       background: #2196F3;
       color: white;
       font-size: 0.7rem;
-      padding: 2px 6px;
-      border-radius: 10px;
+      padding: 2px 8px;
+      border-radius: 12px;
       margin-left: 8px;
+      animation: pulse 2s infinite;
     }
     
     .stat-value {
       font-weight: bold;
       text-align: right;
+      font-size: 1.1rem;
     }
     
     .stat-value.crimes { color: #f44336; }
@@ -169,19 +286,36 @@
       padding: 20px;
       background: white;
       border: 2px solid black;
-      border-radius: 10px;
+      border-radius: 12px;
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
       gap: 15px;
+      animation: slideInDown 0.5s ease-out;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+    }
+
+    @keyframes slideInDown {
+      from { opacity: 0; transform: translateY(-20px); }
+      to { opacity: 1; transform: translateY(0); }
     }
     
     .player-stat-item {
       text-align: center;
+      padding: 10px;
+      border-radius: 8px;
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+
+    .player-stat-item:hover {
+      background: #f5f5f5;
+      transform: scale(1.05);
     }
     
     .player-stat-label {
-      font-size: 0.8rem;
+      font-size: 0.85rem;
       color: #666;
+      margin-bottom: 5px;
     }
     
     .player-stat-value {
@@ -223,31 +357,63 @@
       background: #666;
       color: white;
       cursor: pointer;
-      transition: all 0.2s;
+      transition: all 0.3s;
       text-align: center;
+      position: relative;
+      overflow: hidden;
+      animation: fadeInUp 0.6s ease-out 0.5s both;
     }
     
     .back-button:hover {
       background: #555;
-      transform: scale(1.02);
+      transform: scale(1.05) translateY(-2px);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+
+    .back-button:active {
+      transform: scale(0.95);
+    }
+
+    .back-button::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.2);
+      transform: translate(-50%, -50%);
+      transition: width 0.6s, height 0.6s;
+    }
+
+    .back-button:hover::after {
+      width: 300px;
+      height: 300px;
     }
     
     /* Refresh Button */
     .refresh-btn {
       display: block;
       margin: 20px auto;
-      padding: 8px 16px;
-      background: #ff9800;
+      padding: 10px 20px;
+      background: linear-gradient(135deg, #ff9800, #f57c00);
       color: white;
       border: none;
-      border-radius: 20px;
+      border-radius: 25px;
       cursor: pointer;
       font-family: 'Courier New', monospace;
       font-weight: bold;
+      transition: all 0.3s;
     }
     
     .refresh-btn:hover {
-      background: #f57c00;
+      transform: translateY(-2px) scale(1.05);
+      box-shadow: 0 4px 15px rgba(255, 152, 0, 0.4);
+    }
+
+    .refresh-btn:active {
+      transform: translateY(0) scale(0.95);
     }
     
     /* Empty State */
@@ -255,6 +421,130 @@
       text-align: center;
       padding: 60px;
       color: #666;
+    }
+
+    /* Search Bar */
+    .search-container {
+      max-width: 400px;
+      margin: 20px auto;
+      position: relative;
+      animation: fadeIn 0.6s ease-out 0.15s both;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 12px 20px;
+      font-family: 'Courier New', monospace;
+      font-size: 1rem;
+      border: 2px solid #667eea;
+      border-radius: 50px;
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    .search-input:focus {
+      box-shadow: 0 0 20px rgba(102, 126, 234, 0.3);
+      transform: scale(1.02);
+    }
+
+    .search-button {
+      position: absolute;
+      right: 5px;
+      top: 5px;
+      padding: 7px 20px;
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      font-family: 'Courier New', monospace;
+      font-weight: bold;
+      transition: all 0.2s;
+    }
+
+    .search-button:hover {
+      background: #764ba2;
+      transform: scale(1.05);
+    }
+
+    /* Scroll to top button */
+    .scroll-top {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: #667eea;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-size: 24px;
+      display: none;
+      justify-content: center;
+      align-items: center;
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+      transition: all 0.2s;
+      z-index: 1000;
+      animation: fadeInScale 0.3s ease-out;
+    }
+
+    .scroll-top:hover {
+      transform: scale(1.1);
+      background: #764ba2;
+    }
+
+    .scroll-top.visible {
+      display: flex;
+    }
+
+    @keyframes fadeInScale {
+      from { opacity: 0; transform: scale(0.5); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    /* Progress bar */
+    .reading-progress {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 0%;
+      height: 3px;
+      background: linear-gradient(90deg, #667eea, #764ba2, #f44336, #4CAF50, #2196F3);
+      z-index: 1001;
+      transition: width 0.1s;
+    }
+
+    /* Realtime status */
+    .realtime-status {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      padding: 8px 15px;
+      background: rgba(0,0,0,0.8);
+      color: white;
+      border-radius: 30px;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      z-index: 9997;
+      backdrop-filter: blur(5px);
+      border: 1px solid rgba(255,255,255,0.2);
+      animation: slideInLeft 0.5s ease-out;
+    }
+
+    @keyframes slideInLeft {
+      from { opacity: 0; transform: translateX(-20px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #4CAF50;
+      animation: pulse 2s infinite;
     }
     
     @media (max-width: 600px) {
@@ -270,34 +560,93 @@
       }
       
       .player-avatar {
-        width: 25px;
-        height: 25px;
+        width: 28px;
+        height: 28px;
         font-size: 0.8rem;
       }
       
       .tab-btn {
         padding: 8px 15px;
         font-size: 0.9rem;
+        flex: 1;
+        min-width: 100px;
       }
       
       .player-stats {
         grid-template-columns: repeat(2, 1fr);
+        padding: 15px;
+      }
+
+      .realtime-status {
+        bottom: 10px;
+        left: 10px;
+        padding: 5px 10px;
+        font-size: 0.75rem;
+      }
+
+      .scroll-top {
+        bottom: 10px;
+        right: 10px;
+        width: 40px;
+        height: 40px;
+        font-size: 20px;
+      }
+
+      .search-container {
+        margin: 15px auto;
+        padding: 0 10px;
+      }
+    }
+
+    /* Print styles */
+    @media print {
+      .leaderboard-tabs, .refresh-btn, .back-button, .search-container, .realtime-status, .scroll-top {
+        display: none !important;
+      }
+      
+      .leaderboard-container {
+        box-shadow: none;
+        border: 1px solid #000;
+      }
+      
+      .leaderboard-row.current-player {
+        background: #f0f0f0;
       }
     }
   </style>
 </head>
 <body>
 
+<!-- Reading progress bar -->
+<div class="reading-progress" id="readingProgress"></div>
+
+<!-- Scroll to top button -->
+<button class="scroll-top" onclick="scrollToTop()" id="scrollTopBtn" aria-label="Scroll to top">↑</button>
+
+<!-- Realtime Status Indicator -->
+<div class="realtime-status" id="realtimeStatus">
+  <span class="status-dot"></span>
+  <span id="realtimeText">Live Updates</span>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+
 <h1>🏆 Leaderboards</h1>
 <div class="subtitle">Who's the biggest criminal mastermind?</div>
 
+<!-- Search Bar -->
+<div class="search-container">
+  <input type="text" class="search-input" id="searchInput" placeholder="🔍 Search players..." onkeyup="if(event.key==='Enter') searchPlayers()">
+  <button class="search-button" onclick="searchPlayers()">Search</button>
+</div>
+
 <!-- Category Tabs -->
 <div class="leaderboard-tabs">
-  <button class="tab-btn crimes active" onclick="switchLeaderboard('crimes')">🔫 Most Crimes</button>
-  <button class="tab-btn jobs" onclick="switchLeaderboard('jobs')">💼 Most Jobs</button>
-  <button class="tab-btn cash" onclick="switchLeaderboard('cash')">💰 Richest</button>
-  <button class="tab-btn level" onclick="switchLeaderboard('level')">⭐ Highest Level</button>
-  <button class="tab-btn success" onclick="switchLeaderboard('success')">🎯 Best Success Rate</button>
+  <button class="tab-btn crimes active" onclick="switchLeaderboard('crimes')" id="tabCrimes">🔫 Most Crimes</button>
+  <button class="tab-btn jobs" onclick="switchLeaderboard('jobs')" id="tabJobs">💼 Most Jobs</button>
+  <button class="tab-btn cash" onclick="switchLeaderboard('cash')" id="tabCash">💰 Richest</button>
+  <button class="tab-btn level" onclick="switchLeaderboard('level')" id="tabLevel">⭐ Highest Level</button>
+  <button class="tab-btn success" onclick="switchLeaderboard('success')" id="tabSuccess">🎯 Best Success Rate</button>
 </div>
 
 <!-- Player's Stats Summary -->
@@ -312,252 +661,490 @@
 </div>
 
 <!-- Refresh Button -->
-<button class="refresh-btn" onclick="loadLeaderboard(currentCategory)">🔄 Refresh</button>
+<button class="refresh-btn" onclick="refreshLeaderboard()" id="refreshBtn">🔄 Refresh</button>
 
 <button class="back-button" onclick="goToDashboard()">← Back to Dashboard</button>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<!-- Include shared utilities -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase.js"></script>
+<script src="toast.js"></script>
+<script src="loading.js"></script>
+<script src="error-handler.js"></script>
+
 <script>
-const sb = window.supabase.createClient(
-  "https://mtiwodvsrwvrujbhmmrn.supabase.co",
-  "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
-);
+// Initialize Supabase client
+const sb = window.supabaseClient;
 
 let currentPlayer = null;
 let currentCategory = 'crimes';
 let leaderboardData = [];
+let allPlayersData = [];
+let searchTimeout = null;
+let refreshInterval = null;
+
+// Page initialization
+document.addEventListener('DOMContentLoaded', async function() {
+    await initializePage();
+    setupScrollToTop();
+    setupReadingProgress();
+    setupKeyboardNavigation();
+    setupAutoRefresh();
+});
+
+// Initialize page
+async function initializePage() {
+    return ErrorHandler.withErrorHandling(async () => {
+        // Check authentication
+        const user = await getCurrentUser();
+        if (!user) {
+            showToast('Please log in to view leaderboards', 'warning', 3000);
+            setTimeout(() => {
+                window.location.href = "index.html";
+            }, 2000);
+            return;
+        }
+
+        // Load current player
+        await loadCurrentPlayer();
+        
+        // Load initial leaderboard
+        await loadLeaderboard('crimes');
+        
+        // Show welcome toast
+        showToast('🏆 Welcome to the Leaderboards!', 'info', 3000);
+
+    }, null, 'Failed to initialize leaderboard');
+}
 
 // Load current player
 async function loadCurrentPlayer() {
-  try {
-    const { data: { user } } = await sb.auth.getUser();
-    if (!user) return;
-    
-    const { data: player } = await sb
-      .from('players')
-      .select('*')
-      .eq('auth_id', user.id)
-      .single();
-    
-    if (player) {
-      currentPlayer = player;
-      updatePlayerStats();
-    }
-  } catch (error) {
-    console.error('Error loading player:', error);
-  }
+    return ErrorHandler.withErrorHandling(async () => {
+        const user = await getCurrentUser();
+        if (!user) return;
+        
+        const { data: player, error } = await sb
+            .from('players')
+            .select('*')
+            .eq('auth_id', user.id)
+            .single();
+        
+        if (error) throw error;
+        
+        if (player) {
+            currentPlayer = player;
+            updatePlayerStats();
+        }
+    }, null, 'Error loading player data');
 }
 
 // Update player stats display
 function updatePlayerStats() {
-  if (!currentPlayer) return;
-  
-  const statsDiv = document.getElementById('playerStats');
-  statsDiv.style.display = 'grid';
-  
-  // Find player's rank in current category
-  const playerRank = leaderboardData.findIndex(p => p.player_id === currentPlayer.id) + 1;
-  
-  statsDiv.innerHTML = `
-    <div class="player-stat-item">
-      <div class="player-stat-label">Your Rank</div>
-      <div class="player-stat-value">#${playerRank || '?'}</div>
-    </div>
-    <div class="player-stat-item">
-      <div class="player-stat-label">Username</div>
-      <div class="player-stat-value">${currentPlayer.username}</div>
-    </div>
-    <div class="player-stat-item">
-      <div class="player-stat-label">Level</div>
-      <div class="player-stat-value">${currentPlayer.level}</div>
-    </div>
-    <div class="player-stat-item">
-      <div class="player-stat-label">Cash</div>
-      <div class="player-stat-value">₹${currentPlayer.cash.toLocaleString()}</div>
-    </div>
-  `;
+    if (!currentPlayer) return;
+    
+    const statsDiv = document.getElementById('playerStats');
+    statsDiv.style.display = 'grid';
+    
+    // Find player's rank in current category
+    const playerRank = leaderboardData.findIndex(p => p.player_id === currentPlayer.id) + 1;
+    
+    statsDiv.innerHTML = `
+        <div class="player-stat-item" onclick="showPlayerDetails()">
+            <div class="player-stat-label">Your Rank</div>
+            <div class="player-stat-value ${playerRank === 1 ? 'rank-1' : playerRank === 2 ? 'rank-2' : playerRank === 3 ? 'rank-3' : ''}">#${playerRank || '?'}</div>
+        </div>
+        <div class="player-stat-item">
+            <div class="player-stat-label">Username</div>
+            <div class="player-stat-value">${currentPlayer.username}</div>
+        </div>
+        <div class="player-stat-item">
+            <div class="player-stat-label">Level</div>
+            <div class="player-stat-value">${currentPlayer.level}</div>
+        </div>
+        <div class="player-stat-item">
+            <div class="player-stat-label">Cash</div>
+            <div class="player-stat-value">₹${currentPlayer.cash.toLocaleString()}</div>
+        </div>
+    `;
+}
+
+// Show player details
+function showPlayerDetails() {
+    if (!currentPlayer) return;
+    
+    showToast(`
+        👤 ${currentPlayer.username}
+        Level: ${currentPlayer.level}
+        Cash: ₹${currentPlayer.cash.toLocaleString()}
+        Energy: ${currentPlayer.energy}/100
+        Health: ${currentPlayer.health || 100}
+        Hunger: ${currentPlayer.hunger || 100}
+        Happiness: ${currentPlayer.happiness || 100}
+        Boost: ${currentPlayer.success_boost || 0}%
+    `, 'info', 5000);
 }
 
 // Switch leaderboard category
-function switchLeaderboard(category) {
-  currentCategory = category;
-  
-  // Update active tab
-  document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.classList.remove('active');
-  });
-  event.target.classList.add('active');
-  
-  loadLeaderboard(category);
+async function switchLeaderboard(category) {
+    currentCategory = category;
+    
+    // Update active tab
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    document.getElementById(`tab${category.charAt(0).toUpperCase() + category.slice(1)}`).classList.add('active');
+    
+    await loadLeaderboard(category);
+    
+    // Show toast
+    const categoryNames = {
+        'crimes': 'Most Crimes',
+        'jobs': 'Most Jobs',
+        'cash': 'Richest Players',
+        'level': 'Highest Level',
+        'success': 'Best Success Rate'
+    };
+    showToast(`📊 Viewing: ${categoryNames[category]}`, 'info', 2000);
 }
 
 // Load leaderboard data
 async function loadLeaderboard(category) {
-  const container = document.getElementById('leaderboardContainer');
-  container.innerHTML = `
-    <div class="loading-spinner">
-      <div class="spinner"></div>
-      <p>Loading leaderboard...</p>
-    </div>
-  `;
-  
-  try {
-    let query = sb.from('leaderboard_stats').select('*');
-    
-    // Order by the selected category
-    switch(category) {
-      case 'crimes':
-        query = query.order('total_crimes', { ascending: false });
-        break;
-      case 'jobs':
-        query = query.order('total_jobs', { ascending: false });
-        break;
-      case 'cash':
-        query = query.order('total_cash_earned', { ascending: false });
-        break;
-      case 'level':
-        query = query.order('current_level', { ascending: false });
-        break;
-      case 'success':
-        query = query.order('crime_success_rate', { ascending: false });
-        break;
-    }
-    
-    query = query.limit(100); // Top 100 players
-    
-    const { data, error } = await query;
-    
-    if (error) throw error;
-    
-    leaderboardData = data || [];
-    renderLeaderboard(category, leaderboardData);
-    
-  } catch (error) {
-    console.error('Error loading leaderboard:', error);
-    container.innerHTML = `
-      <div class="empty-state">
-        <p>❌ Error loading leaderboard</p>
-        <button class="refresh-btn" onclick="loadLeaderboard('${category}')">Try Again</button>
-      </div>
-    `;
-  }
+    return ErrorHandler.withErrorHandling(async () => {
+        const container = document.getElementById('leaderboardContainer');
+        
+        // Show loading state
+        container.innerHTML = `
+            <div class="loading-spinner">
+                <div class="spinner"></div>
+                <p>Loading leaderboard...</p>
+            </div>
+        `;
+        
+        let query = sb.from('leaderboard_stats').select('*');
+        
+        // Order by the selected category
+        switch(category) {
+            case 'crimes':
+                query = query.order('total_crimes', { ascending: false });
+                break;
+            case 'jobs':
+                query = query.order('total_jobs', { ascending: false });
+                break;
+            case 'cash':
+                query = query.order('total_cash_earned', { ascending: false });
+                break;
+            case 'level':
+                query = query.order('current_level', { ascending: false });
+                break;
+            case 'success':
+                query = query.order('crime_success_rate', { ascending: false });
+                break;
+        }
+        
+        query = query.limit(100); // Top 100 players
+        
+        const { data, error } = await query;
+        
+        if (error) throw error;
+        
+        leaderboardData = data || [];
+        allPlayersData = data || [];
+        
+        renderLeaderboard(category, leaderboardData);
+        
+        // Update realtime text
+        document.getElementById('realtimeText').textContent = 'Updated just now';
+        setTimeout(() => {
+            document.getElementById('realtimeText').textContent = 'Live Updates';
+        }, 3000);
+
+    }, 'leaderboardContainer', 'Error loading leaderboard');
 }
 
 // Render leaderboard
 function renderLeaderboard(category, data) {
-  const container = document.getElementById('leaderboardContainer');
-  
-  if (!data || data.length === 0) {
-    container.innerHTML = `
-      <div class="empty-state">
-        <p>No data available yet</p>
-      </div>
-    `;
-    return;
-  }
-  
-  let headerTitle = '';
-  let valueClass = '';
-  
-  switch(category) {
-    case 'crimes':
-      headerTitle = 'Total Crimes';
-      valueClass = 'crimes';
-      break;
-    case 'jobs':
-      headerTitle = 'Total Jobs';
-      valueClass = 'jobs';
-      break;
-    case 'cash':
-      headerTitle = 'Total Cash';
-      valueClass = 'cash';
-      break;
-    case 'level':
-      headerTitle = 'Level';
-      valueClass = 'level';
-      break;
-    case 'success':
-      headerTitle = 'Success Rate';
-      valueClass = 'success';
-      break;
-  }
-  
-  let html = `
-    <div class="leaderboard-header">
-      <div>Rank</div>
-      <div>Player</div>
-      <div style="text-align: right;">${headerTitle}</div>
-    </div>
-  `;
-  
-  data.forEach((player, index) => {
-    const rank = index + 1;
-    const isCurrentPlayer = currentPlayer && player.player_id === currentPlayer.id;
-    let rankClass = '';
+    const container = document.getElementById('leaderboardContainer');
     
-    if (rank === 1) rankClass = 'rank-1';
-    else if (rank === 2) rankClass = 'rank-2';
-    else if (rank === 3) rankClass = 'rank-3';
-    
-    let value = '';
-    switch(category) {
-      case 'crimes':
-        value = player.total_crimes.toLocaleString();
-        break;
-      case 'jobs':
-        value = player.total_jobs.toLocaleString();
-        break;
-      case 'cash':
-        value = '₹' + player.total_cash_earned.toLocaleString();
-        break;
-      case 'level':
-        value = player.current_level;
-        break;
-      case 'success':
-        value = player.crime_success_rate.toFixed(1) + '%';
-        break;
+    if (!data || data.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <p>📊 No data available yet</p>
+                <p style="font-size: 0.9rem; margin-top: 10px;">Be the first to make it on the leaderboard!</p>
+            </div>
+        `;
+        return;
     }
     
-    html += `
-      <div class="leaderboard-row ${isCurrentPlayer ? 'current-player' : ''}">
-        <div class="rank ${rankClass}">#${rank}</div>
-        <div class="player-info">
-          <div class="player-avatar">${player.username.charAt(0).toUpperCase()}</div>
-          <div class="player-name">
-            ${player.username}
-            ${isCurrentPlayer ? '<span class="current-badge">You</span>' : ''}
-          </div>
+    let headerTitle = '';
+    let valueClass = '';
+    
+    switch(category) {
+        case 'crimes':
+            headerTitle = 'Total Crimes';
+            valueClass = 'crimes';
+            break;
+        case 'jobs':
+            headerTitle = 'Total Jobs';
+            valueClass = 'jobs';
+            break;
+        case 'cash':
+            headerTitle = 'Total Cash';
+            valueClass = 'cash';
+            break;
+        case 'level':
+            headerTitle = 'Level';
+            valueClass = 'level';
+            break;
+        case 'success':
+            headerTitle = 'Success Rate';
+            valueClass = 'success';
+            break;
+    }
+    
+    let html = `
+        <div class="leaderboard-header">
+            <div>🏆 Rank</div>
+            <div>👤 Player</div>
+            <div style="text-align: right;">${headerTitle}</div>
         </div>
-        <div class="stat-value ${valueClass}">${value}</div>
-      </div>
     `;
-  });
-  
-  container.innerHTML = html;
-  
-  // Update player stats with new rank
-  updatePlayerStats();
+    
+    data.forEach((player, index) => {
+        const rank = index + 1;
+        const isCurrentPlayer = currentPlayer && player.player_id === currentPlayer.id;
+        let rankClass = '';
+        
+        if (rank === 1) rankClass = 'rank-1';
+        else if (rank === 2) rankClass = 'rank-2';
+        else if (rank === 3) rankClass = 'rank-3';
+        
+        let value = '';
+        switch(category) {
+            case 'crimes':
+                value = player.total_crimes?.toLocaleString() || '0';
+                break;
+            case 'jobs':
+                value = player.total_jobs?.toLocaleString() || '0';
+                break;
+            case 'cash':
+                value = '₹' + (player.total_cash_earned?.toLocaleString() || '0');
+                break;
+            case 'level':
+                value = player.current_level || '1';
+                break;
+            case 'success':
+                value = (player.crime_success_rate || 0).toFixed(1) + '%';
+                break;
+        }
+        
+        html += `
+            <div class="leaderboard-row ${isCurrentPlayer ? 'current-player' : ''}" 
+                 onclick="showPlayerRankInfo('${player.player_id}', '${player.username}', ${rank})">
+                <div class="rank ${rankClass}">
+                    ${getRankIcon(rank)} #${rank}
+                </div>
+                <div class="player-info">
+                    <div class="player-avatar" style="background: ${getAvatarColor(player.username)}">${player.username.charAt(0).toUpperCase()}</div>
+                    <div class="player-name">
+                        ${player.username}
+                        ${isCurrentPlayer ? '<span class="current-badge">You</span>' : ''}
+                    </div>
+                </div>
+                <div class="stat-value ${valueClass}">${value}</div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+    
+    // Update player stats with new rank
+    updatePlayerStats();
+}
+
+// Get rank icon
+function getRankIcon(rank) {
+    if (rank === 1) return '👑';
+    if (rank === 2) return '🥈';
+    if (rank === 3) return '🥉';
+    return '📋';
+}
+
+// Get avatar color based on username
+function getAvatarColor(username) {
+    const colors = [
+        'linear-gradient(135deg, #f44336, #d32f2f)',
+        'linear-gradient(135deg, #2196F3, #1976D2)',
+        'linear-gradient(135deg, #4CAF50, #388E3C)',
+        'linear-gradient(135deg, #9c27b0, #7b1fa2)',
+        'linear-gradient(135deg, #ff9800, #f57c00)',
+        'linear-gradient(135deg, #795548, #5d4037)',
+        'linear-gradient(135deg, #607d8b, #455a64)'
+    ];
+    
+    let hash = 0;
+    for (let i = 0; i < username.length; i++) {
+        hash = ((hash << 5) - hash) + username.charCodeAt(i);
+        hash |= 0;
+    }
+    
+    return colors[Math.abs(hash) % colors.length];
+}
+
+// Show player rank info
+function showPlayerRankInfo(playerId, username, rank) {
+    const player = leaderboardData.find(p => p.player_id === playerId);
+    if (!player) return;
+    
+    let details = `👤 ${username}\nRank: #${rank}\n`;
+    
+    details += `Level: ${player.current_level || 1}\n`;
+    details += `Total Cash: ₹${(player.total_cash_earned || 0).toLocaleString()}\n`;
+    details += `Total Crimes: ${player.total_crimes || 0}\n`;
+    details += `Total Jobs: ${player.total_jobs || 0}\n`;
+    details += `Success Rate: ${(player.crime_success_rate || 0).toFixed(1)}%`;
+    
+    showToast(details, 'info', 5000);
+}
+
+// Search players
+function searchPlayers() {
+    const query = document.getElementById('searchInput').value.trim().toLowerCase();
+    if (!query || query.length < 2) {
+        showToast('Please enter at least 2 characters', 'warning', 2000);
+        return;
+    }
+
+    const filtered = allPlayersData.filter(player => 
+        player.username.toLowerCase().includes(query)
+    );
+
+    if (filtered.length > 0) {
+        renderLeaderboard(currentCategory, filtered);
+        showToast(`Found ${filtered.length} player${filtered.length > 1 ? 's' : ''}`, 'success', 2000);
+    } else {
+        showToast(`No players found matching "${query}"`, 'warning', 2000);
+    }
+}
+
+// Refresh leaderboard
+async function refreshLeaderboard() {
+    const refreshBtn = document.getElementById('refreshBtn');
+    refreshBtn.disabled = true;
+    refreshBtn.textContent = '🔄 Refreshing...';
+    
+    await loadLeaderboard(currentCategory);
+    
+    setTimeout(() => {
+        refreshBtn.disabled = false;
+        refreshBtn.textContent = '🔄 Refresh';
+    }, 1000);
+}
+
+// Setup auto-refresh every 60 seconds
+function setupAutoRefresh() {
+    refreshInterval = setInterval(() => {
+        if (currentCategory) {
+            loadLeaderboard(currentCategory);
+        }
+    }, 60000);
 }
 
 // Navigation
 function goToDashboard() {
-  window.location.href = "dashboard.html";
+    showToast('Returning to dashboard...', 'info', 1000);
+    setTimeout(() => {
+        window.location.href = "dashboard.html";
+    }, 500);
 }
 
-// Auto-refresh every 60 seconds
-setInterval(() => {
-  if (currentCategory) {
-    loadLeaderboard(currentCategory);
-  }
-}, 60000);
-
-// Initialize
-async function init() {
-  await loadCurrentPlayer();
-  await loadLeaderboard('crimes');
+// Scroll to top functionality
+function setupScrollToTop() {
+    const scrollBtn = document.getElementById('scrollTopBtn');
+    
+    window.addEventListener('scroll', () => {
+        if (window.scrollY > 300) {
+            scrollBtn.classList.add('visible');
+        } else {
+            scrollBtn.classList.remove('visible');
+        }
+    });
 }
 
-init();
+function scrollToTop() {
+    window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+    });
+}
+
+// Reading progress bar
+function setupReadingProgress() {
+    const progressBar = document.getElementById('readingProgress');
+    
+    window.addEventListener('scroll', () => {
+        const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+        const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+        const scrolled = (winScroll / height) * 100;
+        progressBar.style.width = scrolled + '%';
+    });
+}
+
+// Keyboard navigation
+function setupKeyboardNavigation() {
+    document.addEventListener('keydown', (e) => {
+        // 1-5 for category switching
+        if (e.key === '1') {
+            e.preventDefault();
+            switchLeaderboard('crimes');
+        } else if (e.key === '2') {
+            e.preventDefault();
+            switchLeaderboard('jobs');
+        } else if (e.key === '3') {
+            e.preventDefault();
+            switchLeaderboard('cash');
+        } else if (e.key === '4') {
+            e.preventDefault();
+            switchLeaderboard('level');
+        } else if (e.key === '5') {
+            e.preventDefault();
+            switchLeaderboard('success');
+        }
+        
+        // Ctrl + F for search
+        if (e.ctrlKey && e.key === 'f') {
+            e.preventDefault();
+            document.getElementById('searchInput').focus();
+        }
+        
+        // R for refresh
+        if (e.key === 'r' || e.key === 'R') {
+            if (!e.ctrlKey && !e.metaKey) {
+                e.preventDefault();
+                refreshLeaderboard();
+            }
+        }
+        
+        // Esc to clear search
+        if (e.key === 'Escape') {
+            document.getElementById('searchInput').value = '';
+            renderLeaderboard(currentCategory, allPlayersData);
+        }
+    });
+}
+
+// Clean up on page unload
+window.addEventListener('beforeunload', () => {
+    if (refreshInterval) clearInterval(refreshInterval);
+});
+
+// Export functions for global use
+window.switchLeaderboard = switchLeaderboard;
+window.goToDashboard = goToDashboard;
+window.scrollToTop = scrollToTop;
+window.searchPlayers = searchPlayers;
+window.refreshLeaderboard = refreshLeaderboard;
+window.showPlayerDetails = showPlayerDetails;
+window.showPlayerRankInfo = showPlayerRankInfo;
 </script>
 
 </body>
