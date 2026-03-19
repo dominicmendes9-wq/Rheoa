@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Rheoa RPG - Daily Rewards</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body { 
+      font-family: 'Courier New', monospace; 
+      background: #f8f8f0; 
+      color: #222; 
+      padding: 20px;
+      min-height: 100vh;
+    }
+    
+    h1 { 
+      text-align: center; 
+      margin-bottom: 10px;
+      font-size: clamp(1.5rem, 5vw, 2.5rem);
+      color: #ffd700;
+      text-shadow: 2px 2px 0 #b8860b;
+    }
+    
+    .subtitle {
+      text-align: center;
+      color: #666;
+      margin-bottom: 30px;
+      font-style: italic;
+    }
+    
+    /* Streak Banner */
+    .streak-banner {
+      background: linear-gradient(135deg, #ffd700 0%, #ffa500 100%);
+      color: #333;
+      padding: 20px;
+      border-radius: 15px;
+      margin-bottom: 30px;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 20px;
+      box-shadow: 0 10px 20px rgba(255, 215, 0, 0.3);
+    }
+    
+    .streak-item {
+      text-align: center;
+    }
+    
+    .streak-label {
+      font-size: 0.9rem;
+      opacity: 0.8;
+    }
+    
+    .streak-value {
+      font-size: 2rem;
+      font-weight: bold;
+    }
+    
+    .streak-flame {
+      font-size: 2rem;
+      animation: flicker 1s infinite;
+    }
+    
+    @keyframes flicker {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.8; transform: scale(1.1); }
+    }
+    
+    /* Timer */
+    .timer-container {
+      text-align: center;
+      margin-bottom: 30px;
+      padding: 15px;
+      background: white;
+      border: 3px solid black;
+      border-radius: 10px;
+      font-size: 1.2rem;
+    }
+    
+    .timer {
+      font-weight: bold;
+      color: #ff9800;
+      font-size: 1.5rem;
+    }
+    
+    /* Claim Button */
+    .claim-button-container {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    
+    .claim-btn {
+      padding: 20px 50px;
+      font-size: 2rem;
+      font-family: 'Courier New', monospace;
+      font-weight: bold;
+      border: none;
+      border-radius: 50px;
+      background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+      color: white;
+      cursor: pointer;
+      transition: all 0.3s;
+      box-shadow: 0 10px 20px rgba(76, 175, 80, 0.3);
+    }
+    
+    .claim-btn:hover:not(:disabled) {
+      transform: translateY(-3px) scale(1.05);
+      box-shadow: 0 15px 30px rgba(76, 175, 80, 0.4);
+    }
+    
+    .claim-btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+    
+    .claim-btn.claimable {
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+    
+    /* Rewards Grid */
+    .rewards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 15px;
+      margin-bottom: 30px;
+    }
+    
+    .reward-card {
+      background: white;
+      border: 3px solid #ffd700;
+      border-radius: 15px;
+      padding: 20px 10px;
+      text-align: center;
+      position: relative;
+      transition: all 0.2s;
+    }
+    
+    .reward-card.current {
+      border-color: #4CAF50;
+      background: #f0fff0;
+      transform: scale(1.05);
+      box-shadow: 0 10px 20px rgba(76, 175, 80, 0.3);
+      z-index: 1;
+    }
+    
+    .reward-card.claimed {
+      border-color: #ccc;
+      background: #f5f5f5;
+      opacity: 0.7;
+    }
+    
+    .reward-card.monthly-special {
+      border-color: #ff69b4;
+      background: #fff0f5;
+    }
+    
+    .reward-day {
+      position: absolute;
+      top: -10px;
+      left: 10px;
+      background: #ffd700;
+      color: #333;
+      padding: 3px 10px;
+      border-radius: 15px;
+      font-weight: bold;
+      font-size: 0.8rem;
+    }
+    
+    .reward-icon {
+      font-size: 3rem;
+      margin: 15px 0;
+    }
+    
+    .reward-value {
+      font-size: 1.3rem;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    
+    .reward-description {
+      font-size: 0.9rem;
+      color: #666;
+    }
+    
+    .streak-badge {
+      position: absolute;
+      top: -10px;
+      right: 10px;
+      background: #ff9800;
+      color: white;
+      padding: 3px 10px;
+      border-radius: 15px;
+      font-size: 0.8rem;
+      font-weight: bold;
+    }
+    
+    .claimed-badge {
+      position: absolute;
+      bottom: 5px;
+      right: 5px;
+      color: #4CAF50;
+      font-size: 1.5rem;
+    }
+    
+    /* Monthly Special */
+    .monthly-special {
+      background: linear-gradient(135deg, #ff69b4 0%, #ff1493 100%);
+      color: white;
+      padding: 20px;
+      border-radius: 15px;
+      margin-bottom: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+    
+    .special-icon {
+      font-size: 4rem;
+    }
+    
+    .special-info {
+      flex: 1;
+    }
+    
+    .special-title {
+      font-size: 1.5rem;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    
+    .special-description {
+      font-size: 1rem;
+      opacity: 0.9;
+    }
+    
+    .special-date {
+      font-size: 1.2rem;
+      font-weight: bold;
+      background: rgba(255,255,255,0.2);
+      padding: 10px 20px;
+      border-radius: 25px;
+    }
+    
+    /* History Section */
+    .history-section {
+      background: white;
+      border: 3px solid black;
+      border-radius: 15px;
+      overflow: hidden;
+      margin-top: 30px;
+    }
+    
+    .history-header {
+      background: #333;
+      color: white;
+      padding: 15px;
+      font-weight: bold;
+      font-size: 1.2rem;
+    }
+    
+    .history-list {
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    
+    .history-item {
+      display: grid;
+      grid-template-columns: 100px 1fr 100px;
+      padding: 12px 15px;
+      border-bottom: 1px solid #eee;
+      align-items: center;
+    }
+    
+    .history-date {
+      color: #666;
+    }
+    
+    .history-reward {
+      text-align: center;
+      font-weight: bold;
+    }
+    
+    .history-streak {
+      text-align: right;
+      color: #ff9800;
+      font-weight: bold;
+    }
+    
+    /* Back Button */
+    .back-button {
+      display: block;
+      width: 200px;
+      margin: 40px auto;
+      padding: 12px 24px;
+      font-family: 'Courier New', monospace;
+      font-weight: bold;
+      border: 2px solid black;
+      border-radius: 8px;
+      background: #666;
+      color: white;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+    }
+    
+    .back-button:hover {
+      background: #555;
+      transform: scale(1.02);
+    }
+    
+    /* Toast Notifications */
+    .toast-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 9999;
+    }
+    
+    .toast {
+      padding: 15px 25px;
+      margin-bottom: 10px;
+      border-radius: 8px;
+      color: white;
+      font-weight: bold;
+      animation: slideIn 0.3s ease-out;
+    }
+    
+    .toast.success { background: #4CAF50; }
+    .toast.error { background: #f44336; }
+    .toast.info { background: #2196F3; }
+    .toast.reward { background: #ffd700; color: #333; }
+    
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    
+    /* Spinner */
+    .spinner {
+      display: inline-block;
+      width: 30px;
+      height: 30px;
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #ffd700;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .loading {
+      text-align: center;
+      padding: 60px;
+    }
+    
+    @media (max-width: 600px) {
+      .streak-banner {
+        flex-direction: column;
+        text-align: center;
+      }
+      
+      .rewards-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+      
+      .monthly-special {
+        flex-direction: column;
+        text-align: center;
+      }
+      
+      .history-item {
+        grid-template-columns: 80px 1fr 60px;
+        font-size: 0.9rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="toast-container" id="toast-container"></div>
+
+<h1>🎁 Daily Rewards</h1>
+<div class="subtitle">Login every day to claim amazing prizes!</div>
+
+<!-- Streak Banner -->
+<div id="streakBanner" class="streak-banner" style="display: none;">
+  <div class="streak-item">
+    <div class="streak-label">Current Streak</div>
+    <div class="streak-value" id="currentStreak">0</div>
+  </div>
+  <div class="streak-flame">🔥</div>
+  <div class="streak-item">
+    <div class="streak-label">Max Streak</div>
+    <div class="streak-value" id="maxStreak">0</div>
+  </div>
+  <div class="streak-flame">🔥</div>
+  <div class="streak-item">
+    <div class="streak-label">Total Claims</div>
+    <div class="streak-value" id="totalClaims">0</div>
+  </div>
+</div>
+
+<!-- Timer -->
+<div class="timer-container" id="timerContainer" style="display: none;">
+  <span id="timerMessage">Next reward available in:</span>
+  <span class="timer" id="timer">00:00:00</span>
+</div>
+
+<!-- Claim Button -->
+<div class="claim-button-container">
+  <button class="claim-btn" id="claimBtn" onclick="claimReward()" disabled>
+    🎁 CLAIM REWARD
+  </button>
+</div>
+
+<!-- Monthly Special -->
+<div id="monthlySpecial" class="monthly-special" style="display: none;"></div>
+
+<!-- Rewards Grid -->
+<h2>📅 30-Day Rewards Cycle</h2>
+<div class="rewards-grid" id="rewardsGrid">
+  <div class="loading">
+    <div class="spinner"></div>
+    <p>Loading rewards...</p>
+  </div>
+</div>
+
+<!-- History Section -->
+<div class="history-section">
+  <div class="history-header">📜 Claim History</div>
+  <div class="history-list" id="historyList">
+    <div style="text-align: center; padding: 40px;">No claims yet</div>
+  </div>
+</div>
+
+<button class="back-button" onclick="goToDashboard()">← Back to Dashboard</button>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<script>
+const sb = window.supabase.createClient(
+  "https://mtiwodvsrwvrujbhmmrn.supabase.co",
+  "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
+);
+
+let currentPlayer = null;
+let rewardStatus = null;
+let dailyRewards = [];
+let claimHistory = [];
+let timerInterval = null;
+let monthlySpecial = null;
+
+// Toast notification
+function showToast(message, type = 'info', duration = 3000) {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.textContent = message;
+  
+  container.appendChild(toast);
+  
+  setTimeout(() => {
+    toast.classList.add('fade-out');
+    setTimeout(() => {
+      if (toast.parentNode) {
+        container.removeChild(toast);
+      }
+    }, 300);
+  }, duration);
+}
+
+// Load player data
+async function loadPlayerData() {
+  try {
+    const { data: { user } } = await sb.auth.getUser();
+    if (!user) return window.location.href = "index.html";
+    
+    const { data: player } = await sb
+      .from('players')
+      .select('*')
+      .eq('auth_id', user.id)
+      .single();
+    
+    if (player) {
+      currentPlayer = player;
+      await loadRewardStatus();
+      await loadDailyRewards();
+      await loadClaimHistory();
+    }
+  } catch (error) {
+    console.error('Error loading player:', error);
+  }
+}
+
+// Load reward status
+async function loadRewardStatus() {
+  try {
+    const { data, error } = await sb.rpc('get_daily_reward_status');
+    
+    if (error) throw error;
+    
+    if (data.success) {
+      rewardStatus = data;
+      updateUI();
+      
+      // Check for monthly special
+      if (data.next_reward.is_monthly_special) {
+        monthlySpecial = data.next_reward;
+        showMonthlySpecial();
+      }
+    }
+  } catch (error) {
+    console.error('Error loading reward status:', error);
+  }
+}
+
+// Load daily rewards
+async function loadDailyRewards() {
+  try {
+    const { data } = await sb
+      .from('daily_rewards')
+      .select('*')
+      .order('day_number');
+    
+    dailyRewards = data || [];
+    renderRewardsGrid();
+  } catch (error) {
+    console.error('Error loading daily rewards:', error);
+  }
+}
+
+// Load claim history
+async function loadClaimHistory() {
+  try {
+    const { data } = await sb
+      .from('player_claimed_rewards')
+      .select('*')
+      .eq('player_id', currentPlayer.id)
+      .order('claim_date', { ascending: false })
+      .limit(20);
+    
+    claimHistory = data || [];
+    renderClaimHistory();
+  } catch (error) {
+    console.error('Error loading claim history:', error);
+  }
+}
+
+// Update UI based on status
+function updateUI() {
+  if (!rewardStatus) return;
+  
+  // Update streak banner
+  document.getElementById('streakBanner').style.display = 'flex';
+  document.getElementById('currentStreak').textContent = rewardStatus.current_streak;
+  document.getElementById('maxStreak').textContent = rewardStatus.max_streak;
+  document.getElementById('totalClaims').textContent = rewardStatus.total_claims;
+  
+  // Update claim button
+  const claimBtn = document.getElementById('claimBtn');
+  if (rewardStatus.can_claim) {
+    claimBtn.disabled = false;
+    claimBtn.classList.add('claimable');
+    claimBtn.textContent = '🎁 CLAIM NOW!';
+  } else {
+    claimBtn.disabled = true;
+    claimBtn.classList.remove('claimable');
+    claimBtn.textContent = '🎁 CLAIM REWARD';
+  }
+  
+  // Start timer if needed
+  if (!rewardStatus.can_claim) {
+    startTimer(rewardStatus.seconds_until_next);
+    document.getElementById('timerContainer').style.display = 'block';
+  } else {
+    document.getElementById('timerContainer').style.display = 'none';
+  }
+}
+
+// Start countdown timer
+function startTimer(seconds) {
+  if (timerInterval) clearInterval(timerInterval);
+  
+  const timerEl = document.getElementById('timer');
+  let remaining = seconds;
+  
+  function updateTimer() {
+    if (remaining <= 0) {
+      clearInterval(timerInterval);
+      loadRewardStatus(); // Refresh status
+      return;
+    }
+    
+    const hours = Math.floor(remaining / 3600);
+    const minutes = Math.floor((remaining % 3600) / 60);
+    const secs = remaining % 60;
+    
+    timerEl.textContent = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    remaining--;
+  }
+  
+  updateTimer();
+  timerInterval = setInterval(updateTimer, 1000);
+}
+
+// Show monthly special
+function showMonthlySpecial() {
+  const special = document.getElementById('monthlySpecial');
+  const today = new Date();
+  const month = today.toLocaleString('default', { month: 'long' });
+  const day = today.getDate();
+  
+  special.style.display = 'flex';
+  special.innerHTML = `
+    <div class="special-icon">${monthlySpecial.icon || '🎉'}</div>
+    <div class="special-info">
+      <div class="special-title">${monthlySpecial.description}</div>
+      <div class="special-description">Special reward for ${month} ${day}!</div>
+    </div>
+    <div class="special-date">${month} ${day}</div>
+  `;
+}
+
+// Render rewards grid
+function renderRewardsGrid() {
+  const grid = document.getElementById('rewardsGrid');
+  
+  if (!rewardStatus) {
+    grid.innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading...</p></div>';
+    return;
+  }
+  
+  const currentDay = (rewardStatus.current_streak % 30) + 1;
+  
+  grid.innerHTML = dailyRewards.map(reward => {
+    const isCurrent = reward.day_number === currentDay && rewardStatus.can_claim;
+    const isPast = reward.day_number < currentDay;
+    const isMonthlySpecial = rewardStatus.next_reward.is_monthly_special && 
+                            reward.day_number === currentDay;
+    
+    let rewardValue = reward.reward_value;
+    if (reward.reward_type === 'item') {
+      rewardValue = '';
+    } else if (reward.reward_type === 'boost') {
+      rewardValue = `+${rewardValue}%`;
+    } else {
+      rewardValue = rewardValue.toLocaleString();
+    }
+    
+    return `
+      <div class="reward-card 
+        ${isCurrent ? 'current' : ''} 
+        ${isPast ? 'claimed' : ''}
+        ${isMonthlySpecial ? 'monthly-special' : ''}">
+        <span class="reward-day">Day ${reward.day_number}</span>
+        ${reward.day_number % 7 === 0 ? '<span class="streak-badge">2x Bonus!</span>' : ''}
+        <div class="reward-icon">${reward.icon || '🎁'}</div>
+        <div class="reward-value">${rewardValue}</div>
+        <div class="reward-description">${reward.description}</div>
+        ${isPast ? '<div class="claimed-badge">✓</div>' : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+// Render claim history
+function renderClaimHistory() {
+  const list = document.getElementById('historyList');
+  
+  if (claimHistory.length === 0) {
+    list.innerHTML = '<div style="text-align: center; padding: 40px;">No claims yet</div>';
+    return;
+  }
+  
+  list.innerHTML = claimHistory.map(claim => {
+    const date = new Date(claim.claim_date).toLocaleDateString();
+    const reward = claim.reward_received;
+    
+    let rewardText = '';
+    if (reward.type === 'cash') rewardText = `💰 ₹${reward.value}`;
+    else if (reward.type === 'xp') rewardText = `⭐ ${reward.value} XP`;
+    else if (reward.type === 'energy') rewardText = `⚡ ${reward.value} Energy`;
+    else if (reward.type === 'health') rewardText = `❤️ ${reward.value} Health`;
+    else if (reward.type === 'boost') rewardText = `✨ +${reward.value}% Boost`;
+    else if (reward.type === 'item') rewardText = `📦 Item Received`;
+    
+    return `
+      <div class="history-item">
+        <div class="history-date">${date}</div>
+        <div class="history-reward">${rewardText}</div>
+        <div class="history-streak">Day ${claim.streak_at_claim}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+// Claim reward
+async function claimReward() {
+  if (!rewardStatus || !rewardStatus.can_claim) {
+    showToast('No reward available yet!', 'error');
+    return;
+  }
+  
+  const btn = document.getElementById('claimBtn');
+  btn.disabled = true;
+  btn.textContent = '🎁 CLAIMING...';
+  
+  try {
+    const { data, error } = await sb.rpc('claim_daily_reward');
+    
+    if (error) throw error;
+    
+    if (data.success) {
+      showToast(`✨ ${data.message}! Streak: ${data.streak} days 🔥`, 'reward', 5000);
+      
+      // Show bonus message for streak milestones
+      if (data.streak % 7 === 0) {
+        showToast(`🎉 WEEKLY BONUS! 2x multiplier applied!`, 'success', 4000);
+      }
+      
+      if (data.is_monthly_special) {
+        showToast(`🎊 SPECIAL MONTHLY REWARD!`, 'reward', 4000);
+      }
+      
+      // Reload data
+      await loadRewardStatus();
+      await loadClaimHistory();
+      
+      // Update player stats in background
+      const { data: player } = await sb
+        .from('players')
+        .select('*')
+        .eq('id', currentPlayer.id)
+        .single();
+      
+      if (player) {
+        currentPlayer = player;
+      }
+    } else {
+      showToast(data.error || 'Failed to claim reward', 'error');
+      btn.disabled = false;
+      btn.textContent = '🎁 CLAIM NOW!';
+    }
+  } catch (error) {
+    console.error('Error claiming reward:', error);
+    showToast('Error claiming reward', 'error');
+    btn.disabled = false;
+    btn.textContent = '🎁 CLAIM NOW!';
+  }
+}
+
+// Navigation
+function goToDashboard() {
+  window.location.href = "dashboard.html";
+}
+
+// Clean up
+window.addEventListener('beforeunload', () => {
+  if (timerInterval) clearInterval(timerInterval);
+});
+
+// Initialize
+loadPlayerData();
+</script>
+
+</body>
+</html>
