@@ -1,0 +1,1272 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Rheoa RPG - Racing</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body { 
+      font-family: 'Courier New', monospace; 
+      background: #f8f8f0; 
+      color: #222; 
+      padding: 20px;
+      min-height: 100vh;
+    }
+    
+    h1 { 
+      text-align: center; 
+      margin-bottom: 10px;
+      font-size: clamp(1.5rem, 5vw, 2.5rem);
+      color: #f44336;
+    }
+    
+    .subtitle {
+      text-align: center;
+      color: #666;
+      margin-bottom: 30px;
+      font-style: italic;
+    }
+    
+    /* Player Stats Bar */
+    .player-stats {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+      color: white;
+      padding: 15px 25px;
+      border-radius: 10px;
+      margin-bottom: 30px;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+    
+    .stat-group {
+      display: flex;
+      gap: 30px;
+      flex-wrap: wrap;
+    }
+    
+    .stat {
+      text-align: center;
+    }
+    
+    .stat-label {
+      font-size: 0.8rem;
+      opacity: 0.9;
+    }
+    
+    .stat-value {
+      font-size: 1.3rem;
+      font-weight: bold;
+    }
+    
+    /* Racing Tabs */
+    .racing-tabs {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 30px;
+      flex-wrap: wrap;
+    }
+    
+    .tab-btn {
+      padding: 12px 25px;
+      font-family: 'Courier New', monospace;
+      font-weight: bold;
+      border: 2px solid black;
+      border-radius: 30px;
+      background: white;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .tab-btn:hover {
+      background: #333;
+      color: white;
+    }
+    
+    .tab-btn.active {
+      background: #f44336;
+      color: white;
+      border-color: #f44336;
+    }
+    
+    /* Tab Content */
+    .tab-content {
+      display: none;
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+    
+    /* Garage Section */
+    .garage-section {
+      background: white;
+      border: 3px solid #f44336;
+      border-radius: 15px;
+      padding: 20px;
+      margin-bottom: 30px;
+    }
+    
+    .section-title {
+      font-size: 1.5rem;
+      font-weight: bold;
+      margin-bottom: 20px;
+      color: #f44336;
+    }
+    
+    .vehicles-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .vehicle-card {
+      border: 2px solid #f44336;
+      border-radius: 10px;
+      padding: 15px;
+      background: #fff5f5;
+    }
+    
+    .vehicle-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    
+    .vehicle-name {
+      font-size: 1.2rem;
+      font-weight: bold;
+    }
+    
+    .vehicle-type {
+      background: #f44336;
+      color: white;
+      padding: 3px 10px;
+      border-radius: 15px;
+      font-size: 0.8rem;
+    }
+    
+    .vehicle-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin: 15px 0;
+    }
+    
+    .stat-bar {
+      height: 8px;
+      background: #eee;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-top: 3px;
+    }
+    
+    .stat-fill {
+      height: 100%;
+      background: #f44336;
+    }
+    
+    .vehicle-condition {
+      margin: 10px 0;
+      padding: 8px;
+      background: white;
+      border-radius: 5px;
+      text-align: center;
+    }
+    
+    .condition-good { color: #4CAF50; }
+    .condition-warning { color: #ff9800; }
+    .condition-critical { color: #f44336; }
+    
+    /* Races Grid */
+    .races-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    
+    .race-card {
+      background: white;
+      border: 3px solid #f44336;
+      border-radius: 15px;
+      padding: 20px;
+      transition: transform 0.2s;
+    }
+    
+    .race-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 20px rgba(244, 67, 54, 0.2);
+    }
+    
+    .race-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    
+    .race-name {
+      font-size: 1.3rem;
+      font-weight: bold;
+      color: #f44336;
+    }
+    
+    .race-type {
+      background: #f44336;
+      color: white;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+    }
+    
+    .race-details {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      margin: 15px 0;
+      padding: 15px 0;
+      border-top: 2px solid #eee;
+      border-bottom: 2px solid #eee;
+    }
+    
+    .detail-item {
+      text-align: center;
+    }
+    
+    .detail-label {
+      font-size: 0.8rem;
+      color: #666;
+    }
+    
+    .detail-value {
+      font-weight: bold;
+      font-size: 1.1rem;
+    }
+    
+    .prize-pool {
+      background: #4CAF50;
+      color: white;
+      padding: 10px;
+      border-radius: 8px;
+      text-align: center;
+      margin: 15px 0;
+      font-weight: bold;
+    }
+    
+    .race-participants {
+      margin: 15px 0;
+      max-height: 150px;
+      overflow-y: auto;
+    }
+    
+    .participant-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px dashed #eee;
+    }
+    
+    .join-btn {
+      width: 100%;
+      padding: 12px;
+      background: #f44336;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+      font-family: 'Courier New', monospace;
+    }
+    
+    .join-btn:hover:not(:disabled) {
+      background: #d32f2f;
+    }
+    
+    .join-btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    
+    /* Shop Grid */
+    .shop-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+    }
+    
+    .shop-card {
+      border: 2px solid #f44336;
+      border-radius: 10px;
+      padding: 20px;
+      background: white;
+      text-align: center;
+    }
+    
+    .shop-price {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #4CAF50;
+      margin: 15px 0;
+    }
+    
+    .shop-btn {
+      width: 100%;
+      padding: 12px;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    
+    .shop-btn:hover:not(:disabled) {
+      background: #45a049;
+    }
+    
+    .shop-btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    
+    /* Leaderboard Table */
+    .leaderboard-section {
+      background: white;
+      border: 3px solid #f44336;
+      border-radius: 15px;
+      overflow: hidden;
+    }
+    
+    .leaderboard-header {
+      background: #f44336;
+      color: white;
+      padding: 15px;
+      font-weight: bold;
+      font-size: 1.2rem;
+    }
+    
+    .leaderboard-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    
+    .leaderboard-table th {
+      background: #333;
+      color: white;
+      padding: 12px;
+    }
+    
+    .leaderboard-table td {
+      padding: 10px;
+      border-bottom: 1px solid #eee;
+      text-align: center;
+    }
+    
+    .leaderboard-table tr:hover {
+      background: #fff5f5;
+    }
+    
+    /* History List */
+    .history-list {
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    
+    .history-item {
+      border-bottom: 1px solid #eee;
+      padding: 15px;
+    }
+    
+    .history-header {
+      display: flex;
+      justify-content: space-between;
+      font-weight: bold;
+    }
+    
+    .history-details {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 5px;
+      color: #666;
+    }
+    
+    .profit { color: #4CAF50; }
+    .loss { color: #f44336; }
+    
+    /* Bet Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+    }
+    
+    .modal-content {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      padding: 30px;
+      border-radius: 15px;
+      border: 3px solid #4CAF50;
+      max-width: 400px;
+      width: 90%;
+    }
+    
+    .modal-title {
+      font-size: 1.3rem;
+      font-weight: bold;
+      margin-bottom: 20px;
+      color: #4CAF50;
+    }
+    
+    .modal-input {
+      width: 100%;
+      padding: 10px;
+      margin: 15px 0;
+      font-family: 'Courier New', monospace;
+      border: 2px solid #ddd;
+      border-radius: 5px;
+    }
+    
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    
+    .modal-btn {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    
+    .modal-btn.confirm {
+      background: #4CAF50;
+      color: white;
+    }
+    
+    .modal-btn.cancel {
+      background: #f44336;
+      color: white;
+    }
+    
+    /* Back Button */
+    .back-button {
+      display: block;
+      width: 200px;
+      margin: 40px auto;
+      padding: 12px 24px;
+      font-family: 'Courier New', monospace;
+      font-weight: bold;
+      border: 2px solid black;
+      border-radius: 8px;
+      background: #666;
+      color: white;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+    }
+    
+    .back-button:hover {
+      background: #555;
+      transform: scale(1.02);
+    }
+    
+    /* Toast Notifications */
+    .toast-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 9999;
+    }
+    
+    .toast {
+      padding: 15px 25px;
+      margin-bottom: 10px;
+      border-radius: 8px;
+      color: white;
+      font-weight: bold;
+      animation: slideIn 0.3s ease-out;
+    }
+    
+    .toast.success { background: #4CAF50; }
+    .toast.error { background: #f44336; }
+    .toast.info { background: #2196F3; }
+    .toast.warning { background: #ff9800; }
+    
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    
+    .spinner {
+      display: inline-block;
+      width: 30px;
+      height: 30px;
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #f44336;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .empty-message {
+      text-align: center;
+      padding: 40px;
+      color: #666;
+    }
+    
+    @media (max-width: 600px) {
+      .player-stats {
+        flex-direction: column;
+        text-align: center;
+      }
+      
+      .stat-group {
+        justify-content: center;
+      }
+      
+      .racing-tabs {
+        flex-direction: column;
+      }
+      
+      .tab-btn {
+        width: 100%;
+      }
+      
+      .race-details {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="toast-container" id="toast-container"></div>
+
+<h1>🏁 Racing & Competitions</h1>
+<div class="subtitle">Speed, skill, and high stakes!</div>
+
+<!-- Player Stats -->
+<div class="player-stats" id="playerStats" style="display: none;">
+  <div class="stat-group">
+    <div class="stat">
+      <div class="stat-label">💰 Cash</div>
+      <div class="stat-value" id="playerCash">₹0</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">⭐ Level</div>
+      <div class="stat-value" id="playerLevel">1</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">🚗 Vehicles</div>
+      <div class="stat-value" id="vehicleCount">0</div>
+    </div>
+  </div>
+</div>
+
+<!-- Racing Tabs -->
+<div class="racing-tabs">
+  <button class="tab-btn active" onclick="switchTab('races')">🏁 Races</button>
+  <button class="tab-btn" onclick="switchTab('garage')">🔧 Garage</button>
+  <button class="tab-btn" onclick="switchTab('shop')">🏪 Shop</button>
+  <button class="tab-btn" onclick="switchTab('leaderboard')">📊 Leaderboard</button>
+  <button class="tab-btn" onclick="switchTab('history')">📜 History</button>
+</div>
+
+<!-- Races Tab -->
+<div id="races" class="tab-content active">
+  <div class="races-grid" id="racesGrid">
+    <div class="empty-message">
+      <div class="spinner"></div>
+      <p>Loading races...</p>
+    </div>
+  </div>
+</div>
+
+<!-- Garage Tab -->
+<div id="garage" class="tab-content">
+  <div class="garage-section">
+    <div class="section-title">🔧 My Vehicles</div>
+    <div class="vehicles-grid" id="vehiclesGrid">
+      <div class="empty-message">
+        <div class="spinner"></div>
+        <p>Loading vehicles...</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Shop Tab -->
+<div id="shop" class="tab-content">
+  <div class="garage-section">
+    <div class="section-title">🏪 Vehicle Shop</div>
+    <div class="shop-grid" id="shopGrid">
+      <div class="empty-message">
+        <div class="spinner"></div>
+        <p>Loading vehicles...</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Leaderboard Tab -->
+<div id="leaderboard" class="tab-content">
+  <div class="leaderboard-section">
+    <div class="leaderboard-header">🏆 Racing Champions</div>
+    <table class="leaderboard-table">
+      <thead>
+        <tr>
+          <th>Rank</th>
+          <th>Player</th>
+          <th>Races</th>
+          <th>Wins</th>
+          <th>Win Rate</th>
+          <th>Earnings</th>
+        </tr>
+      </thead>
+      <tbody id="leaderboardBody">
+        <tr>
+          <td colspan="6" class="empty-message">
+            <div class="spinner"></div>
+            <p>Loading leaderboard...</p>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- History Tab -->
+<div id="history" class="tab-content">
+  <div class="garage-section">
+    <div class="section-title">📜 Race History</div>
+    <div class="history-list" id="historyList">
+      <div class="empty-message">
+        <div class="spinner"></div>
+        <p>Loading history...</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Bet Modal -->
+<div id="betModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-title">Place Bet</div>
+    <p id="betParticipantInfo"></p>
+    <input type="number" id="betAmount" class="modal-input" placeholder="Bet amount" min="100" value="100">
+    <p id="potentialPayout">Potential payout: ₹0</p>
+    <div class="modal-actions">
+      <button class="modal-btn confirm" onclick="confirmBet()">Confirm</button>
+      <button class="modal-btn cancel" onclick="closeBetModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<button class="back-button" onclick="goToDashboard()">← Back to Dashboard</button>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<script>
+const sb = window.supabase.createClient(
+  "https://mtiwodvsrwvrujbhmmrn.supabase.co",
+  "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
+);
+
+let currentPlayer = null;
+let vehicles = [];
+let races = [];
+let vehicleTypes = [];
+let leaderboard = [];
+let raceHistory = [];
+let selectedRace = null;
+let selectedParticipant = null;
+
+// Toast notification
+function showToast(message, type = 'info', duration = 3000) {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.textContent = message;
+  
+  container.appendChild(toast);
+  
+  setTimeout(() => {
+    toast.classList.add('fade-out');
+    setTimeout(() => {
+      if (toast.parentNode) {
+        container.removeChild(toast);
+      }
+    }, 300);
+  }, duration);
+}
+
+// Load player data
+async function loadPlayerData() {
+  try {
+    const { data: { user } } = await sb.auth.getUser();
+    if (!user) {
+      window.location.href = "index.html";
+      return;
+    }
+    
+    const { data: player, error } = await sb
+      .from('players')
+      .select('*')
+      .eq('auth_id', user.id)
+      .single();
+    
+    if (error) throw error;
+    
+    if (player) {
+      currentPlayer = player;
+      updatePlayerStats();
+      await loadVehicles();
+      await loadRaces();
+      await loadVehicleTypes();
+      await loadLeaderboard();
+      await loadRaceHistory();
+    }
+  } catch (error) {
+    console.error('Error loading player:', error);
+    showToast('Error loading player data', 'error');
+  }
+}
+
+// Update player stats display
+function updatePlayerStats() {
+  document.getElementById('playerStats').style.display = 'flex';
+  document.getElementById('playerCash').textContent = `₹${currentPlayer.cash.toLocaleString()}`;
+  document.getElementById('playerLevel').textContent = currentPlayer.level;
+  document.getElementById('vehicleCount').textContent = vehicles.length;
+}
+
+// Load vehicles
+async function loadVehicles() {
+  try {
+    const { data, error } = await sb
+      .from('player_vehicles')
+      .select(`
+        *,
+        vehicle_types (*)
+      `)
+      .eq('player_id', currentPlayer.id);
+    
+    if (error) throw error;
+    
+    vehicles = data || [];
+    document.getElementById('vehicleCount').textContent = vehicles.length;
+    renderVehicles();
+  } catch (error) {
+    console.error('Error loading vehicles:', error);
+    showToast('Error loading vehicles', 'error');
+  }
+}
+
+// Load races
+async function loadRaces() {
+  try {
+    const { data, error } = await sb
+      .from('races')
+      .select(`
+        *,
+        race_participants (
+          id,
+          player_id,
+          bet_amount,
+          player:players (username)
+        )
+      `)
+      .in('status', ['open', 'upcoming'])
+      .order('start_time');
+    
+    if (error) throw error;
+    
+    races = data || [];
+    renderRaces();
+  } catch (error) {
+    console.error('Error loading races:', error);
+    showToast('Error loading races', 'error');
+  }
+}
+
+// Load vehicle types
+async function loadVehicleTypes() {
+  try {
+    const { data, error } = await sb
+      .from('vehicle_types')
+      .select('*')
+      .order('price');
+    
+    if (error) throw error;
+    
+    vehicleTypes = data || [];
+    renderShop();
+  } catch (error) {
+    console.error('Error loading vehicle types:', error);
+    showToast('Error loading vehicles', 'error');
+  }
+}
+
+// Load leaderboard
+async function loadLeaderboard() {
+  try {
+    const { data, error } = await sb
+      .from('racing_leaderboard')
+      .select(`
+        *,
+        players!inner (username)
+      `)
+      .order('total_earnings', { ascending: false })
+      .limit(20);
+    
+    if (error) throw error;
+    
+    leaderboard = data || [];
+    renderLeaderboard();
+  } catch (error) {
+    console.error('Error loading leaderboard:', error);
+  }
+}
+
+// Load race history
+async function loadRaceHistory() {
+  try {
+    const { data, error } = await sb
+      .from('race_history')
+      .select(`
+        *,
+        races!inner (name)
+      `)
+      .eq('player_id', currentPlayer.id)
+      .order('created_at', { ascending: false })
+      .limit(20);
+    
+    if (error) throw error;
+    
+    raceHistory = data || [];
+    renderHistory();
+  } catch (error) {
+    console.error('Error loading race history:', error);
+  }
+}
+
+// Render vehicles
+function renderVehicles() {
+  const grid = document.getElementById('vehiclesGrid');
+  
+  if (!vehicles.length) {
+    grid.innerHTML = '<div class="empty-message">No vehicles yet. Buy one from the shop!</div>';
+    return;
+  }
+  
+  grid.innerHTML = vehicles.map(v => {
+    const type = v.vehicle_types;
+    if (!type) return '';
+    
+    const conditionClass = v.condition > 70 ? 'condition-good' : 
+                          v.condition > 30 ? 'condition-warning' : 'condition-critical';
+    
+    const speed = type.base_speed + (v.speed_level - 1) * 5;
+    const accel = type.base_acceleration + (v.acceleration_level - 1) * 5;
+    const handling = type.base_handling + (v.handling_level - 1) * 5;
+    const nitro = type.base_nitro + (v.nitro_level - 1) * 5;
+    
+    return `
+      <div class="vehicle-card">
+        <div class="vehicle-header">
+          <span class="vehicle-name">${v.nickname || type.name}</span>
+          <span class="vehicle-type">${type.name}</span>
+        </div>
+        <div class="vehicle-stats">
+          <div>
+            <div>Speed: ${speed}</div>
+            <div class="stat-bar"><div class="stat-fill" style="width: ${speed}%"></div></div>
+          </div>
+          <div>
+            <div>Acceleration: ${accel}</div>
+            <div class="stat-bar"><div class="stat-fill" style="width: ${accel}%"></div></div>
+          </div>
+          <div>
+            <div>Handling: ${handling}</div>
+            <div class="stat-bar"><div class="stat-fill" style="width: ${handling}%"></div></div>
+          </div>
+          <div>
+            <div>Nitro: ${nitro}</div>
+            <div class="stat-bar"><div class="stat-fill" style="width: ${nitro}%"></div></div>
+          </div>
+        </div>
+        <div class="vehicle-condition ${conditionClass}">
+          Condition: ${v.condition}% ${v.condition < 50 ? '(Needs repair!)' : ''}
+        </div>
+        <div style="display: flex; justify-content: space-around; margin-top: 10px;">
+          <div>Wins: ${v.wins}</div>
+          <div>Losses: ${v.losses}</div>
+          <div>Earnings: ₹${v.total_earnings.toLocaleString()}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// Render races
+function renderRaces() {
+  const grid = document.getElementById('racesGrid');
+  
+  if (!races.length) {
+    grid.innerHTML = '<div class="empty-message">No races available</div>';
+    return;
+  }
+  
+  grid.innerHTML = races.map(race => {
+    const participants = race.race_participants || [];
+    const startTime = new Date(race.start_time).toLocaleString();
+    const hasJoined = participants.some(p => p.player_id === currentPlayer.id);
+    const totalPrize = (race.prize_pool || 0) + (race.base_prize || 0);
+    
+    return `
+      <div class="race-card">
+        <div class="race-header">
+          <span class="race-name">${race.name}</span>
+          <span class="race-type">${race.race_type}</span>
+        </div>
+        <p>${race.description || ''}</p>
+        <div class="race-details">
+          <div class="detail-item">
+            <div class="detail-label">Track Length</div>
+            <div class="detail-value">${(race.track_length / 1000).toFixed(1)}km</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Entry Fee</div>
+            <div class="detail-value">₹${race.entry_fee?.toLocaleString() || 0}</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Min Level</div>
+            <div class="detail-value">${race.min_level}</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Start Time</div>
+            <div class="detail-value">${startTime}</div>
+          </div>
+        </div>
+        <div class="prize-pool">
+          🏆 Prize Pool: ₹${totalPrize.toLocaleString()}
+        </div>
+        <div class="race-participants">
+          <strong>Participants (${participants.length}/${race.max_participants}):</strong>
+          ${participants.map(p => `
+            <div class="participant-item">
+              <span>${p.player?.username || 'Unknown'}</span>
+              ${p.player_id !== currentPlayer.id ? `
+                <button class="bet-btn" style="padding: 2px 8px; font-size: 0.8rem;" 
+                        onclick="openBetModal('${race.id}', '${p.id}', '${p.player?.username || 'Unknown'}')">
+                  Bet
+                </button>
+              ` : '<span>(You)</span>'}
+            </div>
+          `).join('')}
+        </div>
+        <button class="join-btn" 
+                onclick="joinRace('${race.id}')"
+                ${hasJoined || participants.length >= race.max_participants || !vehicles.length ? 'disabled' : ''}>
+          ${!vehicles.length ? 'Need a Vehicle' : 
+            hasJoined ? 'Already Joined' : 
+            participants.length >= race.max_participants ? 'Race Full' : 'Join Race'}
+        </button>
+      </div>
+    `;
+  }).join('');
+}
+
+// Render shop
+function renderShop() {
+  const grid = document.getElementById('shopGrid');
+  
+  if (!vehicleTypes.length) {
+    grid.innerHTML = '<div class="empty-message">No vehicles available</div>';
+    return;
+  }
+  
+  grid.innerHTML = vehicleTypes.map(vt => `
+    <div class="shop-card">
+      <h3>${vt.name}</h3>
+      <p>${vt.description || ''}</p>
+      <div class="vehicle-stats" style="margin: 10px 0;">
+        <div>Speed: ${vt.base_speed}</div>
+        <div>Acceleration: ${vt.base_acceleration}</div>
+        <div>Handling: ${vt.base_handling}</div>
+        <div>Nitro: ${vt.base_nitro}</div>
+      </div>
+      <div class="shop-price">₹${vt.price.toLocaleString()}</div>
+      <div style="margin: 10px 0;">Required Level: ${vt.min_level}</div>
+      <button class="shop-btn" onclick="buyVehicle('${vt.id}')" 
+              ${currentPlayer.level < vt.min_level ? 'disabled' : ''}>
+        ${currentPlayer.level < vt.min_level ? 'Level ' + vt.min_level + ' Required' : 'Buy Now'}
+      </button>
+    </div>
+  `).join('');
+}
+
+// Render leaderboard
+function renderLeaderboard() {
+  const tbody = document.getElementById('leaderboardBody');
+  
+  if (!leaderboard.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="empty-message">No data yet</td></tr>';
+    return;
+  }
+  
+  tbody.innerHTML = leaderboard.map((entry, index) => {
+    const winRate = entry.total_races > 0 
+      ? ((entry.total_wins / entry.total_races) * 100).toFixed(1)
+      : 0;
+    
+    return `
+      <tr>
+        <td>#${index + 1}</td>
+        <td>${entry.players?.username || 'Unknown'}</td>
+        <td>${entry.total_races}</td>
+        <td>${entry.total_wins}</td>
+        <td>${winRate}%</td>
+        <td>₹${entry.total_earnings?.toLocaleString() || 0}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+// Render history
+function renderHistory() {
+  const list = document.getElementById('historyList');
+  
+  if (!raceHistory.length) {
+    list.innerHTML = '<div class="empty-message">No race history yet</div>';
+    return;
+  }
+  
+  list.innerHTML = raceHistory.map(h => `
+    <div class="history-item">
+      <div class="history-header">
+        <span><strong>${h.races?.name || 'Unknown Race'}</strong></span>
+        <span class="${h.position === 1 ? 'profit' : h.position <= 4 ? 'condition-warning' : 'loss'}">
+          ${h.position === 1 ? '🏆 1st' : 
+            h.position === 2 ? '🥈 2nd' : 
+            h.position === 3 ? '🥉 3rd' : 
+            h.position + 'th'}
+        </span>
+      </div>
+      <div class="history-details">
+        <span>${new Date(h.created_at).toLocaleDateString()}</span>
+        <span class="${h.earnings > 0 ? 'profit' : ''}">
+          ${h.earnings > 0 ? '+' : ''}₹${h.earnings?.toLocaleString() || 0}
+        </span>
+      </div>
+    </div>
+  `).join('');
+}
+
+// Buy vehicle
+async function buyVehicle(vehicleTypeId) {
+  const nickname = prompt('Give your vehicle a nickname (optional):', '');
+  
+  try {
+    const { data, error } = await sb.rpc('buy_vehicle', {
+      p_vehicle_type_id: vehicleTypeId,
+      p_nickname: nickname || null
+    });
+    
+    if (error) {
+      console.error('RPC Error:', error);
+      showToast(error.message || 'Failed to buy vehicle', 'error');
+      return;
+    }
+    
+    if (data.success) {
+      showToast(data.message, 'success');
+      await loadVehicles();
+      await loadPlayerData(); // Refresh cash
+      switchTab('garage');
+    } else {
+      showToast(data.error || 'Failed to buy vehicle', 'error');
+    }
+  } catch (error) {
+    console.error('Error buying vehicle:', error);
+    showToast('Failed to buy vehicle: ' + error.message, 'error');
+  }
+}
+
+// Join race
+async function joinRace(raceId) {
+  if (!vehicles.length) {
+    showToast('You need a vehicle to join races!', 'error');
+    return;
+  }
+  
+  // Use the first vehicle for now (could add vehicle selection later)
+  const vehicleId = vehicles[0].id;
+  
+  try {
+    const { data, error } = await sb.rpc('join_race', {
+      p_race_id: raceId,
+      p_vehicle_id: vehicleId
+    });
+    
+    if (error) {
+      console.error('RPC Error:', error);
+      showToast(error.message || 'Failed to join race', 'error');
+      return;
+    }
+    
+    if (data.success) {
+      showToast(data.message, 'success');
+      await loadRaces();
+      await loadPlayerData(); // Refresh cash
+    } else {
+      showToast(data.error || 'Failed to join race', 'error');
+    }
+  } catch (error) {
+    console.error('Error joining race:', error);
+    showToast('Failed to join race', 'error');
+  }
+}
+
+// Open bet modal
+function openBetModal(raceId, participantId, participantName) {
+  selectedRace = raceId;
+  selectedParticipant = { id: participantId, name: participantName };
+  
+  document.getElementById('betParticipantInfo').innerHTML = 
+    `Betting on: <strong>${participantName}</strong>`;
+  document.getElementById('betAmount').value = 100;
+  document.getElementById('potentialPayout').textContent = 'Potential payout: ₹200';
+  document.getElementById('betModal').style.display = 'block';
+}
+
+// Close bet modal
+function closeBetModal() {
+  document.getElementById('betModal').style.display = 'none';
+  selectedRace = null;
+  selectedParticipant = null;
+}
+
+// Calculate potential payout
+document.getElementById('betAmount')?.addEventListener('input', function(e) {
+  const amount = parseInt(e.target.value) || 0;
+  const payout = amount * 2; // Simple 2x odds for demo
+  document.getElementById('potentialPayout').textContent = `Potential payout: ₹${payout}`;
+});
+
+// Confirm bet
+async function confirmBet() {
+  if (!selectedRace || !selectedParticipant) return;
+  
+  const amount = parseInt(document.getElementById('betAmount').value);
+  
+  if (amount < 100) {
+    showToast('Minimum bet is ₹100', 'error');
+    return;
+  }
+  
+  if (amount > currentPlayer.cash) {
+    showToast('Not enough cash', 'error');
+    return;
+  }
+  
+  try {
+    const { data, error } = await sb.rpc('place_bet', {
+      p_race_id: selectedRace,
+      p_participant_id: selectedParticipant.id,
+      p_amount: amount
+    });
+    
+    if (error) {
+      console.error('RPC Error:', error);
+      showToast(error.message || 'Failed to place bet', 'error');
+      closeBetModal();
+      return;
+    }
+    
+    if (data.success) {
+      showToast(data.message, 'success');
+      closeBetModal();
+      await loadPlayerData(); // Refresh cash
+    } else {
+      showToast(data.error || 'Failed to place bet', 'error');
+      closeBetModal();
+    }
+  } catch (error) {
+    console.error('Error placing bet:', error);
+    showToast('Failed to place bet', 'error');
+    closeBetModal();
+  }
+}
+
+// Switch tabs
+function switchTab(tabName) {
+  document.querySelectorAll('.tab-content').forEach(tab => {
+    tab.classList.remove('active');
+  });
+  
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.classList.remove('active');
+  });
+  
+  document.getElementById(tabName).classList.add('active');
+  event.target.classList.add('active');
+  
+  // Refresh data when switching tabs
+  if (tabName === 'garage') {
+    loadVehicles();
+  } else if (tabName === 'races') {
+    loadRaces();
+  } else if (tabName === 'shop') {
+    loadVehicleTypes();
+  } else if (tabName === 'leaderboard') {
+    loadLeaderboard();
+  } else if (tabName === 'history') {
+    loadRaceHistory();
+  }
+}
+
+// Navigation
+function goToDashboard() {
+  window.location.href = "dashboard.html";
+}
+
+// Initialize
+loadPlayerData();
+
+// Refresh races every 30 seconds
+setInterval(() => {
+  const activeTab = document.querySelector('.tab-btn.active');
+  if (activeTab && activeTab.textContent.includes('Races')) {
+    loadRaces();
+  }
+}, 30000);
+</script>
+
+</body>
+</html>

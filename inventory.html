@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Rheoa RPG - Inventory & Shop</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body { 
+      font-family: 'Courier New', monospace; 
+      background: #f8f8f0; 
+      color: #222; 
+      padding: 20px;
+      min-height: 100vh;
+    }
+    
+    h1, h2 { 
+      text-align: center; 
+      margin: 30px 0 20px;
+    }
+    
+    h1 { font-size: clamp(1.5rem, 5vw, 2.5rem); }
+    h2 { font-size: clamp(1.3rem, 4vw, 2rem); color: #333; }
+    
+    .section {
+      max-width: 1400px;
+      margin: 0 auto 40px;
+    }
+    
+    .items-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      padding: 10px;
+    }
+    
+    .item-card { 
+      border: 2px solid black; 
+      border-radius: 12px; 
+      padding: 20px; 
+      background: white;
+      transition: transform 0.2s, box-shadow 0.2s;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      min-height: 320px;
+    }
+    
+    .item-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 6px 15px rgba(0,0,0,0.15);
+    }
+    
+    .item-icon {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      font-size: 2rem;
+    }
+    
+    .item-badge {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      padding: 4px 8px;
+      border-radius: 20px;
+      font-size: 0.7rem;
+      font-weight: bold;
+      color: white;
+    }
+    
+    .badge-energy { background: #4CAF50; }
+    .badge-health { background: #f44336; }
+    .badge-hunger { background: #ff9800; }
+    .badge-happiness { background: #9c27b0; }
+    .badge-boost { background: #2196F3; }
+    .badge-temporary { background: #ff9800; }
+    .badge-permanent { background: #9c27b0; }
+    .badge-multi { background: #795548; }
+    
+    .item-name {
+      font-size: 1.3rem;
+      font-weight: bold;
+      text-align: center;
+      margin: 20px 0 15px;
+      padding-top: 10px;
+    }
+    
+    .item-description {
+      text-align: center;
+      color: #666;
+      font-size: 0.9rem;
+      margin-bottom: 15px;
+      font-style: italic;
+    }
+    
+    .item-details {
+      flex-grow: 1;
+      margin-bottom: 15px;
+    }
+    
+    .item-details p {
+      margin: 8px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .item-details p span {
+      font-weight: bold;
+    }
+    
+    .price { color: #4CAF50; }
+    .effect { color: #2196F3; }
+    .duration { color: #ff9800; }
+    .quantity { color: #9c27b0; }
+    .current-stat { color: #666; font-size: 0.9rem; }
+    
+    .button-container {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    
+    button {
+      flex: 1;
+      padding: 10px;
+      font-size: 0.9rem;
+      font-family: 'Courier New', monospace;
+      font-weight: bold;
+      border: 2px solid black;
+      border-radius: 8px;
+      background: white;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    button.buy {
+      background: #4CAF50;
+      color: white;
+    }
+    
+    button.use {
+      background: #2196F3;
+      color: white;
+    }
+    
+    button.use-all {
+      background: #9c27b0;
+      color: white;
+    }
+    
+    button.buy:hover:not(:disabled) {
+      background: #45a049;
+    }
+    
+    button.use:hover:not(:disabled) {
+      background: #1976D2;
+    }
+    
+    button.use-all:hover:not(:disabled) {
+      background: #7b1fa2;
+    }
+    
+    button:disabled {
+      background: #ccc;
+      color: #666;
+      cursor: not-allowed;
+    }
+    
+    .back-button {
+      display: block;
+      width: 200px;
+      margin: 30px auto;
+      background: #666;
+      color: white;
+    }
+    
+    .back-button:hover {
+      background: #555;
+    }
+    
+    /* Active Boosts Section */
+    .boosts-section {
+      background: white;
+      border: 2px solid #2196F3;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 30px;
+      max-width: 800px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    
+    .boosts-title {
+      font-size: 1.2rem;
+      font-weight: bold;
+      margin-bottom: 15px;
+      color: #2196F3;
+      text-align: center;
+    }
+    
+    .boosts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+    }
+    
+    .boost-card {
+      background: #e3f2fd;
+      border: 2px solid #2196F3;
+      border-radius: 8px;
+      padding: 10px;
+      text-align: center;
+    }
+    
+    .boost-value {
+      font-size: 1.2rem;
+      font-weight: bold;
+      color: #2196F3;
+    }
+    
+    .boost-timer {
+      font-size: 0.8rem;
+      color: #666;
+      margin-top: 5px;
+    }
+    
+    /* Player Stats Summary */
+    .stats-summary {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-bottom: 20px;
+      padding: 15px;
+      background: white;
+      border-radius: 10px;
+      border: 2px solid black;
+      max-width: 800px;
+      margin-left: auto;
+      margin-right: auto;
+      flex-wrap: wrap;
+    }
+    
+    .stat-item {
+      text-align: center;
+      min-width: 80px;
+    }
+    
+    .stat-label {
+      font-size: 0.8rem;
+      color: #666;
+    }
+    
+    .stat-value {
+      font-size: 1.2rem;
+      font-weight: bold;
+    }
+    
+    /* Toast Notifications */
+    .toast-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 9999;
+    }
+    
+    .toast {
+      padding: 15px 25px;
+      margin-bottom: 10px;
+      border-radius: 8px;
+      color: white;
+      font-weight: bold;
+      animation: slideIn 0.3s ease-out;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      min-width: 250px;
+      max-width: 350px;
+    }
+    
+    .toast.success { background: #4CAF50; }
+    .toast.error { background: #f44336; }
+    .toast.info { background: #2196F3; }
+    
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    
+    @keyframes slideOut {
+      from { transform: translateX(0); opacity: 1; }
+      to { transform: translateX(100%); opacity: 0; }
+    }
+    
+    .toast.fade-out {
+      animation: slideOut 0.3s ease-out forwards;
+    }
+    
+    /* Realtime status */
+    .realtime-status {
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      padding: 5px 10px;
+      background: rgba(0,0,0,0.7);
+      color: white;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      z-index: 9997;
+    }
+    
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #4CAF50;
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.5; }
+      100% { opacity: 1; }
+    }
+    
+    .empty-message {
+      text-align: center;
+      padding: 40px;
+      color: #666;
+      font-size: 1.1rem;
+      background: white;
+      border-radius: 10px;
+      border: 2px dashed #ccc;
+      grid-column: 1 / -1;
+    }
+    
+    .loading {
+      text-align: center;
+      padding: 60px;
+      color: #666;
+      font-size: 1.2rem;
+      grid-column: 1 / -1;
+    }
+    
+    @media (max-width: 600px) {
+      body { padding: 10px; }
+      
+      .items-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+      }
+      
+      .item-card {
+        padding: 15px;
+        min-height: 300px;
+      }
+      
+      .item-icon {
+        font-size: 1.5rem;
+      }
+      
+      .item-name {
+        font-size: 1.1rem;
+        margin: 15px 0 10px;
+      }
+      
+      .button-container {
+        flex-direction: column;
+      }
+      
+      .back-button {
+        width: 100%;
+      }
+      
+      .stats-summary {
+        gap: 10px;
+      }
+      
+      .stat-item {
+        min-width: 60px;
+      }
+      
+      .stat-value {
+        font-size: 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="toast-container" id="toast-container"></div>
+<div class="realtime-status" id="realtimeStatus">
+  <span class="status-dot"></span>
+  <span>Live Updates Active</span>
+</div>
+
+<h1>🎒 Inventory & Shop</h1>
+
+<!-- Player Stats Summary -->
+<div id="playerStats" class="stats-summary" style="display: none;"></div>
+
+<!-- Active Boosts Section -->
+<div id="activeBoostsSection" class="boosts-section" style="display: none;">
+  <div class="boosts-title">✨ Active Boosts</div>
+  <div id="activeBoosts" class="boosts-grid"></div>
+</div>
+
+<div class="section">
+  <h2>🛒 Shop</h2>
+  <div id="shop" class="items-grid"></div>
+</div>
+
+<hr>
+
+<div class="section">
+  <h2>📦 Your Inventory</h2>
+  <div id="inventory" class="items-grid"></div>
+</div>
+
+<button class="back-button" onclick="goBack()">← Back to Dashboard</button>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<script>
+const sb = window.supabase.createClient(
+  "https://mtiwodvsrwvrujbhmmrn.supabase.co",
+  "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
+);
+
+let player = null;
+let playerChannel = null;
+let boostInterval = null;
+
+// Toast notification system
+function showToast(message, type = 'info', duration = 3000) {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.textContent = message;
+  
+  container.appendChild(toast);
+  
+  setTimeout(() => {
+    toast.classList.add('fade-out');
+    setTimeout(() => {
+      if (toast.parentNode) {
+        container.removeChild(toast);
+      }
+    }, 300);
+  }, duration);
+}
+
+// Get badge class based on item type
+function getItemBadgeClass(type) {
+  const badges = {
+    'energy': 'badge-energy',
+    'health': 'badge-health',
+    'hunger': 'badge-hunger',
+    'happiness': 'badge-happiness',
+    'success_boost': 'badge-boost',
+    'temporary_boost': 'badge-temporary',
+    'permanent_boost': 'badge-permanent',
+    'multi_use': 'badge-multi'
+  };
+  return badges[type] || 'badge-boost';
+}
+
+// Get icon based on item type
+function getItemIcon(type) {
+  const icons = {
+    'energy': '⚡',
+    'health': '❤️',
+    'hunger': '🍽️',
+    'happiness': '😊',
+    'success_boost': '⭐',
+    'temporary_boost': '✨',
+    'permanent_boost': '💪',
+    'multi_use': '📦'
+  };
+  return icons[type] || '📦';
+}
+
+// Format effect description
+function getEffectDescription(item) {
+  switch(item.type) {
+    case 'energy': return `Restores ${item.effect_value} energy`;
+    case 'health': return `Restores ${item.effect_value} health`;
+    case 'hunger': return `Reduces hunger by ${item.effect_value}`;
+    case 'happiness': return `Increases happiness by ${item.effect_value}`;
+    case 'success_boost': return `+${item.effect_value}% success rate`;
+    case 'temporary_boost': return `+${item.effect_value}% for ${item.duration_minutes} min`;
+    case 'permanent_boost': return `Permanently +${item.effect_value}%`;
+    case 'multi_use': return `${item.max_uses} uses, +${item.effect_value} each`;
+    default: return '';
+  }
+}
+
+// Load player stats
+async function loadPlayerStats() {
+  const { data: { user } } = await sb.auth.getUser();
+  if (!user) return window.location.href = "index.html";
+
+  const { data: playerData } = await sb.from('players').select('*').eq('auth_id', user.id).single();
+  if (!playerData) return;
+  
+  player = playerData;
+  
+  const statsDiv = document.getElementById('playerStats');
+  statsDiv.style.display = 'flex';
+  statsDiv.innerHTML = `
+    <div class="stat-item">
+      <div class="stat-label">💰 Cash</div>
+      <div class="stat-value">₹${player.cash.toLocaleString()}</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-label">⚡ Energy</div>
+      <div class="stat-value">${player.energy}/100</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-label">❤️ Health</div>
+      <div class="stat-value">${player.health || 100}/100</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-label">🍽️ Hunger</div>
+      <div class="stat-value">${player.hunger || 100}/100</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-label">😊 Happiness</div>
+      <div class="stat-value">${player.happiness || 100}/100</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-label">⭐ Boost</div>
+      <div class="stat-value">${player.success_boost || 0}%</div>
+    </div>
+  `;
+}
+
+// Load active boosts
+async function loadActiveBoosts() {
+  try {
+    const { data, error } = await sb.rpc('get_player_active_boosts', {
+      p_player_id: player.id
+    });
+    
+    if (error) throw error;
+    
+    const boostsDiv = document.getElementById('activeBoosts');
+    const boostsSection = document.getElementById('activeBoostsSection');
+    
+    if (data && data.length > 0) {
+      boostsSection.style.display = 'block';
+      boostsDiv.innerHTML = data.map(boost => `
+        <div class="boost-card">
+          <div class="boost-value">+${boost.boost_value}% Success Rate</div>
+          <div class="boost-timer">⏳ ${Math.ceil(boost.minutes_remaining)} min remaining</div>
+        </div>
+      `).join('');
+    } else {
+      boostsSection.style.display = 'none';
+    }
+  } catch (error) {
+    console.error('Error loading boosts:', error);
+  }
+}
+
+// Load shop items
+async function loadShop() {
+  const { data: items } = await sb.from('items').select('*').order('type').order('price');
+  const shopDiv = document.getElementById("shop");
+  
+  if (!items || items.length === 0) {
+    shopDiv.innerHTML = '<div class="empty-message">No items in shop</div>';
+    return;
+  }
+
+  shopDiv.innerHTML = items.map(item => {
+    const badgeClass = getItemBadgeClass(item.type);
+    const icon = item.icon || getItemIcon(item.type);
+    const effectDesc = getEffectDescription(item);
+    
+    return `
+      <div class="item-card">
+        <div class="item-icon">${icon}</div>
+        <span class="item-badge ${badgeClass}">${item.type.replace('_', ' ')}</span>
+        <div class="item-name">${item.name}</div>
+        <div class="item-description">${item.description || effectDesc}</div>
+        <div class="item-details">
+          <p>Effect <span class="effect">+${item.effect_value}</span></p>
+          ${item.duration_minutes > 0 ? `<p>Duration <span class="duration">${item.duration_minutes} min</span></p>` : ''}
+          ${item.max_uses > 1 ? `<p>Max Uses <span class="duration">${item.max_uses}</span></p>` : ''}
+          <p>Price <span class="price">₹${item.price.toLocaleString()}</span></p>
+        </div>
+        <button class="buy" onclick="buyItem('${item.id}', ${item.price})" 
+                ${player.cash < item.price ? 'disabled' : ''}>
+          ${player.cash < item.price ? '❌ Insufficient Funds' : '🛒 Buy'}
+        </button>
+      </div>
+    `;
+  }).join('');
+}
+
+// Load inventory
+async function loadInventory() {
+  const { data: items } = await sb.from('player_items')
+    .select('item_id, quantity, items(*)')
+    .eq('player_id', player.id);
+
+  const inventoryDiv = document.getElementById("inventory");
+  
+  if (!items || items.length === 0) {
+    inventoryDiv.innerHTML = '<div class="empty-message">Your inventory is empty. Visit the shop!</div>';
+    return;
+  }
+
+  inventoryDiv.innerHTML = items.map(i => {
+    const item = i.items;
+    const badgeClass = getItemBadgeClass(item.type);
+    const icon = item.icon || getItemIcon(item.type);
+    const effectDesc = getEffectDescription(item);
+    
+    // Check if item can be used based on current stats
+    let canUse = true;
+    let useDisabledReason = '';
+    
+    if (item.type === 'energy' && player.energy >= 100) {
+      canUse = false;
+      useDisabledReason = 'Energy full';
+    } else if (item.type === 'health' && player.health >= 100) {
+      canUse = false;
+      useDisabledReason = 'Health full';
+    } else if (item.type === 'hunger' && player.hunger <= 0) {
+      canUse = false;
+      useDisabledReason = 'Hunger empty';
+    } else if (item.type === 'happiness' && player.happiness >= 100) {
+      canUse = false;
+      useDisabledReason = 'Happiness full';
+    }
+    
+    return `
+      <div class="item-card">
+        <div class="item-icon">${icon}</div>
+        <span class="item-badge ${badgeClass}">${item.type.replace('_', ' ')}</span>
+        <div class="item-name">${item.name}</div>
+        <div class="item-description">${item.description || effectDesc}</div>
+        <div class="item-details">
+          <p>Quantity <span class="quantity">x${i.quantity}</span></p>
+          <p>Effect <span class="effect">+${item.effect_value}</span></p>
+          ${item.duration_minutes > 0 ? `<p>Duration <span class="duration">${item.duration_minutes} min</span></p>` : ''}
+          ${item.type === 'energy' ? `<p class="current-stat">Current: ${player.energy}/100</p>` : ''}
+          ${item.type === 'health' ? `<p class="current-stat">Current: ${player.health || 100}/100</p>` : ''}
+          ${item.type === 'hunger' ? `<p class="current-stat">Current: ${player.hunger || 100}/100</p>` : ''}
+          ${item.type === 'happiness' ? `<p class="current-stat">Current: ${player.happiness || 100}/100</p>` : ''}
+        </div>
+        <div class="button-container">
+          <button class="use" onclick="useItem('${item.id}', 1)" 
+                  ${!canUse ? 'disabled' : ''}
+                  title="${useDisabledReason}">
+            ${!canUse ? '❌ ' + useDisabledReason : '✨ Use'}
+          </button>
+          ${i.quantity > 1 && item.stackable ? `
+            <button class="use-all" onclick="useItem('${item.id}', ${i.quantity})" 
+                    ${!canUse ? 'disabled' : ''}>
+              Use All
+            </button>
+          ` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// Buy item
+async function buyItem(itemId, price) {
+  if (player.cash < price) { 
+    showToast("❌ Not enough cash!", 'error'); 
+    return; 
+  }
+
+  const { error: updateError } = await sb
+    .from('players')
+    .update({ cash: player.cash - price })
+    .eq('id', player.id);
+    
+  if (updateError) {
+    showToast('Error purchasing item', 'error');
+    return;
+  }
+  
+  player.cash -= price;
+
+  const { data: existing } = await sb.from('player_items')
+    .select('*')
+    .eq('player_id', player.id)
+    .eq('item_id', itemId)
+    .maybeSingle();
+
+  if (existing) {
+    await sb.from('player_items')
+      .update({ quantity: existing.quantity + 1 })
+      .eq('id', existing.id);
+  } else {
+    await sb.from('player_items')
+      .insert({ player_id: player.id, item_id: itemId, quantity: 1 });
+  }
+
+  showToast("✅ Purchase successful!", 'success');
+  loadPlayerStats();
+  loadShop();
+  loadInventory();
+}
+
+// Use item (now using the database function)
+async function useItem(itemId, quantity = 1) {
+  if (!player) return;
+
+  try {
+    const { data, error } = await sb.rpc('use_item', {
+      p_item_id: itemId,
+      p_quantity: quantity
+    });
+
+    if (error) throw error;
+
+    if (!data.success) {
+      showToast(`❌ ${data.error}`, 'error');
+      return;
+    }
+
+    // Show success message
+    showToast(data.message, 'success');
+    
+    // Reload all data
+    await loadPlayerStats();
+    await loadInventory();
+    await loadActiveBoosts();
+
+  } catch (error) {
+    console.error('Error using item:', error);
+    showToast('Error using item', 'error');
+  }
+}
+
+// Set up realtime subscription
+function setupRealtimeSubscription() {
+  if (!player) return;
+  
+  if (playerChannel) playerChannel.unsubscribe();
+  
+  playerChannel = sb
+    .channel('player-changes')
+    .on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'players',
+        filter: `id=eq.${player.id}`
+      },
+      (payload) => {
+        player = payload.new;
+        loadPlayerStats();
+        loadInventory(); // Reload to update disabled states
+      }
+    )
+    .subscribe((status) => {
+      if (status === 'SUBSCRIBED') {
+        document.getElementById('realtimeStatus').style.opacity = '1';
+      }
+    });
+}
+
+// Boost timer update
+function startBoostTimer() {
+  boostInterval = setInterval(() => {
+    loadActiveBoosts(); // Update boost timers every minute
+  }, 60000); // Check every minute
+}
+
+// Initialize
+async function init() {
+  await loadPlayerStats();
+  if (!player) return;
+  
+  setupRealtimeSubscription();
+  await loadActiveBoosts();
+  await loadShop();
+  await loadInventory();
+  startBoostTimer();
+}
+
+function goBack() { 
+  window.location.href = "dashboard.html"; 
+}
+
+// Clean up
+window.addEventListener('beforeunload', () => {
+  if (playerChannel) playerChannel.unsubscribe();
+  if (boostInterval) clearInterval(boostInterval);
+});
+
+// Expose functions globally
+window.buyItem = buyItem;
+window.useItem = useItem;
+window.goBack = goBack;
+
+init();
+
+// Welcome toast
+setTimeout(() => {
+  if (player) {
+    showToast(`Welcome to the shop, ${player.username}!`, 'info');
+  }
+}, 500);
+</script>
+
+</body>
+</html>
