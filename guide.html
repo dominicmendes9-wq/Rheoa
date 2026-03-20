@@ -1,0 +1,1707 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Rheoa RPG - How to Play</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body { 
+      font-family: 'Courier New', monospace; 
+      background: #f8f8f0; 
+      color: #222; 
+      padding: 20px;
+      min-height: 100vh;
+    }
+    
+    h1 { 
+      text-align: center; 
+      margin-bottom: 10px;
+      font-size: clamp(1.5rem, 5vw, 2.5rem);
+      color: #333;
+    }
+    
+    .subtitle {
+      text-align: center;
+      color: #666;
+      margin-bottom: 40px;
+      font-style: italic;
+      font-size: 1.1rem;
+    }
+    
+    /* Quick Start Bar */
+    .quick-start {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 30px;
+      border-radius: 15px;
+      margin-bottom: 40px;
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+    }
+    
+    .quick-start h2 {
+      font-size: 2rem;
+      margin-bottom: 15px;
+    }
+    
+    .quick-start p {
+      font-size: 1.2rem;
+      margin-bottom: 25px;
+      opacity: 0.95;
+    }
+    
+    .start-button {
+      display: inline-block;
+      padding: 15px 40px;
+      font-size: 1.3rem;
+      font-family: 'Courier New', monospace;
+      font-weight: bold;
+      background: white;
+      color: #667eea;
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-decoration: none;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+    
+    .start-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+    }
+    
+    /* Navigation Tabs */
+    .guide-tabs {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 30px;
+      flex-wrap: wrap;
+    }
+    
+    .tab-btn {
+      padding: 12px 25px;
+      font-family: 'Courier New', monospace;
+      font-weight: bold;
+      border: 2px solid black;
+      border-radius: 30px;
+      background: white;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 1rem;
+    }
+    
+    .tab-btn:hover {
+      background: #333;
+      color: white;
+    }
+    
+    .tab-btn.active {
+      background: #333;
+      color: white;
+    }
+    
+    /* Tab Content */
+    .tab-content {
+      display: none;
+      animation: fadeIn 0.5s ease-out;
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    /* Guide Sections */
+    .guide-section {
+      background: white;
+      border: 2px solid black;
+      border-radius: 15px;
+      padding: 30px;
+      margin-bottom: 30px;
+    }
+    
+    .section-title {
+      font-size: 1.8rem;
+      margin-bottom: 20px;
+      color: #333;
+      border-bottom: 3px solid #667eea;
+      padding-bottom: 10px;
+    }
+    
+    .section-subtitle {
+      font-size: 1.3rem;
+      margin: 25px 0 15px;
+      color: #444;
+    }
+    
+    /* Cards Grid */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      margin: 20px 0;
+    }
+    
+    .feature-card {
+      border: 2px solid #667eea;
+      border-radius: 12px;
+      padding: 20px;
+      background: #f8f9ff;
+      transition: transform 0.2s;
+    }
+    
+    .feature-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+    }
+    
+    .feature-icon {
+      font-size: 2.5rem;
+      text-align: center;
+      margin-bottom: 15px;
+    }
+    
+    .feature-title {
+      font-size: 1.2rem;
+      font-weight: bold;
+      text-align: center;
+      margin-bottom: 10px;
+      color: #333;
+    }
+    
+    .feature-desc {
+      color: #666;
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+    
+    /* Stats Explanation */
+    .stats-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin: 20px 0;
+    }
+    
+    .stat-explanation {
+      background: #f5f5f5;
+      border-radius: 10px;
+      padding: 20px;
+      text-align: center;
+    }
+    
+    .stat-icon {
+      font-size: 2rem;
+      margin-bottom: 10px;
+    }
+    
+    .stat-name {
+      font-weight: bold;
+      font-size: 1.1rem;
+      margin-bottom: 8px;
+    }
+    
+    .stat-desc {
+      color: #666;
+      font-size: 0.9rem;
+      line-height: 1.4;
+    }
+    
+    /* FAQ Section */
+    .faq-item {
+      border-bottom: 2px solid #eee;
+      padding: 20px 0;
+    }
+    
+    .faq-item:last-child {
+      border-bottom: none;
+    }
+    
+    .faq-question {
+      font-size: 1.2rem;
+      font-weight: bold;
+      margin-bottom: 10px;
+      color: #333;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .faq-question:hover {
+      color: #667eea;
+    }
+    
+    .faq-answer {
+      color: #666;
+      line-height: 1.6;
+      padding-left: 20px;
+      border-left: 3px solid #667eea;
+      margin-top: 10px;
+    }
+    
+    .faq-answer.hidden {
+      display: none;
+    }
+    
+    .toggle-icon {
+      font-size: 1.5rem;
+      transition: transform 0.3s;
+    }
+    
+    .faq-question.open .toggle-icon {
+      transform: rotate(45deg);
+    }
+    
+    /* Tips & Tricks */
+    .tips-list {
+      list-style: none;
+      padding: 0;
+    }
+    
+    .tip-item {
+      background: #e8f5e8;
+      border: 2px solid #4CAF50;
+      border-radius: 10px;
+      padding: 15px 20px;
+      margin: 15px 0;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+    
+    .tip-icon {
+      font-size: 1.8rem;
+      min-width: 40px;
+      text-align: center;
+    }
+    
+    .tip-text {
+      flex: 1;
+      font-size: 1rem;
+      line-height: 1.5;
+    }
+    
+    /* Table for Levels */
+    .levels-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+    }
+    
+    .levels-table th {
+      background: #333;
+      color: white;
+      padding: 12px;
+      font-weight: bold;
+    }
+    
+    .levels-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #ddd;
+    }
+    
+    .levels-table tr:nth-child(even) {
+      background: #f5f5f5;
+    }
+    
+    .levels-table tr:hover {
+      background: #e8f0fe;
+    }
+    
+    /* Stock Market Table */
+    .stocks-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+    }
+    
+    .stocks-table th {
+      background: #4CAF50;
+      color: white;
+      padding: 12px;
+    }
+    
+    .stocks-table td {
+      padding: 8px 12px;
+      border-bottom: 1px solid #ddd;
+    }
+    
+    /* Racing Table */
+    .racing-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+    }
+    
+    .racing-table th {
+      background: #f44336;
+      color: white;
+      padding: 12px;
+    }
+    
+    .racing-table td {
+      padding: 8px 12px;
+      border-bottom: 1px solid #ddd;
+    }
+    
+    /* Property Table */
+    .property-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+    }
+    
+    .property-table th {
+      background: #8B4513;
+      color: white;
+      padding: 12px;
+    }
+    
+    .property-table td {
+      padding: 8px 12px;
+      border-bottom: 1px solid #ddd;
+    }
+    
+    /* Customization Table */
+    .customization-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+    }
+    
+    .customization-table th {
+      background: #9c27b0;
+      color: white;
+      padding: 12px;
+    }
+    
+    .customization-table td {
+      padding: 8px 12px;
+      border-bottom: 1px solid #ddd;
+    }
+    
+    /* Back Button */
+    .back-button {
+      display: block;
+      width: 200px;
+      margin: 40px auto;
+      padding: 12px 24px;
+      font-family: 'Courier New', monospace;
+      font-weight: bold;
+      border: 2px solid black;
+      border-radius: 8px;
+      background: #666;
+      color: white;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+    }
+    
+    .back-button:hover {
+      background: #555;
+      transform: scale(1.02);
+    }
+    
+    /* Responsive Design */
+    @media (max-width: 600px) {
+      body { padding: 10px; }
+      
+      .quick-start {
+        padding: 20px;
+      }
+      
+      .quick-start h2 {
+        font-size: 1.5rem;
+      }
+      
+      .quick-start p {
+        font-size: 1rem;
+      }
+      
+      .start-button {
+        padding: 12px 30px;
+        font-size: 1.1rem;
+      }
+      
+      .guide-section {
+        padding: 20px;
+      }
+      
+      .section-title {
+        font-size: 1.5rem;
+      }
+      
+      .feature-card {
+        padding: 15px;
+      }
+      
+      .tip-item {
+        flex-direction: column;
+        text-align: center;
+      }
+      
+      .levels-table {
+        font-size: 0.9rem;
+      }
+      
+      .stocks-table {
+        font-size: 0.9rem;
+      }
+      
+      .racing-table {
+        font-size: 0.9rem;
+      }
+      
+      .property-table {
+        font-size: 0.9rem;
+      }
+      
+      .customization-table {
+        font-size: 0.9rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<h1>📚 How to Play Rheoa RPG</h1>
+<div class="subtitle">Your complete guide to becoming a criminal mastermind</div>
+
+<!-- Quick Start -->
+<div class="quick-start">
+  <h2>🚀 Quick Start</h2>
+  <p>New here? Start with Jobs to earn safe money, then try Crimes for bigger rewards!</p>
+  <button class="start-button" onclick="goToDashboard()">Go to Dashboard</button>
+</div>
+
+<!-- Navigation Tabs -->
+<div class="guide-tabs">
+  <button class="tab-btn active" onclick="switchTab('basics')">📖 Basics</button>
+  <button class="tab-btn" onclick="switchTab('stats')">📊 Stats</button>
+  <button class="tab-btn" onclick="switchTab('features')">🎮 Features</button>
+  <button class="tab-btn" onclick="switchTab('levels')">⭐ Levels</button>
+  <button class="tab-btn" onclick="switchTab('items')">🎒 Items</button>
+  <button class="tab-btn" onclick="switchTab('pvp')">⚔️ PvP</button>
+  <button class="tab-btn" onclick="switchTab('gangs')">🏢 Gangs</button>
+  <button class="tab-btn" onclick="switchTab('market')">📈 Market</button>
+  <button class="tab-btn" onclick="switchTab('daily')">🎁 Daily</button>
+  <button class="tab-btn" onclick="switchTab('prestige')">🔄 Prestige</button>
+  <button class="tab-btn" onclick="switchTab('stocks')">📊 Stocks</button>
+  <button class="tab-btn" onclick="switchTab('racing')">🏁 Racing</button>
+  <button class="tab-btn" onclick="switchTab('property')">🏰 Property</button>
+  <button class="tab-btn" onclick="switchTab('customization')">🎨 Customization</button>
+  <button class="tab-btn" onclick="switchTab('exploration')">🌍 World Map</button>
+  <button class="tab-btn" onclick="switchTab('faq')">❓ FAQ</button>
+  <button class="tab-btn" onclick="switchTab('tips')">💡 Tips</button>
+</div>
+
+<!-- Basics Tab -->
+<div id="basics" class="tab-content active">
+  <div class="guide-section">
+    <h2 class="section-title">📖 The Basics</h2>
+    <p style="font-size: 1.1rem; line-height: 1.6; margin-bottom: 20px;">
+      Welcome to Rheoa RPG, a text-based criminal empire simulator! Your goal is to build wealth,
+      gain experience, and become the most notorious criminal mastermind. Start small and work your way up!
+    </p>
+    
+    <h3 class="section-subtitle">🎯 Getting Started</h3>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">💰</div>
+        <div class="feature-title">Start with Jobs</div>
+        <div class="feature-desc">Work legitimate jobs to build your initial capital safely. No risk, steady income.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔫</div>
+        <div class="feature-title">Move to Crimes</div>
+        <div class="feature-desc">Once you have cash, try crimes for bigger rewards. Higher risk = higher reward!</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">⚡</div>
+        <div class="feature-title">Manage Energy</div>
+        <div class="feature-desc">Every action costs energy. It regenerates 1 point per minute automatically.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">⭐</div>
+        <div class="feature-title">Level Up</div>
+        <div class="feature-desc">Gain XP from jobs and crimes to level up and unlock better opportunities.</div>
+      </div>
+    </div>
+    
+    <h3 class="section-subtitle">🎯 Core Gameplay Loop</h3>
+    <ol style="margin-left: 20px; line-height: 2; font-size: 1.1rem;">
+      <li><strong>Work Jobs</strong> - Safe but lower rewards</li>
+      <li><strong>Commit Crimes</strong> - Risky but higher rewards</li>
+      <li><strong>Earn Cash & XP</strong> - Build your wealth and experience</li>
+      <li><strong>Buy Items</strong> - Purchase helpful items from the shop</li>
+      <li><strong>Level Up</strong> - Unlock new crimes and jobs</li>
+      <li><strong>Join a Gang</strong> - Team up with other players</li>
+      <li><strong>Battle in PvP</strong> - Fight other players for loot</li>
+      <li><strong>Trade on Market</strong> - Buy and sell items with players</li>
+      <li><strong>Invest in Stocks</strong> - Play the stock market for profit</li>
+      <li><strong>Race in Competitions</strong> - Win races and earn prizes</li>
+      <li><strong>Buy Property</strong> - Own and upgrade your criminal headquarters</li>
+      <li><strong>Customize Your Profile</strong> - Unlock titles, avatars, and cosmetics</li>
+      <li><strong>Explore the World</strong> - Discover new regions and secrets</li>
+      <li><strong>Collect Daily Rewards</strong> - Login every day for bonuses</li>
+      <li><strong>Prestige</strong> - Reset your progress for permanent power</li>
+    </ol>
+  </div>
+</div>
+
+<!-- Stats Tab -->
+<div id="stats" class="tab-content">
+  <div class="guide-section">
+    <h2 class="section-title">📊 Understanding Your Stats</h2>
+    
+    <div class="stats-container">
+      <div class="stat-explanation">
+        <div class="stat-icon">💰</div>
+        <div class="stat-name">Cash</div>
+        <div class="stat-desc">Your money. Used to buy items and recover from failed crimes.</div>
+      </div>
+      <div class="stat-explanation">
+        <div class="stat-icon">⭐</div>
+        <div class="stat-name">XP</div>
+        <div class="stat-desc">Experience points. Gain from jobs and crimes to level up.</div>
+      </div>
+      <div class="stat-explanation">
+        <div class="stat-icon">⚡</div>
+        <div class="stat-name">Energy</div>
+        <div class="stat-desc">Required for actions. Regenerates 1 per minute. Max 100.</div>
+      </div>
+      <div class="stat-explanation">
+        <div class="stat-icon">❤️</div>
+        <div class="stat-name">Health</div>
+        <div class="stat-desc">Decreases from failed crimes and PvP battles. Restore with items.</div>
+      </div>
+      <div class="stat-explanation">
+        <div class="stat-icon">🍽️</div>
+        <div class="stat-name">Hunger</div>
+        <div class="stat-desc">Increases over time (5 per hour). Eat to reduce.</div>
+      </div>
+      <div class="stat-explanation">
+        <div class="stat-icon">😊</div>
+        <div class="stat-name">Happiness</div>
+        <div class="stat-desc">Decreases over time. Low happiness affects performance.</div>
+      </div>
+      <div class="stat-explanation">
+        <div class="stat-icon">⚡</div>
+        <div class="stat-name">Success Boost</div>
+        <div class="stat-desc">Increases crime success rate. From items, achievements, and prestige perks.</div>
+      </div>
+      <div class="stat-explanation">
+        <div class="stat-icon">🏆</div>
+        <div class="stat-name">Prestige Level</div>
+        <div class="stat-desc">Your overall progression. Higher prestige unlocks permanent bonuses.</div>
+      </div>
+    </div>
+    
+    <h3 class="section-subtitle">⚠️ Stat Warnings</h3>
+    <ul style="margin-left: 20px; line-height: 1.8;">
+      <li><span style="color: #ff9800;">🟡 Yellow border</span> - Stat is below 30% (warning)</li>
+      <li><span style="color: #f44336;">🔴 Red border</span> - Stat is below 10% (critical)</li>
+      <li><strong>Hunger</strong> - Eat food items to restore</li>
+      <li><strong>Happiness</strong> - Use entertainment items</li>
+      <li><strong>Health</strong> - Use first aid items after failed crimes or PvP</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Features Tab -->
+<div id="features" class="tab-content">
+  <div class="guide-section">
+    <h2 class="section-title">🎮 Game Features</h2>
+    
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">💼</div>
+        <div class="feature-title">Jobs</div>
+        <div class="feature-desc">Safe, guaranteed income. Perfect for beginners. 30-second cooldown.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔫</div>
+        <div class="feature-title">Crimes</div>
+        <div class="feature-desc">Risky but rewarding. Success chance varies. 60-second cooldown.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🎒</div>
+        <div class="feature-title">Inventory & Shop</div>
+        <div class="feature-desc">Buy and use items to restore stats and get boosts.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📜</div>
+        <div class="feature-title">History</div>
+        <div class="feature-desc">Track your crime record and success rate.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🏆</div>
+        <div class="feature-title">Achievements</div>
+        <div class="feature-desc">Complete challenges to earn rewards and track progress.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">⚡</div>
+        <div class="feature-title">Energy Regen</div>
+        <div class="feature-desc">1 energy per minute, even while offline.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">⏰</div>
+        <div class="feature-title">Stat Decay</div>
+        <div class="feature-desc">Hunger and happiness decrease 5 points per hour.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔒</div>
+        <div class="feature-title">Level Gating</div>
+        <div class="feature-desc">Higher level crimes and jobs require minimum levels.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🏆</div>
+        <div class="feature-title">Leaderboards</div>
+        <div class="feature-desc">Compete with other players in various categories.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">⚔️</div>
+        <div class="feature-title">PvP Arena</div>
+        <div class="feature-desc">Fight other players for cash, XP, and glory.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🏢</div>
+        <div class="feature-title">Gangs</div>
+        <div class="feature-desc">Join or create gangs to team up with other players.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📈</div>
+        <div class="feature-title">Market</div>
+        <div class="feature-desc">Buy and sell items with other players.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📊</div>
+        <div class="feature-title">Stock Market</div>
+        <div class="feature-desc">Invest in stocks and earn dividends.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🏁</div>
+        <div class="feature-title">Racing</div>
+        <div class="feature-desc">Buy vehicles and compete in races.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🏰</div>
+        <div class="feature-title">Properties</div>
+        <div class="feature-desc">Buy and upgrade your criminal headquarters.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🎨</div>
+        <div class="feature-title">Customization</div>
+        <div class="feature-desc">Unlock titles, avatars, and color schemes.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🌍</div>
+        <div class="feature-title">World Map</div>
+        <div class="feature-desc">Explore regions and discover secrets.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🎁</div>
+        <div class="feature-title">Daily Rewards</div>
+        <div class="feature-desc">Login every day for free rewards and streak bonuses.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔄</div>
+        <div class="feature-title">Prestige</div>
+        <div class="feature-desc">Reset your progress for permanent powerful bonuses.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Levels Tab -->
+<div id="levels" class="tab-content">
+  <div class="guide-section">
+    <h2 class="section-title">⭐ Level Progression</h2>
+    
+    <p style="margin-bottom: 20px;">Levels are calculated from your XP: <strong>Level = √(XP/100) + 1</strong></p>
+    
+    <table class="levels-table">
+      <tr>
+        <th>Level</th>
+        <th>XP Required</th>
+        <th>Unlocks</th>
+      </tr>
+      <tr>
+        <td>1</td>
+        <td>0</td>
+        <td>Basic crimes & jobs</td>
+      </tr>
+      <tr>
+        <td>5</td>
+        <td>1,600</td>
+        <td>Medium crimes & jobs</td>
+      </tr>
+      <tr>
+        <td>10</td>
+        <td>8,100</td>
+        <td>Advanced crimes & jobs, Prestige available, Basic properties</td>
+      </tr>
+      <tr>
+        <td>15</td>
+        <td>19,600</td>
+        <td>Expert crimes & jobs, Stock market access</td>
+      </tr>
+      <tr>
+        <td>20</td>
+        <td>36,100</td>
+        <td>Master crimes & jobs, Racing unlocked</td>
+      </tr>
+      <tr>
+        <td>25</td>
+        <td>57,600</td>
+        <td>Legendary crimes & jobs, Luxury properties</td>
+      </tr>
+      <tr>
+        <td>30</td>
+        <td>84,100</td>
+        <td>Mythical crimes & jobs, All regions unlocked</td>
+      </tr>
+    </table>
+    
+    <h3 class="section-subtitle">🔓 Level Benefits</h3>
+    <ul style="margin-left: 20px; line-height: 1.8;">
+      <li><strong>Higher rewards</strong> - More cash and XP per action</li>
+      <li><strong>New crimes</strong> - Access to more lucrative criminal activities</li>
+      <li><strong>Better jobs</strong> - Higher paying legitimate work</li>
+      <li><strong>Property access</strong> - Buy better properties as you level up</li>
+      <li><strong>Region access</strong> - Explore dangerous new areas</li>
+      <li><strong>Prestige eligibility</strong> - Reach level 10 to unlock prestige mode</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Items Tab -->
+<div id="items" class="tab-content">
+  <div class="guide-section">
+    <h2 class="section-title">🎒 Items Guide</h2>
+    
+    <h3 class="section-subtitle">⚡ Energy Items</h3>
+    <ul style="margin-left: 20px; line-height: 1.8; margin-bottom: 20px;">
+      <li><strong>Energy Drink</strong> - Restores 20 energy instantly</li>
+    </ul>
+    
+    <h3 class="section-subtitle">❤️ Health Items</h3>
+    <ul style="margin-left: 20px; line-height: 1.8; margin-bottom: 20px;">
+      <li><strong>Bandage</strong> - Restores 20 health</li>
+      <li><strong>First Aid Kit</strong> - Restores 50 health</li>
+      <li><strong>Medkit</strong> - Restores 100 health</li>
+    </ul>
+    
+    <h3 class="section-subtitle">🍽️ Hunger Items</h3>
+    <ul style="margin-left: 20px; line-height: 1.8; margin-bottom: 20px;">
+      <li><strong>Sandwich</strong> - Reduces hunger by 30</li>
+      <li><strong>Pizza</strong> - Reduces hunger by 60</li>
+      <li><strong>Full Meal</strong> - Reduces hunger by 100</li>
+    </ul>
+    
+    <h3 class="section-subtitle">😊 Happiness Items</h3>
+    <ul style="margin-left: 20px; line-height: 1.8; margin-bottom: 20px;">
+      <li><strong>Comic Book</strong> - +20 happiness</li>
+      <li><strong>Video Game</strong> - +50 happiness</li>
+      <li><strong>Concert Ticket</strong> - +100 happiness</li>
+    </ul>
+    
+    <h3 class="section-subtitle">✨ Boost Items</h3>
+    <ul style="margin-left: 20px; line-height: 1.8; margin-bottom: 20px;">
+      <li><strong>Energy Drink</strong> - +20% success rate for 30 minutes</li>
+      <li><strong>Focus Potion</strong> - +35% success rate for 1 hour</li>
+      <li><strong>Lucky Charm</strong> - +50% success rate for 2 hours</li>
+    </ul>
+    
+    <h3 class="section-subtitle">💪 Permanent Items</h3>
+    <ul style="margin-left: 20px; line-height: 1.8;">
+      <li><strong>Training Manual</strong> - Permanently +5% success rate</li>
+      <li><strong>Gym Membership</strong> - Permanently +10 max energy</li>
+    </ul>
+  </div>
+</div>
+
+<!-- PvP Tab -->
+<div id="pvp" class="tab-content">
+  <div class="guide-section">
+    <h2 class="section-title">⚔️ Player vs Player Combat</h2>
+    
+    <p style="margin-bottom: 20px;">Challenge other players to battles and prove your superiority!</p>
+    
+    <h3 class="section-subtitle">Battle Mechanics</h3>
+    <ul style="margin-left: 20px; line-height: 1.8; margin-bottom: 20px;">
+      <li><strong>Energy Cost</strong> - 20 energy per battle</li>
+      <li><strong>Health Loss</strong> - Both players lose 10 health</li>
+      <li><strong>Loot</strong> - Winner takes 5% of defender's cash</li>
+      <li><strong>XP Reward</strong> - 50 XP for participating</li>
+      <li><strong>Cooldown</strong> - Can't attack same player for 1 hour</li>
+    </ul>
+    
+    <h3 class="section-subtitle">Ranking System</h3>
+    <ul style="margin-left: 20px; line-height: 1.8; margin-bottom: 20px;">
+      <li><strong>Rank Points</strong> - Start at 1000, gain/lose based on opponent strength</li>
+      <li><strong>Rank Titles</strong> - Rookie → Scrapper → Brawler → Fighter → Warrior → Gladiator → Champion → Master → Grandmaster → Legend → Mythic → Godlike</li>
+      <li><strong>Win/Loss Record</strong> - Tracks your PvP performance</li>
+      <li><strong>Streaks</strong> - Consecutive wins earn bonus bragging rights</li>
+    </ul>
+    
+    <h3 class="section-subtitle">Tips for PvP</h3>
+    <ul style="margin-left: 20px; line-height: 1.8;">
+      <li><strong>Check opponent power</strong> - Compare health and rank before attacking</li>
+      <li><strong>Save energy</strong> - Make sure you have enough energy for the battle</li>
+      <li><strong>Watch cooldowns</strong> - Can't farm the same player repeatedly</li>
+      <li><strong>Build a streak</strong> - Consecutive wins increase your rank faster</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Gangs Tab -->
+<div id="gangs" class="tab-content">
+  <div class="guide-section">
+    <h2 class="section-title">🏢 Gang System</h2>
+    
+    <p style="margin-bottom: 20px;">Join forces with other players to form powerful gangs!</p>
+    
+    <h3 class="section-subtitle">Gang Features</h3>
+    <ul style="margin-left: 20px; line-height: 1.8; margin-bottom: 20px;">
+      <li><strong>Create a Gang</strong> - Form your own team with unique name and tag</li>
+      <li><strong>Gang Levels</strong> - Level up your gang through collective effort</li>
+      <li><strong>Member Roles</strong> - Leader, Co-leader, Captain, Member, Recruit</li>
+      <li><strong>Invite System</strong> - Send invites to other players</li>
+      <li><strong>Join Requests</strong> - Players can request to join your gang</li>
+      <li><strong>Gang Chat</strong> - Real-time communication with members</li>
+    </ul>
+    
+    <h3 class="section-subtitle">Gang Perks</h3>
+    <ul style="margin-left: 20px; line-height: 1.8; margin-bottom: 20px;">
+      <li><strong>XP Boost</strong> - Extra XP for all members</li>
+      <li><strong>Cash Boost</strong> - More cash from jobs</li>
+      <li><strong>Energy Regen</strong> - Faster energy regeneration</li>
+      <li><strong>Crime Boost</strong> - Higher success rates</li>
+      <li><strong>PvP Power</strong> - Stronger in player battles</li>
+      <li><strong>Market Fee Reduction</strong> - Pay less on market trades</li>
+    </ul>
+    
+    <h3 class="section-subtitle">Member Roles & Permissions</h3>
+    <ul style="margin-left: 20px; line-height: 1.8;">
+      <li><strong>👑 Leader</strong> - Full control, can promote/demote, disband gang</li>
+      <li><strong>⚔️ Co-leader</strong> - Can invite, accept requests, manage members</li>
+      <li><strong>🎯 Captain</strong> - Can invite new members</li>
+      <li><strong>👤 Member</strong> - Standard member with chat access</li>
+      <li><strong>🔰 Recruit</strong> - Limited permissions during trial period</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Market Tab -->
+<div id="market" class="tab-content">
+  <div class="guide-section">
+    <h2 class="section-title">📈 Item Market</h2>
+    
+    <p style="margin-bottom: 20px;">Trade items with other players in a dynamic player-driven economy!</p>
+    
+    <h3 class="section-subtitle">How to Use the Market</h3>
+    <ul style="margin-left: 20px; line-height: 1.8; margin-bottom: 20px;">
+      <li><strong>Buying</strong> - Browse active listings and purchase items</li>
+      <li><strong>Selling</strong> - List your items for sale at your desired price</li>
+      <li><strong>Favorites</strong> - Save items you're interested in</li>
+      <li><strong>Price History</strong> - Track item prices over time</li>
+    </ul>
+    
+    <h3 class="section-subtitle">Market Fees</h3>
+    <ul style="margin-left: 20px; line-height: 1.8; margin-bottom: 20px;">
+      <li><strong>Listing Fee</strong> - 5% fee to list items (prevents spam)</li>
+      <li><strong>Transaction Fee</strong> - 2% fee on sales (market upkeep)</li>
+      <li><strong>Listing Duration</strong> - 7 days before automatic expiry</li>
+    </ul>
+    
+    <h3 class="section-subtitle">Tips for Trading</h3>
+    <ul style="margin-left: 20px; line-height: 1.8;">
+      <li><strong>Check price history</strong> - Don't overpay or undersell</li>
+      <li><strong>Watch for deals</strong> - Some players sell below market value</li>
+      <li><strong>Factor in fees</strong> - Remember the 5% listing fee when pricing</li>
+      <li><strong>Be patient</strong> - Rare items take time to sell at good prices</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Daily Rewards Tab -->
+<div id="daily" class="tab-content">
+  <div class="guide-section">
+    <h2 class="section-title">🎁 Daily Rewards</h2>
+    
+    <p style="margin-bottom: 20px;">Login every day to claim amazing prizes and build your streak!</p>
+    
+    <h3 class="section-subtitle">30-Day Reward Cycle</h3>
+    <ul style="margin-left: 20px; line-height: 1.8; margin-bottom: 20px;">
+      <li><strong>Day 1-30</strong> - Different rewards each day</li>
+      <li><strong>Weekly Bonus</strong> - Every 7 days gives 2x multiplier</li>
+      <li><strong>Monthly Specials</strong> - Holiday and event rewards</li>
+    </ul>
+    
+    <h3 class="section-subtitle">Reward Types</h3>
+    <ul style="margin-left: 20px; line-height: 1.8; margin-bottom: 20px;">
+      <li><strong>💰 Cash</strong> - Direct money rewards</li>
+      <li><strong>⭐ XP</strong> - Experience points</li>
+      <li><strong>⚡ Energy</strong> - Energy refills</li>
+      <li><strong>❤️ Health</strong> - Health restoration</li>
+      <li><strong>🍽️ Hunger</strong> - Hunger reduction</li>
+      <li><strong>😊 Happiness</strong> - Happiness boost</li>
+      <li><strong>✨ Boost</strong> - Permanent success rate boost</li>
+      <li><strong>📦 Items</strong> - Physical item rewards</li>
+    </ul>
+    
+    <h3 class="section-subtitle">Streak Bonuses</h3>
+    <ul style="margin-left: 20px; line-height: 1.8;">
+      <li><strong>🔥 Current Streak</strong> - Number of consecutive days</li>
+      <li><strong>💪 Max Streak</strong> - Your personal best</li>
+      <li><strong>🎯 Streak Protection</strong> - Only resets if you miss a full day</li>
+      <li><strong>✨ Weekly Bonus</strong> - 2x multiplier every 7 days</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Prestige Tab -->
+<div id="prestige" class="tab-content">
+  <div class="guide-section">
+    <h2 class="section-title">🔄 Prestige System</h2>
+    
+    <p style="margin-bottom: 20px;">Reset your progress for permanent powerful bonuses! Available at level 10.</p>
+    
+    <h3 class="section-subtitle">How Prestige Works</h3>
+    <ul style="margin-left: 20px; line-height: 1.8; margin-bottom: 20px;">
+      <li><strong>Reset Progress</strong> - Lose all levels, XP, cash, and items</li>
+      <li><strong>Earn Points</strong> - Gain Prestige Points based on your accomplishments</li>
+      <li><strong>Permanent Perks</strong> - Spend points on account-wide buffs</li>
+      <li><strong>Scaling Difficulty</strong> - Each prestige requires more effort</li>
+    </ul>
+    
+    <h3 class="section-subtitle">Prestige Point Calculation</h3>
+    <ul style="margin-left: 20px; line-height: 1.8; margin-bottom: 20px;">
+      <li><strong>Level</strong> - 1 point per 5 levels</li>
+      <li><strong>XP</strong> - 1 point per 10,000 XP</li>
+      <li><strong>Cash</strong> - 1 point per 100,000 cash</li>
+      <li><strong>Crimes</strong> - 1 point per 100 crimes</li>
+      <li><strong>Jobs</strong> - 1 point per 100 jobs</li>
+      <li><strong>Maximum</strong> - Capped at 100 points per prestige</li>
+    </ul>
+    
+    <h3 class="section-subtitle">Prestige Perks</h3>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">⭐</div>
+        <div class="feature-title">XP Master</div>
+        <div class="feature-desc">+5% XP per level (max 10)</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">💰</div>
+        <div class="feature-title">Cash Lord</div>
+        <div class="feature-desc">+5% cash per level (max 10)</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">⚡</div>
+        <div class="feature-title">Energy Surge</div>
+        <div class="feature-desc">+10% energy regen per level (max 5)</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔫</div>
+        <div class="feature-title">Crime Genius</div>
+        <div class="feature-desc">+2% crime success per level (max 10)</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">⚔️</div>
+        <div class="feature-title">PvP Champion</div>
+        <div class="feature-desc">+5% PvP power per level (max 5)</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📈</div>
+        <div class="feature-title">Market Tycoon</div>
+        <div class="feature-desc">-10% market fees per level (max 5)</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">💎</div>
+        <div class="feature-title">Rich Start</div>
+        <div class="feature-desc">+10,000 starting cash per level (max 5)</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🍀</div>
+        <div class="feature-title">Lucky Finder</div>
+        <div class="feature-desc">+2% item find chance per level (max 5)</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔥</div>
+        <div class="feature-title">Streak Master</div>
+        <div class="feature-desc">+10% streak bonus per level (max 5)</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">👑</div>
+        <div class="feature-title">Prestige Master</div>
+        <div class="feature-desc">+1 extra point per prestige (max 3)</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Stocks Tab -->
+<div id="stocks" class="tab-content">
+  <div class="guide-section">
+    <h2 class="section-title">📊 Stock Market</h2>
+    
+    <p style="margin-bottom: 20px;">Invest in stocks and grow your wealth through the market!</p>
+    
+    <h3 class="section-subtitle">Available Stocks</h3>
+    <table class="stocks-table">
+      <tr>
+        <th>Symbol</th>
+        <th>Company</th>
+        <th>Sector</th>
+        <th>Volatility</th>
+        <th>Dividend</th>
+      </tr>
+      <tr>
+        <td>TECH</td>
+        <td>TechnoCorp</td>
+        <td>Technology</td>
+        <td>High</td>
+        <td>1.5%</td>
+      </tr>
+      <tr>
+        <td>BANK</td>
+        <td>Criminal Bank</td>
+        <td>Finance</td>
+        <td>Medium</td>
+        <td>2.0%</td>
+      </tr>
+      <tr>
+        <td>PHARM</td>
+        <td>Black Market Pharma</td>
+        <td>Healthcare</td>
+        <td>High</td>
+        <td>0.5%</td>
+      </tr>
+      <tr>
+        <td>ENERGY</td>
+        <td>Shadow Energy</td>
+        <td>Energy</td>
+        <td>Low</td>
+        <td>3.0%</td>
+      </tr>
+      <tr>
+        <td>WEAPON</td>
+        <td>Arms Dealer Inc</td>
+        <td>Industrial</td>
+        <td>Very High</td>
+        <td>1.0%</td>
+      </tr>
+    </table>
+    
+    <h3 class="section-subtitle">Trading Rules</h3>
+    <ul style="margin-left: 20px; line-height: 1.8;">
+      <li><strong>Brokerage Fee</strong> - 1% fee on all trades</li>
+      <li><strong>Dividends</strong> - Paid randomly to shareholders</li>
+      <li><strong>Price Updates</strong> - Stock prices change every hour</li>
+      <li><strong>Separate Trading Balance</strong> - Transfer funds between main cash and trading account</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Racing Tab -->
+<div id="racing" class="tab-content">
+  <div class="guide-section">
+    <h2 class="section-title">🏁 Racing & Competitions</h2>
+    
+    <p style="margin-bottom: 20px;">Buy vehicles and compete in races for cash and glory!</p>
+    
+    <h3 class="section-subtitle">Vehicle Types</h3>
+    <table class="racing-table">
+      <tr>
+        <th>Vehicle</th>
+        <th>Speed</th>
+        <th>Acceleration</th>
+        <th>Handling</th>
+        <th>Nitro</th>
+        <th>Price</th>
+      </tr>
+      <tr>
+        <td>Scooter</td>
+        <td>40</td>
+        <td>50</td>
+        <td>70</td>
+        <td>30</td>
+        <td>₹5,000</td>
+      </tr>
+      <tr>
+        <td>Sports Bike</td>
+        <td>80</td>
+        <td>85</td>
+        <td>75</td>
+        <td>60</td>
+        <td>₹50,000</td>
+      </tr>
+      <tr>
+        <td>Muscle Car</td>
+        <td>75</td>
+        <td>90</td>
+        <td>45</td>
+        <td>70</td>
+        <td>₹75,000</td>
+      </tr>
+      <tr>
+        <td>Supercar</td>
+        <td>95</td>
+        <td>85</td>
+        <td>80</td>
+        <td>80</td>
+        <td>₹200,000</td>
+      </tr>
+    </table>
+    
+    <h3 class="section-subtitle">Race Types</h3>
+    <ul style="margin-left: 20px; line-height: 1.8;">
+      <li><strong>Street Race</strong> - City streets, balanced difficulty</li>
+      <li><strong>Drag Race</strong> - Straight line, pure speed</li>
+      <li><strong>Circuit Race</strong> - Professional track, requires handling</li>
+      <li><strong>Off-road</strong> - Rough terrain, needs good suspension</li>
+      <li><strong>Tournament</strong> - Multi-race event with big prizes</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Property Tab -->
+<div id="property" class="tab-content">
+  <div class="guide-section">
+    <h2 class="section-title">🏰 Player Properties</h2>
+    
+    <p style="margin-bottom: 20px;">Own and upgrade your criminal headquarters!</p>
+    
+    <h3 class="section-subtitle">Property Types</h3>
+    <table class="property-table">
+      <tr>
+        <th>Property</th>
+        <th>Class</th>
+        <th>Security</th>
+        <th>Storage</th>
+        <th>Rooms</th>
+        <th>Price</th>
+        <th>Level</th>
+      </tr>
+      <tr>
+        <td>Starter Apartment</td>
+        <td>Apartment</td>
+        <td>2</td>
+        <td>100</td>
+        <td>2</td>
+        <td>₹50,000</td>
+        <td>1</td>
+      </tr>
+      <tr>
+        <td>Safe House</td>
+        <td>Hideout</td>
+        <td>4</td>
+        <td>150</td>
+        <td>3</td>
+        <td>₹150,000</td>
+        <td>5</td>
+      </tr>
+      <tr>
+        <td>Luxury Mansion</td>
+        <td>Mansion</td>
+        <td>5</td>
+        <td>400</td>
+        <td>8</td>
+        <td>₹1,500,000</td>
+        <td>25</td>
+      </tr>
+      <tr>
+        <td>Fortified Compound</td>
+        <td>Compound</td>
+        <td>9</td>
+        <td>500</td>
+        <td>10</td>
+        <td>₹2,500,000</td>
+        <td>30</td>
+      </tr>
+    </table>
+    
+    <h3 class="section-subtitle">Property Features</h3>
+    <ul style="margin-left: 20px; line-height: 1.8;">
+      <li><strong>Safe Room</strong> - 20% robbery reduction</li>
+      <li><strong>Shooting Range</strong> - +3% crime success</li>
+      <li><strong>Secret Vault</strong> - +200% cash storage</li>
+      <li><strong>Garage</strong> - Store multiple vehicles</li>
+      <li><strong>Drug Lab</strong> - Passive income</li>
+      <li><strong>Private Gym</strong> - +50% health regen</li>
+    </ul>
+    
+    <h3 class="section-subtitle">Robbery System</h3>
+    <ul style="margin-left: 20px; line-height: 1.8;">
+      <li>Store cash safely in your property</li>
+      <li>Other players can attempt to rob you</li>
+      <li>Higher security = lower robbery chance</li>
+      <li>Safe room feature reduces success rate</li>
+      <li>Failed robbery costs the attacker</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Customization Tab -->
+<div id="customization" class="tab-content">
+  <div class="guide-section">
+    <h2 class="section-title">🎨 Customization</h2>
+    
+    <p style="margin-bottom: 20px;">Personalize your profile with unique cosmetics!</p>
+    
+    <h3 class="section-subtitle">Title Rarities</h3>
+    <table class="customization-table">
+      <tr>
+        <th>Rarity</th>
+        <th>Example Titles</th>
+        <th>How to Get</th>
+      </tr>
+      <tr>
+        <td>Common</td>
+        <td>Criminal, Petty Thief</td>
+        <td>Starting, easy achievements</td>
+      </tr>
+      <tr>
+        <td>Rare</td>
+        <td>Burglar, PvP Champion</td>
+        <td>50 crimes, 50 PvP wins</td>
+      </tr>
+      <tr>
+        <td>Epic</td>
+        <td>Master Thief, CEO</td>
+        <td>100 crimes, 1000 jobs</td>
+      </tr>
+      <tr>
+        <td>Legendary</td>
+        <td>Crime Lord, Undisputed</td>
+        <td>500 crimes, 500 PvP wins</td>
+      </tr>
+      <tr>
+        <td>Mythic</td>
+        <td>Billionaire, Prestige 25</td>
+        <td>₹1B earned, Prestige 25</td>
+      </tr>
+    </table>
+    
+    <h3 class="section-subtitle">Customization Options</h3>
+    <ul style="margin-left: 20px; line-height: 1.8;">
+      <li><strong>Titles</strong> - Display your achievements</li>
+      <li><strong>Avatars</strong> - Unique profile pictures</li>
+      <li><strong>Frames</strong> - Decorative borders</li>
+      <li><strong>Badges</strong> - Show off accomplishments</li>
+      <li><strong>Color Schemes</strong> - Customize the game's look</li>
+    </ul>
+    
+    <h3 class="section-subtitle">Unlock Methods</h3>
+    <ul style="margin-left: 20px; line-height: 1.8;">
+      <li><strong>Level</strong> - Reach certain levels</li>
+      <li><strong>Prestige</strong> - Prestige milestones</li>
+      <li><strong>Achievement</strong> - Complete specific achievements</li>
+      <li><strong>Event</strong> - Limited-time events</li>
+      <li><strong>Purchase</strong> - Buy with in-game cash</li>
+    </ul>
+  </div>
+</div>
+
+<!-- World Map Tab -->
+<div id="exploration" class="tab-content">
+  <div class="guide-section">
+    <h2 class="section-title">🌍 World Map & Exploration</h2>
+    
+    <p style="margin-bottom: 20px;">Explore different regions, discover secrets, and expand your territory!</p>
+    
+    <h3 class="section-subtitle">Regions</h3>
+    <ul style="margin-left: 20px; line-height: 1.8; margin-bottom: 20px;">
+      <li><strong>Criminal Bay</strong> - Starting area, low danger</li>
+      <li><strong>Shadow District</strong> - Medium danger, better rewards</li>
+      <li><strong>Industrial Zone</strong> - High danger, smuggling operations</li>
+      <li><strong>The Docks</strong> - International connections</li>
+      <li><strong>Underground Bunker</strong> - Military technology</li>
+      <li><strong>Criminal HQ</strong> - Heart of organized crime</li>
+      <li><strong>The Swamps</strong> - Hidden contraband</li>
+      <li><strong>Ghost Town</strong> - Rumors of treasure</li>
+      <li><strong>The Arena</strong> - Underground fighting</li>
+      <li><strong>Forgotten Temple</strong> - Ancient mysteries</li>
+    </ul>
+    
+    <h3 class="section-subtitle">Exploration Mechanics</h3>
+    <ul style="margin-left: 20px; line-height: 1.8;">
+      <li><strong>Discover Regions</strong> - Find new areas to operate</li>
+      <li><strong>Exploration Progress</strong> - Each region can be explored up to 100%</li>
+      <li><strong>Hidden Discoveries</strong> - Find secret caches, vantage points, and lore</li>
+      <li><strong>XP Rewards</strong> - Gain experience for discoveries</li>
+      <li><strong>Travel System</strong> - Move between connected regions</li>
+      <li><strong>Region-Specific Content</strong> - Different crimes and jobs per region</li>
+    </ul>
+    
+    <h3 class="section-subtitle">Travel Rules</h3>
+    <ul style="margin-left: 20px; line-height: 1.8;">
+      <li><strong>Travel Time</strong> - Each route takes time</li>
+      <li><strong>Travel Cost</strong> - Pay to move between regions</li>
+      <li><strong>Level Requirements</strong> - Some routes need higher level</li>
+      <li><strong>Discovery Required</strong> - Must discover region before traveling</li>
+    </ul>
+  </div>
+</div>
+
+<!-- FAQ Tab -->
+<div id="faq" class="tab-content">
+  <div class="guide-section">
+    <h2 class="section-title">❓ Frequently Asked Questions</h2>
+    
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFAQ(this)">
+        How do I get more energy?
+        <span class="toggle-icon">+</span>
+      </div>
+      <div class="faq-answer hidden">
+        Energy regenerates automatically at a rate of 1 point per minute. You can also use Energy Drink items to restore energy instantly. The energy bar shows a timer for when your next energy point will regenerate. Prestige perks can increase your energy regeneration rate.
+      </div>
+    </div>
+    
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFAQ(this)">
+        What happens when I fail a crime?
+        <span class="toggle-icon">+</span>
+      </div>
+      <div class="faq-answer hidden">
+        When you fail a crime, you lose the fail penalty amount from your cash and your health decreases. You still lose the energy cost. Make sure to have enough cash buffer and health items before attempting risky crimes!
+      </div>
+    </div>
+    
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFAQ(this)">
+        How do I increase my success rate?
+        <span class="toggle-icon">+</span>
+      </div>
+      <div class="faq-answer hidden">
+        Success rate can be increased by:<br>
+        - Using temporary boost items (Energy Drink, Lucky Charm)<br>
+        - Permanent boosts from achievements<br>
+        - Training Manual items for permanent boost<br>
+        - Prestige perks (Crime Genius)<br>
+        - Property features (Shooting Range)<br>
+        - Higher level also unlocks easier crimes
+      </div>
+    </div>
+    
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFAQ(this)">
+        Why are some crimes/jobs locked?
+        <span class="toggle-icon">+</span>
+      </div>
+      <div class="faq-answer hidden">
+        Crimes and jobs have minimum level requirements. Check the level badge on each card. You need to reach that level by gaining XP from easier activities first. Some may also be region-locked until you discover certain areas.
+      </div>
+    </div>
+    
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFAQ(this)">
+        How does stat decay work?
+        <span class="toggle-icon">+</span>
+      </div>
+      <div class="faq-answer hidden">
+        Hunger and happiness decrease by 5 points for every hour you're away from the game. When you log back in, the game calculates how many hours have passed and reduces your stats accordingly. Keep them balanced with food and entertainment items!
+      </div>
+    </div>
+    
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFAQ(this)">
+        What are achievements?
+        <span class="toggle-icon">+</span>
+      </div>
+      <div class="faq-answer hidden">
+        Achievements are milestones you can complete, like committing 100 crimes or earning ₹1,000,000. When you complete them, you earn cash and XP rewards. Check the Achievements page to track your progress!
+      </div>
+    </div>
+    
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFAQ(this)">
+        How does PvP work?
+        <span class="toggle-icon">+</span>
+      </div>
+      <div class="faq-answer hidden">
+        PvP battles cost 20 energy. Both players lose 10 health. The winner takes 5% of the defender's cash and earns 50 XP. You can't attack the same player for 1 hour. Your rank points determine your title and matchmaking.
+      </div>
+    </div>
+    
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFAQ(this)">
+        What are the benefits of joining a gang?
+        <span class="toggle-icon">+</span>
+      </div>
+      <div class="faq-answer hidden">
+        Gangs provide permanent passive bonuses to all members, including XP boosts, cash boosts, energy regeneration, crime success rate, PvP power, and market fee reductions. You also get access to gang chat and can participate in gang activities.
+      </div>
+    </div>
+    
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFAQ(this)">
+        How does the market work?
+        <span class="toggle-icon">+</span>
+      </div>
+      <div class="faq-answer hidden">
+        The market allows you to buy and sell items with other players. Listings cost a 5% fee and last 7 days. You can buy any quantity from listings. Price history helps you determine fair prices.
+      </div>
+    </div>
+    
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFAQ(this)">
+        How do stocks work?
+        <span class="toggle-icon">+</span>
+      </div>
+      <div class="faq-answer hidden">
+        The stock market lets you invest in companies. You need to transfer cash to your trading balance first. Stock prices change based on volatility and market news. Some stocks pay dividends. You can track your portfolio value and profit/loss.
+      </div>
+    </div>
+    
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFAQ(this)">
+        How does racing work?
+        <span class="toggle-icon">+</span>
+      </div>
+      <div class="faq-answer hidden">
+        First, buy a vehicle from the shop. Each vehicle has different stats (speed, acceleration, handling, nitro). Join races that match your level. Race outcomes depend on your vehicle stats and a bit of luck. Winners earn cash from the prize pool.
+      </div>
+    </div>
+    
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFAQ(this)">
+        What can I do with a property?
+        <span class="toggle-icon">+</span>
+      </div>
+      <div class="faq-answer hidden">
+        Properties let you store cash safely away from your main wallet. You can upgrade security to prevent robberies, increase storage capacity, and add special features like safe rooms, shooting ranges, and drug labs for passive income. Other players can try to rob you!
+      </div>
+    </div>
+    
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFAQ(this)">
+        How do I unlock customization items?
+        <span class="toggle-icon">+</span>
+      </div>
+      <div class="faq-answer hidden">
+        Titles, avatars, frames, and color schemes are unlocked through achievements, prestige levels, special events, or by purchasing them with in-game cash. Once unlocked, you can equip them from the Customization page to personalize your profile.
+      </div>
+    </div>
+    
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFAQ(this)">
+        What is the world map for?
+        <span class="toggle-icon">+</span>
+      </div>
+      <div class="faq-answer hidden">
+        The world map lets you explore different regions. Each region has its own unique crimes, jobs, and items. You can discover hidden secrets, find special caches, and unlock new areas as you level up. Travel between regions costs cash and time.
+      </div>
+    </div>
+    
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFAQ(this)">
+        What are daily rewards?
+        <span class="toggle-icon">+</span>
+      </div>
+      <div class="faq-answer hidden">
+        Daily rewards give you free items and resources every day you log in. Your streak increases with consecutive logins, and every 7 days you get a 2x bonus. There are also special monthly rewards on holidays!
+      </div>
+    </div>
+    
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFAQ(this)">
+        What is Prestige mode?
+        <span class="toggle-icon">+</span>
+      </div>
+      <div class="faq-answer hidden">
+        Prestige mode becomes available at level 10. When you prestige, you reset your level, XP, cash, and items, but earn Prestige Points based on your accomplishments. These points can be spent on permanent perks that boost all your future gameplay. Each prestige level makes you permanently stronger!
+      </div>
+    </div>
+    
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFAQ(this)">
+        Can I play on mobile?
+        <span class="toggle-icon">+</span>
+      </div>
+      <div class="faq-answer hidden">
+        Yes! The game is fully responsive and works on all devices. The interface adapts to your screen size for the best experience on phone, tablet, or desktop. The map is especially designed for touch interaction on mobile.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tips Tab -->
+<div id="tips" class="tab-content">
+  <div class="guide-section">
+    <h2 class="section-title">💡 Pro Tips & Strategies</h2>
+    
+    <div class="tips-list">
+      <div class="tip-item">
+        <div class="tip-icon">💰</div>
+        <div class="tip-text"><strong>Start with jobs</strong> - Build a cash buffer before attempting crimes. This protects you from bankruptcy on failed attempts.</div>
+      </div>
+      
+      <div class="tip-item">
+        <div class="tip-icon">⚡</div>
+        <div class="tip-text"><strong>Use energy wisely</strong> - Don't waste energy on low-reward activities when you're close to leveling up. Save it for better opportunities.</div>
+      </div>
+      
+      <div class="tip-item">
+        <div class="tip-icon">🍽️</div>
+        <div class="tip-text"><strong>Keep stats balanced</strong> - Low hunger or happiness can affect your performance. Always keep them above 50% for optimal results.</div>
+      </div>
+      
+      <div class="tip-item">
+        <div class="tip-icon">📊</div>
+        <div class="tip-text"><strong>Track success rates</strong> - Different crimes have different base success rates. Pick ones that match your risk tolerance.</div>
+      </div>
+      
+      <div class="tip-item">
+        <div class="tip-icon">🏆</div>
+        <div class="tip-text"><strong>Check achievements</strong> - Regularly check your achievements page. You might be close to completing some without realizing it!</div>
+      </div>
+      
+      <div class="tip-item">
+        <div class="tip-icon">⏰</div>
+        <div class="tip-text"><strong>Log in regularly</strong> - Energy regenerates and stats decay over time. Logging in every few hours helps you stay on top of your stats.</div>
+      </div>
+      
+      <div class="tip-item">
+        <div class="tip-icon">🎒</div>
+        <div class="tip-text"><strong>Stock up on items</strong> - Buy items in bulk when you have extra cash. You never know when you'll need a quick health restore or energy boost.</div>
+      </div>
+      
+      <div class="tip-item">
+        <div class="tip-icon">📈</div>
+        <div class="tip-text"><strong>Plan your progression</strong> - Aim for specific level milestones. Each new tier unlocks significantly better rewards.</div>
+      </div>
+      
+      <div class="tip-item">
+        <div class="tip-icon">🍀</div>
+        <div class="tip-text"><strong>Save boost items</strong> - Use temporary boost items before attempting high-level crimes for maximum benefit.</div>
+      </div>
+      
+      <div class="tip-item">
+        <div class="tip-icon">📜</div>
+        <div class="tip-text"><strong>Learn from history</strong> - Check your crime history to see which crimes you succeed at most often. Focus on your strengths!</div>
+      </div>
+      
+      <div class="tip-item">
+        <div class="tip-icon">⚔️</div>
+        <div class="tip-text"><strong>PvP selectively</strong> - Check opponent power before attacking. Target players with similar or slightly lower power for best results.</div>
+      </div>
+      
+      <div class="tip-item">
+        <div class="tip-icon">🏢</div>
+        <div class="tip-text"><strong>Join an active gang</strong> - Active gangs unlock more perks and provide better bonuses. Contribute to help your gang grow.</div>
+      </div>
+      
+      <div class="tip-item">
+        <div class="tip-icon">📈</div>
+        <div class="tip-text"><strong>Watch market trends</strong> - Buy low, sell high. Check price history to identify profitable trading opportunities.</div>
+      </div>
+      
+      <div class="tip-item">
+        <div class="tip-icon">📊</div>
+        <div class="tip-text"><strong>Diversify your stocks</strong> - Don't put all your money in one stock. Spread investments across different sectors to manage risk.</div>
+      </div>
+      
+      <div class="tip-item">
+        <div class="tip-icon">🏁</div>
+        <div class="tip-text"><strong>Upgrade your vehicle</strong> - Better stats increase your chances of winning races. Focus on upgrading your best vehicle first.</div>
+      </div>
+      
+      <div class="tip-item">
+        <div class="tip-icon">🏰</div>
+        <div class="tip-text"><strong>Store cash in property</strong> - Keep your wealth safe from failed crimes. Upgrade security to prevent robberies.</div>
+      </div>
+      
+      <div class="tip-item">
+        <div class="tip-icon">🎨</div>
+        <div class="tip-text"><strong>Show off your achievements</strong> - Equip rare titles and frames to let everyone know your accomplishments.</div>
+      </div>
+      
+      <div class="tip-item">
+        <div class="tip-icon">🌍</div>
+        <div class="tip-text"><strong>Explore everything</strong> - Each region has unique secrets. Take time to explore thoroughly for bonus XP and items.</div>
+      </div>
+      
+      <div class="tip-item">
+        <div class="tip-icon">🎁</div>
+        <div class="tip-text"><strong>Never miss a daily reward</strong> - The streak bonus makes daily rewards increasingly valuable. Set a reminder to log in every day!</div>
+      </div>
+      
+      <div class="tip-item">
+        <div class="tip-icon">🔄</div>
+        <div class="tip-text"><strong>Prestige strategically</strong> - Wait until you have high stats before prestiging to maximize points. Early prestiges are faster, later prestiges give more total power.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<button class="back-button" onclick="goToDashboard()">← Back to Dashboard</button>
+
+<script>
+// Tab switching
+function switchTab(tabName) {
+  // Hide all tabs
+  document.querySelectorAll('.tab-content').forEach(tab => {
+    tab.classList.remove('active');
+  });
+  
+  // Deactivate all buttons
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.classList.remove('active');
+  });
+  
+  // Show selected tab
+  document.getElementById(tabName).classList.add('active');
+  
+  // Activate clicked button
+  event.target.classList.add('active');
+}
+
+// FAQ toggle
+function toggleFAQ(element) {
+  const answer = element.nextElementSibling;
+  const icon = element.querySelector('.toggle-icon');
+  
+  answer.classList.toggle('hidden');
+  element.classList.toggle('open');
+  
+  if (icon.textContent === '+') {
+    icon.textContent = '−';
+  } else {
+    icon.textContent = '+';
+  }
+}
+
+// Navigation
+function goToDashboard() {
+  window.location.href = "dashboard.html";
+}
+
+// Open first FAQ item by default (optional)
+window.addEventListener('load', () => {
+  const firstFAQ = document.querySelector('.faq-question');
+  if (firstFAQ) {
+    setTimeout(() => {
+      toggleFAQ(firstFAQ);
+    }, 500);
+  }
+});
+</script>
+
+</body>
+</html>
