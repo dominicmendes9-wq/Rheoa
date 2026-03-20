@@ -832,24 +832,61 @@ async function loadVehicleTypes() {
   }
 }
 
-// Load leaderboard
+// Load leaderboard - FIXED VERSION
 async function loadLeaderboard() {
   try {
+    console.log('Loading leaderboard from race_history...');
+    
+    // Query race_history directly with player info
     const { data, error } = await sb
-      .from('racing_leaderboard')
+      .from('race_history')
       .select(`
-        *,
-        players!inner (username)
+        player_id,
+        earnings,
+        position,
+        players!inner (
+          username
+        )
       `)
-      .order('total_earnings', { ascending: false })
-      .limit(20);
+      .order('created_at', { ascending: false });
     
-    if (error) throw error;
+    if (error) {
+      console.error('Error loading race_history:', error);
+      throw error;
+    }
     
-    leaderboard = data || [];
+    console.log('Race history data:', data);
+    
+    // Process the data to create leaderboard stats
+    const stats = {};
+    data.forEach(entry => {
+      if (!stats[entry.player_id]) {
+        stats[entry.player_id] = {
+          player_id: entry.player_id,
+          username: entry.players?.username || 'Unknown',
+          total_races: 0,
+          total_wins: 0,
+          total_earnings: 0
+        };
+      }
+      stats[entry.player_id].total_races++;
+      if (entry.position === 1) stats[entry.player_id].total_wins++;
+      stats[entry.player_id].total_earnings += entry.earnings || 0;
+    });
+    
+    // Convert to array and sort by earnings
+    leaderboard = Object.values(stats)
+      .sort((a, b) => b.total_earnings - a.total_earnings)
+      .slice(0, 20);
+    
+    console.log('Processed leaderboard:', leaderboard);
     renderLeaderboard();
   } catch (error) {
     console.error('Error loading leaderboard:', error);
+    showToast('Error loading leaderboard', 'error');
+    // Show empty leaderboard
+    document.getElementById('leaderboardBody').innerHTML = 
+      '<tr><td colspan="6" class="empty-message">No race data yet</td></tr>';
   }
 }
 
@@ -872,6 +909,7 @@ async function loadRaceHistory() {
     renderHistory();
   } catch (error) {
     console.error('Error loading race history:', error);
+    showToast('Error loading race history', 'error');
   }
 }
 
@@ -924,9 +962,9 @@ function renderVehicles() {
           Condition: ${v.condition}% ${v.condition < 50 ? '(Needs repair!)' : ''}
         </div>
         <div style="display: flex; justify-content: space-around; margin-top: 10px;">
-          <div>Wins: ${v.wins}</div>
-          <div>Losses: ${v.losses}</div>
-          <div>Earnings: ₹${v.total_earnings.toLocaleString()}</div>
+          <div>Wins: ${v.wins || 0}</div>
+          <div>Losses: ${v.losses || 0}</div>
+          <div>Earnings: ₹${(v.total_earnings || 0).toLocaleString()}</div>
         </div>
       </div>
     `;
@@ -1031,12 +1069,12 @@ function renderShop() {
   `).join('');
 }
 
-// Render leaderboard
+// Render leaderboard - UPDATED
 function renderLeaderboard() {
   const tbody = document.getElementById('leaderboardBody');
   
   if (!leaderboard.length) {
-    tbody.innerHTML = '<tr><td colspan="6" class="empty-message">No data yet</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" class="empty-message">No race data yet</td></tr>';
     return;
   }
   
@@ -1048,11 +1086,11 @@ function renderLeaderboard() {
     return `
       <tr>
         <td>#${index + 1}</td>
-        <td>${entry.players?.username || 'Unknown'}</td>
+        <td>${entry.username || 'Unknown'}</td>
         <td>${entry.total_races}</td>
         <td>${entry.total_wins}</td>
         <td>${winRate}%</td>
-        <td>₹${entry.total_earnings?.toLocaleString() || 0}</td>
+        <td>₹${(entry.total_earnings || 0).toLocaleString()}</td>
       </tr>
     `;
   }).join('');
