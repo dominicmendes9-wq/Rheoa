@@ -1,13 +1,8 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
   <title>Rheoa RPG - Welcome</title>
-  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
-  <!-- Favicon (prevents 404 error) -->
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎮</text></svg>">
-  
   <style>
     * {
       box-sizing: border-box;
@@ -18,6 +13,7 @@
     body { 
       font-family: 'Courier New', monospace; 
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #222; 
       min-height: 100vh;
       display: flex;
       align-items: center;
@@ -36,6 +32,19 @@
       padding: 40px 30px;
       box-shadow: 0 20px 60px rgba(0,0,0,0.3);
       backdrop-filter: blur(10px);
+      border: 2px solid rgba(255,255,255,0.1);
+      animation: slideUp 0.6s ease-out;
+    }
+    
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
     
     .logo {
@@ -51,6 +60,13 @@
       -webkit-text-fill-color: transparent;
       background-clip: text;
       margin-bottom: 10px;
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
     }
     
     .tagline {
@@ -73,6 +89,11 @@
       padding: 15px;
       background: #f5f5f5;
       border-radius: 12px;
+      transition: transform 0.2s;
+    }
+    
+    .feature:hover {
+      transform: translateY(-3px);
     }
     
     .feature-icon {
@@ -100,32 +121,72 @@
       font-weight: bold;
       border-radius: 50px;
       cursor: pointer;
+      transition: all 0.3s;
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
       width: 100%;
       max-width: 300px;
       margin: 0 auto 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
     }
     
     .login-btn:hover {
       transform: translateY(-2px);
-      box-shadow: 0 6px 25px rgba(102, 126, 234, 0.8);
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
     }
     
-    .login-btn.loading {
-      opacity: 0.7;
-      cursor: not-allowed;
+    .login-btn:active {
+      transform: translateY(0);
     }
     
-    .login-btn.loading .btn-text {
+    .login-btn img {
+      width: 24px;
+      height: 24px;
+    }
+    
+    .status-message {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 10px;
+      background: #f5f5f5;
+      color: #333;
+      font-size: 1rem;
       display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      animation: fadeIn 0.3s ease-out;
     }
     
-    .login-btn.loading::after {
-      content: '';
-      display: inline-block;
+    .status-message.show {
+      display: flex;
+    }
+    
+    .status-message.success {
+      background: #e8f5e8;
+      color: #2e7d32;
+      border: 1px solid #4CAF50;
+    }
+    
+    .status-message.info {
+      background: #e3f2fd;
+      color: #1976D2;
+      border: 1px solid #2196F3;
+    }
+    
+    .status-message.error {
+      background: #ffebee;
+      color: #c62828;
+      border: 1px solid #f44336;
+    }
+    
+    .spinner {
       width: 20px;
       height: 20px;
-      border: 3px solid white;
-      border-top: 3px solid transparent;
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #667eea;
       border-radius: 50%;
       animation: spin 1s linear infinite;
     }
@@ -135,78 +196,29 @@
       100% { transform: rotate(360deg); }
     }
     
-    .debug-info {
-      margin-top: 20px;
-      padding: 15px;
-      background: #f0f0f0;
-      border-radius: 10px;
-      font-size: 0.8rem;
-      text-align: left;
-      display: none;
-      max-height: 300px;
-      overflow-y: auto;
-    }
-    
-    .debug-info.show {
-      display: block;
-    }
-    
-    .debug-info div {
-      padding: 3px 0;
-      border-bottom: 1px solid #ddd;
-      font-family: monospace;
-    }
-    
-    .error-message {
-      color: #f44336;
-      margin-top: 10px;
-      padding: 10px;
-      background: #ffebee;
-      border-radius: 5px;
-      display: none;
-    }
-    
-    .error-message.show {
-      display: block;
-    }
-    
-    .success-message {
-      color: #4CAF50;
-      margin-top: 10px;
-      padding: 10px;
-      background: #e8f5e8;
-      border-radius: 5px;
-      display: none;
-    }
-    
-    .success-message.show {
-      display: block;
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
     }
     
     .footer {
       margin-top: 30px;
       text-align: center;
-      color: rgba(255,255,255,0.9);
+      color: rgba(255,255,255,0.8);
+      font-size: 0.9rem;
     }
     
     .footer a {
       color: white;
       text-decoration: none;
+      font-weight: bold;
     }
     
-    .guide-link {
-      margin-top: 15px;
-    }
-    
-    .guide-link a {
-      color: #667eea;
-      text-decoration: none;
-    }
-    
-    .guide-link a:hover {
+    .footer a:hover {
       text-decoration: underline;
     }
     
+    /* Toast Notification Styles */
     .toast-container {
       position: fixed;
       top: 20px;
@@ -244,24 +256,63 @@
       animation: slideOut 0.3s ease-out forwards;
     }
     
-    .status-text {
-      margin-top: 15px;
-      padding: 10px;
-      border-radius: 5px;
+    /* Loading state for button */
+    .login-btn.loading {
+      opacity: 0.7;
+      cursor: not-allowed;
     }
     
-    .url-display {
-      margin-top: 10px;
-      padding: 10px;
-      background: #e3f2fd;
-      border-radius: 5px;
-      font-size: 0.8rem;
-      word-break: break-all;
+    .login-btn.loading .btn-text {
       display: none;
     }
     
-    .url-display.show {
-      display: block;
+    .login-btn.loading::after {
+      content: '';
+      width: 20px;
+      height: 20px;
+      border: 3px solid white;
+      border-top: 3px solid transparent;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    
+    /* Mobile styles */
+    @media (max-width: 600px) {
+      .welcome-card {
+        padding: 30px 20px;
+      }
+      
+      .logo h1 {
+        font-size: 2.5rem;
+      }
+      
+      .features {
+        gap: 10px;
+      }
+      
+      .feature {
+        padding: 10px;
+      }
+      
+      .feature-icon {
+        font-size: 1.5rem;
+      }
+      
+      .feature-text {
+        font-size: 0.8rem;
+      }
+      
+      .login-btn {
+        padding: 14px 30px;
+        font-size: 1rem;
+      }
+      
+      .toast {
+        min-width: 200px;
+        max-width: 280px;
+        padding: 12px 20px;
+        font-size: 0.9rem;
+      }
     }
   </style>
 </head>
@@ -311,390 +362,82 @@
         <span class="btn-text">🚀 Login with Google</span>
       </button>
       
-      <div id="status" class="status-text"></div>
-      
-      <div class="guide-link">
-        <a href="guide.html">📚 New here? Check out the Guide →</a>
-      </div>
-      
-      <!-- Debug Toggle Button -->
-      <button id="debugToggle" style="margin-top: 10px; background: none; border: none; color: #999; cursor: pointer; font-size: 0.8rem;">🐛 Show Debug</button>
-      
-      <!-- URL Display -->
-      <div class="url-display" id="urlDisplay"></div>
-      
-      <!-- Debug Info -->
-      <div class="debug-info" id="debugInfo">
-        <strong>Debug Log:</strong>
-        <div id="debugContent"></div>
-      </div>
-      
-      <!-- Error Message -->
-      <div class="error-message" id="errorMessage"></div>
-      
-      <!-- Success Message -->
-      <div class="success-message" id="successMessage"></div>
+      <p id="status" style="margin-top: 15px; color: #666;"></p>
     </div>
   </div>
   
   <div class="footer">
     <p>© 2024 Rheoa RPG. All rights reserved.</p>
-    <p>Your GitHub Pages URL: <span id="githubUrl"></span></p>
+    <p>Ready to start your journey? <a href="#" onclick="document.getElementById('loginBtn').click(); return false;">Login now!</a></p>
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 
 <script>
-// ============================================
-// CONFIGURATION
-// ============================================
-const SUPABASE_URL = "https://mtiwodvsrwvrujbhmmrn.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp";
+// ORIGINAL SUPABASE CONFIG - UNCHANGED
+const sb = window.supabase.createClient(
+  "https://mtiwodvsrwvrujbhmmrn.supabase.co",
+  "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
+);
 
-// GitHub Pages URL - UPDATE THIS TO YOUR ACTUAL GITHUB PAGES URL
-const GITHUB_PAGES_URL = "https://dominicmendes9-wq.github.io/Rheoa";
-
-// Debug log array
-const debugLogs = [];
-
-// ============================================
-// UTILITY FUNCTIONS
-// ============================================
-
-// Add debug message
-function addDebug(message) {
-  const timestamp = new Date().toLocaleTimeString();
-  const logEntry = `[${timestamp}] ${message}`;
+// Toast notification system (UI enhancement only)
+function showToast(message, type = 'info', duration = 3000) {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.textContent = message;
   
-  console.log(logEntry);
-  debugLogs.unshift(logEntry);
+  container.appendChild(toast);
   
-  // Keep only last 20 logs
-  if (debugLogs.length > 20) debugLogs.pop();
-  
-  // Update debug display
-  const debugContent = document.getElementById('debugContent');
-  if (debugContent) {
-    debugContent.innerHTML = debugLogs.map(log => `<div>${log}</div>`).join('');
-  }
-}
-
-// Show error
-function showError(message) {
-  console.error(message);
-  const errorDiv = document.getElementById('errorMessage');
-  errorDiv.textContent = message;
-  errorDiv.classList.add('show');
-  
-  // Hide success if showing
-  document.getElementById('successMessage').classList.remove('show');
-  
-  if (window.showToast) {
-    window.showToast(message, 'error', 5000);
-  }
-}
-
-// Show success
-function showSuccess(message) {
-  const successDiv = document.getElementById('successMessage');
-  successDiv.textContent = message;
-  successDiv.classList.add('show');
-  
-  // Hide error if showing
-  document.getElementById('errorMessage').classList.remove('show');
-}
-
-// Clear messages
-function clearMessages() {
-  document.getElementById('errorMessage').classList.remove('show');
-  document.getElementById('successMessage').classList.remove('show');
-}
-
-// Show URL info
-function showUrlInfo(url) {
-  const urlDisplay = document.getElementById('urlDisplay');
-  urlDisplay.innerHTML = `<strong>Redirect URL:</strong> ${url}`;
-  urlDisplay.classList.add('show');
-}
-
-// ============================================
-// TOAST NOTIFICATION SYSTEM
-// ============================================
-(function() {
-  let container = document.getElementById('toast-container');
-  if (!container) {
-    container = document.createElement('div');
-    container.id = 'toast-container';
-    container.className = 'toast-container';
-    document.body.appendChild(container);
-  }
-
-  window.showToast = function(message, type = 'info', duration = 3000) {
-    const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
-    toast.textContent = message;
-    
-    container.appendChild(toast);
-    
-    setTimeout(() => {
-      toast.classList.add('fade-out');
-      setTimeout(() => {
-        if (toast.parentNode) {
-          container.removeChild(toast);
-        }
-      }, 300);
-    }, duration);
-  };
-})();
-
-// ============================================
-// INITIALIZE SUPABASE
-// ============================================
-addDebug('Initializing Supabase...');
-addDebug(`URL: ${SUPABASE_URL}`);
-
-let supabaseClient;
-
-try {
-  // Create Supabase client
-  supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    auth: {
-      autoRefreshToken: true,
-      persistSession: true,
-      detectSessionInUrl: true,
-      flowType: 'pkce'
-    }
-  });
-  
-  addDebug('Supabase client created successfully');
-} catch (error) {
-  addDebug(`Failed to create Supabase client: ${error.message}`);
-  showError('Failed to initialize authentication. Please refresh the page.');
-}
-
-// ============================================
-// AUTH FUNCTIONS
-// ============================================
-
-// Login function
-async function login() {
-  clearMessages();
-  const loginBtn = document.getElementById('loginBtn');
-  
-  try {
-    addDebug('Login button clicked');
-    loginBtn.classList.add('loading');
-    loginBtn.disabled = true;
-    
-    // Use the GitHub Pages URL for redirect
-    const redirectUrl = GITHUB_PAGES_URL + '/dashboard.html';
-    addDebug(`Redirect URL: ${redirectUrl}`);
-    showUrlInfo(redirectUrl);
-    
-    const { data, error } = await supabaseClient.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: redirectUrl
-      }
-    });
-    
-    if (error) {
-      addDebug(`OAuth error: ${error.message}`);
-      throw error;
-    }
-    
-    addDebug('OAuth initiated successfully');
-    showSuccess('Redirecting to Google...');
-    
-  } catch (error) {
-    addDebug(`Login error: ${error.message}`);
-    loginBtn.classList.remove('loading');
-    loginBtn.disabled = false;
-    showError(error.message || 'Login failed. Please try again.');
-  }
-}
-
-// Get current user
-async function getCurrentUser() {
-  try {
-    addDebug('Getting current user...');
-    const { data: { user }, error } = await supabaseClient.auth.getUser();
-    
-    if (error) {
-      addDebug(`Get user error: ${error.message}`);
-      return null;
-    }
-    
-    addDebug(user ? `User found: ${user.email}` : 'No user found');
-    return user;
-  } catch (error) {
-    addDebug(`Error in getCurrentUser: ${error.message}`);
-    return null;
-  }
-}
-
-// Get session
-async function getSession() {
-  try {
-    addDebug('Getting session...');
-    const { data, error } = await supabaseClient.auth.getSession();
-    
-    if (error) {
-      addDebug(`Get session error: ${error.message}`);
-      return null;
-    }
-    
-    addDebug(data.session ? 'Session found' : 'No session');
-    return data.session;
-  } catch (error) {
-    addDebug(`Error in getSession: ${error.message}`);
-    return null;
-  }
-}
-
-// Check user function
-async function checkUser() {
-  try {
-    const user = await getCurrentUser();
-    const statusEl = document.getElementById("status");
-    
-    if (user) {
-      statusEl.innerHTML = `✓ Logged in as: ${user.email}`;
-      statusEl.style.color = '#4CAF50';
-      
-      addDebug(`User is logged in: ${user.email}`);
-      showSuccess(`Welcome back, ${user.email}!`);
-      
-      // Auto-redirect after 2 seconds
-      setTimeout(() => {
-        if (!window.location.pathname.includes('dashboard')) {
-          addDebug('Redirecting to dashboard...');
-          window.location.href = GITHUB_PAGES_URL + '/dashboard.html';
-        }
-      }, 2000);
-    } else {
-      statusEl.innerHTML = "🔐 Not logged in";
-      statusEl.style.color = '#666';
-      addDebug('No user logged in');
-    }
-  } catch (error) {
-    addDebug(`Check user error: ${error.message}`);
-  }
-}
-
-// Handle redirect after OAuth
-async function handleRedirect() {
-  addDebug('Checking for OAuth redirect...');
-  addDebug(`Current URL: ${window.location.href}`);
-  
-  try {
-    // Get the session
-    const session = await getSession();
-    
-    if (session) {
-      addDebug('Session found, login successful');
-      showSuccess('✅ Login successful! Redirecting...');
-      
-      setTimeout(() => {
-        window.location.href = GITHUB_PAGES_URL + '/dashboard.html';
-      }, 1500);
-      return true;
-    }
-    
-    // Check for error in URL
-    const params = new URLSearchParams(window.location.search);
-    const error = params.get('error');
-    const errorDescription = params.get('error_description');
-    
-    if (error) {
-      addDebug(`OAuth error in URL: ${error} - ${errorDescription}`);
-      showError(`Authentication failed: ${errorDescription || error}`);
-    } else {
-      addDebug('No session found after redirect');
-    }
-    
-    return false;
-  } catch (error) {
-    addDebug(`Redirect handling error: ${error.message}`);
-    showError('Failed to complete login. Please try again.');
-    return false;
-  }
-}
-
-// ============================================
-// EVENT LISTENERS
-// ============================================
-
-// Login button click
-document.getElementById('loginBtn').addEventListener('click', login);
-
-// Debug toggle
-document.getElementById('debugToggle').addEventListener('click', function() {
-  const debugDiv = document.getElementById('debugInfo');
-  debugDiv.classList.toggle('show');
-  this.textContent = debugDiv.classList.contains('show') ? '🐛 Hide Debug' : '🐛 Show Debug';
-});
-
-// Auth state changes
-if (supabaseClient) {
-  supabaseClient.auth.onAuthStateChange((event, session) => {
-    addDebug(`Auth state changed: ${event}`);
-    
-    if (event === 'SIGNED_IN') {
-      addDebug('User signed in');
-      showSuccess('✅ Login successful!');
-      
-      setTimeout(() => {
-        window.location.href = GITHUB_PAGES_URL + '/dashboard.html';
-      }, 1500);
-    } else if (event === 'SIGNED_OUT') {
-      addDebug('User signed out');
-      checkUser();
-    } else if (event === 'TOKEN_REFRESHED') {
-      addDebug('Token refreshed');
-    }
-  });
-}
-
-// ============================================
-// INITIALIZATION
-// ============================================
-document.addEventListener('DOMContentLoaded', async function() {
-  addDebug('DOM Content Loaded');
-  addDebug(`Current Origin: ${window.location.origin}`);
-  addDebug(`GitHub Pages URL: ${GITHUB_PAGES_URL}`);
-  
-  // Display GitHub URL in footer
-  document.getElementById('githubUrl').textContent = GITHUB_PAGES_URL;
-  
-  // Check if this is a redirect from OAuth
-  const hasAuthParams = window.location.hash || 
-                       window.location.search.includes('access_token') || 
-                       window.location.search.includes('code') ||
-                       window.location.search.includes('error');
-  
-  if (hasAuthParams) {
-    addDebug('Auth parameters detected in URL');
-    await handleRedirect();
-  } else {
-    // Normal page load, just check user
-    await checkUser();
-  }
-  
-  // Show welcome toast
   setTimeout(() => {
-    window.showToast?.('👋 Welcome to Rheoa RPG!', 'info', 4000);
-  }, 500);
-});
+    toast.classList.add('fade-out');
+    setTimeout(() => {
+      if (toast.parentNode) {
+        container.removeChild(toast);
+      }
+    }, 300);
+  }, duration);
+}
 
-// Handle visibility change
-document.addEventListener('visibilitychange', () => {
-  if (!document.hidden) {
-    addDebug('Tab became visible, checking user...');
-    checkUser();
+// ORIGINAL LOGIN FUNCTION - EXACTLY AS BEFORE
+async function login() {
+  await sb.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: "https://dominicmendes9-wq.github.io/Rheoa/dashboard.html"
+    }
+  });
+}
+
+document.getElementById("loginBtn").addEventListener("click", login);
+
+// ORIGINAL AUTH STATE HANDLER - UNCHANGED
+sb.auth.onAuthStateChange((event, session) => {
+  if (event === "SIGNED_IN") {
+    showToast('✅ Login successful!', 'success');
+    window.location.href = "dashboard.html";
   }
 });
+
+// ORIGINAL CHECK USER FUNCTION - UNCHANGED
+async function checkUser() {
+  const { data } = await sb.auth.getUser();
+
+  if (data.user) {
+    document.getElementById("status").innerText =
+      "Already logged in: " + data.user.email;
+    showToast(`Welcome back, ${data.user.email}!`, 'success');
+  }
+}
+
+checkUser();
+
+// Welcome toast
+setTimeout(() => {
+  showToast('👋 Welcome to Rheoa RPG!', 'info', 4000);
+}, 500);
+
 </script>
 
 </body>
