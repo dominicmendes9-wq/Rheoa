@@ -768,6 +768,8 @@ function updatePlayerStats() {
 // Load vehicles
 async function loadVehicles() {
   try {
+    console.log('Loading vehicles for player:', currentPlayer?.id);
+    
     const { data, error } = await sb
       .from('player_vehicles')
       .select(`
@@ -776,68 +778,109 @@ async function loadVehicles() {
       `)
       .eq('player_id', currentPlayer.id);
     
-    if (error) throw error;
+    if (error) {
+      console.error('❌ Vehicles Error Details:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
+      showToast(`Error loading vehicles: ${error.message}`, 'error');
+      return;
+    }
     
+    console.log('✅ Vehicles loaded:', data);
     vehicles = data || [];
     document.getElementById('vehicleCount').textContent = vehicles.length;
     renderVehicles();
   } catch (error) {
-    console.error('Error loading vehicles:', error);
-    showToast('Error loading vehicles', 'error');
+    console.error('❌ Vehicles Exception:', error);
+    showToast('Error loading vehicles: ' + error.message, 'error');
   }
 }
 
-// Load races
+// Load races - FIXED with explicit foreign key
 async function loadRaces() {
   try {
-    const { data, error } = await sb
+    console.log('Loading races...');
+    
+    // First load races
+    const { data: racesData, error: racesError } = await sb
       .from('races')
-      .select(`
-        *,
-        race_participants (
-          id,
-          player_id,
-          bet_amount,
-          player:players (username)
-        )
-      `)
+      .select('*')
       .in('status', ['open', 'upcoming'])
       .order('start_time');
     
-    if (error) throw error;
+    if (racesError) {
+      console.error('❌ Races Error:', racesError);
+      showToast(`Error loading races: ${racesError.message}`, 'error');
+      return;
+    }
     
-    races = data || [];
+    console.log('✅ Races loaded:', racesData);
+    
+    // Then load participants separately for each race
+    const racesWithParticipants = [];
+    
+    for (const race of racesData || []) {
+      const { data: participants, error: participantsError } = await sb
+        .from('race_participants')
+        .select(`
+          id,
+          player_id,
+          bet_amount,
+          players (username)
+        `)
+        .eq('race_id', race.id);
+      
+      if (participantsError) {
+        console.error('Error loading participants for race:', race.id, participantsError);
+      }
+      
+      racesWithParticipants.push({
+        ...race,
+        race_participants: participants || []
+      });
+    }
+    
+    races = racesWithParticipants;
     renderRaces();
   } catch (error) {
-    console.error('Error loading races:', error);
-    showToast('Error loading races', 'error');
+    console.error('❌ Races Exception:', error);
+    showToast('Error loading races: ' + error.message, 'error');
   }
 }
 
 // Load vehicle types
 async function loadVehicleTypes() {
   try {
+    console.log('Loading vehicle types...');
+    
     const { data, error } = await sb
       .from('vehicle_types')
       .select('*')
       .order('price');
     
-    if (error) throw error;
+    if (error) {
+      console.error('❌ Vehicle Types Error:', error);
+      showToast(`Error loading vehicle types: ${error.message}`, 'error');
+      return;
+    }
     
+    console.log('✅ Vehicle types loaded:', data);
     vehicleTypes = data || [];
     renderShop();
   } catch (error) {
-    console.error('Error loading vehicle types:', error);
-    showToast('Error loading vehicles', 'error');
+    console.error('❌ Vehicle Types Exception:', error);
+    showToast('Error loading vehicle types: ' + error.message, 'error');
   }
 }
 
-// Load leaderboard - FIXED VERSION
+// Load leaderboard
 async function loadLeaderboard() {
   try {
     console.log('Loading leaderboard from race_history...');
     
-    // Query race_history directly with player info - removed !inner
     const { data, error } = await sb
       .from('race_history')
       .select(`
@@ -851,11 +894,21 @@ async function loadLeaderboard() {
       .order('created_at', { ascending: false });
     
     if (error) {
-      console.error('Error loading race_history:', error);
-      throw error;
+      console.error('❌ Leaderboard Error:', error);
+      showToast(`Error loading leaderboard: ${error.message}`, 'error');
+      document.getElementById('leaderboardBody').innerHTML = 
+        `<tr><td colspan="6" class="empty-message">Error: ${error.message}</td></tr>`;
+      return;
     }
     
-    console.log('Race history data:', data);
+    console.log('✅ Race history data:', data);
+    
+    if (!data || data.length === 0) {
+      console.log('No race history data yet');
+      leaderboard = [];
+      renderLeaderboard();
+      return;
+    }
     
     // Process the data to create leaderboard stats
     const stats = {};
@@ -879,37 +932,57 @@ async function loadLeaderboard() {
       .sort((a, b) => b.total_earnings - a.total_earnings)
       .slice(0, 20);
     
-    console.log('Processed leaderboard:', leaderboard);
+    console.log('✅ Processed leaderboard:', leaderboard);
     renderLeaderboard();
   } catch (error) {
-    console.error('Error loading leaderboard:', error);
-    showToast('Error loading leaderboard', 'error');
-    // Show empty leaderboard
+    console.error('❌ Leaderboard Exception:', error);
+    showToast('Error loading leaderboard: ' + error.message, 'error');
     document.getElementById('leaderboardBody').innerHTML = 
       '<tr><td colspan="6" class="empty-message">No race data yet</td></tr>';
   }
 }
 
-// Load race history
+// Load race history - FIXED
 async function loadRaceHistory() {
   try {
-    const { data, error } = await sb
+    console.log('Loading race history for player:', currentPlayer?.id);
+    
+    // First get race history
+    const { data: historyData, error: historyError } = await sb
       .from('race_history')
-      .select(`
-        *,
-        races!inner (name)
-      `)
+      .select('*')
       .eq('player_id', currentPlayer.id)
       .order('created_at', { ascending: false })
       .limit(20);
     
-    if (error) throw error;
+    if (historyError) {
+      console.error('❌ Race History Error:', historyError);
+      showToast(`Error loading race history: ${historyError.message}`, 'error');
+      return;
+    }
     
-    raceHistory = data || [];
+    console.log('✅ Race history data:', historyData);
+    
+    // Then get race names separately
+    const historyWithRaces = [];
+    for (const item of historyData || []) {
+      const { data: raceData, error: raceError } = await sb
+        .from('races')
+        .select('name')
+        .eq('id', item.race_id)
+        .single();
+      
+      historyWithRaces.push({
+        ...item,
+        races: raceData || { name: 'Unknown Race' }
+      });
+    }
+    
+    raceHistory = historyWithRaces;
     renderHistory();
   } catch (error) {
-    console.error('Error loading race history:', error);
-    showToast('Error loading race history', 'error');
+    console.error('❌ Race History Exception:', error);
+    showToast('Error loading race history: ' + error.message, 'error');
   }
 }
 
@@ -1018,10 +1091,10 @@ function renderRaces() {
           <strong>Participants (${participants.length}/${race.max_participants}):</strong>
           ${participants.map(p => `
             <div class="participant-item">
-              <span>${p.player?.username || 'Unknown'}</span>
+              <span>${p.players?.username || 'Unknown'}</span>
               ${p.player_id !== currentPlayer.id ? `
                 <button class="bet-btn" style="padding: 2px 8px; font-size: 0.8rem;" 
-                        onclick="openBetModal('${race.id}', '${p.id}', '${p.player?.username || 'Unknown'}')">
+                        onclick="openBetModal('${race.id}', '${p.id}', '${p.players?.username || 'Unknown'}')">
                   Bet
                 </button>
               ` : '<span>(You)</span>'}
@@ -1069,7 +1142,7 @@ function renderShop() {
   `).join('');
 }
 
-// Render leaderboard - UPDATED
+// Render leaderboard
 function renderLeaderboard() {
   const tbody = document.getElementById('leaderboardBody');
   
