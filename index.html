@@ -574,18 +574,143 @@
   </div>
 </div>
 
-<!-- Include shared utilities -->
+<!-- Include Supabase JS -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabase.js"></script>
-<script src="toast.js"></script>
-<script src="loading.js"></script>
-<script src="error-handler.js"></script>
 
 <script>
-// Initialize Supabase client (using shared instance)
-const sb = window.supabaseClient;
+// ============================================
+// SUPABASE CONFIGURATION - DIRECT IN INDEX.HTML
+// ============================================
+const SUPABASE_URL = "https://mtiwodvsrwvrujbhmmrn.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp";
 
-// ORIGINAL LOGIN FUNCTION - Enhanced with loading states
+// Create Supabase client directly
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// Make it available globally
+window.supabase = supabase;
+
+// ============================================
+// TOAST NOTIFICATION SYSTEM
+// ============================================
+(function() {
+    // Create toast container if it doesn't exist
+    let container = document.getElementById('toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        container.className = 'toast-container';
+        document.body.appendChild(container);
+    }
+
+    // Toast function
+    window.showToast = function(message, type = 'info', duration = 3000) {
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.textContent = message;
+        
+        container.appendChild(toast);
+        
+        // Remove after duration
+        setTimeout(() => {
+            toast.classList.add('fade-out');
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    container.removeChild(toast);
+                }
+            }, 300);
+        }, duration);
+    };
+
+    // Add necessary styles if not already present
+    const style = document.createElement('style');
+    style.textContent = `
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+        }
+        .toast {
+            padding: 15px 25px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            animation: slideIn 0.3s ease-out;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            min-width: 250px;
+            max-width: 350px;
+        }
+        .toast.success { background: #4CAF50; }
+        .toast.error { background: #f44336; }
+        .toast.info { background: #2196F3; }
+        .toast.warning { background: #ff9800; }
+        .toast.achievement { background: #9c27b0; }
+        
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes slideOut {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(100%); opacity: 0; }
+        }
+        .toast.fade-out {
+            animation: slideOut 0.3s ease-out forwards;
+        }
+    `;
+    document.head.appendChild(style);
+})();
+
+// ============================================
+// ERROR HANDLER
+// ============================================
+window.ErrorHandler = {
+    handleSupabaseError: function(error, customMessage = 'An error occurred') {
+        console.error('Supabase error:', error);
+        
+        if (error?.message) {
+            if (error.message.includes('duplicate key')) {
+                return 'This record already exists.';
+            }
+            if (error.message.includes('foreign key')) {
+                return 'Referenced record not found.';
+            }
+            if (error.message.includes('permission denied') || error.message.includes('policy')) {
+                return 'You do not have permission to perform this action.';
+            }
+            if (error.message.includes('JWT') || error.message.includes('auth')) {
+                return 'Your session has expired. Please log in again.';
+            }
+            if (error.message.includes('network')) {
+                return 'Network error. Please check your connection.';
+            }
+            return error.message;
+        }
+        return customMessage;
+    },
+
+    async withErrorHandling(asyncFn, errorMessage = 'Operation failed') {
+        try {
+            return await asyncFn();
+        } catch (error) {
+            const friendlyMessage = this.handleSupabaseError(error, errorMessage);
+            if (window.showToast) {
+                window.showToast(friendlyMessage, 'error');
+            } else {
+                alert(friendlyMessage);
+            }
+            throw error;
+        }
+    }
+};
+
+// ============================================
+// AUTH FUNCTIONS
+// ============================================
+
+// Login function
 async function login() {
   const loginBtn = document.getElementById('loginBtn');
   
@@ -594,19 +719,33 @@ async function login() {
     loginBtn.classList.add('loading');
     showToast('🔄 Redirecting to Google...', 'info', 3000);
     
-    await sb.auth.signInWithOAuth({
+    const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
         redirectTo: window.location.origin + "/dashboard.html"
       }
     });
+    
+    if (error) throw error;
+    
   } catch (error) {
     console.error('Login error:', error);
     loginBtn.classList.remove('loading');
     
-    // Use error handler
     const friendlyMessage = ErrorHandler.handleSupabaseError(error, 'Login failed');
     showToast(friendlyMessage, 'error', 5000);
+  }
+}
+
+// Get current user
+async function getCurrentUser() {
+  try {
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (error) throw error;
+    return user;
+  } catch (error) {
+    console.error('Error getting user:', error);
+    return null;
   }
 }
 
@@ -629,8 +768,8 @@ function showFeatureTip(feature, tip) {
   }, 500);
 }
 
-// ORIGINAL AUTH STATE HANDLER - Enhanced with animations
-sb.auth.onAuthStateChange((event, session) => {
+// Auth state handler
+supabase.auth.onAuthStateChange((event, session) => {
   console.log('Auth event:', event);
   
   if (event === "SIGNED_IN") {
@@ -658,26 +797,43 @@ function createConfetti() {
   confetti.className = 'confetti';
   document.body.appendChild(confetti);
   
-  // Create canvas confetti if available
-  if (typeof confetti !== 'undefined' && window.confetti) {
-    window.confetti({
-      particleCount: 100,
-      spread: 70,
-      origin: { y: 0.6 }
-    });
+  // Create simple confetti with colored divs
+  for (let i = 0; i < 50; i++) {
+    const piece = document.createElement('div');
+    piece.style.position = 'fixed';
+    piece.style.left = Math.random() * 100 + '%';
+    piece.style.top = '-10px';
+    piece.style.width = '10px';
+    piece.style.height = '10px';
+    piece.style.background = `hsl(${Math.random() * 360}, 100%, 50%)`;
+    piece.style.borderRadius = '50%';
+    piece.style.pointerEvents = 'none';
+    piece.style.zIndex = '9999';
+    piece.style.animation = `confettiFall ${Math.random() * 3 + 2}s linear forwards`;
+    document.body.appendChild(piece);
+    
+    setTimeout(() => piece.remove(), 5000);
   }
+  
+  // Add CSS for confetti animation
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes confettiFall {
+      0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+    }
+  `;
+  document.head.appendChild(style);
   
   setTimeout(() => {
     confetti.remove();
   }, 2000);
 }
 
-// ORIGINAL CHECK USER FUNCTION - Enhanced
+// Check user function
 async function checkUser() {
   return ErrorHandler.withErrorHandling(async () => {
-    const { data: { user }, error } = await sb.auth.getUser();
-
-    if (error) throw error;
+    const user = await getCurrentUser();
 
     if (user) {
       const statusEl = document.getElementById("status");
@@ -707,7 +863,7 @@ async function checkUser() {
     } else {
       document.getElementById("status").innerHTML = "🔐 Not logged in";
     }
-  }, null, 'Failed to check login status');
+  }, 'Failed to check login status');
 }
 
 // Navigate to guide with loading state
@@ -718,6 +874,28 @@ function navigateToGuide(event) {
   setTimeout(() => {
     window.location.href = "guide.html";
   }, 500);
+}
+
+// Handle redirect after OAuth
+async function handleRedirect() {
+  try {
+    const { data, error } = await supabase.auth.getSession();
+    
+    if (error) {
+      console.error('Session error:', error);
+      showToast('Error getting session', 'error');
+      return;
+    }
+    
+    if (data.session) {
+      showToast('✅ Login successful!', 'success');
+      setTimeout(() => {
+        window.location.href = "dashboard.html";
+      }, 1500);
+    }
+  } catch (error) {
+    console.error('Redirect handling error:', error);
+  }
 }
 
 // Page initialization
@@ -757,34 +935,10 @@ document.addEventListener('DOMContentLoaded', async function() {
   }
 });
 
-// Handle redirect after OAuth
-async function handleRedirect() {
-  const { data, error } = await sb.auth.getSession();
-  
-  if (error) {
-    console.error('Session error:', error);
-    showToast('Error getting session', 'error');
-    return;
-  }
-  
-  if (data.session) {
-    showToast('✅ Login successful!', 'success');
-    setTimeout(() => {
-      window.location.href = "dashboard.html";
-    }, 1500);
-  }
-}
-
 // Check if we're returning from OAuth redirect
-if (window.location.hash || window.location.search.includes('access_token')) {
+if (window.location.hash || window.location.search.includes('access_token') || window.location.search.includes('code')) {
   handleRedirect();
 }
-
-// Export functions for global use
-window.login = login;
-window.triggerLogin = triggerLogin;
-window.showFeatureTip = showFeatureTip;
-window.navigateToGuide = navigateToGuide;
 
 // Add keyboard shortcuts
 document.addEventListener('keydown', (e) => {
@@ -819,15 +973,12 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
-// Add loading manager integration
-window.showLoading = function(show = true) {
-  const loginBtn = document.getElementById('loginBtn');
-  if (show) {
-    loginBtn.classList.add('loading');
-  } else {
-    loginBtn.classList.remove('loading');
-  }
-};
+// Export functions for global use
+window.login = login;
+window.triggerLogin = triggerLogin;
+window.showFeatureTip = showFeatureTip;
+window.navigateToGuide = navigateToGuide;
+window.getCurrentUser = getCurrentUser;
 </script>
 
 </body>
