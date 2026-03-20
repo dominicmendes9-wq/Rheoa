@@ -765,32 +765,46 @@ function updatePlayerStats() {
   document.getElementById('vehicleCount').textContent = vehicles.length;
 }
 
-// Load vehicles
+// Load vehicles - FIXED with separate queries
 async function loadVehicles() {
   try {
     console.log('Loading vehicles for player:', currentPlayer?.id);
     
-    const { data, error } = await sb
+    // First load player vehicles
+    const { data: vehiclesData, error: vehiclesError } = await sb
       .from('player_vehicles')
-      .select(`
-        *,
-        vehicle_types (*)
-      `)
+      .select('*')
       .eq('player_id', currentPlayer.id);
     
-    if (error) {
-      console.error('❌ Vehicles Error Details:', {
-        message: error.message,
-        details: error.details,
-        hint: error.hint,
-        code: error.code
-      });
-      showToast(`Error loading vehicles: ${error.message}`, 'error');
+    if (vehiclesError) {
+      console.error('❌ Vehicles Error:', vehiclesError);
+      showToast(`Error loading vehicles: ${vehiclesError.message}`, 'error');
       return;
     }
     
-    console.log('✅ Vehicles loaded:', data);
-    vehicles = data || [];
+    console.log('✅ Vehicles loaded:', vehiclesData);
+    
+    // Then load vehicle types separately for each vehicle
+    const vehiclesWithTypes = [];
+    
+    for (const vehicle of vehiclesData || []) {
+      const { data: typeData, error: typeError } = await sb
+        .from('vehicle_types')
+        .select('*')
+        .eq('id', vehicle.vehicle_type_id)
+        .single();
+      
+      if (typeError) {
+        console.error('Error loading vehicle type for vehicle:', vehicle.id, typeError);
+      }
+      
+      vehiclesWithTypes.push({
+        ...vehicle,
+        vehicle_types: typeData || null
+      });
+    }
+    
+    vehicles = vehiclesWithTypes;
     document.getElementById('vehicleCount').textContent = vehicles.length;
     renderVehicles();
   } catch (error) {
@@ -799,7 +813,7 @@ async function loadVehicles() {
   }
 }
 
-// Load races - FIXED with explicit foreign key
+// Load races - FIXED with separate queries
 async function loadRaces() {
   try {
     console.log('Loading races...');
