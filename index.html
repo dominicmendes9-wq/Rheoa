@@ -5,6 +5,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
+  <!-- Favicon (prevents 404 error) -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎮</text></svg>">
+  
   <style>
     * {
       box-sizing: border-box;
@@ -112,6 +115,26 @@
       cursor: not-allowed;
     }
     
+    .login-btn.loading .btn-text {
+      display: none;
+    }
+    
+    .login-btn.loading::after {
+      content: '';
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid white;
+      border-top: 3px solid transparent;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
     .debug-info {
       margin-top: 20px;
       padding: 15px;
@@ -120,10 +143,18 @@
       font-size: 0.8rem;
       text-align: left;
       display: none;
+      max-height: 300px;
+      overflow-y: auto;
     }
     
     .debug-info.show {
       display: block;
+    }
+    
+    .debug-info div {
+      padding: 3px 0;
+      border-bottom: 1px solid #ddd;
+      font-family: monospace;
     }
     
     .error-message {
@@ -139,6 +170,19 @@
       display: block;
     }
     
+    .success-message {
+      color: #4CAF50;
+      margin-top: 10px;
+      padding: 10px;
+      background: #e8f5e8;
+      border-radius: 5px;
+      display: none;
+    }
+    
+    .success-message.show {
+      display: block;
+    }
+    
     .footer {
       margin-top: 30px;
       text-align: center;
@@ -147,6 +191,15 @@
     
     .footer a {
       color: white;
+      text-decoration: none;
+    }
+    
+    .guide-link {
+      margin-top: 15px;
+    }
+    
+    .guide-link a {
+      color: #667eea;
       text-decoration: none;
     }
     
@@ -185,6 +238,12 @@
     
     .toast.fade-out {
       animation: slideOut 0.3s ease-out forwards;
+    }
+    
+    .status-text {
+      margin-top: 15px;
+      padding: 10px;
+      border-radius: 5px;
     }
   </style>
 </head>
@@ -234,20 +293,26 @@
         <span class="btn-text">🚀 Login with Google</span>
       </button>
       
-      <p id="status" style="margin-top: 15px; color: #666;"></p>
+      <div id="status" class="status-text"></div>
       
       <div class="guide-link">
         <a href="guide.html">📚 New here? Check out the Guide →</a>
       </div>
       
-      <!-- Debug Info (hidden by default) -->
+      <!-- Debug Toggle Button -->
+      <button id="debugToggle" style="margin-top: 10px; background: none; border: none; color: #999; cursor: pointer; font-size: 0.8rem;">🐛 Show Debug</button>
+      
+      <!-- Debug Info -->
       <div class="debug-info" id="debugInfo">
-        <strong>Debug Info:</strong>
+        <strong>Debug Log:</strong>
         <div id="debugContent"></div>
       </div>
       
       <!-- Error Message -->
       <div class="error-message" id="errorMessage"></div>
+      
+      <!-- Success Message -->
+      <div class="success-message" id="successMessage"></div>
     </div>
   </div>
   
@@ -260,41 +325,65 @@
 
 <script>
 // ============================================
-// SUPABASE CONFIGURATION
+// CONFIGURATION
 // ============================================
 const SUPABASE_URL = "https://mtiwodvsrwvrujbhmmrn.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp";
 
-// Debug function
+// Debug log array
+const debugLogs = [];
+
+// ============================================
+// UTILITY FUNCTIONS
+// ============================================
+
+// Add debug message
 function addDebug(message) {
-  console.log('[DEBUG]', message);
-  const debugDiv = document.getElementById('debugInfo');
-  const debugContent = document.getElementById('debugContent');
-  
-  if (!debugDiv.classList.contains('show')) {
-    debugDiv.classList.add('show');
-  }
-  
   const timestamp = new Date().toLocaleTimeString();
-  debugContent.innerHTML = `<div>${timestamp}: ${message}</div>` + debugContent.innerHTML;
+  const logEntry = `[${timestamp}] ${message}`;
+  
+  console.log(logEntry);
+  debugLogs.unshift(logEntry);
+  
+  // Keep only last 20 logs
+  if (debugLogs.length > 20) debugLogs.pop();
+  
+  // Update debug display
+  const debugContent = document.getElementById('debugContent');
+  if (debugContent) {
+    debugContent.innerHTML = debugLogs.map(log => `<div>${log}</div>`).join('');
+  }
 }
 
 // Show error
 function showError(message) {
-  console.error('[ERROR]', message);
+  console.error(message);
   const errorDiv = document.getElementById('errorMessage');
   errorDiv.textContent = message;
   errorDiv.classList.add('show');
   
-  // Also show as toast if available
+  // Hide success if showing
+  document.getElementById('successMessage').classList.remove('show');
+  
   if (window.showToast) {
     window.showToast(message, 'error', 5000);
   }
 }
 
-// Clear error
-function clearError() {
+// Show success
+function showSuccess(message) {
+  const successDiv = document.getElementById('successMessage');
+  successDiv.textContent = message;
+  successDiv.classList.add('show');
+  
+  // Hide error if showing
   document.getElementById('errorMessage').classList.remove('show');
+}
+
+// Clear messages
+function clearMessages() {
+  document.getElementById('errorMessage').classList.remove('show');
+  document.getElementById('successMessage').classList.remove('show');
 }
 
 // ============================================
@@ -332,17 +421,20 @@ function clearError() {
 // ============================================
 addDebug('Initializing Supabase...');
 addDebug(`URL: ${SUPABASE_URL}`);
-addDebug(`Key length: ${SUPABASE_ANON_KEY.length}`);
 
-let supabase;
+let supabaseClient;
+
 try {
-  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  // Create Supabase client
+  supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     auth: {
       autoRefreshToken: true,
       persistSession: true,
-      detectSessionInUrl: true
+      detectSessionInUrl: true,
+      flowType: 'pkce'
     }
   });
+  
   addDebug('Supabase client created successfully');
 } catch (error) {
   addDebug(`Failed to create Supabase client: ${error.message}`);
@@ -355,7 +447,7 @@ try {
 
 // Login function
 async function login() {
-  clearError();
+  clearMessages();
   const loginBtn = document.getElementById('loginBtn');
   
   try {
@@ -367,7 +459,7 @@ async function login() {
     const redirectUrl = window.location.origin + '/dashboard.html';
     addDebug(`Redirect URL: ${redirectUrl}`);
     
-    const { data, error } = await supabase.auth.signInWithOAuth({
+    const { data, error } = await supabaseClient.auth.signInWithOAuth({
       provider: 'google',
       options: {
         redirectTo: redirectUrl
@@ -380,7 +472,7 @@ async function login() {
     }
     
     addDebug('OAuth initiated successfully');
-    // The page will redirect, so we don't need to do anything else
+    showSuccess('Redirecting to Google...');
     
   } catch (error) {
     addDebug(`Login error: ${error.message}`);
@@ -394,11 +486,11 @@ async function login() {
 async function getCurrentUser() {
   try {
     addDebug('Getting current user...');
-    const { data: { user }, error } = await supabase.auth.getUser();
+    const { data: { user }, error } = await supabaseClient.auth.getUser();
     
     if (error) {
       addDebug(`Get user error: ${error.message}`);
-      throw error;
+      return null;
     }
     
     addDebug(user ? `User found: ${user.email}` : 'No user found');
@@ -413,11 +505,11 @@ async function getCurrentUser() {
 async function getSession() {
   try {
     addDebug('Getting session...');
-    const { data, error } = await supabase.auth.getSession();
+    const { data, error } = await supabaseClient.auth.getSession();
     
     if (error) {
       addDebug(`Get session error: ${error.message}`);
-      throw error;
+      return null;
     }
     
     addDebug(data.session ? 'Session found' : 'No session');
@@ -439,6 +531,7 @@ async function checkUser() {
       statusEl.style.color = '#4CAF50';
       
       addDebug(`User is logged in: ${user.email}`);
+      showSuccess(`Welcome back, ${user.email}!`);
       
       // Auto-redirect after 2 seconds
       setTimeout(() => {
@@ -461,16 +554,14 @@ async function checkUser() {
 async function handleRedirect() {
   addDebug('Checking for OAuth redirect...');
   addDebug(`Current URL: ${window.location.href}`);
-  addDebug(`Hash: ${window.location.hash}`);
-  addDebug(`Search: ${window.location.search}`);
   
   try {
-    // Check if we have a session
+    // Get the session
     const session = await getSession();
     
     if (session) {
       addDebug('Session found, login successful');
-      showToast('✅ Login successful!', 'success', 3000);
+      showSuccess('✅ Login successful! Redirecting...');
       
       setTimeout(() => {
         window.location.href = 'dashboard.html';
@@ -505,14 +596,21 @@ async function handleRedirect() {
 // Login button click
 document.getElementById('loginBtn').addEventListener('click', login);
 
+// Debug toggle
+document.getElementById('debugToggle').addEventListener('click', function() {
+  const debugDiv = document.getElementById('debugInfo');
+  debugDiv.classList.toggle('show');
+  this.textContent = debugDiv.classList.contains('show') ? '🐛 Hide Debug' : '🐛 Show Debug';
+});
+
 // Auth state changes
-if (supabase) {
-  supabase.auth.onAuthStateChange((event, session) => {
+if (supabaseClient) {
+  supabaseClient.auth.onAuthStateChange((event, session) => {
     addDebug(`Auth state changed: ${event}`);
     
     if (event === 'SIGNED_IN') {
       addDebug('User signed in');
-      showToast('✅ Login successful!', 'success', 3000);
+      showSuccess('✅ Login successful!');
       
       setTimeout(() => {
         window.location.href = 'dashboard.html';
@@ -548,7 +646,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   
   // Show welcome toast
   setTimeout(() => {
-    showToast('👋 Welcome to Rheoa RPG!', 'info', 4000);
+    window.showToast?.('👋 Welcome to Rheoa RPG!', 'info', 4000);
   }, 500);
 });
 
@@ -557,15 +655,6 @@ document.addEventListener('visibilitychange', () => {
   if (!document.hidden) {
     addDebug('Tab became visible, checking user...');
     checkUser();
-  }
-});
-
-// Add keyboard shortcut for debug (Ctrl+Shift+D)
-document.addEventListener('keydown', (e) => {
-  if (e.ctrlKey && e.shiftKey && e.key === 'D') {
-    e.preventDefault();
-    const debugDiv = document.getElementById('debugInfo');
-    debugDiv.classList.toggle('show');
   }
 });
 </script>
