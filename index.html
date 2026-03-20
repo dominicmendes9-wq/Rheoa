@@ -203,6 +203,10 @@
       text-decoration: none;
     }
     
+    .guide-link a:hover {
+      text-decoration: underline;
+    }
+    
     .toast-container {
       position: fixed;
       top: 20px;
@@ -244,6 +248,20 @@
       margin-top: 15px;
       padding: 10px;
       border-radius: 5px;
+    }
+    
+    .url-display {
+      margin-top: 10px;
+      padding: 10px;
+      background: #e3f2fd;
+      border-radius: 5px;
+      font-size: 0.8rem;
+      word-break: break-all;
+      display: none;
+    }
+    
+    .url-display.show {
+      display: block;
     }
   </style>
 </head>
@@ -302,6 +320,9 @@
       <!-- Debug Toggle Button -->
       <button id="debugToggle" style="margin-top: 10px; background: none; border: none; color: #999; cursor: pointer; font-size: 0.8rem;">🐛 Show Debug</button>
       
+      <!-- URL Display -->
+      <div class="url-display" id="urlDisplay"></div>
+      
       <!-- Debug Info -->
       <div class="debug-info" id="debugInfo">
         <strong>Debug Log:</strong>
@@ -318,6 +339,7 @@
   
   <div class="footer">
     <p>© 2024 Rheoa RPG. All rights reserved.</p>
+    <p>Your GitHub Pages URL: <span id="githubUrl"></span></p>
   </div>
 </div>
 
@@ -329,6 +351,9 @@
 // ============================================
 const SUPABASE_URL = "https://mtiwodvsrwvrujbhmmrn.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp";
+
+// GitHub Pages URL - UPDATE THIS TO YOUR ACTUAL GITHUB PAGES URL
+const GITHUB_PAGES_URL = "https://dominicmendes9-wq.github.io/Rheoa";
 
 // Debug log array
 const debugLogs = [];
@@ -384,6 +409,13 @@ function showSuccess(message) {
 function clearMessages() {
   document.getElementById('errorMessage').classList.remove('show');
   document.getElementById('successMessage').classList.remove('show');
+}
+
+// Show URL info
+function showUrlInfo(url) {
+  const urlDisplay = document.getElementById('urlDisplay');
+  urlDisplay.innerHTML = `<strong>Redirect URL:</strong> ${url}`;
+  urlDisplay.classList.add('show');
 }
 
 // ============================================
@@ -455,9 +487,10 @@ async function login() {
     loginBtn.classList.add('loading');
     loginBtn.disabled = true;
     
-    // Get the current origin for redirect
-    const redirectUrl = window.location.origin + '/dashboard.html';
+    // Use the GitHub Pages URL for redirect
+    const redirectUrl = GITHUB_PAGES_URL + '/dashboard.html';
     addDebug(`Redirect URL: ${redirectUrl}`);
+    showUrlInfo(redirectUrl);
     
     const { data, error } = await supabaseClient.auth.signInWithOAuth({
       provider: 'google',
@@ -537,7 +570,7 @@ async function checkUser() {
       setTimeout(() => {
         if (!window.location.pathname.includes('dashboard')) {
           addDebug('Redirecting to dashboard...');
-          window.location.href = 'dashboard.html';
+          window.location.href = GITHUB_PAGES_URL + '/dashboard.html';
         }
       }, 2000);
     } else {
@@ -564,7 +597,7 @@ async function handleRedirect() {
       showSuccess('✅ Login successful! Redirecting...');
       
       setTimeout(() => {
-        window.location.href = 'dashboard.html';
+        window.location.href = GITHUB_PAGES_URL + '/dashboard.html';
       }, 1500);
       return true;
     }
@@ -613,7 +646,7 @@ if (supabaseClient) {
       showSuccess('✅ Login successful!');
       
       setTimeout(() => {
-        window.location.href = 'dashboard.html';
+        window.location.href = GITHUB_PAGES_URL + '/dashboard.html';
       }, 1500);
     } else if (event === 'SIGNED_OUT') {
       addDebug('User signed out');
@@ -629,6 +662,11 @@ if (supabaseClient) {
 // ============================================
 document.addEventListener('DOMContentLoaded', async function() {
   addDebug('DOM Content Loaded');
+  addDebug(`Current Origin: ${window.location.origin}`);
+  addDebug(`GitHub Pages URL: ${GITHUB_PAGES_URL}`);
+  
+  // Display GitHub URL in footer
+  document.getElementById('githubUrl').textContent = GITHUB_PAGES_URL;
   
   // Check if this is a redirect from OAuth
   const hasAuthParams = window.location.hash || 
