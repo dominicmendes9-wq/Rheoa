@@ -15,40 +15,16 @@
     body { 
       font-family: 'Courier New', monospace; 
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: #222; 
       min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
       padding: 20px;
-      position: relative;
-      overflow-x: hidden;
-    }
-
-    /* Animated background particles */
-    body::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%),
-                  radial-gradient(circle at 80% 80%, rgba(255,255,255,0.1) 0%, transparent 50%);
-      animation: float 20s ease-in-out infinite;
-    }
-
-    @keyframes float {
-      0%, 100% { transform: translate(0, 0) scale(1); }
-      25% { transform: translate(-10px, -10px) scale(1.05); }
-      75% { transform: translate(10px, 10px) scale(0.95); }
     }
     
     .container {
       max-width: 500px;
       width: 100%;
-      position: relative;
-      z-index: 1;
     }
     
     .welcome-card {
@@ -57,49 +33,11 @@
       padding: 40px 30px;
       box-shadow: 0 20px 60px rgba(0,0,0,0.3);
       backdrop-filter: blur(10px);
-      border: 2px solid rgba(255,255,255,0.1);
-      animation: slideUp 0.6s ease-out, glow 3s infinite;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .welcome-card::before {
-      content: '';
-      position: absolute;
-      top: -50%;
-      left: -50%;
-      width: 200%;
-      height: 200%;
-      background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-      animation: rotate 20s linear infinite;
-    }
-
-    @keyframes rotate {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
-    }
-
-    @keyframes glow {
-      0%, 100% { box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
-      50% { box-shadow: 0 20px 80px rgba(102, 126, 234, 0.5); }
-    }
-    
-    @keyframes slideUp {
-      from {
-        opacity: 0;
-        transform: translateY(30px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
     }
     
     .logo {
       text-align: center;
       margin-bottom: 30px;
-      position: relative;
-      z-index: 1;
     }
     
     .logo h1 {
@@ -110,14 +48,6 @@
       -webkit-text-fill-color: transparent;
       background-clip: text;
       margin-bottom: 10px;
-      animation: pulse 2s infinite;
-      text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
-    }
-    
-    @keyframes pulse {
-      0% { transform: scale(1); }
-      50% { transform: scale(1.05); }
-      100% { transform: scale(1); }
     }
     
     .tagline {
@@ -126,14 +56,6 @@
       font-size: 1.1rem;
       margin-bottom: 40px;
       font-style: italic;
-      animation: fadeIn 1s ease-out 0.2s both;
-      position: relative;
-      z-index: 1;
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
     }
     
     .features {
@@ -141,8 +63,6 @@
       grid-template-columns: repeat(2, 1fr);
       gap: 20px;
       margin-bottom: 40px;
-      position: relative;
-      z-index: 1;
     }
     
     .feature {
@@ -150,58 +70,21 @@
       padding: 15px;
       background: #f5f5f5;
       border-radius: 12px;
-      transition: all 0.3s;
-      animation: fadeInFeature 0.5s ease-out;
-      animation-fill-mode: both;
-      cursor: pointer;
-      border: 2px solid transparent;
-    }
-
-    .feature:nth-child(1) { animation-delay: 0.1s; }
-    .feature:nth-child(2) { animation-delay: 0.2s; }
-    .feature:nth-child(3) { animation-delay: 0.3s; }
-    .feature:nth-child(4) { animation-delay: 0.4s; }
-    .feature:nth-child(5) { animation-delay: 0.5s; }
-    .feature:nth-child(6) { animation-delay: 0.6s; }
-
-    @keyframes fadeInFeature {
-      from { opacity: 0; transform: scale(0.9); }
-      to { opacity: 1; transform: scale(1); }
-    }
-    
-    .feature:hover {
-      transform: translateY(-5px) scale(1.02);
-      border-color: #667eea;
-      background: white;
-      box-shadow: 0 10px 20px rgba(102, 126, 234, 0.2);
     }
     
     .feature-icon {
       font-size: 2rem;
       margin-bottom: 8px;
-      animation: bounce 2s infinite;
-    }
-
-    @keyframes bounce {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-5px); }
     }
     
     .feature-text {
       font-size: 0.9rem;
       font-weight: bold;
       color: #333;
-      transition: color 0.2s;
-    }
-
-    .feature:hover .feature-text {
-      color: #667eea;
     }
     
     .login-section {
       text-align: center;
-      position: relative;
-      z-index: 1;
     }
     
     .login-btn {
@@ -214,300 +97,94 @@
       font-weight: bold;
       border-radius: 50px;
       cursor: pointer;
-      transition: all 0.3s;
-      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
       width: 100%;
       max-width: 300px;
       margin: 0 auto 20px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      position: relative;
-      overflow: hidden;
-      animation: slideInButton 0.8s ease-out 0.7s both;
-    }
-
-    @keyframes slideInButton {
-      from { opacity: 0; transform: translateY(20px); }
-      to { opacity: 1; transform: translateY(0); }
     }
     
     .login-btn:hover {
-      transform: translateY(-2px) scale(1.05);
+      transform: translateY(-2px);
       box-shadow: 0 6px 25px rgba(102, 126, 234, 0.8);
     }
     
-    .login-btn:active {
-      transform: translateY(0) scale(0.95);
-    }
-
-    .login-btn::after {
-      content: '';
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 0;
-      height: 0;
-      border-radius: 50%;
-      background: rgba(255,255,255,0.2);
-      transform: translate(-50%, -50%);
-      transition: width 0.6s, height 0.6s;
-    }
-
-    .login-btn:hover::after {
-      width: 300px;
-      height: 300px;
+    .login-btn.loading {
+      opacity: 0.7;
+      cursor: not-allowed;
     }
     
-    .login-btn img {
-      width: 24px;
-      height: 24px;
-      transition: transform 0.3s;
-    }
-
-    .login-btn:hover img {
-      transform: rotate(360deg);
-    }
-    
-    .status-message {
+    .debug-info {
       margin-top: 20px;
       padding: 15px;
+      background: #f0f0f0;
       border-radius: 10px;
-      background: #f5f5f5;
-      color: #333;
-      font-size: 1rem;
+      font-size: 0.8rem;
+      text-align: left;
       display: none;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      animation: fadeInMessage 0.3s ease-out;
-      position: relative;
-      z-index: 1;
     }
     
-    .status-message.show {
-      display: flex;
+    .debug-info.show {
+      display: block;
     }
     
-    .status-message.success {
-      background: #e8f5e8;
-      color: #2e7d32;
-      border: 1px solid #4CAF50;
-    }
-    
-    .status-message.info {
-      background: #e3f2fd;
-      color: #1976D2;
-      border: 1px solid #2196F3;
-    }
-    
-    .status-message.error {
+    .error-message {
+      color: #f44336;
+      margin-top: 10px;
+      padding: 10px;
       background: #ffebee;
-      color: #c62828;
-      border: 1px solid #f44336;
-    }
-
-    @keyframes fadeInMessage {
-      from { opacity: 0; transform: translateY(-10px); }
-      to { opacity: 1; transform: translateY(0); }
+      border-radius: 5px;
+      display: none;
     }
     
-    .spinner {
-      width: 20px;
-      height: 20px;
-      border: 3px solid #f3f3f3;
-      border-top: 3px solid #667eea;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-    }
-    
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
+    .error-message.show {
+      display: block;
     }
     
     .footer {
       margin-top: 30px;
       text-align: center;
       color: rgba(255,255,255,0.9);
-      font-size: 0.9rem;
-      animation: fadeIn 1s ease-out 1s both;
-      position: relative;
-      z-index: 1;
     }
     
     .footer a {
       color: white;
       text-decoration: none;
-      font-weight: bold;
-      transition: all 0.2s;
-      position: relative;
     }
     
-    .footer a:hover {
-      text-decoration: none;
-      text-shadow: 0 0 10px rgba(255,255,255,0.8);
-    }
-
-    .footer a::after {
-      content: '';
-      position: absolute;
-      bottom: -2px;
-      left: 0;
-      width: 0;
-      height: 2px;
-      background: white;
-      transition: width 0.3s;
-    }
-
-    .footer a:hover::after {
-      width: 100%;
-    }
-    
-    /* Loading state for button */
-    .login-btn.loading {
-      opacity: 0.8;
-      cursor: not-allowed;
-      pointer-events: none;
-    }
-    
-    .login-btn.loading .btn-text {
-      display: none;
-    }
-    
-    .login-btn.loading::after {
-      content: '';
-      width: 20px;
-      height: 20px;
-      border: 3px solid white;
-      border-top: 3px solid transparent;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-    }
-
-    /* User info card */
-    .user-info {
-      margin-top: 20px;
-      padding: 15px;
-      background: rgba(255,255,255,0.1);
-      border-radius: 10px;
-      color: white;
-      display: none;
-      animation: slideDown 0.3s ease-out;
-    }
-
-    .user-info.show {
-      display: block;
-    }
-
-    @keyframes slideDown {
-      from { opacity: 0; transform: translateY(-10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    .user-info p {
-      margin: 5px 0;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .user-info strong {
-      color: #ffd700;
-    }
-
-    /* Quick guide link */
-    .guide-link {
-      margin-top: 15px;
-      font-size: 0.9rem;
-    }
-
-    .guide-link a {
-      color: rgba(255,255,255,0.8);
-      text-decoration: none;
-      transition: all 0.2s;
-    }
-
-    .guide-link a:hover {
-      color: white;
-      text-decoration: underline;
-    }
-    
-    /* Mobile styles */
-    @media (max-width: 600px) {
-      .welcome-card {
-        padding: 30px 20px;
-      }
-      
-      .logo h1 {
-        font-size: 2.5rem;
-      }
-      
-      .features {
-        gap: 10px;
-      }
-      
-      .feature {
-        padding: 10px;
-      }
-      
-      .feature-icon {
-        font-size: 1.5rem;
-      }
-      
-      .feature-text {
-        font-size: 0.8rem;
-      }
-      
-      .login-btn {
-        padding: 14px 30px;
-        font-size: 1rem;
-      }
-
-      .user-info {
-        font-size: 0.9rem;
-      }
-    }
-
-    /* Print styles */
-    @media print {
-      body {
-        background: white;
-      }
-      
-      .welcome-card {
-        box-shadow: none;
-        border: 1px solid #ddd;
-      }
-      
-      .login-btn, .footer {
-        display: none;
-      }
-    }
-
-    /* Focus styles for accessibility */
-    .login-btn:focus-visible,
-    .feature:focus-visible {
-      outline: 3px solid white;
-      outline-offset: 2px;
-    }
-
-    /* Confetti animation for login success */
-    .confetti {
+    .toast-container {
       position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-      z-index: 9998;
-      animation: confettiFade 2s ease-out forwards;
+      top: 20px;
+      right: 20px;
+      z-index: 9999;
     }
-
-    @keyframes confettiFade {
-      0% { opacity: 1; }
-      100% { opacity: 0; }
+    
+    .toast {
+      padding: 15px 25px;
+      margin-bottom: 10px;
+      border-radius: 8px;
+      color: white;
+      font-weight: bold;
+      animation: slideIn 0.3s ease-out;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      min-width: 250px;
+      max-width: 350px;
+    }
+    
+    .toast.success { background: #4CAF50; }
+    .toast.error { background: #f44336; }
+    .toast.info { background: #2196F3; }
+    
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    
+    @keyframes slideOut {
+      from { transform: translateX(0); opacity: 1; }
+      to { transform: translateX(100%); opacity: 0; }
+    }
+    
+    .toast.fade-out {
+      animation: slideOut 0.3s ease-out forwards;
     }
   </style>
 </head>
@@ -525,28 +202,28 @@
       🎮 Begin Your Criminal Empire 🎮
     </div>
     
-    <div class="features" id="featuresGrid">
-      <div class="feature" tabindex="0" onclick="showFeatureTip('Earn Cash', '💰 Start with jobs to build your wealth!')">
+    <div class="features">
+      <div class="feature">
         <div class="feature-icon">💰</div>
         <div class="feature-text">Earn Cash</div>
       </div>
-      <div class="feature" tabindex="0" onclick="showFeatureTip('Level Up', '⭐ Gain XP from crimes and jobs to level up!')">
+      <div class="feature">
         <div class="feature-icon">⭐</div>
         <div class="feature-text">Level Up</div>
       </div>
-      <div class="feature" tabindex="0" onclick="showFeatureTip('Commit Crimes', '🔫 Higher risk = higher reward!')">
+      <div class="feature">
         <div class="feature-icon">🔫</div>
         <div class="feature-text">Commit Crimes</div>
       </div>
-      <div class="feature" tabindex="0" onclick="showFeatureTip('Work Jobs', '💼 Safe income for beginners')">
+      <div class="feature">
         <div class="feature-icon">💼</div>
         <div class="feature-text">Work Jobs</div>
       </div>
-      <div class="feature" tabindex="0" onclick="showFeatureTip('Shop & Items', '🎒 Buy items to restore stats')">
+      <div class="feature">
         <div class="feature-icon">🎒</div>
         <div class="feature-text">Shop & Items</div>
       </div>
-      <div class="feature" tabindex="0" onclick="showFeatureTip('Track History', '📜 Monitor your progress')">
+      <div class="feature">
         <div class="feature-icon">📜</div>
         <div class="feature-text">Track History</div>
       </div>
@@ -557,154 +234,120 @@
         <span class="btn-text">🚀 Login with Google</span>
       </button>
       
-      <!-- User info display (shown when already logged in) -->
-      <div class="user-info" id="userInfo"></div>
-      
       <p id="status" style="margin-top: 15px; color: #666;"></p>
       
       <div class="guide-link">
-        <a href="guide.html" onclick="navigateToGuide(event)">📚 New here? Check out the Guide →</a>
+        <a href="guide.html">📚 New here? Check out the Guide →</a>
       </div>
+      
+      <!-- Debug Info (hidden by default) -->
+      <div class="debug-info" id="debugInfo">
+        <strong>Debug Info:</strong>
+        <div id="debugContent"></div>
+      </div>
+      
+      <!-- Error Message -->
+      <div class="error-message" id="errorMessage"></div>
     </div>
   </div>
   
   <div class="footer">
     <p>© 2024 Rheoa RPG. All rights reserved.</p>
-    <p>Ready to start your journey? <a href="#" onclick="triggerLogin(); return false;">Login now!</a></p>
   </div>
 </div>
 
-<!-- Include Supabase JS -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script>
 // ============================================
-// SUPABASE CONFIGURATION - DIRECT IN INDEX.HTML
+// SUPABASE CONFIGURATION
 // ============================================
 const SUPABASE_URL = "https://mtiwodvsrwvrujbhmmrn.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp";
 
-// Create Supabase client directly
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Debug function
+function addDebug(message) {
+  console.log('[DEBUG]', message);
+  const debugDiv = document.getElementById('debugInfo');
+  const debugContent = document.getElementById('debugContent');
+  
+  if (!debugDiv.classList.contains('show')) {
+    debugDiv.classList.add('show');
+  }
+  
+  const timestamp = new Date().toLocaleTimeString();
+  debugContent.innerHTML = `<div>${timestamp}: ${message}</div>` + debugContent.innerHTML;
+}
 
-// Make it available globally
-window.supabase = supabase;
+// Show error
+function showError(message) {
+  console.error('[ERROR]', message);
+  const errorDiv = document.getElementById('errorMessage');
+  errorDiv.textContent = message;
+  errorDiv.classList.add('show');
+  
+  // Also show as toast if available
+  if (window.showToast) {
+    window.showToast(message, 'error', 5000);
+  }
+}
+
+// Clear error
+function clearError() {
+  document.getElementById('errorMessage').classList.remove('show');
+}
 
 // ============================================
 // TOAST NOTIFICATION SYSTEM
 // ============================================
 (function() {
-    // Create toast container if it doesn't exist
-    let container = document.getElementById('toast-container');
-    if (!container) {
-        container = document.createElement('div');
-        container.id = 'toast-container';
-        container.className = 'toast-container';
-        document.body.appendChild(container);
-    }
+  let container = document.getElementById('toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toast-container';
+    container.className = 'toast-container';
+    document.body.appendChild(container);
+  }
 
-    // Toast function
-    window.showToast = function(message, type = 'info', duration = 3000) {
-        const toast = document.createElement('div');
-        toast.className = `toast ${type}`;
-        toast.textContent = message;
-        
-        container.appendChild(toast);
-        
-        // Remove after duration
-        setTimeout(() => {
-            toast.classList.add('fade-out');
-            setTimeout(() => {
-                if (toast.parentNode) {
-                    container.removeChild(toast);
-                }
-            }, 300);
-        }, duration);
-    };
-
-    // Add necessary styles if not already present
-    const style = document.createElement('style');
-    style.textContent = `
-        .toast-container {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 9999;
+  window.showToast = function(message, type = 'info', duration = 3000) {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+    
+    container.appendChild(toast);
+    
+    setTimeout(() => {
+      toast.classList.add('fade-out');
+      setTimeout(() => {
+        if (toast.parentNode) {
+          container.removeChild(toast);
         }
-        .toast {
-            padding: 15px 25px;
-            margin-bottom: 10px;
-            border-radius: 8px;
-            color: white;
-            font-weight: bold;
-            animation: slideIn 0.3s ease-out;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            min-width: 250px;
-            max-width: 350px;
-        }
-        .toast.success { background: #4CAF50; }
-        .toast.error { background: #f44336; }
-        .toast.info { background: #2196F3; }
-        .toast.warning { background: #ff9800; }
-        .toast.achievement { background: #9c27b0; }
-        
-        @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-        @keyframes slideOut {
-            from { transform: translateX(0); opacity: 1; }
-            to { transform: translateX(100%); opacity: 0; }
-        }
-        .toast.fade-out {
-            animation: slideOut 0.3s ease-out forwards;
-        }
-    `;
-    document.head.appendChild(style);
+      }, 300);
+    }, duration);
+  };
 })();
 
 // ============================================
-// ERROR HANDLER
+// INITIALIZE SUPABASE
 // ============================================
-window.ErrorHandler = {
-    handleSupabaseError: function(error, customMessage = 'An error occurred') {
-        console.error('Supabase error:', error);
-        
-        if (error?.message) {
-            if (error.message.includes('duplicate key')) {
-                return 'This record already exists.';
-            }
-            if (error.message.includes('foreign key')) {
-                return 'Referenced record not found.';
-            }
-            if (error.message.includes('permission denied') || error.message.includes('policy')) {
-                return 'You do not have permission to perform this action.';
-            }
-            if (error.message.includes('JWT') || error.message.includes('auth')) {
-                return 'Your session has expired. Please log in again.';
-            }
-            if (error.message.includes('network')) {
-                return 'Network error. Please check your connection.';
-            }
-            return error.message;
-        }
-        return customMessage;
-    },
+addDebug('Initializing Supabase...');
+addDebug(`URL: ${SUPABASE_URL}`);
+addDebug(`Key length: ${SUPABASE_ANON_KEY.length}`);
 
-    async withErrorHandling(asyncFn, errorMessage = 'Operation failed') {
-        try {
-            return await asyncFn();
-        } catch (error) {
-            const friendlyMessage = this.handleSupabaseError(error, errorMessage);
-            if (window.showToast) {
-                window.showToast(friendlyMessage, 'error');
-            } else {
-                alert(friendlyMessage);
-            }
-            throw error;
-        }
+let supabase;
+try {
+  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: true
     }
-};
+  });
+  addDebug('Supabase client created successfully');
+} catch (error) {
+  addDebug(`Failed to create Supabase client: ${error.message}`);
+  showError('Failed to initialize authentication. Please refresh the page.');
+}
 
 // ============================================
 // AUTH FUNCTIONS
@@ -712,273 +355,219 @@ window.ErrorHandler = {
 
 // Login function
 async function login() {
+  clearError();
   const loginBtn = document.getElementById('loginBtn');
   
   try {
-    // Show loading state
+    addDebug('Login button clicked');
     loginBtn.classList.add('loading');
-    showToast('🔄 Redirecting to Google...', 'info', 3000);
+    loginBtn.disabled = true;
     
-    const { error } = await supabase.auth.signInWithOAuth({
+    // Get the current origin for redirect
+    const redirectUrl = window.location.origin + '/dashboard.html';
+    addDebug(`Redirect URL: ${redirectUrl}`);
+    
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: window.location.origin + "/dashboard.html"
+        redirectTo: redirectUrl
       }
     });
     
-    if (error) throw error;
+    if (error) {
+      addDebug(`OAuth error: ${error.message}`);
+      throw error;
+    }
+    
+    addDebug('OAuth initiated successfully');
+    // The page will redirect, so we don't need to do anything else
     
   } catch (error) {
-    console.error('Login error:', error);
+    addDebug(`Login error: ${error.message}`);
     loginBtn.classList.remove('loading');
-    
-    const friendlyMessage = ErrorHandler.handleSupabaseError(error, 'Login failed');
-    showToast(friendlyMessage, 'error', 5000);
+    loginBtn.disabled = false;
+    showError(error.message || 'Login failed. Please try again.');
   }
 }
 
 // Get current user
 async function getCurrentUser() {
   try {
+    addDebug('Getting current user...');
     const { data: { user }, error } = await supabase.auth.getUser();
-    if (error) throw error;
+    
+    if (error) {
+      addDebug(`Get user error: ${error.message}`);
+      throw error;
+    }
+    
+    addDebug(user ? `User found: ${user.email}` : 'No user found');
     return user;
   } catch (error) {
-    console.error('Error getting user:', error);
+    addDebug(`Error in getCurrentUser: ${error.message}`);
     return null;
   }
 }
 
-// Trigger login from footer link
-function triggerLogin() {
-  document.getElementById('loginBtn').click();
-}
-
-// Show feature tips when clicking features
-function showFeatureTip(feature, tip) {
-  showToast(`💡 ${feature}: ${tip}`, 'info', 4000);
-  
-  // Add highlight animation to clicked feature
-  const featureElement = event.currentTarget;
-  featureElement.style.animation = 'none';
-  featureElement.offsetHeight; // Trigger reflow
-  featureElement.style.animation = 'pulse 0.5s ease';
-  setTimeout(() => {
-    featureElement.style.animation = '';
-  }, 500);
-}
-
-// Auth state handler
-supabase.auth.onAuthStateChange((event, session) => {
-  console.log('Auth event:', event);
-  
-  if (event === "SIGNED_IN") {
-    // Show success message
-    showToast('✅ Login successful!', 'success', 3000);
+// Get session
+async function getSession() {
+  try {
+    addDebug('Getting session...');
+    const { data, error } = await supabase.auth.getSession();
     
-    // Create confetti effect
-    createConfetti();
-    
-    // Redirect after a short delay
-    setTimeout(() => {
-      window.location.href = "dashboard.html";
-    }, 1500);
-  } else if (event === "SIGNED_OUT") {
-    showToast('👋 Signed out successfully', 'info', 3000);
-    document.getElementById('userInfo').classList.remove('show');
-  } else if (event === "TOKEN_REFRESHED") {
-    console.log('Token refreshed');
-  }
-});
-
-// Create confetti effect
-function createConfetti() {
-  const confetti = document.createElement('div');
-  confetti.className = 'confetti';
-  document.body.appendChild(confetti);
-  
-  // Create simple confetti with colored divs
-  for (let i = 0; i < 50; i++) {
-    const piece = document.createElement('div');
-    piece.style.position = 'fixed';
-    piece.style.left = Math.random() * 100 + '%';
-    piece.style.top = '-10px';
-    piece.style.width = '10px';
-    piece.style.height = '10px';
-    piece.style.background = `hsl(${Math.random() * 360}, 100%, 50%)`;
-    piece.style.borderRadius = '50%';
-    piece.style.pointerEvents = 'none';
-    piece.style.zIndex = '9999';
-    piece.style.animation = `confettiFall ${Math.random() * 3 + 2}s linear forwards`;
-    document.body.appendChild(piece);
-    
-    setTimeout(() => piece.remove(), 5000);
-  }
-  
-  // Add CSS for confetti animation
-  const style = document.createElement('style');
-  style.textContent = `
-    @keyframes confettiFall {
-      0% { transform: translateY(0) rotate(0deg); opacity: 1; }
-      100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+    if (error) {
+      addDebug(`Get session error: ${error.message}`);
+      throw error;
     }
-  `;
-  document.head.appendChild(style);
-  
-  setTimeout(() => {
-    confetti.remove();
-  }, 2000);
+    
+    addDebug(data.session ? 'Session found' : 'No session');
+    return data.session;
+  } catch (error) {
+    addDebug(`Error in getSession: ${error.message}`);
+    return null;
+  }
 }
 
 // Check user function
 async function checkUser() {
-  return ErrorHandler.withErrorHandling(async () => {
+  try {
     const user = await getCurrentUser();
-
+    const statusEl = document.getElementById("status");
+    
     if (user) {
-      const statusEl = document.getElementById("status");
       statusEl.innerHTML = `✓ Logged in as: ${user.email}`;
       statusEl.style.color = '#4CAF50';
       
-      // Show user info card
-      const userInfo = document.getElementById('userInfo');
-      userInfo.innerHTML = `
-        <p><strong>👤 Welcome back!</strong></p>
-        <p>📧 ${user.email}</p>
-        <p>🆔 ${user.id.substring(0, 8)}...</p>
-      `;
-      userInfo.classList.add('show');
+      addDebug(`User is logged in: ${user.email}`);
       
-      showToast(`Welcome back, ${user.email}!`, 'success', 4000);
-      
-      // Auto-redirect after 3 seconds if on welcome page
+      // Auto-redirect after 2 seconds
       setTimeout(() => {
-        if (window.location.pathname.includes('index') || window.location.pathname === '/') {
-          showToast('🔄 Redirecting to dashboard...', 'info', 2000);
-          setTimeout(() => {
-            window.location.href = "dashboard.html";
-          }, 2000);
+        if (!window.location.pathname.includes('dashboard')) {
+          addDebug('Redirecting to dashboard...');
+          window.location.href = 'dashboard.html';
         }
-      }, 3000);
+      }, 2000);
     } else {
-      document.getElementById("status").innerHTML = "🔐 Not logged in";
+      statusEl.innerHTML = "🔐 Not logged in";
+      statusEl.style.color = '#666';
+      addDebug('No user logged in');
     }
-  }, 'Failed to check login status');
-}
-
-// Navigate to guide with loading state
-function navigateToGuide(event) {
-  if (event) event.preventDefault();
-  
-  showToast('📚 Loading guide...', 'info', 2000);
-  setTimeout(() => {
-    window.location.href = "guide.html";
-  }, 500);
+  } catch (error) {
+    addDebug(`Check user error: ${error.message}`);
+  }
 }
 
 // Handle redirect after OAuth
 async function handleRedirect() {
+  addDebug('Checking for OAuth redirect...');
+  addDebug(`Current URL: ${window.location.href}`);
+  addDebug(`Hash: ${window.location.hash}`);
+  addDebug(`Search: ${window.location.search}`);
+  
   try {
-    const { data, error } = await supabase.auth.getSession();
+    // Check if we have a session
+    const session = await getSession();
+    
+    if (session) {
+      addDebug('Session found, login successful');
+      showToast('✅ Login successful!', 'success', 3000);
+      
+      setTimeout(() => {
+        window.location.href = 'dashboard.html';
+      }, 1500);
+      return true;
+    }
+    
+    // Check for error in URL
+    const params = new URLSearchParams(window.location.search);
+    const error = params.get('error');
+    const errorDescription = params.get('error_description');
     
     if (error) {
-      console.error('Session error:', error);
-      showToast('Error getting session', 'error');
-      return;
+      addDebug(`OAuth error in URL: ${error} - ${errorDescription}`);
+      showError(`Authentication failed: ${errorDescription || error}`);
+    } else {
+      addDebug('No session found after redirect');
     }
     
-    if (data.session) {
-      showToast('✅ Login successful!', 'success');
+    return false;
+  } catch (error) {
+    addDebug(`Redirect handling error: ${error.message}`);
+    showError('Failed to complete login. Please try again.');
+    return false;
+  }
+}
+
+// ============================================
+// EVENT LISTENERS
+// ============================================
+
+// Login button click
+document.getElementById('loginBtn').addEventListener('click', login);
+
+// Auth state changes
+if (supabase) {
+  supabase.auth.onAuthStateChange((event, session) => {
+    addDebug(`Auth state changed: ${event}`);
+    
+    if (event === 'SIGNED_IN') {
+      addDebug('User signed in');
+      showToast('✅ Login successful!', 'success', 3000);
+      
       setTimeout(() => {
-        window.location.href = "dashboard.html";
+        window.location.href = 'dashboard.html';
       }, 1500);
+    } else if (event === 'SIGNED_OUT') {
+      addDebug('User signed out');
+      checkUser();
+    } else if (event === 'TOKEN_REFRESHED') {
+      addDebug('Token refreshed');
     }
-  } catch (error) {
-    console.error('Redirect handling error:', error);
-  }
+  });
 }
 
-// Page initialization
+// ============================================
+// INITIALIZATION
+// ============================================
 document.addEventListener('DOMContentLoaded', async function() {
-  try {
-    // Check login status
+  addDebug('DOM Content Loaded');
+  
+  // Check if this is a redirect from OAuth
+  const hasAuthParams = window.location.hash || 
+                       window.location.search.includes('access_token') || 
+                       window.location.search.includes('code') ||
+                       window.location.search.includes('error');
+  
+  if (hasAuthParams) {
+    addDebug('Auth parameters detected in URL');
+    await handleRedirect();
+  } else {
+    // Normal page load, just check user
     await checkUser();
-    
-    // Show welcome toast
-    setTimeout(() => {
-      showToast('👋 Welcome to Rheoa RPG!', 'info', 4000);
-    }, 500);
-    
-    // Add click handlers to features
-    document.querySelectorAll('.feature').forEach(feature => {
-      feature.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          feature.click();
-        }
-      });
-    });
-    
-    // Prefetch guide page for faster navigation
-    if ('requestIdleCallback' in window) {
-      requestIdleCallback(() => {
-        const link = document.createElement('link');
-        link.rel = 'prefetch';
-        link.href = 'guide.html';
-        document.head.appendChild(link);
-      });
-    }
-    
-  } catch (error) {
-    console.error('Initialization error:', error);
-    showToast('Failed to initialize', 'error', 5000);
-  }
-});
-
-// Check if we're returning from OAuth redirect
-if (window.location.hash || window.location.search.includes('access_token') || window.location.search.includes('code')) {
-  handleRedirect();
-}
-
-// Add keyboard shortcuts
-document.addEventListener('keydown', (e) => {
-  // Press 'L' to login
-  if (e.key === 'l' || e.key === 'L') {
-    if (!e.ctrlKey && !e.metaKey) {
-      e.preventDefault();
-      login();
-    }
   }
   
-  // Press 'G' to go to guide
-  if (e.key === 'g' || e.key === 'G') {
-    if (!e.ctrlKey && !e.metaKey) {
-      e.preventDefault();
-      navigateToGuide(e);
-    }
-  }
-  
-  // Press 'Esc' to clear status
-  if (e.key === 'Escape') {
-    const statusEl = document.getElementById('status');
-    statusEl.innerHTML = '';
-  }
+  // Show welcome toast
+  setTimeout(() => {
+    showToast('👋 Welcome to Rheoa RPG!', 'info', 4000);
+  }, 500);
 });
 
-// Handle visibility change (tab focus)
+// Handle visibility change
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden) {
-    // Tab became visible, refresh user status
+    addDebug('Tab became visible, checking user...');
     checkUser();
   }
 });
 
-// Export functions for global use
-window.login = login;
-window.triggerLogin = triggerLogin;
-window.showFeatureTip = showFeatureTip;
-window.navigateToGuide = navigateToGuide;
-window.getCurrentUser = getCurrentUser;
+// Add keyboard shortcut for debug (Ctrl+Shift+D)
+document.addEventListener('keydown', (e) => {
+  if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+    e.preventDefault();
+    const debugDiv = document.getElementById('debugInfo');
+    debugDiv.classList.toggle('show');
+  }
+});
 </script>
 
 </body>
