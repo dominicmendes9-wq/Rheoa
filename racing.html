@@ -837,14 +837,14 @@ async function loadLeaderboard() {
   try {
     console.log('Loading leaderboard from race_history...');
     
-    // Query race_history directly with player info
+    // Query race_history directly with player info - removed !inner
     const { data, error } = await sb
       .from('race_history')
       .select(`
         player_id,
         earnings,
         position,
-        players!inner (
+        players (
           username
         )
       `)
@@ -1163,9 +1163,38 @@ async function joinRace(raceId) {
     return;
   }
   
-  // Use the first vehicle for now (could add vehicle selection later)
-  const vehicleId = vehicles[0].id;
+  // Show vehicle selector if multiple vehicles
+  if (vehicles.length > 1) {
+    showVehicleSelector(raceId);
+    return;
+  }
   
+  // Use the first vehicle if only one
+  const vehicleId = vehicles[0].id;
+  await executeJoinRace(raceId, vehicleId);
+}
+
+// Show vehicle selector
+function showVehicleSelector(raceId) {
+  let vehicleOptions = vehicles.map((v, index) => {
+    const type = v.vehicle_types;
+    return `${index + 1}. ${v.nickname || type.name} (Speed: ${type.base_speed}, Accel: ${type.base_acceleration})`;
+  }).join('\n');
+  
+  const choice = prompt(`Select a vehicle (1-${vehicles.length}):\n${vehicleOptions}`);
+  
+  if (choice) {
+    const index = parseInt(choice) - 1;
+    if (index >= 0 && index < vehicles.length) {
+      executeJoinRace(raceId, vehicles[index].id);
+    } else {
+      showToast('Invalid vehicle selection', 'error');
+    }
+  }
+}
+
+// Execute join race
+async function executeJoinRace(raceId, vehicleId) {
   try {
     const { data, error } = await sb.rpc('join_race', {
       p_race_id: raceId,
