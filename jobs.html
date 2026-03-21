@@ -901,7 +901,8 @@ async function loadJobs() {
       setupRealtimeSubscriptions();
     }
 
-    const { data: jobsData } = await sb.from('jobs').select('*').order('min_level').order('name');
+    // SORT BY SALARY (LOW TO HIGH)
+    const { data: jobsData } = await sb.from('jobs').select('*').order('salary', { ascending: true });
     if (!jobsData || jobsData.length === 0) {
       document.getElementById("jobs").innerHTML = '<div class="loading">No jobs available</div>';
       return;
@@ -930,7 +931,7 @@ async function loadJobs() {
     const jobsDiv = document.getElementById("jobs");
     jobsDiv.innerHTML = "";
 
-    // Build all cards sorted by level requirement
+    // Build all cards sorted by salary
     jobs.forEach(job => {
       jobsDiv.innerHTML += buildJobCard(job);
     });
