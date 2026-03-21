@@ -485,6 +485,22 @@
       color: white;
     }
     
+    /* Spinner */
+    .spinner {
+      display: inline-block;
+      width: 30px;
+      height: 30px;
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #f57c00;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
     /* Back Button */
     .back-button {
       display: block;
@@ -531,6 +547,12 @@
     @keyframes slideIn {
       from { transform: translateX(100%); opacity: 0; }
       to { transform: translateX(0); opacity: 1; }
+    }
+    
+    .empty-message {
+      text-align: center;
+      padding: 40px;
+      color: #666;
     }
     
     @media (max-width: 900px) {
@@ -582,11 +604,11 @@
 
 <!-- Market Tabs -->
 <div class="market-tabs">
-  <button class="tab-btn active" onclick="switchTab('buy')">🛒 Buy</button>
-  <button class="tab-btn" onclick="switchTab('sell')">💰 Sell</button>
-  <button class="tab-btn" onclick="switchTab('my-listings')">📋 My Listings</button>
-  <button class="tab-btn" onclick="switchTab('history')">📜 History</button>
-  <button class="tab-btn" onclick="switchTab('favorites')">⭐ Favorites</button>
+  <button class="tab-btn active" data-tab="buy">🛒 Buy</button>
+  <button class="tab-btn" data-tab="sell">💰 Sell</button>
+  <button class="tab-btn" data-tab="my-listings">📋 My Listings</button>
+  <button class="tab-btn" data-tab="history">📜 History</button>
+  <button class="tab-btn" data-tab="favorites">⭐ Favorites</button>
 </div>
 
 <!-- Main Container -->
@@ -594,12 +616,12 @@
   <!-- Listings Area -->
   <div class="listings-section" id="listingsSection">
     <div class="section-header">
-      <span>🛒 Active Listings</span>
+      <span id="sectionTitle">🛒 Active Listings</span>
       <span id="listingCount">0 items</span>
     </div>
     
-    <!-- Filters -->
-    <div class="filter-bar">
+    <!-- Filters (only visible for buy tab) -->
+    <div id="filterBar" class="filter-bar" style="display: flex;">
       <input type="text" id="searchFilter" class="filter-input" placeholder="Search items..." oninput="filterListings()">
       <select id="categoryFilter" class="filter-select" onchange="filterListings()">
         <option value="all">All Categories</option>
@@ -607,7 +629,10 @@
         <option value="health">❤️ Health</option>
         <option value="hunger">🍽️ Hunger</option>
         <option value="happiness">😊 Happiness</option>
-        <option value="boost">✨ Boost</option>
+        <option value="temporary_boost">✨ Temporary Boost</option>
+        <option value="permanent_boost">💪 Permanent Boost</option>
+        <option value="success_boost">⭐ Success Boost</option>
+        <option value="multi_use">📦 Multi-Use</option>
       </select>
       <select id="sortFilter" class="filter-select" onchange="filterListings()">
         <option value="price_asc">Price: Low to High</option>
@@ -619,15 +644,15 @@
     
     <!-- Listings Grid -->
     <div id="listingsGrid" class="listings-grid">
-      <div style="text-align: center; grid-column: 1/-1; padding: 40px;">
-        <div class="spinner" style="margin: 0 auto 10px;"></div>
+      <div class="empty-message">
+        <div class="spinner"></div>
         <p>Loading listings...</p>
       </div>
     </div>
   </div>
   
-  <!-- Sidebar -->
-  <div class="market-sidebar">
+  <!-- Sidebar (only visible for buy and sell tabs) -->
+  <div class="market-sidebar" id="marketSidebar">
     <!-- Quick Sell -->
     <div class="sidebar-section" id="quickSellSection">
       <div class="sidebar-header">💰 Quick Sell</div>
@@ -656,7 +681,7 @@
     </div>
     
     <!-- Price Chart -->
-    <div class="sidebar-section">
+    <div class="sidebar-section" id="priceChartSection">
       <div class="sidebar-header">📊 Price History</div>
       <div class="sidebar-content">
         <select id="priceHistoryItem" class="form-input" style="margin-bottom: 15px;" onchange="loadPriceHistory()">
@@ -671,7 +696,7 @@
     <div class="sidebar-section">
       <div class="sidebar-header">🔔 Notifications</div>
       <div class="sidebar-content" id="notificationsList" style="max-height: 200px; overflow-y: auto;">
-        <div style="text-align: center; padding: 20px;">No notifications</div>
+        <div class="empty-message">No notifications</div>
       </div>
     </div>
   </div>
@@ -708,6 +733,7 @@ let favorites = [];
 let notifications = [];
 let selectedListing = null;
 let priceHistory = [];
+let currentTab = 'buy';
 
 // Toast notification
 function showToast(message, type = 'info', duration = 3000) {
@@ -790,7 +816,9 @@ async function loadActiveListings() {
     
     activeListings = data || [];
     document.getElementById('listingCount').textContent = `${activeListings.length} items`;
-    renderListings();
+    if (currentTab === 'buy') {
+      renderListings();
+    }
   } catch (error) {
     console.error('Error loading listings:', error);
   }
@@ -809,7 +837,9 @@ async function loadMyListings() {
       .order('created_at', { ascending: false });
     
     myListings = data || [];
-    renderMyListings();
+    if (currentTab === 'my-listings') {
+      renderMyListings();
+    }
   } catch (error) {
     console.error('Error loading my listings:', error);
   }
@@ -864,8 +894,10 @@ async function loadPriceHistoryItems() {
       .order('name');
     
     const select = document.getElementById('priceHistoryItem');
-    select.innerHTML = '<option value="">Select item...</option>' + 
-      data.map(item => `<option value="${item.id}">${item.name}</option>`).join('');
+    if (select) {
+      select.innerHTML = '<option value="">Select item...</option>' + 
+        data.map(item => `<option value="${item.id}">${item.name}</option>`).join('');
+    }
   } catch (error) {
     console.error('Error loading price history items:', error);
   }
@@ -900,6 +932,8 @@ function updatePlayerStats() {
 // Update sell item select
 function updateSellItemSelect() {
   const select = document.getElementById('sellItemSelect');
+  if (!select) return;
+  
   select.innerHTML = '<option value="">Choose an item...</option>' + 
     playerInventory.map(item => 
       `<option value="${item.item_id}" data-quantity="${item.quantity}">
@@ -909,21 +943,24 @@ function updateSellItemSelect() {
 }
 
 // Calculate listing fee
-document.getElementById('sellPrice').addEventListener('input', updateListingFee);
-document.getElementById('sellQuantity').addEventListener('input', updateListingFee);
+const sellPriceInput = document.getElementById('sellPrice');
+const sellQuantityInput = document.getElementById('sellQuantity');
+if (sellPriceInput) sellPriceInput.addEventListener('input', updateListingFee);
+if (sellQuantityInput) sellQuantityInput.addEventListener('input', updateListingFee);
 
 function updateListingFee() {
-  const quantity = parseInt(document.getElementById('sellQuantity').value) || 1;
-  const price = parseInt(document.getElementById('sellPrice').value) || 0;
+  const quantity = parseInt(document.getElementById('sellQuantity')?.value) || 1;
+  const price = parseInt(document.getElementById('sellPrice')?.value) || 0;
   const fee = Math.floor((quantity * price * 5) / 100);
-  document.getElementById('listingFee').textContent = fee;
+  const feeSpan = document.getElementById('listingFee');
+  if (feeSpan) feeSpan.textContent = fee;
 }
 
 // Create listing
 async function createListing() {
-  const itemId = document.getElementById('sellItemSelect').value;
-  const quantity = parseInt(document.getElementById('sellQuantity').value);
-  const price = parseInt(document.getElementById('sellPrice').value);
+  const itemId = document.getElementById('sellItemSelect')?.value;
+  const quantity = parseInt(document.getElementById('sellQuantity')?.value);
+  const price = parseInt(document.getElementById('sellPrice')?.value);
   
   if (!itemId || quantity < 1 || price < 1) {
     showToast('Please fill in all fields', 'error');
@@ -963,15 +1000,16 @@ async function createListing() {
 // Render listings
 function renderListings() {
   const grid = document.getElementById('listingsGrid');
+  if (!grid) return;
   
   if (activeListings.length === 0) {
-    grid.innerHTML = '<div style="text-align: center; grid-column: 1/-1; padding: 40px;">No active listings</div>';
+    grid.innerHTML = '<div class="empty-message">No active listings</div>';
     return;
   }
   
-  const searchTerm = document.getElementById('searchFilter').value.toLowerCase();
-  const category = document.getElementById('categoryFilter').value;
-  const sort = document.getElementById('sortFilter').value;
+  const searchTerm = document.getElementById('searchFilter')?.value.toLowerCase() || '';
+  const category = document.getElementById('categoryFilter')?.value || 'all';
+  const sort = document.getElementById('sortFilter')?.value || 'price_asc';
   
   let filtered = activeListings.filter(listing => {
     const matchesSearch = listing.item.name.toLowerCase().includes(searchTerm);
@@ -994,10 +1032,13 @@ function renderListings() {
     const isFavorite = favorites.includes(listing.item_id);
     const sellerName = listing.seller ? listing.seller.username : 'Unknown';
     
+    // Get appropriate icon based on item type
+    let typeIcon = listing.item.icon || '📦';
+    
     return `
       <div class="listing-card">
         <div class="listing-header">
-          <span class="listing-item">${listing.item.icon || '📦'} ${listing.item.name}</span>
+          <span class="listing-item">${typeIcon} ${listing.item.name}</span>
           <span class="listing-quantity">x${listing.quantity}</span>
         </div>
         <div class="listing-seller">Seller: ${sellerName}</div>
@@ -1023,7 +1064,9 @@ function renderListings() {
 let filterTimeout;
 function filterListings() {
   clearTimeout(filterTimeout);
-  filterTimeout = setTimeout(renderListings, 300);
+  filterTimeout = setTimeout(() => {
+    if (currentTab === 'buy') renderListings();
+  }, 300);
 }
 
 // Open buy modal
@@ -1086,6 +1129,7 @@ async function confirmPurchase() {
       await loadPlayerData();
       await loadActiveListings();
       await loadMyListings();
+      await loadFavorites(); // Refresh favorites after purchase
     } else {
       showToast(data.error || 'Purchase failed', 'error');
     }
@@ -1119,7 +1163,11 @@ async function toggleFavorite(itemId) {
       showToast('Added to favorites', 'success');
     }
     
-    renderListings();
+    if (currentTab === 'buy') {
+      renderListings();
+    } else if (currentTab === 'favorites') {
+      loadFavoritesListings();
+    }
   } catch (error) {
     console.error('Error toggling favorite:', error);
   }
@@ -1127,15 +1175,15 @@ async function toggleFavorite(itemId) {
 
 // Render my listings
 function renderMyListings() {
-  const container = document.querySelector('#my-listings .listings-grid');
-  if (!container) return;
+  const grid = document.getElementById('listingsGrid');
+  if (!grid) return;
   
   if (myListings.length === 0) {
-    container.innerHTML = '<div style="text-align: center; padding: 40px;">You have no listings</div>';
+    grid.innerHTML = '<div class="empty-message">You have no listings</div>';
     return;
   }
   
-  container.innerHTML = myListings.map(listing => {
+  grid.innerHTML = myListings.map(listing => {
     const statusClass = `status-${listing.status}`;
     
     return `
@@ -1183,9 +1231,10 @@ async function cancelListing(listingId) {
 // Render notifications
 function renderNotifications() {
   const container = document.getElementById('notificationsList');
+  if (!container) return;
   
   if (notifications.length === 0) {
-    container.innerHTML = '<div style="text-align: center; padding: 20px;">No notifications</div>';
+    container.innerHTML = '<div class="empty-message">No notifications</div>';
     return;
   }
   
@@ -1201,9 +1250,10 @@ function renderNotifications() {
 function renderPriceChart() {
   const chart = document.getElementById('priceChart');
   const stats = document.getElementById('priceStats');
+  if (!chart || !stats) return;
   
   if (priceHistory.length === 0) {
-    chart.innerHTML = '<p style="text-align: center;">No price data available</p>';
+    chart.innerHTML = '<p class="empty-message">No price data available</p>';
     stats.innerHTML = '';
     return;
   }
@@ -1237,34 +1287,55 @@ function renderPriceChart() {
 }
 
 // Switch tabs
-function switchTab(tabName) {
+function switchTab(tabName, btnElement) {
+  currentTab = tabName;
+  const grid = document.getElementById('listingsGrid');
+  const filterBar = document.getElementById('filterBar');
+  const sidebar = document.getElementById('marketSidebar');
+  const sectionTitle = document.getElementById('sectionTitle');
+  
+  if (!grid) return;
+  
+  // Update active button
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.classList.remove('active');
   });
-  event.target.classList.add('active');
+  if (btnElement) btnElement.classList.add('active');
   
-  const listingsSection = document.getElementById('listingsSection');
-  const sectionHeader = listingsSection.querySelector('.section-header span:first-child');
+  // Show/hide filter bar based on tab
+  if (filterBar) {
+    filterBar.style.display = tabName === 'buy' ? 'flex' : 'none';
+  }
   
+  // Show/hide sidebar sections based on tab
+  if (sidebar) {
+    const quickSell = document.getElementById('quickSellSection');
+    const priceChart = document.getElementById('priceChartSection');
+    
+    if (quickSell) quickSell.style.display = tabName === 'sell' ? 'block' : 'none';
+    if (priceChart) priceChart.style.display = tabName === 'buy' ? 'block' : 'none';
+  }
+  
+  // Load content based on tab
   switch(tabName) {
     case 'buy':
-      sectionHeader.textContent = '🛒 Active Listings';
+      sectionTitle.textContent = '🛒 Active Listings';
       renderListings();
       break;
     case 'sell':
-      sectionHeader.textContent = '💰 My Items for Sale';
-      listingsSection.querySelector('.listings-grid').innerHTML = '';
+      sectionTitle.textContent = '💰 My Items for Sale';
+      grid.innerHTML = '<div class="empty-message">Select items from the sidebar to sell</div>';
       break;
     case 'my-listings':
-      sectionHeader.textContent = '📋 My Listings';
+      sectionTitle.textContent = '📋 My Listings';
       renderMyListings();
       break;
     case 'history':
-      sectionHeader.textContent = '📜 Transaction History';
+      sectionTitle.textContent = '📜 Transaction History';
       loadTransactionHistory();
       break;
     case 'favorites':
-      sectionHeader.textContent = '⭐ Favorite Items';
+      sectionTitle.textContent = '⭐ Favorite Items';
       loadFavoritesListings();
       break;
   }
@@ -1273,7 +1344,9 @@ function switchTab(tabName) {
 // Load transaction history
 async function loadTransactionHistory() {
   const grid = document.getElementById('listingsGrid');
-  grid.innerHTML = '<div style="text-align: center; padding: 40px;">Loading...</div>';
+  if (!grid) return;
+  
+  grid.innerHTML = '<div class="empty-message"><div class="spinner"></div><p>Loading...</p></div>';
   
   try {
     const { data } = await sb
@@ -1289,7 +1362,7 @@ async function loadTransactionHistory() {
       .limit(50);
     
     if (!data || data.length === 0) {
-      grid.innerHTML = '<div style="text-align: center; padding: 40px;">No transactions yet</div>';
+      grid.innerHTML = '<div class="empty-message">No transactions yet</div>';
       return;
     }
     
@@ -1303,7 +1376,7 @@ async function loadTransactionHistory() {
             <span class="listing-quantity">x${t.quantity}</span>
           </div>
           <div>${isBuyer ? 'Bought from' : 'Sold to'}: ${isBuyer ? t.seller.username : t.buyer.username}</div>
-          <div class="listing-price ${isBuyer ? '' : 'profit'}">
+          <div class="listing-price">
             ${isBuyer ? '-' : '+'}₹${t.total_price.toLocaleString()}
           </div>
           <div style="font-size: 0.8rem; color: #666;">
@@ -1314,23 +1387,27 @@ async function loadTransactionHistory() {
     }).join('');
   } catch (error) {
     console.error('Error loading history:', error);
-    grid.innerHTML = '<div style="text-align: center; padding: 40px;">Error loading history</div>';
+    grid.innerHTML = '<div class="empty-message">Error loading history</div>';
   }
 }
 
 // Load favorites listings
 async function loadFavoritesListings() {
   const grid = document.getElementById('listingsGrid');
+  if (!grid) return;
   
   if (favorites.length === 0) {
-    grid.innerHTML = '<div style="text-align: center; padding: 40px;">No favorite items</div>';
+    grid.innerHTML = '<div class="empty-message">No favorite items</div>';
     return;
   }
+  
+  // Refresh active listings first
+  await loadActiveListings();
   
   const favoriteListings = activeListings.filter(l => favorites.includes(l.item_id));
   
   if (favoriteListings.length === 0) {
-    grid.innerHTML = '<div style="text-align: center; padding: 40px;">No listings for your favorite items</div>';
+    grid.innerHTML = '<div class="empty-message">No listings for your favorite items</div>';
     return;
   }
   
@@ -1359,13 +1436,25 @@ function goToDashboard() {
   window.location.href = "dashboard.html";
 }
 
+// Set up tab click handlers
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    const tabName = btn.getAttribute('data-tab');
+    if (tabName) switchTab(tabName, btn);
+  });
+});
+
 // Initialize
 loadPlayerData();
 
 // Refresh every 30 seconds
 setInterval(() => {
-  if (document.querySelector('.tab-btn.active').textContent.includes('Buy')) {
+  if (currentTab === 'buy') {
     loadActiveListings();
+  } else if (currentTab === 'my-listings') {
+    loadMyListings();
+  } else if (currentTab === 'favorites') {
+    loadFavoritesListings();
   }
 }, 30000);
 </script>
