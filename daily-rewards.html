@@ -371,6 +371,17 @@
       padding: 60px;
     }
     
+    /* Error display */
+    .error-message {
+      text-align: center;
+      padding: 40px;
+      color: #f44336;
+      background: #ffebee;
+      border-radius: 10px;
+      margin: 20px;
+      font-weight: bold;
+    }
+    
     @media (max-width: 600px) {
       .streak-banner {
         flex-direction: column;
@@ -490,13 +501,24 @@ function showToast(message, type = 'info', duration = 3000) {
 async function loadPlayerData() {
   try {
     const { data: { user } } = await sb.auth.getUser();
-    if (!user) return window.location.href = "index.html";
+    if (!user) {
+      console.log('No user found, redirecting to index.html');
+      window.location.href = "index.html";
+      return;
+    }
+    console.log('User found:', user.email);
     
-    const { data: player } = await sb
+    const { data: player, error } = await sb
       .from('players')
       .select('*')
       .eq('auth_id', user.id)
       .single();
+    
+    if (error) {
+      console.error('Error loading player:', error);
+      document.getElementById('rewardsGrid').innerHTML = '<div class="error-message">Error loading player data. Please refresh.</div>';
+      return;
+    }
     
     if (player) {
       currentPlayer = player;
@@ -505,16 +527,24 @@ async function loadPlayerData() {
       await loadClaimHistory();
     }
   } catch (error) {
-    console.error('Error loading player:', error);
+    console.error('Error in loadPlayerData:', error);
+    document.getElementById('rewardsGrid').innerHTML = '<div class="error-message">Error loading player data. Please refresh.</div>';
   }
 }
 
 // Load reward status
 async function loadRewardStatus() {
   try {
+    console.log('Calling get_daily_reward_status...');
     const { data, error } = await sb.rpc('get_daily_reward_status');
     
-    if (error) throw error;
+    if (error) {
+      console.error('RPC error:', error);
+      document.getElementById('rewardsGrid').innerHTML = `<div class="error-message">Error: ${error.message}</div>`;
+      return;
+    }
+    
+    console.log('Reward status response:', data);
     
     if (data.success) {
       rewardStatus = data;
@@ -525,19 +555,25 @@ async function loadRewardStatus() {
         monthlySpecial = data.next_reward;
         showMonthlySpecial();
       }
+    } else {
+      console.error('RPC returned failure:', data.error);
+      document.getElementById('rewardsGrid').innerHTML = `<div class="error-message">Error: ${data.error || 'Unknown error'}</div>`;
     }
   } catch (error) {
-    console.error('Error loading reward status:', error);
+    console.error('Error in loadRewardStatus:', error);
+    document.getElementById('rewardsGrid').innerHTML = `<div class="error-message">Error: ${error.message}</div>`;
   }
 }
 
 // Load daily rewards
 async function loadDailyRewards() {
   try {
-    const { data } = await sb
+    const { data, error } = await sb
       .from('daily_rewards')
       .select('*')
       .order('day_number');
+    
+    if (error) throw error;
     
     dailyRewards = data || [];
     renderRewardsGrid();
@@ -546,16 +582,18 @@ async function loadDailyRewards() {
   }
 }
 
-// Load claim history
+// Load claim history (updated to match actual schema)
 async function loadClaimHistory() {
   try {
-    const { data } = await sb
+    const { data, error } = await sb
       .from('player_claimed_rewards')
       .select('*')
       .eq('player_id', currentPlayer.id)
       .order('created_at', { ascending: false })
       .limit(20);
-
+    
+    if (error) throw error;
+    
     claimHistory = data || [];
     renderClaimHistory();
   } catch (error) {
@@ -643,7 +681,7 @@ function renderRewardsGrid() {
   const grid = document.getElementById('rewardsGrid');
   
   if (!rewardStatus) {
-    grid.innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading...</p></div>';
+    // Wait for rewardStatus to load (should be soon)
     return;
   }
   
@@ -680,15 +718,15 @@ function renderRewardsGrid() {
   }).join('');
 }
 
-// Render claim history
+// Render claim history (updated to match actual schema)
 function renderClaimHistory() {
   const list = document.getElementById('historyList');
-
-  if (!claimHistory.length) {
+  
+  if (claimHistory.length === 0) {
     list.innerHTML = '<div style="text-align: center; padding: 40px;">No claims yet</div>';
     return;
   }
-
+  
   list.innerHTML = claimHistory.map(claim => {
     const date = new Date(claim.created_at).toLocaleDateString();
     let rewardText = '';
@@ -698,7 +736,7 @@ function renderClaimHistory() {
     else if (claim.reward_type === 'health') rewardText = `❤️ ${claim.reward_value} Health`;
     else if (claim.reward_type === 'boost') rewardText = `✨ +${claim.reward_value}% Boost`;
     else rewardText = `📦 Reward`;
-
+    
     return `
       <div class="history-item">
         <div class="history-date">${date}</div>
