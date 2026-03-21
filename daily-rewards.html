@@ -553,9 +553,9 @@ async function loadClaimHistory() {
       .from('player_claimed_rewards')
       .select('*')
       .eq('player_id', currentPlayer.id)
-      .order('claim_date', { ascending: false })
+      .order('created_at', { ascending: false })
       .limit(20);
-    
+
     claimHistory = data || [];
     renderClaimHistory();
   } catch (error) {
@@ -683,24 +683,22 @@ function renderRewardsGrid() {
 // Render claim history
 function renderClaimHistory() {
   const list = document.getElementById('historyList');
-  
-  if (claimHistory.length === 0) {
+
+  if (!claimHistory.length) {
     list.innerHTML = '<div style="text-align: center; padding: 40px;">No claims yet</div>';
     return;
   }
-  
+
   list.innerHTML = claimHistory.map(claim => {
-    const date = new Date(claim.claim_date).toLocaleDateString();
-    const reward = claim.reward_received;
-    
+    const date = new Date(claim.created_at).toLocaleDateString();
     let rewardText = '';
-    if (reward.type === 'cash') rewardText = `💰 ₹${reward.value}`;
-    else if (reward.type === 'xp') rewardText = `⭐ ${reward.value} XP`;
-    else if (reward.type === 'energy') rewardText = `⚡ ${reward.value} Energy`;
-    else if (reward.type === 'health') rewardText = `❤️ ${reward.value} Health`;
-    else if (reward.type === 'boost') rewardText = `✨ +${reward.value}% Boost`;
-    else if (reward.type === 'item') rewardText = `📦 Item Received`;
-    
+    if (claim.reward_type === 'cash') rewardText = `💰 ₹${claim.reward_value.toLocaleString()}`;
+    else if (claim.reward_type === 'xp') rewardText = `⭐ ${claim.reward_value} XP`;
+    else if (claim.reward_type === 'energy') rewardText = `⚡ ${claim.reward_value} Energy`;
+    else if (claim.reward_type === 'health') rewardText = `❤️ ${claim.reward_value} Health`;
+    else if (claim.reward_type === 'boost') rewardText = `✨ +${claim.reward_value}% Boost`;
+    else rewardText = `📦 Reward`;
+
     return `
       <div class="history-item">
         <div class="history-date">${date}</div>
