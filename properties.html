@@ -747,9 +747,10 @@ async function loadPlayerProperty() {
     
     playerProperty = data || null;
     renderPropertyOverview();
-  catch (error) {
-  console.error('Error loading property:', error.message || error);
-}
+  } catch (error) {
+    console.error('Error loading property:', error.message || error);
+    showToast('Error loading property data', 'error');
+  }
 }
 
 // Load property types
@@ -863,6 +864,19 @@ function renderPropertyOverview() {
   }
   
   const type = playerProperty.property_types;
+  
+  // Check if property type exists (safety check)
+  if (!type) {
+    console.error('Property type missing for property:', playerProperty);
+    container.innerHTML = `
+      <div class="empty-message">
+        <p>Property data is corrupted. Please contact support.</p>
+        <p>Property ID: ${playerProperty.id}</p>
+      </div>
+    `;
+    return;
+  }
+  
   const securityPercent = (playerProperty.security_level / 10) * 100;
   const storagePercent = (playerProperty.storage_capacity / 500) * 100;
   
@@ -931,6 +945,12 @@ function renderUpgrades() {
   }
   
   const type = playerProperty.property_types;
+  
+  if (!type) {
+    container.innerHTML = '<div class="empty-message">Property type data missing</div>';
+    return;
+  }
+  
   const currentSecurity = playerProperty.security_level;
   const currentStorage = playerProperty.storage_capacity;
   const currentRooms = playerProperty.rooms;
@@ -1085,6 +1105,11 @@ function renderShop() {
     return;
   }
   
+  if (!propertyTypes.length) {
+    container.innerHTML = '<div class="empty-message">No properties available</div>';
+    return;
+  }
+  
   container.innerHTML = propertyTypes.map(type => {
     const canAfford = currentPlayer.cash >= type.base_price;
     const meetsLevel = currentPlayer.level >= type.min_level;
@@ -1093,7 +1118,7 @@ function renderShop() {
       <div class="shop-card">
         <div class="feature-icon">${type.icon || '🏠'}</div>
         <h3>${type.name}</h3>
-        <p>${type.description}</p>
+        <p>${type.description || ''}</p>
         <div class="property-stats-grid" style="margin: 15px 0;">
           <div>Security: ${type.base_security}/10</div>
           <div>Storage: ${type.base_capacity}</div>
