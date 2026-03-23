@@ -734,11 +734,12 @@ function updatePlayerStats() {
 // Load player property
 async function loadPlayerProperty() {
   try {
+    // Explicitly specify the foreign key to resolve ambiguity
     const { data, error } = await sb
       .from('player_properties')
       .select(`
         *,
-        property_types (*)
+        property_types:property_type_id (*)
       `)
       .eq('player_id', currentPlayer.id)
       .single();
@@ -865,7 +866,6 @@ function renderPropertyOverview() {
   
   const type = playerProperty.property_types;
   
-  // Check if property type exists (safety check)
   if (!type) {
     console.error('Property type missing for property:', playerProperty);
     container.innerHTML = `
