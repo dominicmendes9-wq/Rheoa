@@ -734,19 +734,34 @@ function updatePlayerStats() {
 // Load player property
 async function loadPlayerProperty() {
   try {
-    // Explicitly specify the foreign key to resolve ambiguity
-    const { data, error } = await sb
+    // First get the player property without nested join
+    const { data: propertyData, error: propertyError } = await sb
       .from('player_properties')
-      .select(`
-        *,
-        property_types:property_type_id (*)
-      `)
+      .select('*')
       .eq('player_id', currentPlayer.id)
       .single();
     
-    if (error && error.code !== 'PGRST116') throw error;
+    if (propertyError && propertyError.code !== 'PGRST116') throw propertyError;
     
-    playerProperty = data || null;
+    if (propertyData) {
+      // Now fetch the property type separately
+      const { data: typeData, error: typeError } = await sb
+        .from('property_types')
+        .select('*')
+        .eq('id', propertyData.property_type_id)
+        .single();
+      
+      if (typeError) throw typeError;
+      
+      // Combine into a single object
+      playerProperty = {
+        ...propertyData,
+        property_types: typeData
+      };
+    } else {
+      playerProperty = null;
+    }
+    
     renderPropertyOverview();
   } catch (error) {
     console.error('Error loading property:', error.message || error);
