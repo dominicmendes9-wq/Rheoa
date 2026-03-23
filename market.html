@@ -1074,6 +1074,9 @@ function openBuyModal(listingId) {
   selectedListing = activeListings.find(l => l.id === listingId);
   if (!selectedListing) return;
   
+  // Safely get seller name
+  const sellerName = selectedListing.seller?.username || 'Unknown';
+  
   const modal = document.getElementById('buyModal');
   const details = document.getElementById('modalItemDetails');
   const quantity = document.getElementById('modalQuantity');
@@ -1081,7 +1084,7 @@ function openBuyModal(listingId) {
   
   details.innerHTML = `
     <strong>${selectedListing.item.name}</strong><br>
-    Seller: ${selectedListing.seller.username}<br>
+    Seller: ${sellerName}<br>
     Price: ₹${selectedListing.price_per_unit} each<br>
     Available: ${selectedListing.quantity}
   `;
