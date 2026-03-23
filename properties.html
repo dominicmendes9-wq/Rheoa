@@ -747,9 +747,9 @@ async function loadPlayerProperty() {
     
     playerProperty = data || null;
     renderPropertyOverview();
-  } catch (error) {
-    console.error('Error loading property:', error);
-  }
+  catch (error) {
+  console.error('Error loading property:', error.message || error);
+}
 }
 
 // Load property types
