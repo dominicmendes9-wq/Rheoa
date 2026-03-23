@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Rheoa RPG - Prestige System</title>
+  <title>Rheoa RPG - Properties</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     * {
@@ -22,8 +22,7 @@
       text-align: center; 
       margin-bottom: 10px;
       font-size: clamp(1.5rem, 5vw, 2.5rem);
-      color: #9c27b0;
-      text-shadow: 2px 2px 0 #7b1fa2;
+      color: #8B4513;
     }
     
     .subtitle {
@@ -33,315 +32,442 @@
       font-style: italic;
     }
     
-    /* Prestige Banner */
-    .prestige-banner {
-      background: linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%);
-      color: white;
-      padding: 30px;
-      border-radius: 15px;
-      margin-bottom: 30px;
+    /* Player Stats Bar */
+    .player-stats {
       display: flex;
       justify-content: space-between;
       align-items: center;
+      background: linear-gradient(135deg, #8B4513 0%, #654321 100%);
+      color: white;
+      padding: 15px 25px;
+      border-radius: 10px;
+      margin-bottom: 30px;
       flex-wrap: wrap;
-      gap: 20px;
-      box-shadow: 0 10px 20px rgba(156, 39, 176, 0.3);
+      gap: 15px;
     }
     
-    .prestige-level {
+    .stat-group {
+      display: flex;
+      gap: 30px;
+      flex-wrap: wrap;
+    }
+    
+    .stat {
       text-align: center;
     }
     
-    .prestige-label {
-      font-size: 0.9rem;
+    .stat-label {
+      font-size: 0.8rem;
       opacity: 0.9;
     }
     
-    .prestige-value {
-      font-size: 3rem;
+    .stat-value {
+      font-size: 1.3rem;
       font-weight: bold;
-      line-height: 1;
     }
     
-    .prestige-points {
+    /* Property Tabs */
+    .property-tabs {
       display: flex;
-      gap: 30px;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 30px;
+      flex-wrap: wrap;
     }
     
-    .points-item {
-      text-align: center;
-    }
-    
-    .points-value {
-      font-size: 2rem;
+    .tab-btn {
+      padding: 12px 25px;
+      font-family: 'Courier New', monospace;
       font-weight: bold;
+      border: 2px solid black;
+      border-radius: 30px;
+      background: white;
+      cursor: pointer;
+      transition: all 0.2s;
     }
     
-    /* Stats Grid */
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 15px;
+    .tab-btn:hover {
+      background: #333;
+      color: white;
+    }
+    
+    .tab-btn.active {
+      background: #8B4513;
+      color: white;
+      border-color: #8B4513;
+    }
+    
+    /* Property Overview */
+    .property-overview {
+      background: white;
+      border: 3px solid #8B4513;
+      border-radius: 15px;
+      padding: 25px;
       margin-bottom: 30px;
     }
     
-    .stat-card {
-      background: white;
-      border: 2px solid #9c27b0;
+    .property-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+    
+    .property-name {
+      font-size: 2rem;
+      font-weight: bold;
+      color: #8B4513;
+    }
+    
+    .property-type {
+      background: #8B4513;
+      color: white;
+      padding: 5px 15px;
+      border-radius: 20px;
+      font-size: 1rem;
+    }
+    
+    .property-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin: 20px 0;
+    }
+    
+    .property-stat-card {
+      background: #f5f5f5;
       border-radius: 10px;
       padding: 15px;
       text-align: center;
     }
     
-    .stat-label {
-      color: #666;
+    .property-stat-label {
       font-size: 0.9rem;
+      color: #666;
     }
     
-    .stat-value {
+    .property-stat-value {
       font-size: 1.5rem;
       font-weight: bold;
-      color: #9c27b0;
+      color: #8B4513;
     }
     
-    .stat-note {
-      font-size: 0.8rem;
-      color: #4CAF50;
-      margin-top: 5px;
-    }
-    
-    /* Prestige Button */
-    .prestige-button-container {
-      text-align: center;
-      margin: 40px 0;
-    }
-    
-    .prestige-btn {
-      padding: 20px 60px;
-      font-size: 2rem;
-      font-family: 'Courier New', monospace;
-      font-weight: bold;
-      border: none;
-      border-radius: 50px;
-      background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
-      color: white;
-      cursor: pointer;
-      transition: all 0.3s;
-      box-shadow: 0 10px 20px rgba(244, 67, 54, 0.3);
-    }
-    
-    .prestige-btn:hover:not(:disabled) {
-      transform: translateY(-3px) scale(1.05);
-      box-shadow: 0 15px 30px rgba(244, 67, 54, 0.4);
-    }
-    
-    .prestige-btn:disabled {
-      background: #ccc;
-      cursor: not-allowed;
-      box-shadow: none;
-    }
-    
-    .prestige-btn.pulse {
-      animation: pulse 2s infinite;
-    }
-    
-    @keyframes pulse {
-      0% { transform: scale(1); }
-      50% { transform: scale(1.05); }
-      100% { transform: scale(1); }
-    }
-    
-    .warning-text {
-      color: #f44336;
-      font-weight: bold;
-      margin-top: 10px;
-    }
-    
-    /* Perks Section */
-    .perks-section {
-      margin: 40px 0;
-    }
-    
-    .section-title {
-      font-size: 1.8rem;
-      margin-bottom: 20px;
-      color: #333;
-      border-bottom: 3px solid #9c27b0;
-      padding-bottom: 10px;
-    }
-    
-    .perks-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 20px;
-    }
-    
-    .perk-card {
-      background: white;
-      border: 3px solid #9c27b0;
-      border-radius: 15px;
-      padding: 20px;
-      transition: all 0.2s;
-      position: relative;
+    .progress-bar {
+      width: 100%;
+      height: 10px;
+      background: #eee;
+      border-radius: 5px;
       overflow: hidden;
+      margin: 10px 0;
     }
     
-    .perk-card:hover {
+    .progress-fill {
+      height: 100%;
+      background: #8B4513;
+      transition: width 0.3s;
+    }
+    
+    /* Cash Storage Section */
+    .cash-storage {
+      display: flex;
+      gap: 20px;
+      margin: 20px 0;
+      flex-wrap: wrap;
+    }
+    
+    .storage-card {
+      flex: 1;
+      min-width: 250px;
+      background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+      color: white;
+      border-radius: 10px;
+      padding: 20px;
+      text-align: center;
+    }
+    
+    .storage-amount {
+      font-size: 2rem;
+      font-weight: bold;
+      margin: 10px 0;
+    }
+    
+    .storage-controls {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+    }
+    
+    .storage-input {
+      flex: 1;
+      padding: 8px;
+      font-family: 'Courier New', monospace;
+      border: none;
+      border-radius: 5px;
+    }
+    
+    .storage-btn {
+      padding: 8px 15px;
+      background: rgba(255,255,255,0.2);
+      color: white;
+      border: 1px solid white;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    
+    .storage-btn:hover {
+      background: rgba(255,255,255,0.3);
+    }
+    
+    /* Upgrades Grid */
+    .upgrades-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      margin: 20px 0;
+    }
+    
+    .upgrade-card {
+      background: white;
+      border: 2px solid #8B4513;
+      border-radius: 10px;
+      padding: 20px;
+      transition: transform 0.2s;
+    }
+    
+    .upgrade-card:hover {
       transform: translateY(-3px);
-      box-shadow: 0 10px 20px rgba(156, 39, 176, 0.2);
+      box-shadow: 0 10px 20px rgba(139, 69, 19, 0.2);
     }
     
-    .perk-card.owned {
+    .upgrade-card.current {
       border-color: #4CAF50;
       background: #f0fff0;
     }
     
-    .perk-card.maxed {
-      border-color: #ff9800;
-      background: #fff3e0;
+    .upgrade-card.maxed {
+      border-color: #f44336;
+      background: #ffebee;
     }
     
-    .perk-icon {
-      font-size: 3rem;
-      text-align: center;
-      margin-bottom: 10px;
-    }
-    
-    .perk-name {
+    .upgrade-title {
       font-size: 1.3rem;
       font-weight: bold;
-      text-align: center;
+      color: #8B4513;
       margin-bottom: 10px;
     }
     
-    .perk-description {
-      color: #666;
-      text-align: center;
-      margin-bottom: 15px;
-      min-height: 60px;
-    }
-    
-    .perk-level {
+    .upgrade-level {
       display: flex;
       justify-content: space-between;
-      align-items: center;
       margin: 15px 0;
     }
     
-    .level-text {
-      font-weight: bold;
-    }
-    
     .level-badge {
-      background: #9c27b0;
+      background: #8B4513;
       color: white;
       padding: 3px 10px;
       border-radius: 15px;
       font-size: 0.9rem;
     }
     
-    .level-badge.owned {
-      background: #4CAF50;
-    }
-    
-    .level-badge.maxed {
-      background: #ff9800;
-    }
-    
-    .perk-value {
-      font-size: 1.2rem;
-      font-weight: bold;
+    .upgrade-benefit {
       color: #4CAF50;
-      text-align: center;
+      font-weight: bold;
       margin: 10px 0;
     }
     
-    .perk-cost {
-      text-align: center;
+    .upgrade-cost {
       color: #f44336;
       font-weight: bold;
       margin: 10px 0;
     }
     
-    .purchase-btn {
+    .upgrade-btn {
       width: 100%;
-      padding: 12px;
-      font-family: 'Courier New', monospace;
-      font-weight: bold;
-      border: none;
-      border-radius: 8px;
+      padding: 10px;
       background: #4CAF50;
       color: white;
+      border: none;
+      border-radius: 5px;
       cursor: pointer;
-      transition: all 0.2s;
+      font-weight: bold;
     }
     
-    .purchase-btn:hover:not(:disabled) {
+    .upgrade-btn:hover:not(:disabled) {
       background: #45a049;
     }
     
-    .purchase-btn:disabled {
+    .upgrade-btn:disabled {
       background: #ccc;
       cursor: not-allowed;
     }
     
-    /* History Section */
-    .history-section {
-      background: white;
-      border: 3px solid black;
-      border-radius: 15px;
-      overflow: hidden;
-      margin-top: 30px;
-    }
-    
-    .history-header {
-      background: #333;
-      color: white;
-      padding: 15px;
-      font-weight: bold;
-      font-size: 1.2rem;
-    }
-    
-    .history-list {
-      max-height: 300px;
-      overflow-y: auto;
-    }
-    
-    .history-item {
+    /* Features Grid */
+    .features-grid {
       display: grid;
-      grid-template-columns: 120px 1fr 120px;
-      padding: 12px 15px;
-      border-bottom: 1px solid #eee;
-      align-items: center;
-    }
-    
-    .history-date {
-      color: #666;
-    }
-    
-    .history-detail {
-      text-align: center;
-    }
-    
-    .history-points {
-      text-align: right;
-      font-weight: bold;
-      color: #9c27b0;
-    }
-    
-    /* Leaderboard Preview */
-    .leaderboard-preview {
-      background: #f5f5f5;
-      border: 2px solid #9c27b0;
-      border-radius: 10px;
-      padding: 15px;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
       margin: 20px 0;
     }
     
-    .preview-title {
-      font-weight: bold;
+    .feature-card {
+      background: white;
+      border: 2px solid #8B4513;
+      border-radius: 10px;
+      padding: 20px;
+      transition: transform 0.2s;
+    }
+    
+    .feature-card.owned {
+      border-color: #4CAF50;
+      background: #f0fff0;
+    }
+    
+    .feature-icon {
+      font-size: 2.5rem;
+      text-align: center;
       margin-bottom: 10px;
-      color: #9c27b0;
+    }
+    
+    .feature-name {
+      font-size: 1.2rem;
+      font-weight: bold;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    
+    .feature-description {
+      color: #666;
+      font-size: 0.9rem;
+      margin-bottom: 15px;
+      text-align: center;
+    }
+    
+    .feature-benefit {
+      background: #e8f5e8;
+      padding: 10px;
+      border-radius: 5px;
+      margin: 10px 0;
+      text-align: center;
+      color: #4CAF50;
+      font-weight: bold;
+    }
+    
+    .feature-cost {
+      color: #f44336;
+      font-weight: bold;
+      text-align: center;
+      margin: 10px 0;
+    }
+    
+    .feature-btn {
+      width: 100%;
+      padding: 10px;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    
+    .feature-btn.owned {
+      background: #9c27b0;
+    }
+    
+    .feature-btn:hover:not(:disabled) {
+      background: #45a049;
+    }
+    
+    .feature-btn.owned:hover {
+      background: #7b1fa2;
+    }
+    
+    /* Robbery Logs */
+    .logs-section {
+      background: white;
+      border: 3px solid #8B4513;
+      border-radius: 15px;
+      padding: 20px;
+      margin-top: 30px;
+    }
+    
+    .log-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px;
+      border-bottom: 1px solid #eee;
+    }
+    
+    .log-success { color: #4CAF50; }
+    .log-failed { color: #f44336; }
+    
+    /* Market Listings */
+    .market-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      margin: 20px 0;
+    }
+    
+    .listing-card {
+      background: white;
+      border: 2px solid #8B4513;
+      border-radius: 10px;
+      padding: 20px;
+    }
+    
+    .listing-price {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #4CAF50;
+      margin: 10px 0;
+    }
+    
+    /* Shop Grid */
+    .shop-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      margin: 20px 0;
+    }
+    
+    .shop-card {
+      background: white;
+      border: 2px solid #8B4513;
+      border-radius: 10px;
+      padding: 20px;
+      text-align: center;
+    }
+    
+    .shop-price {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #4CAF50;
+      margin: 10px 0;
+    }
+    
+    .shop-btn {
+      width: 100%;
+      padding: 10px;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    
+    .shop-btn:hover:not(:disabled) {
+      background: #45a049;
+    }
+    
+    .shop-btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
     }
     
     /* Back Button */
@@ -386,78 +512,11 @@
     .toast.success { background: #4CAF50; }
     .toast.error { background: #f44336; }
     .toast.info { background: #2196F3; }
-    .toast.prestige { background: #9c27b0; }
+    .toast.warning { background: #ff9800; }
     
     @keyframes slideIn {
       from { transform: translateX(100%); opacity: 0; }
       to { transform: translateX(0); opacity: 1; }
-    }
-    
-    /* Modal */
-    .modal {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0,0,0,0.5);
-      z-index: 1000;
-    }
-    
-    .modal-content {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: white;
-      padding: 30px;
-      border-radius: 15px;
-      border: 3px solid #9c27b0;
-      max-width: 500px;
-      width: 90%;
-    }
-    
-    .modal-title {
-      font-size: 1.8rem;
-      font-weight: bold;
-      color: #f44336;
-      margin-bottom: 20px;
-      text-align: center;
-    }
-    
-    .modal-warning {
-      background: #ffebee;
-      border: 2px solid #f44336;
-      border-radius: 10px;
-      padding: 15px;
-      margin: 20px 0;
-    }
-    
-    .modal-actions {
-      display: flex;
-      gap: 15px;
-      margin-top: 30px;
-    }
-    
-    .modal-btn {
-      flex: 1;
-      padding: 12px;
-      font-family: 'Courier New', monospace;
-      font-weight: bold;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-    }
-    
-    .modal-btn.confirm {
-      background: #f44336;
-      color: white;
-    }
-    
-    .modal-btn.cancel {
-      background: #666;
-      color: white;
     }
     
     .spinner {
@@ -465,7 +524,7 @@
       width: 30px;
       height: 30px;
       border: 3px solid #f3f3f3;
-      border-top: 3px solid #9c27b0;
+      border-top: 3px solid #8B4513;
       border-radius: 50%;
       animation: spin 1s linear infinite;
     }
@@ -475,24 +534,33 @@
       100% { transform: rotate(360deg); }
     }
     
+    .empty-message {
+      text-align: center;
+      padding: 40px;
+      color: #666;
+    }
+    
     @media (max-width: 600px) {
-      .prestige-banner {
+      .player-stats {
         flex-direction: column;
         text-align: center;
       }
       
-      .prestige-points {
+      .property-tabs {
         flex-direction: column;
-        gap: 10px;
       }
       
-      .history-item {
-        grid-template-columns: 80px 1fr 80px;
-        font-size: 0.9rem;
+      .tab-btn {
+        width: 100%;
       }
       
-      .perks-grid {
-        grid-template-columns: 1fr;
+      .property-header {
+        flex-direction: column;
+        text-align: center;
+      }
+      
+      .cash-storage {
+        flex-direction: column;
       }
     }
   </style>
@@ -501,109 +569,84 @@
 
 <div class="toast-container" id="toast-container"></div>
 
-<h1>🔄 Prestige System</h1>
-<div class="subtitle">Reset your progress for永久 powerful bonuses</div>
+<h1>🏰 Player Properties</h1>
+<div class="subtitle">Own, upgrade, and protect your criminal empire</div>
 
-<!-- Prestige Banner -->
-<div class="prestige-banner" id="prestigeBanner">
-  <div class="prestige-level">
-    <div class="prestige-label">Prestige Level</div>
-    <div class="prestige-value" id="prestigeLevel">0</div>
-  </div>
-  <div class="prestige-points">
-    <div class="points-item">
-      <div class="prestige-label">Total Points</div>
-      <div class="points-value" id="totalPoints">0</div>
+<!-- Player Stats -->
+<div class="player-stats" id="playerStats" style="display: none;">
+  <div class="stat-group">
+    <div class="stat">
+      <div class="stat-label">💰 Cash</div>
+      <div class="stat-value" id="playerCash">₹0</div>
     </div>
-    <div class="points-item">
-      <div class="prestige-label">Available</div>
-      <div class="points-value" id="availablePoints">0</div>
+    <div class="stat">
+      <div class="stat-label">⭐ Level</div>
+      <div class="stat-value" id="playerLevel">1</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">⚡ Energy</div>
+      <div class="stat-value" id="playerEnergy">100</div>
     </div>
   </div>
 </div>
 
-<!-- Current Stats -->
-<div class="stats-grid" id="statsGrid">
-  <div class="stat-card">
-    <div class="stat-label">Current Level</div>
-    <div class="stat-value" id="currentLevel">0</div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-label">Total XP</div>
-    <div class="stat-value" id="totalXP">0</div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-label">Total Cash</div>
-    <div class="stat-value" id="totalCash">₹0</div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-label">Crimes</div>
-    <div class="stat-value" id="totalCrimes">0</div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-label">Jobs</div>
-    <div class="stat-value" id="totalJobs">0</div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-label">Potential Points</div>
-    <div class="stat-value" id="potentialPoints">0</div>
-    <div class="stat-note">if you prestige now</div>
-  </div>
+<!-- Property Tabs -->
+<div class="property-tabs">
+  <button class="tab-btn active" onclick="switchTab('overview')">🏠 Overview</button>
+  <button class="tab-btn" onclick="switchTab('upgrades')">⬆️ Upgrades</button>
+  <button class="tab-btn" onclick="switchTab('features')">✨ Features</button>
+  <button class="tab-btn" onclick="switchTab('security')">🔒 Security</button>
+  <button class="tab-btn" onclick="switchTab('market')">🏪 Market</button>
+  <button class="tab-btn" onclick="switchTab('shop')">🛒 Buy Property</button>
 </div>
 
-<!-- Prestige Button -->
-<div class="prestige-button-container">
-  <button class="prestige-btn" id="prestigeBtn" onclick="showPrestigeModal()" disabled>
-    🔄 PRESTIGE
-  </button>
-  <div id="prestigeWarning" class="warning-text"></div>
-</div>
-
-<!-- Active Bonuses Preview -->
-<div class="leaderboard-preview" id="bonusPreview">
-  <div class="preview-title">✨ Your Active Bonuses</div>
-  <div id="bonuses" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;">
-    Loading bonuses...
-  </div>
-</div>
-
-<!-- Perks Section -->
-<div class="perks-section">
-  <h2 class="section-title">💪 Prestige Perks</h2>
-  <div class="perks-grid" id="perksGrid">
-    <div style="text-align: center; grid-column: 1/-1; padding: 40px;">
+<!-- Overview Tab -->
+<div id="overview" class="tab-content" style="display: block;">
+  <div id="propertyOverview" class="property-overview">
+    <div style="text-align: center; padding: 40px;">
       <div class="spinner"></div>
-      <p>Loading perks...</p>
+      <p>Loading property data...</p>
     </div>
   </div>
 </div>
 
-<!-- History Section -->
-<div class="history-section">
-  <div class="history-header">📜 Prestige History</div>
-  <div class="history-list" id="historyList">
-    <div style="text-align: center; padding: 40px;">No prestige history yet</div>
+<!-- Upgrades Tab -->
+<div id="upgrades" class="tab-content" style="display: none;">
+  <div class="property-overview">
+    <h2 style="margin-bottom: 20px;">⬆️ Property Upgrades</h2>
+    <div class="upgrades-grid" id="upgradesGrid"></div>
   </div>
 </div>
 
-<!-- Prestige Confirmation Modal -->
-<div id="prestigeModal" class="modal">
-  <div class="modal-content">
-    <div class="modal-title">⚠️ WARNING ⚠️</div>
-    <div class="modal-warning">
-      <p style="font-weight: bold; margin-bottom: 10px;">You will lose:</p>
-      <ul style="margin-left: 20px; line-height: 1.8;">
-        <li>All levels and XP</li>
-        <li>All cash</li>
-        <li>All items in inventory</li>
-        <li>Crime and job history</li>
-      </ul>
-    </div>
-    <p style="margin: 20px 0;">But you will gain <span id="modalPoints" style="font-weight: bold; color: #9c27b0;">0</span> Prestige Points!</p>
-    <div class="modal-actions">
-      <button class="modal-btn confirm" onclick="performPrestige()">Yes, Prestige!</button>
-      <button class="modal-btn cancel" onclick="closeModal()">Cancel</button>
-    </div>
+<!-- Features Tab -->
+<div id="features" class="tab-content" style="display: none;">
+  <div class="property-overview">
+    <h2 style="margin-bottom: 20px;">✨ Special Features</h2>
+    <div class="features-grid" id="featuresGrid"></div>
+  </div>
+</div>
+
+<!-- Security Tab -->
+<div id="security" class="tab-content" style="display: none;">
+  <div class="property-overview">
+    <h2 style="margin-bottom: 20px;">🔒 Security & Robbery Logs</h2>
+    <div id="securityContent"></div>
+  </div>
+</div>
+
+<!-- Market Tab -->
+<div id="market" class="tab-content" style="display: none;">
+  <div class="property-overview">
+    <h2 style="margin-bottom: 20px;">🏪 Property Market</h2>
+    <div class="market-grid" id="marketGrid"></div>
+  </div>
+</div>
+
+<!-- Shop Tab -->
+<div id="shop" class="tab-content" style="display: none;">
+  <div class="property-overview">
+    <h2 style="margin-bottom: 20px;">🛒 Buy Property</h2>
+    <div class="shop-grid" id="shopGrid"></div>
   </div>
 </div>
 
@@ -617,9 +660,13 @@ const sb = window.supabase.createClient(
 );
 
 let currentPlayer = null;
-let prestigeInfo = null;
-let perks = [];
-let playerPerks = [];
+let playerProperty = null;
+let propertyTypes = [];
+let propertyUpgrades = [];
+let propertyFeatures = [];
+let ownedFeatures = [];
+let robberyLogs = [];
+let propertyListings = [];
 
 // Toast notification
 function showToast(message, type = 'info', duration = 3000) {
@@ -640,265 +687,611 @@ function showToast(message, type = 'info', duration = 3000) {
   }, duration);
 }
 
-// Load prestige info
-async function loadPrestigeInfo() {
+// Load player data
+async function loadPlayerData() {
   try {
     const { data: { user } } = await sb.auth.getUser();
-    if (!user) return window.location.href = "index.html";
-    
-    const { data, error } = await sb.rpc('get_prestige_info');
-    
-    if (error) throw error;
-    
-    if (data.success) {
-      prestigeInfo = data;
-      updateUI();
-      await loadPerks();
-      await loadBonuses();
+    if (!user) {
+      window.location.href = "index.html";
+      return;
     }
-  } catch (error) {
-    console.error('Error loading prestige info:', error);
-  }
-}
-
-// Load perks
-async function loadPerks() {
-  try {
-    // Get all perks
-    const { data: allPerks } = await sb
-      .from('prestige_perks')
+    
+    const { data: player, error } = await sb
+      .from('players')
       .select('*')
-      .order('cost_per_level');
-    
-    perks = allPerks || [];
-    
-    // Get player's purchased perks
-    const { data: purchased } = await sb
-      .from('player_prestige_perks')
-      .select('*')
-      .eq('player_id', prestigeInfo.current_prestige ? 'player_id' : '');
-    
-    playerPerks = purchased || [];
-    
-    renderPerks();
-  } catch (error) {
-    console.error('Error loading perks:', error);
-  }
-}
-
-// Load active bonuses
-async function loadBonuses() {
-  try {
-    const { data, error } = await sb.rpc('get_player_bonuses', {
-      p_player_id: prestigeInfo.current_prestige ? 'player_id' : ''
-    });
+      .eq('auth_id', user.id)
+      .single();
     
     if (error) throw error;
     
-    const bonuses = document.getElementById('bonuses');
-    bonuses.innerHTML = '';
-    
-    const bonusMap = {
-      xp_boost: { icon: '⭐', name: 'XP Boost' },
-      cash_boost: { icon: '💰', name: 'Cash Boost' },
-      energy_regen: { icon: '⚡', name: 'Energy Regen' },
-      crime_boost: { icon: '🔫', name: 'Crime Boost' },
-      pvp_boost: { icon: '⚔️', name: 'PvP Boost' },
-      market_fee_reduction: { icon: '📈', name: 'Market Fee' },
-      starting_cash: { icon: '💎', name: 'Starting Cash' },
-      item_find_chance: { icon: '🍀', name: 'Item Find' },
-      streak_bonus: { icon: '🔥', name: 'Streak Bonus' },
-      prestige_master: { icon: '👑', name: 'Prestige Master' }
-    };
-    
-    for (const [key, value] of Object.entries(data)) {
-      if (value > 0) {
-        const info = bonusMap[key] || { icon: '✨', name: key };
-        bonuses.innerHTML += `
-          <div style="background: #f0f0f0; padding: 8px; border-radius: 5px; text-align: center;">
-            <span style="font-size: 1.2rem;">${info.icon}</span>
-            <div><strong>${info.name}</strong></div>
-            <div>+${value}%</div>
-          </div>
-        `;
+    if (player) {
+      currentPlayer = player;
+      updatePlayerStats();
+      await loadPlayerProperty();
+      await loadPropertyTypes();
+      await loadPropertyFeatures();
+      
+      if (playerProperty) {
+        await loadPropertyUpgrades();
+        await loadOwnedFeatures();
+        await loadRobberyLogs();
       }
     }
-    
-    if (bonuses.innerHTML === '') {
-      bonuses.innerHTML = '<div style="grid-column: 1/-1; text-align: center;">No active bonuses</div>';
-    }
   } catch (error) {
-    console.error('Error loading bonuses:', error);
+    console.error('Error loading player:', error);
+    showToast('Error loading data', 'error');
   }
 }
 
-// Update UI
-function updateUI() {
-  if (!prestigeInfo) return;
-  
-  document.getElementById('prestigeLevel').textContent = prestigeInfo.current_prestige;
-  document.getElementById('totalPoints').textContent = prestigeInfo.total_points;
-  document.getElementById('availablePoints').textContent = prestigeInfo.unspent_points;
-  
-  document.getElementById('currentLevel').textContent = prestigeInfo.current_stats.level;
-  document.getElementById('totalXP').textContent = prestigeInfo.current_stats.xp.toLocaleString();
-  document.getElementById('totalCash').textContent = `₹${prestigeInfo.current_stats.cash.toLocaleString()}`;
-  document.getElementById('totalCrimes').textContent = prestigeInfo.current_stats.crimes;
-  document.getElementById('totalJobs').textContent = prestigeInfo.current_stats.jobs;
-  document.getElementById('potentialPoints').textContent = prestigeInfo.potential_points;
-  
-  const prestigeBtn = document.getElementById('prestigeBtn');
-  const warning = document.getElementById('prestigeWarning');
-  
-  if (prestigeInfo.can_prestige) {
-    prestigeBtn.disabled = false;
-    prestigeBtn.classList.add('pulse');
-    warning.textContent = '';
-  } else {
-    prestigeBtn.disabled = true;
-    prestigeBtn.classList.remove('pulse');
-    warning.textContent = 'Need to reach level 10 to prestige!';
-  }
-  
-  renderHistory();
+// Update player stats
+function updatePlayerStats() {
+  document.getElementById('playerStats').style.display = 'flex';
+  document.getElementById('playerCash').textContent = `₹${currentPlayer.cash.toLocaleString()}`;
+  document.getElementById('playerLevel').textContent = currentPlayer.level;
+  document.getElementById('playerEnergy').textContent = currentPlayer.energy;
 }
 
-// Render perks
-function renderPerks() {
-  const grid = document.getElementById('perksGrid');
-  
-  if (!perks.length) return;
-  
-  grid.innerHTML = perks.map(perk => {
-    const playerPerk = playerPerks.find(p => p.perk_id === perk.id);
-    const currentLevel = playerPerk ? playerPerk.current_level : 0;
-    const isOwned = currentLevel > 0;
-    const isMaxed = currentLevel >= perk.max_level;
-    const nextLevelCost = perk.cost_per_level * (currentLevel + 1);
-    const canAfford = prestigeInfo.unspent_points >= nextLevelCost;
-    const currentValue = perk.perk_value * currentLevel;
-    const nextValue = perk.perk_value * (currentLevel + 1);
+// Load player property
+async function loadPlayerProperty() {
+  try {
+    // First get the player property without nested join
+    const { data: propertyData, error: propertyError } = await sb
+      .from('player_properties')
+      .select('*')
+      .eq('player_id', currentPlayer.id)
+      .single();
     
-    let statusClass = '';
-    if (isMaxed) statusClass = 'maxed';
-    else if (isOwned) statusClass = 'owned';
+    if (propertyError && propertyError.code !== 'PGRST116') throw propertyError;
     
-    return `
-      <div class="perk-card ${statusClass}">
-        <div class="perk-icon">${perk.icon || '✨'}</div>
-        <div class="perk-name">${perk.name}</div>
-        <div class="perk-description">${perk.description}</div>
-        <div class="perk-level">
-          <span class="level-text">Level</span>
-          <span class="level-badge ${statusClass}">${currentLevel}/${perk.max_level}</span>
-        </div>
-        <div class="perk-value">
-          Current: +${currentValue}%
-          ${!isMaxed ? `<br>Next: +${nextValue}%` : ''}
-        </div>
-        ${!isMaxed ? `
-          <div class="perk-cost">Cost: ${nextLevelCost} points</div>
-          <button class="purchase-btn" 
-                  onclick="purchasePerk('${perk.id}')"
-                  ${!canAfford ? 'disabled' : ''}>
-            ${canAfford ? 'Upgrade' : 'Not enough points'}
-          </button>
-        ` : '<div style="text-align: center; color: #ff9800;">MAXED</div>'}
+    if (propertyData) {
+      // Now fetch the property type separately
+      const { data: typeData, error: typeError } = await sb
+        .from('property_types')
+        .select('*')
+        .eq('id', propertyData.property_type_id)
+        .single();
+      
+      if (typeError) throw typeError;
+      
+      // Combine into a single object
+      playerProperty = {
+        ...propertyData,
+        property_types: typeData
+      };
+    } else {
+      playerProperty = null;
+    }
+    
+    renderPropertyOverview();
+  } catch (error) {
+    console.error('Error loading property:', error.message || error);
+    showToast('Error loading property data', 'error');
+  }
+}
+
+// Load property types
+async function loadPropertyTypes() {
+  try {
+    const { data, error } = await sb
+      .from('property_types')
+      .select('*')
+      .order('base_price');
+    
+    if (error) throw error;
+    
+    propertyTypes = data || [];
+    renderShop();
+  } catch (error) {
+    console.error('Error loading property types:', error);
+  }
+}
+
+// Load property upgrades
+async function loadPropertyUpgrades() {
+  if (!playerProperty) return;
+  
+  try {
+    const { data, error } = await sb
+      .from('property_upgrades')
+      .select('*')
+      .eq('property_type_id', playerProperty.property_type_id)
+      .order('upgrade_level');
+    
+    if (error) throw error;
+    
+    propertyUpgrades = data || [];
+    renderUpgrades();
+  } catch (error) {
+    console.error('Error loading upgrades:', error);
+  }
+}
+
+// Load property features
+async function loadPropertyFeatures() {
+  try {
+    const { data, error } = await sb
+      .from('property_features')
+      .select('*')
+      .order('cost');
+    
+    if (error) throw error;
+    
+    propertyFeatures = data || [];
+  } catch (error) {
+    console.error('Error loading features:', error);
+  }
+}
+
+// Load owned features
+async function loadOwnedFeatures() {
+  if (!playerProperty) return;
+  
+  try {
+    const { data, error } = await sb
+      .from('player_property_features')
+      .select('feature_id')
+      .eq('property_id', playerProperty.id);
+    
+    if (error) throw error;
+    
+    ownedFeatures = data.map(f => f.feature_id) || [];
+    renderFeatures();
+  } catch (error) {
+    console.error('Error loading owned features:', error);
+  }
+}
+
+// Load robbery logs
+async function loadRobberyLogs() {
+  if (!playerProperty) return;
+  
+  try {
+    const { data, error } = await sb
+      .from('property_robberies')
+      .select(`
+        *,
+        robber:players!property_robberies_robber_id_fkey (username)
+      `)
+      .eq('target_player_id', currentPlayer.id)
+      .order('created_at', { ascending: false })
+      .limit(20);
+    
+    if (error) throw error;
+    
+    robberyLogs = data || [];
+    renderSecurity();
+  } catch (error) {
+    console.error('Error loading robbery logs:', error);
+  }
+}
+
+// Render property overview
+function renderPropertyOverview() {
+  const container = document.getElementById('propertyOverview');
+  
+  if (!playerProperty) {
+    container.innerHTML = `
+      <div class="empty-message">
+        <p>You don't own a property yet!</p>
+        <p>Go to the Shop tab to buy your first property.</p>
       </div>
     `;
-  }).join('');
-}
-
-// Render history
-function renderHistory() {
-  const list = document.getElementById('historyList');
-  
-  if (!prestigeInfo.history || prestigeInfo.history.length === 0) {
-    list.innerHTML = '<div style="text-align: center; padding: 40px;">No prestige history yet</div>';
     return;
   }
   
-  list.innerHTML = prestigeInfo.history.map(item => {
-    const date = new Date(item.created_at).toLocaleDateString();
+  const type = playerProperty.property_types;
+  
+  if (!type) {
+    console.error('Property type missing for property:', playerProperty);
+    container.innerHTML = `
+      <div class="empty-message">
+        <p>Property data is corrupted. Please contact support.</p>
+        <p>Property ID: ${playerProperty.id}</p>
+      </div>
+    `;
+    return;
+  }
+  
+  const securityPercent = (playerProperty.security_level / 10) * 100;
+  const storagePercent = (playerProperty.storage_capacity / 500) * 100;
+  
+  container.innerHTML = `
+    <div class="property-header">
+      <div>
+        <span class="property-name">${playerProperty.property_name || type.name}</span>
+      </div>
+      <span class="property-type">${type.property_class}</span>
+    </div>
+    
+    <div class="property-stats-grid">
+      <div class="property-stat-card">
+        <div class="property-stat-label">Level</div>
+        <div class="property-stat-value">${playerProperty.level}/${type.max_level}</div>
+      </div>
+      <div class="property-stat-card">
+        <div class="property-stat-label">Security</div>
+        <div class="property-stat-value">${playerProperty.security_level}/10</div>
+        <div class="progress-bar"><div class="progress-fill" style="width: ${securityPercent}%"></div></div>
+      </div>
+      <div class="property-stat-card">
+        <div class="property-stat-label">Storage</div>
+        <div class="property-stat-value">${playerProperty.storage_capacity} items</div>
+        <div class="progress-bar"><div class="progress-fill" style="width: ${storagePercent}%"></div></div>
+      </div>
+      <div class="property-stat-card">
+        <div class="property-stat-label">Rooms</div>
+        <div class="property-stat-value">${playerProperty.rooms}</div>
+      </div>
+    </div>
+    
+    <div class="cash-storage">
+      <div class="storage-card">
+        <div>💵 Cash in Property</div>
+        <div class="storage-amount">₹${playerProperty.cash_stored.toLocaleString()}</div>
+        <div class="storage-controls">
+          <input type="number" id="depositAmount" class="storage-input" placeholder="Amount" min="1" value="1000">
+          <button class="storage-btn" onclick="depositCash()">Deposit</button>
+        </div>
+        <div class="storage-controls">
+          <input type="number" id="withdrawAmount" class="storage-input" placeholder="Amount" min="1" value="1000">
+          <button class="storage-btn" onclick="withdrawCash()">Withdraw</button>
+        </div>
+      </div>
+      
+      <div class="storage-card" style="background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);">
+        <div>⚡ Robbery Info</div>
+        <div style="margin: 10px 0;">
+          Last robbed: ${playerProperty.last_robbed_at ? new Date(playerProperty.last_robbed_at).toLocaleString() : 'Never'}
+        </div>
+        <div>Security Level: ${playerProperty.security_level}/10</div>
+        <div>Protection until: ${playerProperty.robbery_protection_until ? new Date(playerProperty.robbery_protection_until).toLocaleString() : 'None'}</div>
+      </div>
+    </div>
+  `;
+}
+
+// Render upgrades
+function renderUpgrades() {
+  const container = document.getElementById('upgradesGrid');
+  
+  if (!playerProperty || !propertyUpgrades.length) {
+    container.innerHTML = '<div class="empty-message">No upgrades available</div>';
+    return;
+  }
+  
+  const type = playerProperty.property_types;
+  
+  if (!type) {
+    container.innerHTML = '<div class="empty-message">Property type data missing</div>';
+    return;
+  }
+  
+  const currentSecurity = playerProperty.security_level;
+  const currentStorage = playerProperty.storage_capacity;
+  const currentRooms = playerProperty.rooms;
+  
+  const securityUpgrades = propertyUpgrades.filter(u => u.upgrade_type === 'security');
+  const storageUpgrades = propertyUpgrades.filter(u => u.upgrade_type === 'storage');
+  const roomsUpgrades = propertyUpgrades.filter(u => u.upgrade_type === 'rooms');
+  
+  container.innerHTML = '';
+  
+  // Security upgrades
+  if (securityUpgrades.length) {
+    const nextLevel = currentSecurity - type.base_security + 1;
+    const currentUpgrade = securityUpgrades.find(u => u.upgrade_level === nextLevel);
+    const isMaxed = nextLevel > type.max_level;
+    
+    container.innerHTML += `
+      <div class="upgrade-card ${isMaxed ? 'maxed' : ''}">
+        <div class="upgrade-title">🔒 Security System</div>
+        <div class="upgrade-level">
+          <span>Current: ${currentSecurity}</span>
+          <span class="level-badge">Max: 10</span>
+        </div>
+        ${!isMaxed && currentUpgrade ? `
+          <div class="upgrade-benefit">Next: +1 Security (Level ${currentSecurity + 1})</div>
+          <div class="upgrade-cost">Cost: ₹${currentUpgrade.cost.toLocaleString()}</div>
+          <button class="upgrade-btn" onclick="upgradeProperty('security')" 
+                  ${currentPlayer.cash < currentUpgrade.cost ? 'disabled' : ''}>
+            Upgrade Security
+          </button>
+        ` : '<div class="upgrade-benefit">Maximum Level Reached</div>'}
+      </div>
+    `;
+  }
+  
+  // Storage upgrades
+  if (storageUpgrades.length) {
+    const nextLevel = (currentStorage - type.base_capacity) / 50 + 1;
+    const currentUpgrade = storageUpgrades.find(u => u.upgrade_level === nextLevel);
+    const isMaxed = nextLevel > type.max_level;
+    
+    container.innerHTML += `
+      <div class="upgrade-card ${isMaxed ? 'maxed' : ''}">
+        <div class="upgrade-title">📦 Storage Expansion</div>
+        <div class="upgrade-level">
+          <span>Current: ${currentStorage}</span>
+          <span class="level-badge">Max: ${type.base_capacity + (type.max_level-1)*50}</span>
+        </div>
+        ${!isMaxed && currentUpgrade ? `
+          <div class="upgrade-benefit">Next: +${currentUpgrade.benefit_value} Storage</div>
+          <div class="upgrade-cost">Cost: ₹${currentUpgrade.cost.toLocaleString()}</div>
+          <button class="upgrade-btn" onclick="upgradeProperty('storage')"
+                  ${currentPlayer.cash < currentUpgrade.cost ? 'disabled' : ''}>
+            Upgrade Storage
+          </button>
+        ` : '<div class="upgrade-benefit">Maximum Level Reached</div>'}
+      </div>
+    `;
+  }
+  
+  // Rooms upgrades
+  if (roomsUpgrades.length) {
+    const nextLevel = currentRooms - type.base_rooms + 1;
+    const currentUpgrade = roomsUpgrades.find(u => u.upgrade_level === nextLevel);
+    const isMaxed = nextLevel > type.max_level;
+    
+    container.innerHTML += `
+      <div class="upgrade-card ${isMaxed ? 'maxed' : ''}">
+        <div class="upgrade-title">🏠 Extra Rooms</div>
+        <div class="upgrade-level">
+          <span>Current: ${currentRooms}</span>
+          <span class="level-badge">Max: ${type.base_rooms + (type.max_level-1)}</span>
+        </div>
+        ${!isMaxed && currentUpgrade ? `
+          <div class="upgrade-benefit">Next: +1 Room</div>
+          <div class="upgrade-cost">Cost: ₹${currentUpgrade.cost.toLocaleString()}</div>
+          <button class="upgrade-btn" onclick="upgradeProperty('rooms')"
+                  ${currentPlayer.cash < currentUpgrade.cost ? 'disabled' : ''}>
+            Add Room
+          </button>
+        ` : '<div class="upgrade-benefit">Maximum Level Reached</div>'}
+      </div>
+    `;
+  }
+}
+
+// Render features
+function renderFeatures() {
+  const container = document.getElementById('featuresGrid');
+  
+  if (!propertyFeatures.length) {
+    container.innerHTML = '<div class="empty-message">No features available</div>';
+    return;
+  }
+  
+  container.innerHTML = propertyFeatures.map(feature => {
+    const isOwned = ownedFeatures.includes(feature.id);
+    const canAfford = currentPlayer.cash >= feature.cost;
+    const meetsLevel = currentPlayer.level >= feature.required_level;
     
     return `
-      <div class="history-item">
-        <div class="history-date">${date}</div>
-        <div class="history-detail">
-          Prestige ${item.prestige_level} <br>
-          <small>from level ${item.old_level}</small>
-        </div>
-        <div class="history-points">+${item.points_earned} pts</div>
+      <div class="feature-card ${isOwned ? 'owned' : ''}">
+        <div class="feature-icon">${feature.icon || '✨'}</div>
+        <div class="feature-name">${feature.name}</div>
+        <div class="feature-description">${feature.description}</div>
+        <div class="feature-benefit">${feature.benefit}</div>
+        <div class="feature-cost">Cost: ₹${feature.cost.toLocaleString()}</div>
+        <div>Required Level: ${feature.required_level}</div>
+        <button class="feature-btn ${isOwned ? 'owned' : ''}" 
+                onclick="${isOwned ? '#' : `purchaseFeature('${feature.id}')`}"
+                ${isOwned ? 'disabled' : (!meetsLevel || !canAfford || !playerProperty ? 'disabled' : '')}>
+          ${isOwned ? '✓ Owned' : 'Purchase'}
+        </button>
       </div>
     `;
   }).join('');
 }
 
-// Show prestige confirmation modal
-function showPrestigeModal() {
-  if (!prestigeInfo || !prestigeInfo.can_prestige) return;
+// Render security
+function renderSecurity() {
+  const container = document.getElementById('securityContent');
   
-  document.getElementById('modalPoints').textContent = prestigeInfo.potential_points;
-  document.getElementById('prestigeModal').style.display = 'block';
-}
-
-// Close modal
-function closeModal() {
-  document.getElementById('prestigeModal').style.display = 'none';
-}
-
-// Perform prestige
-async function performPrestige() {
-  closeModal();
-  
-  const btn = document.getElementById('prestigeBtn');
-  btn.disabled = true;
-  btn.textContent = '🔄 PRESTIGING...';
-  
-  try {
-    const { data, error } = await sb.rpc('perform_prestige');
-    
-    if (error) throw error;
-    
-    if (data.success) {
-      showToast(data.message, 'prestige', 6000);
-      showToast(`✨ Earned ${data.points_earned} Prestige Points!`, 'success', 4000);
-      
-      // Reload all data
-      await loadPrestigeInfo();
-    } else {
-      showToast(data.error || 'Prestige failed', 'error');
-    }
-  } catch (error) {
-    console.error('Error prestiging:', error);
-    showToast('Error during prestige', 'error');
-  } finally {
-    btn.disabled = false;
-    btn.textContent = '🔄 PRESTIGE';
+  if (!robberyLogs.length) {
+    container.innerHTML = '<div class="empty-message">No robbery attempts recorded</div>';
+    return;
   }
+  
+  container.innerHTML = `
+    <h3 style="margin-bottom: 15px;">Recent Robbery Attempts</h3>
+    ${robberyLogs.map(log => `
+      <div class="log-item">
+        <span>${new Date(log.created_at).toLocaleString()}</span>
+        <span class="log-${log.outcome}">${log.outcome.toUpperCase()}</span>
+        <span>by ${log.robber?.username || 'Unknown'}</span>
+        <span>${log.outcome === 'success' ? `Lost ₹${log.loot_amount}` : 'Failed'}</span>
+      </div>
+    `).join('')}
+  `;
 }
 
-// Purchase perk
-async function purchasePerk(perkId) {
+// Render shop
+function renderShop() {
+  const container = document.getElementById('shopGrid');
+  
+  if (playerProperty) {
+    container.innerHTML = `
+      <div class="empty-message">
+        <p>You already own a property!</p>
+        <p>You must sell your current property before buying a new one.</p>
+      </div>
+    `;
+    return;
+  }
+  
+  if (!propertyTypes.length) {
+    container.innerHTML = '<div class="empty-message">No properties available</div>';
+    return;
+  }
+  
+  container.innerHTML = propertyTypes.map(type => {
+    const canAfford = currentPlayer.cash >= type.base_price;
+    const meetsLevel = currentPlayer.level >= type.min_level;
+    
+    return `
+      <div class="shop-card">
+        <div class="feature-icon">${type.icon || '🏠'}</div>
+        <h3>${type.name}</h3>
+        <p>${type.description || ''}</p>
+        <div class="property-stats-grid" style="margin: 15px 0;">
+          <div>Security: ${type.base_security}/10</div>
+          <div>Storage: ${type.base_capacity}</div>
+          <div>Rooms: ${type.base_rooms}</div>
+          <div>Max Level: ${type.max_level}</div>
+        </div>
+        <div class="shop-price">₹${type.base_price.toLocaleString()}</div>
+        <div>Required Level: ${type.min_level}</div>
+        <button class="shop-btn" onclick="buyProperty('${type.id}')"
+                ${!meetsLevel || !canAfford ? 'disabled' : ''}>
+          ${!meetsLevel ? 'Level ' + type.min_level + ' Required' : 
+            !canAfford ? 'Cannot Afford' : 'Buy Now'}
+        </button>
+      </div>
+    `;
+  }).join('');
+}
+
+// Buy property
+async function buyProperty(propertyTypeId) {
+  const propertyName = prompt('Give your property a name (optional):', '');
+  
   try {
-    const { data, error } = await sb.rpc('purchase_prestige_perk', {
-      p_perk_id: perkId
+    const { data, error } = await sb.rpc('buy_property', {
+      p_property_type_id: propertyTypeId,
+      p_property_name: propertyName || null
     });
     
     if (error) throw error;
     
     if (data.success) {
       showToast(data.message, 'success');
-      await loadPrestigeInfo();
-      await loadPerks();
-      await loadBonuses();
+      await loadPlayerData();
+      switchTab('overview');
     } else {
-      showToast(data.error || 'Purchase failed', 'error');
+      showToast(data.error, 'error');
     }
   } catch (error) {
-    console.error('Error purchasing perk:', error);
-    showToast('Error purchasing perk', 'error');
+    console.error('Error buying property:', error);
+    showToast('Failed to buy property', 'error');
   }
+}
+
+// Upgrade property
+async function upgradeProperty(upgradeType) {
+  try {
+    const { data, error } = await sb.rpc('upgrade_property', {
+      p_upgrade_type: upgradeType
+    });
+    
+    if (error) throw error;
+    
+    if (data.success) {
+      showToast(data.message, 'success');
+      await loadPlayerData();
+      await loadPlayerProperty();
+      await loadPropertyUpgrades();
+    } else {
+      showToast(data.error, 'error');
+    }
+  } catch (error) {
+    console.error('Error upgrading property:', error);
+    showToast('Failed to upgrade', 'error');
+  }
+}
+
+// Purchase feature
+async function purchaseFeature(featureId) {
+  try {
+    const { data, error } = await sb.rpc('purchase_property_feature', {
+      p_feature_id: featureId
+    });
+    
+    if (error) throw error;
+    
+    if (data.success) {
+      showToast(data.message, 'success');
+      await loadPlayerData();
+      await loadOwnedFeatures();
+    } else {
+      showToast(data.error, 'error');
+    }
+  } catch (error) {
+    console.error('Error purchasing feature:', error);
+    showToast('Failed to purchase feature', 'error');
+  }
+}
+
+// Deposit cash
+async function depositCash() {
+  const amount = parseInt(document.getElementById('depositAmount').value);
+  
+  if (amount < 1) {
+    showToast('Enter a valid amount', 'error');
+    return;
+  }
+  
+  try {
+    const { data, error } = await sb.rpc('store_cash_in_property', {
+      p_amount: amount
+    });
+    
+    if (error) throw error;
+    
+    if (data.success) {
+      showToast(data.message, 'success');
+      await loadPlayerData();
+      await loadPlayerProperty();
+    } else {
+      showToast(data.error, 'error');
+    }
+  } catch (error) {
+    console.error('Error depositing cash:', error);
+    showToast('Failed to deposit cash', 'error');
+  }
+}
+
+// Withdraw cash
+async function withdrawCash() {
+  const amount = parseInt(document.getElementById('withdrawAmount').value);
+  
+  if (amount < 1) {
+    showToast('Enter a valid amount', 'error');
+    return;
+  }
+  
+  try {
+    const { data, error } = await sb.rpc('withdraw_cash_from_property', {
+      p_amount: amount
+    });
+    
+    if (error) throw error;
+    
+    if (data.success) {
+      showToast(data.message, 'success');
+      await loadPlayerData();
+      await loadPlayerProperty();
+    } else {
+      showToast(data.error, 'error');
+    }
+  } catch (error) {
+    console.error('Error withdrawing cash:', error);
+    showToast('Failed to withdraw cash', 'error');
+  }
+}
+
+// Switch tabs
+function switchTab(tabName) {
+  document.querySelectorAll('.tab-content').forEach(tab => {
+    tab.style.display = 'none';
+  });
+  
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.classList.remove('active');
+  });
+  
+  document.getElementById(tabName).style.display = 'block';
+  event.target.classList.add('active');
 }
 
 // Navigation
@@ -907,7 +1300,7 @@ function goToDashboard() {
 }
 
 // Initialize
-loadPrestigeInfo();
+loadPlayerData();
 </script>
 
 </body>
