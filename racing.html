@@ -278,33 +278,38 @@
       border-bottom: 1px dashed #eee;
     }
     
-    .join-btn, .leave-btn {
+    .join-btn, .quit-btn {
       width: 100%;
       padding: 12px;
-      background: #f44336;
-      color: white;
       border: none;
       border-radius: 8px;
       font-weight: bold;
       cursor: pointer;
       font-family: 'Courier New', monospace;
+      margin-top: 10px;
+    }
+    
+    .join-btn {
+      background: #4CAF50;
+      color: white;
     }
     
     .join-btn:hover:not(:disabled) {
-      background: #d32f2f;
+      background: #45a049;
     }
     
-    .leave-btn {
-      background: #ff9800;
-    }
-    
-    .leave-btn:hover:not(:disabled) {
-      background: #f57c00;
-    }
-    
-    .join-btn:disabled, .leave-btn:disabled {
+    .join-btn:disabled {
       background: #ccc;
       cursor: not-allowed;
+    }
+    
+    .quit-btn {
+      background: #f44336;
+      color: white;
+    }
+    
+    .quit-btn:hover {
+      background: #d32f2f;
     }
     
     /* Shop Grid */
@@ -714,6 +719,7 @@ let leaderboard = [];
 let raceHistory = [];
 let selectedRace = null;
 let selectedParticipant = null;
+let activeRaceParticipation = null; // store the race the player is currently in (if any)
 
 // Toast notification
 function showToast(message, type = 'info', duration = 3000) {
@@ -759,6 +765,7 @@ async function loadPlayerData() {
       await loadVehicleTypes();
       await loadLeaderboard();
       await loadRaceHistory();
+      await checkActiveRaceParticipation(); // new: check if player is already in a race
     }
   } catch (error) {
     console.error('Error loading player:', error);
@@ -774,11 +781,32 @@ function updatePlayerStats() {
   document.getElementById('vehicleCount').textContent = vehicles.length;
 }
 
+// Check if player is already in a race that is not finished
+async function checkActiveRaceParticipation() {
+  try {
+    const { data, error } = await sb
+      .from('race_participants')
+      .select(`
+        id,
+        race_id,
+        races!inner (id, name, status)
+      `)
+      .eq('player_id', currentPlayer.id)
+      .not('races.status', 'eq', 'finished')
+      .limit(1);
+    
+    if (error) throw error;
+    activeRaceParticipation = data && data.length > 0 ? data[0] : null;
+    // Re-render races to update button states
+    renderRaces();
+  } catch (error) {
+    console.error('Error checking active race participation:', error);
+  }
+}
+
 // Load vehicles (fixed ambiguous relationship)
 async function loadVehicles() {
   try {
-    console.log('Loading vehicles for player:', currentPlayer?.id);
-    
     const { data: vehiclesData, error: vehiclesError } = await sb
       .from('player_vehicles')
       .select('*, vehicle_types:vehicle_type_id(*)')
@@ -790,8 +818,6 @@ async function loadVehicles() {
       return;
     }
     
-    console.log('✅ Vehicles loaded:', vehiclesData);
-    
     vehicles = vehiclesData || [];
     document.getElementById('vehicleCount').textContent = vehicles.length;
     renderVehicles();
@@ -801,11 +827,9 @@ async function loadVehicles() {
   }
 }
 
-// Load races (fixed ambiguous relationship)
+// Load races (with participants)
 async function loadRaces() {
   try {
-    console.log('Loading races...');
-    
     const { data: racesData, error: racesError } = await sb
       .from('races')
       .select('*')
@@ -817,8 +841,6 @@ async function loadRaces() {
       showToast(`Error loading races: ${racesError.message}`, 'error');
       return;
     }
-    
-    console.log('✅ Races loaded:', racesData);
     
     const racesWithParticipants = [];
     for (const race of racesData || []) {
@@ -858,8 +880,6 @@ async function loadRaces() {
 // Load vehicle types
 async function loadVehicleTypes() {
   try {
-    console.log('Loading vehicle types...');
-    
     const { data, error } = await sb
       .from('vehicle_types')
       .select('*')
@@ -871,7 +891,6 @@ async function loadVehicleTypes() {
       return;
     }
     
-    console.log('✅ Vehicle types loaded:', data);
     vehicleTypes = data || [];
     renderShop();
   } catch (error) {
@@ -883,8 +902,6 @@ async function loadVehicleTypes() {
 // Load leaderboard
 async function loadLeaderboard() {
   try {
-    console.log('Loading leaderboard...');
-    
     const { data, error } = await sb
       .from('racing_leaderboard')
       .select('*')
@@ -897,7 +914,6 @@ async function loadLeaderboard() {
       return;
     }
     
-    console.log('✅ Leaderboard data:', data);
     leaderboard = data || [];
     renderLeaderboard();
   } catch (error) {
@@ -909,8 +925,6 @@ async function loadLeaderboard() {
 // Load race history
 async function loadRaceHistory() {
   try {
-    console.log('Loading race history for player:', currentPlayer?.id);
-    
     const { data, error } = await sb
       .from('race_history')
       .select('*, races(name)')
@@ -924,7 +938,6 @@ async function loadRaceHistory() {
       return;
     }
     
-    console.log('✅ Race history data:', data);
     raceHistory = data || [];
     renderHistory();
   } catch (error) {
@@ -944,9 +957,7 @@ function renderVehicles() {
   
   grid.innerHTML = vehicles.map(v => {
     const type = v.vehicle_types;
-    if (!type) {
-      return '';
-    }
+    if (!type) return '';
     
     const conditionClass = v.condition > 70 ? 'condition-good' : 
                           v.condition > 30 ? 'condition-warning' : 'condition-critical';
@@ -993,7 +1004,7 @@ function renderVehicles() {
   }).join('');
 }
 
-// Render races with leave option and disable joining multiple races
+// Render races
 function renderRaces() {
   const grid = document.getElementById('racesGrid');
   
@@ -1002,45 +1013,37 @@ function renderRaces() {
     return;
   }
   
-  // Check if player is already in any active race
-  const inAnyActiveRace = races.some(race => 
-    race.race_participants.some(p => p.player_id === currentPlayer.id)
-  );
-  
   grid.innerHTML = races.map(race => {
     const participants = race.race_participants || [];
     const startTime = new Date(race.start_time).toLocaleString();
-    const isParticipating = participants.some(p => p.player_id === currentPlayer.id);
+    const hasJoined = participants.some(p => p.player_id === currentPlayer.id);
     const totalPrize = (race.prize_pool || 0) + (race.base_prize || 0);
+    const raceStatus = race.status;
     
-    let buttonDisabled = false;
-    let buttonText = '';
-    let buttonClick = '';
-    let buttonClass = 'join-btn';
+    // Determine if player can join
+    let joinDisabled = false;
+    let joinButtonText = 'Join Race';
+    let joinButtonClass = 'join-btn';
     
-    if (isParticipating) {
-      // Player is already in this race -> show Leave Race button
-      buttonText = 'Leave Race';
-      buttonClick = `leaveRace('${race.id}')`;
-      buttonClass = 'leave-btn';
-      buttonDisabled = false; // Leave button is always enabled (unless race started)
-    } else {
-      // Not in this race
-      if (!vehicles.length) {
-        buttonText = 'Need a Vehicle';
-        buttonDisabled = true;
-      } else if (inAnyActiveRace) {
-        buttonText = 'Already in a race';
-        buttonDisabled = true;
-      } else if (participants.length >= race.max_participants) {
-        buttonText = 'Race Full';
-        buttonDisabled = true;
-      } else {
-        buttonText = 'Join Race';
-        buttonClick = `joinRace('${race.id}')`;
-        buttonDisabled = false;
-      }
+    if (hasJoined) {
+      joinButtonText = 'Already Joined';
+      joinDisabled = true;
+    } else if (activeRaceParticipation && activeRaceParticipation.race_id !== race.id) {
+      joinButtonText = 'Already in Another Race';
+      joinDisabled = true;
+    } else if (participants.length >= race.max_participants) {
+      joinButtonText = 'Race Full';
+      joinDisabled = true;
+    } else if (!vehicles.length) {
+      joinButtonText = 'Need a Vehicle';
+      joinDisabled = true;
+    } else if (currentPlayer.level < race.min_level) {
+      joinButtonText = `Need Level ${race.min_level}`;
+      joinDisabled = true;
     }
+    
+    // Show "Quit Race" button if the player is in this race and the race hasn't started
+    const showQuit = hasJoined && (raceStatus === 'open' || raceStatus === 'upcoming');
     
     return `
       <div class="race-card">
@@ -1088,37 +1091,19 @@ function renderRaces() {
             `;
           }).join('')}
         </div>
-        <button class="${buttonClass}" 
-                onclick="${buttonClick}"
-                ${buttonDisabled ? 'disabled' : ''}>
-          ${buttonText}
+        <button class="${joinButtonClass}" 
+                onclick="joinRace('${race.id}')"
+                ${joinDisabled ? 'disabled' : ''}>
+          ${joinButtonText}
         </button>
+        ${showQuit ? `
+          <button class="quit-btn" onclick="quitRace('${race.id}')">
+            🚪 Quit Race
+          </button>
+        ` : ''}
       </div>
     `;
   }).join('');
-}
-
-// New: Leave race
-async function leaveRace(raceId) {
-  if (!confirm('Are you sure you want to leave this race? Your entry fee will be refunded if the race hasn\'t started.')) return;
-  
-  try {
-    const { data, error } = await sb.rpc('cancel_race_entry', {
-      p_race_id: raceId
-    });
-    
-    if (error) throw error;
-    
-    if (data.success) {
-      showToast(data.message, 'success');
-      await loadRaces(); // Refresh races
-    } else {
-      showToast(data.error || 'Failed to leave race', 'error');
-    }
-  } catch (error) {
-    console.error('Error leaving race:', error);
-    showToast('Error leaving race', 'error');
-  }
 }
 
 // Render shop
@@ -1165,7 +1150,7 @@ function renderLeaderboard() {
       : 0;
     
     return `
-      <tr>
+       <tr>
         <td>#${index + 1}</td>
         <td>${entry.username || 'Unknown'}</td>
         <td>${entry.total_races}</td>
@@ -1227,7 +1212,6 @@ async function buyVehicle(vehicleTypeId) {
       showToast(data.message, 'success');
       await loadVehicles();
       await loadPlayerData(); // Refresh cash
-      // Switch to garage if not already there
       if (!document.getElementById('garage').classList.contains('active')) {
         switchTab('garage');
       } else {
@@ -1246,6 +1230,11 @@ async function buyVehicle(vehicleTypeId) {
 async function joinRace(raceId) {
   if (!vehicles.length) {
     showToast('You need a vehicle to join races!', 'error');
+    return;
+  }
+  
+  if (activeRaceParticipation) {
+    showToast('You are already in another race. Finish or quit it first.', 'error');
     return;
   }
   
@@ -1295,12 +1284,42 @@ async function executeJoinRace(raceId, vehicleId) {
       showToast(data.message, 'success');
       await loadRaces();
       await loadPlayerData(); // Refresh cash
+      await checkActiveRaceParticipation(); // update active race status
     } else {
       showToast(data.error || 'Failed to join race', 'error');
     }
   } catch (error) {
     console.error('Error joining race:', error);
     showToast('Failed to join race', 'error');
+  }
+}
+
+// Quit race
+async function quitRace(raceId) {
+  if (!confirm('Are you sure you want to quit this race? You will get your entry fee back, but you will lose any bets placed.')) return;
+  
+  try {
+    const { data, error } = await sb.rpc('quit_race', {
+      p_race_id: raceId
+    });
+    
+    if (error) {
+      console.error('RPC Error:', error);
+      showToast(error.message || 'Failed to quit race', 'error');
+      return;
+    }
+    
+    if (data.success) {
+      showToast(data.message, 'success');
+      await loadRaces();
+      await loadPlayerData(); // Refresh cash
+      await checkActiveRaceParticipation(); // update active race status
+    } else {
+      showToast(data.error || 'Failed to quit race', 'error');
+    }
+  } catch (error) {
+    console.error('Error quitting race:', error);
+    showToast('Failed to quit race', 'error');
   }
 }
 
@@ -1399,10 +1418,12 @@ function switchTab(tabName, evt) {
     }
   }
   
+  // Refresh data when switching tabs
   if (tabName === 'garage') {
     loadVehicles();
   } else if (tabName === 'races') {
     loadRaces();
+    checkActiveRaceParticipation();
   } else if (tabName === 'shop') {
     loadVehicleTypes();
   } else if (tabName === 'leaderboard') {
@@ -1425,6 +1446,7 @@ setInterval(() => {
   const activeTab = document.querySelector('.tab-btn.active');
   if (activeTab && activeTab.textContent.includes('Races')) {
     loadRaces();
+    checkActiveRaceParticipation();
   }
 }, 30000);
 </script>
