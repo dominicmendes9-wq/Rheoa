@@ -278,7 +278,7 @@
       border-bottom: 1px dashed #eee;
     }
     
-    .join-btn {
+    .join-btn, .leave-btn {
       width: 100%;
       padding: 12px;
       background: #f44336;
@@ -294,7 +294,15 @@
       background: #d32f2f;
     }
     
-    .join-btn:disabled {
+    .leave-btn {
+      background: #ff9800;
+    }
+    
+    .leave-btn:hover:not(:disabled) {
+      background: #f57c00;
+    }
+    
+    .join-btn:disabled, .leave-btn:disabled {
       background: #ccc;
       cursor: not-allowed;
     }
@@ -937,7 +945,6 @@ function renderVehicles() {
   grid.innerHTML = vehicles.map(v => {
     const type = v.vehicle_types;
     if (!type) {
-      // Skip if type data missing (shouldn't happen with proper schema)
       return '';
     }
     
@@ -986,7 +993,7 @@ function renderVehicles() {
   }).join('');
 }
 
-// Render races
+// Render races with leave option and disable joining multiple races
 function renderRaces() {
   const grid = document.getElementById('racesGrid');
   
@@ -995,11 +1002,45 @@ function renderRaces() {
     return;
   }
   
+  // Check if player is already in any active race
+  const inAnyActiveRace = races.some(race => 
+    race.race_participants.some(p => p.player_id === currentPlayer.id)
+  );
+  
   grid.innerHTML = races.map(race => {
     const participants = race.race_participants || [];
     const startTime = new Date(race.start_time).toLocaleString();
-    const hasJoined = participants.some(p => p.player_id === currentPlayer.id);
+    const isParticipating = participants.some(p => p.player_id === currentPlayer.id);
     const totalPrize = (race.prize_pool || 0) + (race.base_prize || 0);
+    
+    let buttonDisabled = false;
+    let buttonText = '';
+    let buttonClick = '';
+    let buttonClass = 'join-btn';
+    
+    if (isParticipating) {
+      // Player is already in this race -> show Leave Race button
+      buttonText = 'Leave Race';
+      buttonClick = `leaveRace('${race.id}')`;
+      buttonClass = 'leave-btn';
+      buttonDisabled = false; // Leave button is always enabled (unless race started)
+    } else {
+      // Not in this race
+      if (!vehicles.length) {
+        buttonText = 'Need a Vehicle';
+        buttonDisabled = true;
+      } else if (inAnyActiveRace) {
+        buttonText = 'Already in a race';
+        buttonDisabled = true;
+      } else if (participants.length >= race.max_participants) {
+        buttonText = 'Race Full';
+        buttonDisabled = true;
+      } else {
+        buttonText = 'Join Race';
+        buttonClick = `joinRace('${race.id}')`;
+        buttonDisabled = false;
+      }
+    }
     
     return `
       <div class="race-card">
@@ -1047,16 +1088,37 @@ function renderRaces() {
             `;
           }).join('')}
         </div>
-        <button class="join-btn" 
-                onclick="joinRace('${race.id}')"
-                ${hasJoined || participants.length >= race.max_participants || !vehicles.length ? 'disabled' : ''}>
-          ${!vehicles.length ? 'Need a Vehicle' : 
-            hasJoined ? 'Already Joined' : 
-            participants.length >= race.max_participants ? 'Race Full' : 'Join Race'}
+        <button class="${buttonClass}" 
+                onclick="${buttonClick}"
+                ${buttonDisabled ? 'disabled' : ''}>
+          ${buttonText}
         </button>
       </div>
     `;
   }).join('');
+}
+
+// New: Leave race
+async function leaveRace(raceId) {
+  if (!confirm('Are you sure you want to leave this race? Your entry fee will be refunded if the race hasn\'t started.')) return;
+  
+  try {
+    const { data, error } = await sb.rpc('cancel_race_entry', {
+      p_race_id: raceId
+    });
+    
+    if (error) throw error;
+    
+    if (data.success) {
+      showToast(data.message, 'success');
+      await loadRaces(); // Refresh races
+    } else {
+      showToast(data.error || 'Failed to leave race', 'error');
+    }
+  } catch (error) {
+    console.error('Error leaving race:', error);
+    showToast('Error leaving race', 'error');
+  }
 }
 
 // Render shop
@@ -1313,7 +1375,7 @@ async function confirmBet() {
   }
 }
 
-// Switch tabs (FIXED: now accepts optional event parameter)
+// Switch tabs
 function switchTab(tabName, evt) {
   document.querySelectorAll('.tab-content').forEach(tab => {
     tab.classList.remove('active');
@@ -1325,11 +1387,9 @@ function switchTab(tabName, evt) {
   
   document.getElementById(tabName).classList.add('active');
   
-  // Handle active class for the button that was clicked
   if (evt && evt.target && evt.target.classList) {
     evt.target.classList.add('active');
   } else {
-    // If called programmatically, find the button with matching tab name and add active class
     const buttons = document.querySelectorAll('.tab-btn');
     for (let btn of buttons) {
       if (btn.textContent.includes(tabName) || btn.getAttribute('onclick')?.includes(tabName)) {
@@ -1339,7 +1399,6 @@ function switchTab(tabName, evt) {
     }
   }
   
-  // Refresh data when switching tabs
   if (tabName === 'garage') {
     loadVehicles();
   } else if (tabName === 'races') {
