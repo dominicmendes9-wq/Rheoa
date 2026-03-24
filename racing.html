@@ -766,7 +766,7 @@ function updatePlayerStats() {
   document.getElementById('vehicleCount').textContent = vehicles.length;
 }
 
-// Load vehicles
+// Load vehicles (with debugging logs)
 async function loadVehicles() {
   try {
     console.log('Loading vehicles for player:', currentPlayer?.id);
@@ -784,8 +784,15 @@ async function loadVehicles() {
     
     console.log('✅ Vehicles loaded:', vehiclesData);
     
+    if (!vehiclesData || vehiclesData.length === 0) {
+      vehicles = [];
+      document.getElementById('vehicleCount').textContent = 0;
+      renderVehicles();
+      return;
+    }
+    
     const vehiclesWithTypes = [];
-    for (const vehicle of vehiclesData || []) {
+    for (const vehicle of vehiclesData) {
       const { data: typeData, error: typeError } = await sb
         .from('vehicle_types')
         .select('*')
