@@ -4,6 +4,7 @@
   <title>Rheoa RPG - Racing</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
+    /* (keep existing CSS unchanged) */
     * {
       box-sizing: border-box;
       margin: 0;
@@ -765,14 +766,14 @@ function updatePlayerStats() {
   document.getElementById('vehicleCount').textContent = vehicles.length;
 }
 
-// Load vehicles
+// Load vehicles (fixed ambiguous relationship)
 async function loadVehicles() {
   try {
     console.log('Loading vehicles for player:', currentPlayer?.id);
     
     const { data: vehiclesData, error: vehiclesError } = await sb
       .from('player_vehicles')
-      .select('*, vehicle_types(*)')
+      .select('*, vehicle_types:vehicle_type_id(*)')
       .eq('player_id', currentPlayer.id);
     
     if (vehiclesError) {
@@ -792,7 +793,7 @@ async function loadVehicles() {
   }
 }
 
-// Load races
+// Load races (fixed ambiguous relationship)
 async function loadRaces() {
   try {
     console.log('Loading races...');
@@ -821,7 +822,10 @@ async function loadRaces() {
           vehicle_id,
           bet_amount,
           players (username),
-          player_vehicles (nickname, vehicle_types(name))
+          player_vehicles:vehicle_id (
+            nickname,
+            vehicle_types:vehicle_type_id (name)
+          )
         `)
         .eq('race_id', race.id);
       
@@ -1029,7 +1033,7 @@ function renderRaces() {
           <strong>Participants (${participants.length}/${race.max_participants}):</strong>
           ${participants.map(p => {
             const vehicle = p.player_vehicles;
-            const vehicleName = vehicle ? (vehicle.nickname || vehicle.vehicle_types?.name || 'Unknown') : 'Unknown';
+            const vehicleName = vehicle ? (vehicle.nickname || (vehicle.vehicle_types?.name || 'Unknown')) : 'Unknown';
             return `
               <div class="participant-item">
                 <span>${p.players?.username || 'Unknown'} (${vehicleName})</span>
