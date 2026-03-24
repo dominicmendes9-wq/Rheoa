@@ -4,6 +4,7 @@
   <title>Rheoa RPG - Racing</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
+    /* (keep existing CSS unchanged) */
     * {
       box-sizing: border-box;
       margin: 0;
@@ -591,11 +592,11 @@
 
 <!-- Racing Tabs -->
 <div class="racing-tabs">
-  <button class="tab-btn active" onclick="switchTab('races')">🏁 Races</button>
-  <button class="tab-btn" onclick="switchTab('garage')">🔧 Garage</button>
-  <button class="tab-btn" onclick="switchTab('shop')">🏪 Shop</button>
-  <button class="tab-btn" onclick="switchTab('leaderboard')">📊 Leaderboard</button>
-  <button class="tab-btn" onclick="switchTab('history')">📜 History</button>
+  <button class="tab-btn active" onclick="switchTab('races', event)">🏁 Races</button>
+  <button class="tab-btn" onclick="switchTab('garage', event)">🔧 Garage</button>
+  <button class="tab-btn" onclick="switchTab('shop', event)">🏪 Shop</button>
+  <button class="tab-btn" onclick="switchTab('leaderboard', event)">📊 Leaderboard</button>
+  <button class="tab-btn" onclick="switchTab('history', event)">📜 History</button>
 </div>
 
 <!-- Races Tab -->
@@ -765,12 +766,11 @@ function updatePlayerStats() {
   document.getElementById('vehicleCount').textContent = vehicles.length;
 }
 
-// Load vehicles - FIXED with separate queries
+// Load vehicles
 async function loadVehicles() {
   try {
     console.log('Loading vehicles for player:', currentPlayer?.id);
     
-    // First load player vehicles
     const { data: vehiclesData, error: vehiclesError } = await sb
       .from('player_vehicles')
       .select('*')
@@ -784,9 +784,7 @@ async function loadVehicles() {
     
     console.log('✅ Vehicles loaded:', vehiclesData);
     
-    // Then load vehicle types separately for each vehicle
     const vehiclesWithTypes = [];
-    
     for (const vehicle of vehiclesData || []) {
       const { data: typeData, error: typeError } = await sb
         .from('vehicle_types')
@@ -813,12 +811,11 @@ async function loadVehicles() {
   }
 }
 
-// Load races - FIXED with separate queries
+// Load races
 async function loadRaces() {
   try {
     console.log('Loading races...');
     
-    // First load races
     const { data: racesData, error: racesError } = await sb
       .from('races')
       .select('*')
@@ -833,9 +830,7 @@ async function loadRaces() {
     
     console.log('✅ Races loaded:', racesData);
     
-    // Then load participants separately for each race
     const racesWithParticipants = [];
-    
     for (const race of racesData || []) {
       const { data: participants, error: participantsError } = await sb
         .from('race_participants')
@@ -901,9 +896,7 @@ async function loadLeaderboard() {
         player_id,
         earnings,
         position,
-        players (
-          username
-        )
+        players (username)
       `)
       .order('created_at', { ascending: false });
     
@@ -924,7 +917,6 @@ async function loadLeaderboard() {
       return;
     }
     
-    // Process the data to create leaderboard stats
     const stats = {};
     data.forEach(entry => {
       if (!stats[entry.player_id]) {
@@ -941,7 +933,6 @@ async function loadLeaderboard() {
       stats[entry.player_id].total_earnings += entry.earnings || 0;
     });
     
-    // Convert to array and sort by earnings
     leaderboard = Object.values(stats)
       .sort((a, b) => b.total_earnings - a.total_earnings)
       .slice(0, 20);
@@ -956,12 +947,11 @@ async function loadLeaderboard() {
   }
 }
 
-// Load race history - FIXED
+// Load race history
 async function loadRaceHistory() {
   try {
     console.log('Loading race history for player:', currentPlayer?.id);
     
-    // First get race history
     const { data: historyData, error: historyError } = await sb
       .from('race_history')
       .select('*')
@@ -977,7 +967,6 @@ async function loadRaceHistory() {
     
     console.log('✅ Race history data:', historyData);
     
-    // Then get race names separately
     const historyWithRaces = [];
     for (const item of historyData || []) {
       const { data: raceData, error: raceError } = await sb
@@ -1011,7 +1000,10 @@ function renderVehicles() {
   
   grid.innerHTML = vehicles.map(v => {
     const type = v.vehicle_types;
-    if (!type) return '';
+    if (!type) {
+      // Skip vehicles with missing type data (should not happen, but safe)
+      return '';
+    }
     
     const conditionClass = v.condition > 70 ? 'condition-good' : 
                           v.condition > 30 ? 'condition-warning' : 'condition-critical';
@@ -1030,19 +1022,19 @@ function renderVehicles() {
         <div class="vehicle-stats">
           <div>
             <div>Speed: ${speed}</div>
-            <div class="stat-bar"><div class="stat-fill" style="width: ${speed}%"></div></div>
+            <div class="stat-bar"><div class="stat-fill" style="width: ${Math.min(100, speed)}%"></div></div>
           </div>
           <div>
             <div>Acceleration: ${accel}</div>
-            <div class="stat-bar"><div class="stat-fill" style="width: ${accel}%"></div></div>
+            <div class="stat-bar"><div class="stat-fill" style="width: ${Math.min(100, accel)}%"></div></div>
           </div>
           <div>
             <div>Handling: ${handling}</div>
-            <div class="stat-bar"><div class="stat-fill" style="width: ${handling}%"></div></div>
+            <div class="stat-bar"><div class="stat-fill" style="width: ${Math.min(100, handling)}%"></div></div>
           </div>
           <div>
             <div>Nitro: ${nitro}</div>
-            <div class="stat-bar"><div class="stat-fill" style="width: ${nitro}%"></div></div>
+            <div class="stat-bar"><div class="stat-fill" style="width: ${Math.min(100, nitro)}%"></div></div>
           </div>
         </div>
         <div class="vehicle-condition ${conditionClass}">
@@ -1233,7 +1225,7 @@ async function buyVehicle(vehicleTypeId) {
       showToast(data.message, 'success');
       await loadVehicles();
       await loadPlayerData(); // Refresh cash
-      switchTab('garage');
+      switchTab('garage'); // No event, but switchTab now handles it
     } else {
       showToast(data.error || 'Failed to buy vehicle', 'error');
     }
@@ -1250,13 +1242,11 @@ async function joinRace(raceId) {
     return;
   }
   
-  // Show vehicle selector if multiple vehicles
   if (vehicles.length > 1) {
     showVehicleSelector(raceId);
     return;
   }
   
-  // Use the first vehicle if only one
   const vehicleId = vehicles[0].id;
   await executeJoinRace(raceId, vehicleId);
 }
@@ -1378,8 +1368,8 @@ async function confirmBet() {
   }
 }
 
-// Switch tabs
-function switchTab(tabName) {
+// Switch tabs (FIXED: now accepts optional event parameter)
+function switchTab(tabName, evt) {
   document.querySelectorAll('.tab-content').forEach(tab => {
     tab.classList.remove('active');
   });
@@ -1389,7 +1379,20 @@ function switchTab(tabName) {
   });
   
   document.getElementById(tabName).classList.add('active');
-  event.target.classList.add('active');
+  
+  // Handle active class for the button that was clicked
+  if (evt && evt.target && evt.target.classList) {
+    evt.target.classList.add('active');
+  } else {
+    // If called programmatically, find the button with matching tab name and add active class
+    const buttons = document.querySelectorAll('.tab-btn');
+    for (let btn of buttons) {
+      if (btn.textContent.includes(tabName) || btn.getAttribute('onclick')?.includes(tabName)) {
+        btn.classList.add('active');
+        break;
+      }
+    }
+  }
   
   // Refresh data when switching tabs
   if (tabName === 'garage') {
