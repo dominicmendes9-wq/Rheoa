@@ -4,7 +4,6 @@
   <title>Rheoa RPG - Racing</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    /* (keep existing CSS unchanged) */
     * {
       box-sizing: border-box;
       margin: 0;
@@ -766,14 +765,14 @@ function updatePlayerStats() {
   document.getElementById('vehicleCount').textContent = vehicles.length;
 }
 
-// Load vehicles (with debugging logs)
+// Load vehicles
 async function loadVehicles() {
   try {
     console.log('Loading vehicles for player:', currentPlayer?.id);
     
     const { data: vehiclesData, error: vehiclesError } = await sb
       .from('player_vehicles')
-      .select('*')
+      .select('*, vehicle_types(*)')
       .eq('player_id', currentPlayer.id);
     
     if (vehiclesError) {
@@ -784,32 +783,7 @@ async function loadVehicles() {
     
     console.log('✅ Vehicles loaded:', vehiclesData);
     
-    if (!vehiclesData || vehiclesData.length === 0) {
-      vehicles = [];
-      document.getElementById('vehicleCount').textContent = 0;
-      renderVehicles();
-      return;
-    }
-    
-    const vehiclesWithTypes = [];
-    for (const vehicle of vehiclesData) {
-      const { data: typeData, error: typeError } = await sb
-        .from('vehicle_types')
-        .select('*')
-        .eq('id', vehicle.vehicle_type_id)
-        .single();
-      
-      if (typeError) {
-        console.error('Error loading vehicle type for vehicle:', vehicle.id, typeError);
-      }
-      
-      vehiclesWithTypes.push({
-        ...vehicle,
-        vehicle_types: typeData || null
-      });
-    }
-    
-    vehicles = vehiclesWithTypes;
+    vehicles = vehiclesData || [];
     document.getElementById('vehicleCount').textContent = vehicles.length;
     renderVehicles();
   } catch (error) {
@@ -844,8 +818,10 @@ async function loadRaces() {
         .select(`
           id,
           player_id,
+          vehicle_id,
           bet_amount,
-          players (username)
+          players (username),
+          player_vehicles (nickname, vehicle_types(name))
         `)
         .eq('race_id', race.id);
       
@@ -895,62 +871,26 @@ async function loadVehicleTypes() {
 // Load leaderboard
 async function loadLeaderboard() {
   try {
-    console.log('Loading leaderboard from race_history...');
+    console.log('Loading leaderboard...');
     
     const { data, error } = await sb
-      .from('race_history')
-      .select(`
-        player_id,
-        earnings,
-        position,
-        players (username)
-      `)
-      .order('created_at', { ascending: false });
+      .from('racing_leaderboard')
+      .select('*')
+      .order('total_earnings', { ascending: false })
+      .limit(20);
     
     if (error) {
       console.error('❌ Leaderboard Error:', error);
       showToast(`Error loading leaderboard: ${error.message}`, 'error');
-      document.getElementById('leaderboardBody').innerHTML = 
-        `<tr><td colspan="6" class="empty-message">Error: ${error.message}</td></tr>`;
       return;
     }
     
-    console.log('✅ Race history data:', data);
-    
-    if (!data || data.length === 0) {
-      console.log('No race history data yet');
-      leaderboard = [];
-      renderLeaderboard();
-      return;
-    }
-    
-    const stats = {};
-    data.forEach(entry => {
-      if (!stats[entry.player_id]) {
-        stats[entry.player_id] = {
-          player_id: entry.player_id,
-          username: entry.players?.username || 'Unknown',
-          total_races: 0,
-          total_wins: 0,
-          total_earnings: 0
-        };
-      }
-      stats[entry.player_id].total_races++;
-      if (entry.position === 1) stats[entry.player_id].total_wins++;
-      stats[entry.player_id].total_earnings += entry.earnings || 0;
-    });
-    
-    leaderboard = Object.values(stats)
-      .sort((a, b) => b.total_earnings - a.total_earnings)
-      .slice(0, 20);
-    
-    console.log('✅ Processed leaderboard:', leaderboard);
+    console.log('✅ Leaderboard data:', data);
+    leaderboard = data || [];
     renderLeaderboard();
   } catch (error) {
     console.error('❌ Leaderboard Exception:', error);
     showToast('Error loading leaderboard: ' + error.message, 'error');
-    document.getElementById('leaderboardBody').innerHTML = 
-      '<tr><td colspan="6" class="empty-message">No race data yet</td></tr>';
   }
 }
 
@@ -959,36 +899,21 @@ async function loadRaceHistory() {
   try {
     console.log('Loading race history for player:', currentPlayer?.id);
     
-    const { data: historyData, error: historyError } = await sb
+    const { data, error } = await sb
       .from('race_history')
-      .select('*')
+      .select('*, races(name)')
       .eq('player_id', currentPlayer.id)
       .order('created_at', { ascending: false })
       .limit(20);
     
-    if (historyError) {
-      console.error('❌ Race History Error:', historyError);
-      showToast(`Error loading race history: ${historyError.message}`, 'error');
+    if (error) {
+      console.error('❌ Race History Error:', error);
+      showToast(`Error loading race history: ${error.message}`, 'error');
       return;
     }
     
-    console.log('✅ Race history data:', historyData);
-    
-    const historyWithRaces = [];
-    for (const item of historyData || []) {
-      const { data: raceData, error: raceError } = await sb
-        .from('races')
-        .select('name')
-        .eq('id', item.race_id)
-        .single();
-      
-      historyWithRaces.push({
-        ...item,
-        races: raceData || { name: 'Unknown Race' }
-      });
-    }
-    
-    raceHistory = historyWithRaces;
+    console.log('✅ Race history data:', data);
+    raceHistory = data || [];
     renderHistory();
   } catch (error) {
     console.error('❌ Race History Exception:', error);
@@ -1008,7 +933,7 @@ function renderVehicles() {
   grid.innerHTML = vehicles.map(v => {
     const type = v.vehicle_types;
     if (!type) {
-      // Skip vehicles with missing type data (should not happen, but safe)
+      // Skip if type data missing (shouldn't happen with proper schema)
       return '';
     }
     
@@ -1102,17 +1027,21 @@ function renderRaces() {
         </div>
         <div class="race-participants">
           <strong>Participants (${participants.length}/${race.max_participants}):</strong>
-          ${participants.map(p => `
-            <div class="participant-item">
-              <span>${p.players?.username || 'Unknown'}</span>
-              ${p.player_id !== currentPlayer.id ? `
-                <button class="bet-btn" style="padding: 2px 8px; font-size: 0.8rem;" 
-                        onclick="openBetModal('${race.id}', '${p.id}', '${p.players?.username || 'Unknown'}')">
-                  Bet
-                </button>
-              ` : '<span>(You)</span>'}
-            </div>
-          `).join('')}
+          ${participants.map(p => {
+            const vehicle = p.player_vehicles;
+            const vehicleName = vehicle ? (vehicle.nickname || vehicle.vehicle_types?.name || 'Unknown') : 'Unknown';
+            return `
+              <div class="participant-item">
+                <span>${p.players?.username || 'Unknown'} (${vehicleName})</span>
+                ${p.player_id !== currentPlayer.id ? `
+                  <button class="bet-btn" style="padding: 2px 8px; font-size: 0.8rem;" 
+                          onclick="openBetModal('${race.id}', '${p.id}', '${p.players?.username || 'Unknown'}')">
+                    Bet
+                  </button>
+                ` : '<span>(You)</span>'}
+              </div>
+            `;
+          }).join('')}
         </div>
         <button class="join-btn" 
                 onclick="joinRace('${race.id}')"
@@ -1232,7 +1161,12 @@ async function buyVehicle(vehicleTypeId) {
       showToast(data.message, 'success');
       await loadVehicles();
       await loadPlayerData(); // Refresh cash
-      switchTab('garage'); // No event, but switchTab now handles it
+      // Switch to garage if not already there
+      if (!document.getElementById('garage').classList.contains('active')) {
+        switchTab('garage');
+      } else {
+        renderVehicles();
+      }
     } else {
       showToast(data.error || 'Failed to buy vehicle', 'error');
     }
