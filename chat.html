@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chatroom - Rheoa RPG</title>
     <style>
+        /* (CSS unchanged from previous version – keep the same styling) */
         * {
             margin: 0;
             padding: 0;
@@ -25,10 +26,9 @@
             display: flex;
             flex: 1;
             gap: 20px;
-            min-height: 0; /* important for flex children scrolling */
+            min-height: 0;
         }
 
-        /* Rooms Sidebar */
         .rooms-sidebar {
             width: 260px;
             background: white;
@@ -83,7 +83,6 @@
             color: white;
         }
 
-        /* Main Chat Area */
         .chat-main {
             flex: 1;
             display: flex;
@@ -190,7 +189,6 @@
             font-weight: bold;
         }
 
-        /* Members Sidebar */
         .members-sidebar {
             width: 260px;
             background: white;
@@ -252,7 +250,6 @@
         .promote-btn { background: #4CAF50; color: white; }
         .demote-btn { background: #ff9800; color: white; }
 
-        /* Modal */
         .modal {
             display: none;
             position: fixed;
@@ -386,47 +383,61 @@
             return player?.id;
         }
 
-        // Load rooms the user is member of
-       async function loadRooms() {
-    const playerId = await getPlayerId();
-    if (!playerId) return;
+        // Load rooms the user can see (global + joined channels)
+        async function loadRooms() {
+            const playerId = await getPlayerId();
+            if (!playerId) return;
 
-    // Fetch all active rooms with a left join to memberships
-    const { data: roomsData, error } = await sb
-        .from('chat_rooms')
-        .select(`
-            id, name, description, type,
-            chat_room_members!left(role, user_id)
-        `)
-        .eq('is_active', true);
+            // Fetch all active rooms with a left join to memberships
+            const { data: roomsData, error } = await sb
+                .from('chat_rooms')
+                .select(`
+                    id, name, description, type,
+                    chat_room_members!left(role, user_id)
+                `)
+                .eq('is_active', true);
 
-    if (error) {
-        console.error('Error loading rooms:', error);
-        return;
-    }
+            if (error) {
+                console.error('Error loading rooms:', error);
+                return;
+            }
 
-    // Keep global room always; keep channels only if user is a member
-    const visibleRooms = roomsData.filter(room => {
-        if (room.type === 'global') return true;
-        // For channels, user must have a membership row
-        return room.chat_room_members.some(m => m.user_id === playerId);
-    });
+            // Keep global room always; keep channels only if user is a member
+            const visibleRooms = roomsData.filter(room => {
+                if (room.type === 'global') return true;
+                // For channels, user must have a membership row
+                return room.chat_room_members.some(m => m.user_id === playerId);
+            });
 
-    rooms = visibleRooms.map(room => ({
-        ...room,
-        role: room.chat_room_members.find(m => m.user_id === playerId)?.role || null
-    }));
+            rooms = visibleRooms.map(room => ({
+                ...room,
+                role: room.chat_room_members.find(m => m.user_id === playerId)?.role || null
+            }));
 
-    renderRooms();
+            renderRooms();
 
-    // If no room is selected and we have a global room, select it automatically
-    if (!currentRoom && rooms.length) {
-        const globalRoom = rooms.find(r => r.type === 'global');
-        if (globalRoom) selectRoom(globalRoom.id);
-    }
-}
+            // If no room is selected and we have a global room, select it automatically
+            if (!currentRoom && rooms.length) {
+                const globalRoom = rooms.find(r => r.type === 'global');
+                if (globalRoom) selectRoom(globalRoom.id);
+            }
+        }
 
-        // Select a room and load its messages and members
+        function renderRooms() {
+            const container = document.getElementById('roomsList');
+            if (!rooms.length) {
+                container.innerHTML = '<div class="empty">No rooms available. Create one!</div>';
+                return;
+            }
+            container.innerHTML = rooms.map(room => `
+                <div class="room-item ${currentRoom?.id === room.id ? 'active' : ''}" 
+                     onclick="selectRoom('${room.id}')">
+                    <strong>${escapeHtml(room.name)}</strong>
+                    <div style="font-size:0.7rem; color:gray;">${room.type === 'global' ? 'Global' : 'Channel'}</div>
+                </div>
+            `).join('');
+        }
+
         async function selectRoom(roomId) {
             if (currentRoom?.id === roomId) return;
             if (messagesSubscription) messagesSubscription.unsubscribe();
@@ -476,7 +487,7 @@
             container.innerHTML = currentMessages.map(msg => `
                 <div class="message ${msg.user_id === playerId ? 'own' : ''}">
                     <div class="message-header">
-                        <span class="message-username">${msg.players.username}</span>
+                        <span class="message-username">${escapeHtml(msg.players.username)}</span>
                         <span class="message-time">${new Date(msg.created_at).toLocaleTimeString()}</span>
                     </div>
                     <div class="message-text">${escapeHtml(msg.message)}</div>
@@ -524,7 +535,7 @@
                 return `
                     <div class="member-item">
                         <div>
-                            <span class="member-name">${m.players.username}</span>
+                            <span class="member-name">${escapeHtml(m.players.username)}</span>
                             <span class="member-role ${m.role}">${m.role}</span>
                             ${isBanned ? '<span style="color:red;">(banned)</span>' : ''}
                         </div>
@@ -533,7 +544,7 @@
                                 ${m.role !== 'admin' ? `<button class="promote-btn" onclick="promoteUser('${m.user_id}')">⬆️</button>` : ''}
                                 ${m.role !== 'member' ? `<button class="demote-btn" onclick="demoteUser('${m.user_id}')">⬇️</button>` : ''}
                                 <button class="kick-btn" onclick="kickUser('${m.user_id}')">Kick</button>
-                                <button class="ban-btn" onclick="showBanModal('${m.user_id}', '${m.players.username}')">Ban</button>
+                                <button class="ban-btn" onclick="showBanModal('${m.user_id}', '${escapeHtml(m.players.username)}')">Ban</button>
                             ` : (isOperator && m.user_id !== playerId && m.role !== 'admin') ? `
                                 <button class="kick-btn" onclick="kickUser('${m.user_id}')">Kick</button>
                             ` : ''}
@@ -553,7 +564,6 @@
                     table: 'chat_messages',
                     filter: `room_id=eq.${currentRoom.id}`
                 }, payload => {
-                    // Append new message (if not deleted)
                     if (!payload.new.is_deleted) {
                         currentMessages.push(payload.new);
                         renderMessages();
@@ -565,7 +575,6 @@
                     table: 'chat_messages',
                     filter: `room_id=eq.${currentRoom.id}`
                 }, payload => {
-                    // Handle message edit/delete
                     const index = currentMessages.findIndex(m => m.id === payload.new.id);
                     if (index !== -1) {
                         if (payload.new.is_deleted) {
@@ -599,7 +608,6 @@
             }
         }
 
-        // Room creation
         function showCreateRoomModal() {
             document.getElementById('createRoomModal').style.display = 'block';
         }
@@ -621,12 +629,11 @@
                 showToast('Room created!', 'success');
                 closeModal('createRoomModal');
                 await loadRooms();
-                // Optionally auto-join the new room
+                // Auto-select the new room
                 selectRoom(data.room_id);
             }
         }
 
-        // Moderation actions
         async function kickUser(userId) {
             if (!confirm('Kick this user from the room?')) return;
             const { data, error } = await sb.rpc('kick_user', {
@@ -699,8 +706,8 @@
         }
 
         function showToast(message, type) {
-            // Implement simple toast or use existing function from your game
-            alert(message); // placeholder
+            // Replace with your toast implementation if needed
+            alert(message); // simple fallback
         }
 
         function escapeHtml(text) {
@@ -709,7 +716,7 @@
             return div.innerHTML;
         }
 
-        // Initialization
+        // Initialize
         (async function init() {
             const playerId = await getPlayerId();
             if (!playerId) {
@@ -717,11 +724,6 @@
                 return;
             }
             await loadRooms();
-            // If there is a global room, select it by default
-            const globalRoom = rooms.find(r => r.type === 'global');
-            if (globalRoom) {
-                selectRoom(globalRoom.id);
-            }
         })();
     </script>
 </body>
