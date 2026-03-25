@@ -387,42 +387,44 @@
         }
 
         // Load rooms the user is member of
-        async function loadRooms() {
-            const playerId = await getPlayerId();
-            if (!playerId) return;
+       async function loadRooms() {
+    const playerId = await getPlayerId();
+    if (!playerId) return;
 
-            // Global room + channels where user is member
-            const { data, error } = await sb
-                .from('chat_rooms')
-                .select(`
-                    id, name, description, type,
-                    chat_room_members!inner(role)
-                `)
-                .eq('is_active', true)
-                .or(`type.eq.global,and(chat_room_members.user_id.eq.${playerId})`);
+    // Fetch all active rooms with a left join to memberships
+    const { data: roomsData, error } = await sb
+        .from('chat_rooms')
+        .select(`
+            id, name, description, type,
+            chat_room_members!left(role, user_id)
+        `)
+        .eq('is_active', true);
 
-            if (error) {
-                console.error('Error loading rooms:', error);
-                return;
-            }
-            rooms = data || [];
-            renderRooms();
-        }
+    if (error) {
+        console.error('Error loading rooms:', error);
+        return;
+    }
 
-        function renderRooms() {
-            const container = document.getElementById('roomsList');
-            if (!rooms.length) {
-                container.innerHTML = '<div class="empty">No rooms available. Create one!</div>';
-                return;
-            }
-            container.innerHTML = rooms.map(room => `
-                <div class="room-item ${currentRoom?.id === room.id ? 'active' : ''}" 
-                     onclick="selectRoom('${room.id}')">
-                    <strong>${room.name}</strong>
-                    <div style="font-size:0.7rem; color:gray;">${room.type === 'global' ? 'Global' : 'Channel'}</div>
-                </div>
-            `).join('');
-        }
+    // Keep global room always; keep channels only if user is a member
+    const visibleRooms = roomsData.filter(room => {
+        if (room.type === 'global') return true;
+        // For channels, user must have a membership row
+        return room.chat_room_members.some(m => m.user_id === playerId);
+    });
+
+    rooms = visibleRooms.map(room => ({
+        ...room,
+        role: room.chat_room_members.find(m => m.user_id === playerId)?.role || null
+    }));
+
+    renderRooms();
+
+    // If no room is selected and we have a global room, select it automatically
+    if (!currentRoom && rooms.length) {
+        const globalRoom = rooms.find(r => r.type === 'global');
+        if (globalRoom) selectRoom(globalRoom.id);
+    }
+}
 
         // Select a room and load its messages and members
         async function selectRoom(roomId) {
