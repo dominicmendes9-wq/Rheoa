@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bitcoin Donations - Rheoa RPG</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #f8f8f0;
+            color: #222;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            border: 2px solid #f7931a;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: #f7931a;
+            margin-bottom: 10px;
+            font-size: 2rem;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-style: italic;
+        }
+
+        .donation-section {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+            margin-bottom: 40px;
+            justify-content: center;
+        }
+
+        .qr-box {
+            background: white;
+            border: 2px solid #f7931a;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            flex: 1;
+            min-width: 250px;
+        }
+
+        .qr-box img {
+            max-width: 200px;
+            height: auto;
+            margin: 10px auto;
+        }
+
+        .address-box {
+            background: #f0f0f0;
+            padding: 15px;
+            border-radius: 8px;
+            word-break: break-all;
+            font-size: 0.9rem;
+            margin-top: 15px;
+        }
+
+        .address-label {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stats {
+            flex: 2;
+            background: #f5f5f5;
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: #666;
+            text-transform: uppercase;
+        }
+
+        .stat-value {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: #f7931a;
+            margin-top: 5px;
+        }
+
+        .transaction-list {
+            max-height: 300px;
+            overflow-y: auto;
+            border-top: 1px solid #ddd;
+            padding-top: 15px;
+        }
+
+        .transaction-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+            font-size: 0.9rem;
+        }
+
+        .tx-amount {
+            font-weight: bold;
+        }
+
+        .tx-amount.incoming {
+            color: #4CAF50;
+        }
+
+        .tx-amount.outgoing {
+            color: #f44336;
+        }
+
+        .tx-date {
+            color: #666;
+            font-size: 0.8rem;
+        }
+
+        .refresh-btn {
+            display: block;
+            width: 200px;
+            margin: 20px auto;
+            padding: 10px;
+            background: #f7931a;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+
+        .refresh-btn:hover {
+            background: #e67e22;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .error {
+            color: #f44336;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .back-button {
+            display: block;
+            width: 200px;
+            margin: 40px auto 0;
+            padding: 12px 24px;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            border: 2px solid black;
+            border-radius: 8px;
+            background: #666;
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+            text-decoration: none;
+        }
+
+        .back-button:hover {
+            background: #555;
+            transform: scale(1.02);
+        }
+
+        @media (max-width: 600px) {
+            .donation-section {
+                flex-direction: column;
+            }
+            .qr-box img {
+                max-width: 150px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏆 Support Rheoa RPG</h1>
+        <div class="subtitle">Your donations help keep the game running and fuel future development!</div>
+
+        <div class="donation-section">
+            <div class="qr-box">
+                <div class="address-label">Scan to donate Bitcoin</div>
+                <div id="qrCode"></div>
+                <div class="address-box">
+                    <div class="address-label">Bitcoin Address:</div>
+                    <div id="btcAddress">1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa</div>
+                </div>
+                <p style="font-size: 0.8rem; margin-top: 10px;">Any amount is appreciated!</p>
+            </div>
+
+            <div class="stats">
+                <h3>📊 Transaction Statistics</h3>
+                <div id="statsContent" class="loading">Loading blockchain data...</div>
+                <button class="refresh-btn" onclick="loadDonationStats()">🔄 Refresh</button>
+            </div>
+        </div>
+
+        <div class="transaction-list">
+            <h3>📜 Recent Transactions</h3>
+            <div id="transactionsContent" class="loading">Loading recent transactions...</div>
+        </div>
+
+        <a href="dashboard.html" class="back-button">← Back to Dashboard</a>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs2-fix/qrcode.min.js"></script>
+    <script>
+        // ========== CONFIGURATION ==========
+        // Replace this with your actual Bitcoin address
+        const BTC_ADDRESS = "bc1qcd6ynd6z84wjzx3awrpzw2zp9jteyfmn7lpe08"; // Example: Satoshi's address
+        // ===================================
+
+        // API endpoint using Blockstream.info
+        const API_URL = `https://blockstream.info/api/address/${BTC_ADDRESS}`;
+
+        // Helper to convert satoshis to BTC (1 BTC = 100,000,000 satoshis)
+        function satoshiToBtc(satoshis) {
+            return (satoshis / 1e8).toFixed(8);
+        }
+
+        // Format date from timestamp
+        function formatDate(timestamp) {
+            if (!timestamp) return 'Unknown';
+            const date = new Date(timestamp * 1000);
+            return date.toLocaleString();
+        }
+
+        // Fetch and display statistics and transactions
+        async function loadDonationStats() {
+            const statsDiv = document.getElementById('statsContent');
+            const txDiv = document.getElementById('transactionsContent');
+            statsDiv.innerHTML = '<div class="loading">Loading blockchain data...</div>';
+            txDiv.innerHTML = '<div class="loading">Loading recent transactions...</div>';
+
+            try {
+                const response = await fetch(API_URL);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+
+                // data.chain_stats contains confirmed transactions
+                const chain = data.chain_stats;
+                const mempool = data.mempool_stats;
+
+                // Totals: received = funded_txo_sum (in satoshis), sent = spent_txo_sum
+                const totalReceived = chain.funded_txo_sum + mempool.funded_txo_sum;
+                const totalSent = chain.spent_txo_sum + mempool.spent_txo_sum;
+                const balance = totalReceived - totalSent;
+                const txCount = chain.tx_count + mempool.tx_count;
+
+                statsDiv.innerHTML = `
+                    <div class="stat-grid">
+                        <div class="stat-card">
+                            <div class="stat-label">Total Received</div>
+                            <div class="stat-value">${satoshiToBtc(totalReceived)} BTC</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Total Sent</div>
+                            <div class="stat-value">${satoshiToBtc(totalSent)} BTC</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Current Balance</div>
+                            <div class="stat-value">${satoshiToBtc(balance)} BTC</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Transaction Count</div>
+                            <div class="stat-value">${txCount}</div>
+                        </div>
+                    </div>
+                `;
+
+                // Fetch recent transactions
+                // Blockstream API returns list of transaction IDs. We need to fetch each tx details, but that's heavy.
+                // Instead, we can display a simple list with txid and amount. For amount we need to compute the net for this address.
+                // We'll fetch transaction details for the first 10 txids.
+                const txids = chain.txids || [];
+                const recentTxids = txids.slice(-10).reverse(); // show most recent first
+
+                if (recentTxids.length === 0) {
+                    txDiv.innerHTML = '<div class="empty-message">No transactions yet.</div>';
+                    return;
+                }
+
+                // Fetch each transaction to get details (this could be many API calls, but limited to 10)
+                const txDetails = await Promise.all(
+                    recentTxids.map(async (txid) => {
+                        const txRes = await fetch(`https://blockstream.info/api/tx/${txid}`);
+                        if (!txRes.ok) return null;
+                        const txData = await txRes.json();
+                        // Calculate net amount for this address
+                        let net = 0;
+                        txData.vout.forEach(vout => {
+                            if (vout.scriptpubkey_address === BTC_ADDRESS) {
+                                net += vout.value;
+                            }
+                        });
+                        txData.vin.forEach(vin => {
+                            if (vin.prevout && vin.prevout.scriptpubkey_address === BTC_ADDRESS) {
+                                net -= vin.prevout.value;
+                            }
+                        });
+                        const amount = satoshiToBtc(Math.abs(net));
+                        const type = net > 0 ? 'incoming' : (net < 0 ? 'outgoing' : 'unknown');
+                        return {
+                            txid: txid,
+                            amount: amount,
+                            type: type,
+                            time: txData.status?.block_time ? formatDate(txData.status.block_time) : 'Pending'
+                        };
+                    })
+                );
+
+                const validTxs = txDetails.filter(tx => tx !== null);
+                if (validTxs.length === 0) {
+                    txDiv.innerHTML = '<div class="empty-message">Could not load transaction details.</div>';
+                } else {
+                    txDiv.innerHTML = validTxs.map(tx => `
+                        <div class="transaction-item">
+                            <div>
+                                <a href="https://blockstream.info/tx/${tx.txid}" target="_blank" style="color: #f7931a; text-decoration: none;">
+                                    ${tx.txid.substring(0, 16)}...
+                                </a>
+                            </div>
+                            <div class="tx-amount ${tx.type === 'incoming' ? 'incoming' : 'outgoing'}">
+                                ${tx.type === 'incoming' ? '+' : '-'} ${tx.amount} BTC
+                            </div>
+                            <div class="tx-date">${tx.time}</div>
+                        </div>
+                    `).join('');
+                }
+
+            } catch (error) {
+                console.error('Error fetching donation stats:', error);
+                statsDiv.innerHTML = `<div class="error">Error loading blockchain data: ${error.message}</div>`;
+                txDiv.innerHTML = '<div class="error">Unable to load transactions. Please try again later.</div>';
+            }
+        }
+
+        // Generate QR code for the Bitcoin address
+        function generateQRCode() {
+            const addressElement = document.getElementById('btcAddress');
+            addressElement.textContent = BTC_ADDRESS;
+
+            const qrDiv = document.getElementById('qrCode');
+            // Clear any existing QR
+            qrDiv.innerHTML = '';
+            // Create QR code
+            new QRCode(qrDiv, {
+                text: `bitcoin:${BTC_ADDRESS}`,
+                width: 200,
+                height: 200,
+                colorDark: "#000000",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.M
+            });
+        }
+
+        // Initialize
+        generateQRCode();
+        loadDonationStats();
+
+        // Auto-refresh every 60 seconds
+        setInterval(loadDonationStats, 60000);
+    </script>
+</body>
+</html>
