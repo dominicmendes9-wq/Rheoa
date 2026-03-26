@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chat - Rheoa RPG</title>
     <style>
-        /* (keep existing CSS unchanged) */
         * {
             margin: 0;
             padding: 0;
@@ -246,6 +245,25 @@
             background: #4CAF50;
         }
 
+        .member-actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        .dm-btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            padding: 2px 5px;
+            cursor: pointer;
+            font-size: 0.7rem;
+        }
+
+        .dm-btn:hover {
+            background: #45a049;
+        }
+
         .modal {
             display: none;
             position: fixed;
@@ -285,7 +303,6 @@
             text-decoration: none;
         }
 
-        /* Toast notifications */
         .toast-container {
             position: fixed;
             top: 20px;
@@ -373,7 +390,6 @@
             "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
         );
 
-        // Toast notification – we'll keep it for success/info messages
         function showToast(message, type = 'info', duration = 3000) {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
@@ -411,7 +427,6 @@
             const { data: allRooms, error } = await sb.from('chat_rooms').select('*').order('created_at');
             if (error) {
                 console.error('Error loading rooms:', error);
-                // No toast for this error – only console
                 return;
             }
 
@@ -441,7 +456,7 @@
                 <div class="room-item ${currentRoom?.id === room.id ? 'active' : ''}" 
                      onclick="selectRoom('${room.id}')">
                     <strong>${escapeHtml(room.name)}</strong>
-                    <div style="font-size:0.7rem; color:gray;">${room.type === 'global' ? 'Global' : 'Channel'}</div>
+                    <div style="font-size:0.7rem; color:gray;">${room.type === 'global' ? 'Global' : (room.type === 'dm' ? 'DM' : 'Channel')}</div>
                 </div>
             `).join('');
         }
@@ -530,7 +545,6 @@
 
             roomChannel.on('broadcast', { event: 'message' }, (payload) => {
                 const newMsg = payload.payload;
-                // Avoid duplicates: don't add if already present (by id)
                 if (!currentMessages.some(m => m.id === newMsg.id)) {
                     currentMessages.push(newMsg);
                     renderMessages();
@@ -562,12 +576,10 @@
                 players: { username: currentPlayer.username }
             };
 
-            // Add to UI immediately (optimistic)
             currentMessages.push(newMsg);
             renderMessages();
             input.value = '';
 
-            // Broadcast to others
             if (roomChannel) {
                 await roomChannel.send({
                     type: 'broadcast',
@@ -576,7 +588,6 @@
                 });
             }
 
-            // Persist to database
             const { error } = await sb
                 .from('chat_messages')
                 .insert({
@@ -587,8 +598,48 @@
 
             if (error) {
                 console.error('Failed to persist message:', error);
-                // No red toast – only log to console
             }
+        }
+
+        // DM function
+        async function startDM(otherUserId, otherUsername) {
+            if (otherUserId === currentPlayer.id) {
+                showToast("You cannot message yourself", 'error');
+                return;
+            }
+            try {
+                const { data, error } = await sb.rpc('create_or_get_dm_room', { p_other_user_id: otherUserId });
+                if (error) throw error;
+                if (data.success) {
+                    await loadRooms();
+                    selectRoom(data.room_id);
+                } else {
+                    showToast(data.error || 'Failed to start DM', 'error');
+                }
+            } catch (err) {
+                console.error('Error starting DM:', err);
+                showToast('Error starting DM', 'error');
+            }
+        }
+
+        function renderMembers() {
+            const container = document.getElementById('membersList');
+            if (!onlineUsers.length) {
+                container.innerHTML = '<div class="empty">No one else is online in this room.</div>';
+                return;
+            }
+            container.innerHTML = onlineUsers.map(user => `
+                <div class="member-item">
+                    <div class="member-avatar">${user.username.charAt(0).toUpperCase()}</div>
+                    <div class="member-name">${escapeHtml(user.username)}</div>
+                    <div class="member-status"></div>
+                    ${user.user_id !== currentPlayer.id ? `
+                        <div class="member-actions">
+                            <button class="dm-btn" onclick="startDM('${user.user_id}', '${escapeHtml(user.username)}')">💬</button>
+                        </div>
+                    ` : ''}
+                </div>
+            `).join('');
         }
 
         // Room creation
@@ -621,21 +672,6 @@
                 await loadRooms();
                 selectRoom(data.id);
             }
-        }
-
-        function renderMembers() {
-            const container = document.getElementById('membersList');
-            if (!onlineUsers.length) {
-                container.innerHTML = '<div class="empty">No one else is online in this room.</div>';
-                return;
-            }
-            container.innerHTML = onlineUsers.map(user => `
-                <div class="member-item">
-                    <div class="member-avatar">${user.username.charAt(0).toUpperCase()}</div>
-                    <div class="member-name">${escapeHtml(user.username)}</div>
-                    <div class="member-status"></div>
-                </div>
-            `).join('');
         }
 
         function closeModal(modalId) {
