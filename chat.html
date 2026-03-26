@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chat - Rheoa RPG</title>
     <style>
+        /* (keep existing CSS unchanged) */
         * {
             margin: 0;
             padding: 0;
@@ -28,7 +29,6 @@
             min-height: 0;
         }
 
-        /* Rooms Sidebar */
         .rooms-sidebar {
             width: 260px;
             background: white;
@@ -83,7 +83,6 @@
             color: white;
         }
 
-        /* Main Chat Area */
         .chat-main {
             flex: 1;
             display: flex;
@@ -190,7 +189,6 @@
             font-weight: bold;
         }
 
-        /* Members Sidebar (with presence) */
         .members-sidebar {
             width: 260px;
             background: white;
@@ -248,7 +246,6 @@
             background: #4CAF50;
         }
 
-        /* Modal */
         .modal {
             display: none;
             position: fixed;
@@ -287,9 +284,37 @@
             color: #666;
             text-decoration: none;
         }
+
+        /* Toast notifications (if not already present) */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+        }
+        .toast {
+            padding: 15px 25px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            animation: slideIn 0.3s ease-out;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            min-width: 250px;
+            max-width: 350px;
+        }
+        .toast.success { background: #4CAF50; }
+        .toast.error { background: #f44336; }
+        .toast.info { background: #2196F3; }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
     </style>
 </head>
 <body>
+    <div class="toast-container" id="toast-container"></div>
+
     <div class="chat-container">
         <!-- Rooms Sidebar -->
         <div class="rooms-sidebar">
@@ -348,15 +373,29 @@
             "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
         );
 
-        // Global state
-        let currentPlayer = null;          // { id, username }
-        let currentRoom = null;            // { id, name, type }
-        let rooms = [];                    // list of rooms user can see
-        let currentMessages = [];
-        let roomChannel = null;            // Realtime channel for current room (presence + broadcast)
-        let onlineUsers = [];              // presence list
+        // Toast notification (reuse existing or define here)
+        function showToast(message, type = 'info', duration = 3000) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.add('fade-out');
+                setTimeout(() => {
+                    if (toast.parentNode) container.removeChild(toast);
+                }, 300);
+            }, duration);
+        }
 
-        // Helper: get player's id and username
+        // Global state
+        let currentPlayer = null;
+        let currentRoom = null;
+        let rooms = [];
+        let currentMessages = [];
+        let roomChannel = null;
+        let onlineUsers = [];
+
         async function getPlayer() {
             const { data: { user } } = await sb.auth.getUser();
             if (!user) return null;
@@ -365,30 +404,20 @@
             return player;
         }
 
-        // Load rooms (global + channels user is member of)
         async function loadRooms() {
             const player = await getPlayer();
             if (!player) return;
 
-            // Get all rooms
-            const { data: allRooms, error } = await sb
-                .from('chat_rooms')
-                .select('*')
-                .order('created_at');
-
+            const { data: allRooms, error } = await sb.from('chat_rooms').select('*').order('created_at');
             if (error) {
                 console.error('Error loading rooms:', error);
+                showToast('Error loading rooms', 'error');
                 return;
             }
 
-            // Get user's channel memberships
-            const { data: memberships } = await sb
-                .from('chat_members')
-                .select('room_id')
-                .eq('user_id', player.id);
+            const { data: memberships } = await sb.from('chat_members').select('room_id').eq('user_id', player.id);
             const memberRoomIds = memberships?.map(m => m.room_id) || [];
 
-            // Filter: global always visible; channels only if member
             rooms = allRooms.filter(room => {
                 if (room.type === 'global') return true;
                 return memberRoomIds.includes(room.id);
@@ -396,7 +425,6 @@
 
             renderRooms();
 
-            // Auto-select global room if exists and no room selected
             if (!currentRoom && rooms.length) {
                 const globalRoom = rooms.find(r => r.type === 'global');
                 if (globalRoom) selectRoom(globalRoom.id);
@@ -418,7 +446,6 @@
             `).join('');
         }
 
-        // Select a room, load history, set up realtime channel
         async function selectRoom(roomId) {
             if (currentRoom?.id === roomId) return;
             if (roomChannel) {
@@ -437,10 +464,7 @@
             document.getElementById('messageInput').disabled = false;
             document.getElementById('sendBtn').disabled = false;
 
-            // Load historical messages
             await loadMessages();
-
-            // Setup Realtime channel for this room (presence + broadcast)
             setupRoomChannel();
         }
 
@@ -460,9 +484,9 @@
 
             if (error) {
                 console.error('Error loading messages:', error);
+                showToast('Error loading messages', 'error');
                 return;
             }
-            // Transform: players is an array, take first element
             currentMessages = (data || []).map(msg => ({
                 ...msg,
                 players: msg.players[0]
@@ -489,14 +513,11 @@
             container.scrollTop = container.scrollHeight;
         }
 
-        // Setup Realtime channel for the current room
         function setupRoomChannel() {
             if (!currentRoom || !currentPlayer) return;
 
-            // Channel name: room:<roomId>
             roomChannel = sb.channel(`room:${currentRoom.id}`);
 
-            // Presence: sync event
             roomChannel.on('presence', { event: 'sync' }, () => {
                 const state = roomChannel.presenceState();
                 const userList = [];
@@ -508,20 +529,17 @@
                 renderMembers();
             });
 
-            // Broadcast: receive messages
             roomChannel.on('broadcast', { event: 'message' }, (payload) => {
                 const newMsg = payload.payload;
-                // Avoid duplicate if we just sent it (optimistic already added)
+                // Avoid duplicates: don't add if already present (by id or by content within last few seconds)
                 if (!currentMessages.some(m => m.id === newMsg.id)) {
                     currentMessages.push(newMsg);
                     renderMessages();
                 }
             });
 
-            // Subscribe to the channel
             roomChannel.subscribe(async (status) => {
                 if (status === 'SUBSCRIBED') {
-                    // Track own presence
                     await roomChannel.track({
                         user_id: currentPlayer.id,
                         username: currentPlayer.username,
@@ -531,7 +549,6 @@
             });
         }
 
-        // Send a message (optimistic UI + broadcast + persist)
         async function sendMessage() {
             const input = document.getElementById('messageInput');
             const text = input.value.trim();
@@ -546,12 +563,12 @@
                 players: { username: currentPlayer.username }
             };
 
-            // Optimistic add
+            // Add to UI immediately (optimistic)
             currentMessages.push(newMsg);
             renderMessages();
             input.value = '';
 
-            // Broadcast to others (we will also receive it, but duplicate detection prevents double render)
+            // Broadcast to others
             if (roomChannel) {
                 await roomChannel.send({
                     type: 'broadcast',
@@ -571,10 +588,8 @@
 
             if (error) {
                 console.error('Failed to persist message:', error);
-                // Optionally show an error and remove the optimistic message
-                currentMessages = currentMessages.filter(m => m.id !== tempId);
-                renderMessages();
-                alert('Failed to send message. Please try again.');
+                showToast('Message saved locally but could not sync to server', 'error');
+                // Do NOT remove the optimistic message – keep it in UI
             }
         }
 
@@ -586,7 +601,7 @@
         async function createRoom() {
             const name = document.getElementById('roomName').value.trim();
             if (!name) {
-                alert('Room name required');
+                showToast('Room name required', 'error');
                 return;
             }
             const { data, error } = await sb
@@ -601,17 +616,14 @@
                 .single();
 
             if (error) {
-                alert(error.message);
+                showToast(error.message, 'error');
             } else {
-                alert('Room created!');
+                showToast('Room created!', 'success');
                 closeModal('createRoomModal');
                 await loadRooms();
                 selectRoom(data.id);
             }
         }
-
-        // Join a channel (for simplicity, we'll add a join button later – but for now, creator auto-joins)
-        // We can add a "Join" button next to channels that the user is not a member of.
 
         function renderMembers() {
             const container = document.getElementById('membersList');
