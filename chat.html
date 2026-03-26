@@ -245,25 +245,6 @@
             background: #4CAF50;
         }
 
-        .member-actions {
-            display: flex;
-            gap: 5px;
-        }
-
-        .dm-btn {
-            background: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 3px;
-            padding: 2px 5px;
-            cursor: pointer;
-            font-size: 0.7rem;
-        }
-
-        .dm-btn:hover {
-            background: #45a049;
-        }
-
         .modal {
             display: none;
             position: fixed;
@@ -404,7 +385,6 @@
             }, duration);
         }
 
-        // Global state
         let currentPlayer = null;
         let currentRoom = null;
         let rooms = [];
@@ -456,7 +436,7 @@
                 <div class="room-item ${currentRoom?.id === room.id ? 'active' : ''}" 
                      onclick="selectRoom('${room.id}')">
                     <strong>${escapeHtml(room.name)}</strong>
-                    <div style="font-size:0.7rem; color:gray;">${room.type === 'global' ? 'Global' : (room.type === 'dm' ? 'DM' : 'Channel')}</div>
+                    <div style="font-size:0.7rem; color:gray;">${room.type === 'global' ? 'Global' : 'Channel'}</div>
                 </div>
             `).join('');
         }
@@ -601,27 +581,6 @@
             }
         }
 
-        // DM function
-        async function startDM(otherUserId, otherUsername) {
-            if (otherUserId === currentPlayer.id) {
-                showToast("You cannot message yourself", 'error');
-                return;
-            }
-            try {
-                const { data, error } = await sb.rpc('create_or_get_dm_room', { p_other_user_id: otherUserId });
-                if (error) throw error;
-                if (data.success) {
-                    await loadRooms();
-                    selectRoom(data.room_id);
-                } else {
-                    showToast(data.error || 'Failed to start DM', 'error');
-                }
-            } catch (err) {
-                console.error('Error starting DM:', err);
-                showToast('Error starting DM', 'error');
-            }
-        }
-
         function renderMembers() {
             const container = document.getElementById('membersList');
             if (!onlineUsers.length) {
@@ -633,16 +592,10 @@
                     <div class="member-avatar">${user.username.charAt(0).toUpperCase()}</div>
                     <div class="member-name">${escapeHtml(user.username)}</div>
                     <div class="member-status"></div>
-                    ${user.user_id !== currentPlayer.id ? `
-                        <div class="member-actions">
-                            <button class="dm-btn" onclick="startDM('${user.user_id}', '${escapeHtml(user.username)}')">💬</button>
-                        </div>
-                    ` : ''}
                 </div>
             `).join('');
         }
 
-        // Room creation
         function showCreateRoomModal() {
             document.getElementById('createRoomModal').style.display = 'block';
         }
@@ -684,7 +637,6 @@
             return div.innerHTML;
         }
 
-        // Initialize
         (async function init() {
             const player = await getPlayer();
             if (!player) {
