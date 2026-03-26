@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chatroom - Rheoa RPG</title>
+    <title>Chat - Rheoa RPG</title>
     <style>
         * {
             margin: 0;
@@ -28,6 +28,7 @@
             min-height: 0;
         }
 
+        /* Rooms Sidebar */
         .rooms-sidebar {
             width: 260px;
             background: white;
@@ -82,6 +83,7 @@
             color: white;
         }
 
+        /* Main Chat Area */
         .chat-main {
             flex: 1;
             display: flex;
@@ -105,7 +107,7 @@
             font-weight: bold;
         }
 
-        .member-count {
+        .online-count {
             font-size: 0.8rem;
             background: rgba(255,255,255,0.2);
             padding: 2px 8px;
@@ -188,6 +190,7 @@
             font-weight: bold;
         }
 
+        /* Members Sidebar (with presence) */
         .members-sidebar {
             width: 260px;
             background: white;
@@ -217,38 +220,35 @@
             border-radius: 5px;
             background: #f5f5f5;
             display: flex;
-            justify-content: space-between;
             align-items: center;
+            gap: 10px;
+        }
+
+        .member-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #2196F3;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
         }
 
         .member-name {
             font-weight: bold;
+            flex: 1;
         }
 
-        .member-role {
-            font-size: 0.7rem;
-            padding: 2px 6px;
-            border-radius: 10px;
-            background: #ddd;
+        .member-status {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #4CAF50;
         }
 
-        .member-role.admin { background: #f44336; color: white; }
-        .member-role.operator { background: #ff9800; color: white; }
-
-        .member-actions button {
-            margin-left: 5px;
-            padding: 2px 5px;
-            font-size: 0.7rem;
-            cursor: pointer;
-            border: none;
-            border-radius: 3px;
-        }
-
-        .kick-btn { background: #f44336; color: white; }
-        .ban-btn { background: #9c27b0; color: white; }
-        .promote-btn { background: #4CAF50; color: white; }
-        .demote-btn { background: #ff9800; color: white; }
-
+        /* Modal */
         .modal {
             display: none;
             position: fixed;
@@ -306,7 +306,7 @@
         <div class="chat-main">
             <div class="chat-header">
                 <div class="room-info" id="currentRoomName">Select a room</div>
-                <div class="member-count" id="memberCount">0 members</div>
+                <div class="online-count" id="onlineCount">0 online</div>
             </div>
             <div class="messages-area" id="messagesArea">
                 <div class="loading">Select a room to start chatting</div>
@@ -319,7 +319,7 @@
 
         <!-- Members Sidebar -->
         <div class="members-sidebar">
-            <div class="members-header">👥 Members</div>
+            <div class="members-header">👥 Online</div>
             <div class="members-list" id="membersList">
                 <div class="loading">Select a room</div>
             </div>
@@ -341,23 +341,6 @@
         </div>
     </div>
 
-    <!-- Ban Modal -->
-    <div id="banModal" class="modal">
-        <div class="modal-content">
-            <h3>Ban User</h3>
-            <p id="banUserName"></p>
-            <input type="text" id="banReason" placeholder="Reason (optional)">
-            <select id="banDuration">
-                <option value="24">24 hours</option>
-                <option value="168">7 days</option>
-                <option value="720">30 days</option>
-                <option value="0">Permanent</option>
-            </select>
-            <button onclick="confirmBan()">Ban</button>
-            <button onclick="closeModal('banModal')">Cancel</button>
-        </div>
-    </div>
-
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
     <script>
         const sb = window.supabase.createClient(
@@ -365,14 +348,15 @@
             "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
         );
 
-        let currentPlayer = null;
-        let currentRoom = null;
-        let rooms = [];
-        let members = [];
-        let messagesSubscription = null;
+        // Global state
+        let currentPlayer = null;          // { id, username }
+        let currentRoom = null;            // { id, name, type }
+        let rooms = [];                    // list of rooms user can see
         let currentMessages = [];
+        let roomChannel = null;            // Realtime channel for current room (presence + broadcast)
+        let onlineUsers = [];              // presence list
 
-        // Helper to get player's UUID and username from auth
+        // Helper: get player's id and username
         async function getPlayer() {
             const { data: { user } } = await sb.auth.getUser();
             if (!user) return null;
@@ -381,50 +365,38 @@
             return player;
         }
 
-        // Helper to check for duplicate messages (same user, same text, within last 5 seconds)
-        function isDuplicateMessage(newMsg, existingMessages) {
-            const now = new Date();
-            const recentMessages = existingMessages.filter(m => {
-                const msgTime = new Date(m.created_at);
-                const diff = (now - msgTime) / 1000;
-                return diff < 5 && m.user_id === newMsg.user_id && m.message === newMsg.message;
-            });
-            return recentMessages.length > 0;
-        }
-
-        // Load rooms the user can see (global + joined channels)
+        // Load rooms (global + channels user is member of)
         async function loadRooms() {
             const player = await getPlayer();
             if (!player) return;
 
-            // Fetch all active rooms with a left join to memberships
-            const { data: roomsData, error } = await sb
+            // Get all rooms
+            const { data: allRooms, error } = await sb
                 .from('chat_rooms')
-                .select(`
-                    id, name, description, type,
-                    chat_room_members!left(role, user_id)
-                `)
-                .eq('is_active', true);
+                .select('*')
+                .order('created_at');
 
             if (error) {
                 console.error('Error loading rooms:', error);
                 return;
             }
 
-            // Keep global room always; keep channels only if user is a member
-            const visibleRooms = roomsData.filter(room => {
-                if (room.type === 'global') return true;
-                return room.chat_room_members.some(m => m.user_id === player.id);
-            });
+            // Get user's channel memberships
+            const { data: memberships } = await sb
+                .from('chat_members')
+                .select('room_id')
+                .eq('user_id', player.id);
+            const memberRoomIds = memberships?.map(m => m.room_id) || [];
 
-            rooms = visibleRooms.map(room => ({
-                ...room,
-                role: room.chat_room_members.find(m => m.user_id === player.id)?.role || null
-            }));
+            // Filter: global always visible; channels only if member
+            rooms = allRooms.filter(room => {
+                if (room.type === 'global') return true;
+                return memberRoomIds.includes(room.id);
+            });
 
             renderRooms();
 
-            // If no room is selected and we have a global room, select it automatically
+            // Auto-select global room if exists and no room selected
             if (!currentRoom && rooms.length) {
                 const globalRoom = rooms.find(r => r.type === 'global');
                 if (globalRoom) selectRoom(globalRoom.id);
@@ -446,9 +418,13 @@
             `).join('');
         }
 
+        // Select a room, load history, set up realtime channel
         async function selectRoom(roomId) {
             if (currentRoom?.id === roomId) return;
-            if (messagesSubscription) messagesSubscription.unsubscribe();
+            if (roomChannel) {
+                roomChannel.unsubscribe();
+                roomChannel = null;
+            }
 
             currentRoom = rooms.find(r => r.id === roomId);
             if (!currentRoom) return;
@@ -456,13 +432,16 @@
             renderRooms();
             document.getElementById('currentRoomName').innerHTML = currentRoom.name;
             document.getElementById('messagesArea').innerHTML = '<div class="loading">Loading messages...</div>';
-            document.getElementById('memberCount').textContent = 'Loading...';
+            document.getElementById('onlineCount').textContent = '0 online';
+            document.getElementById('membersList').innerHTML = '<div class="loading">Loading...</div>';
             document.getElementById('messageInput').disabled = false;
             document.getElementById('sendBtn').disabled = false;
 
+            // Load historical messages
             await loadMessages();
-            await loadMembers();
-            subscribeToMessages();
+
+            // Setup Realtime channel for this room (presence + broadcast)
+            setupRoomChannel();
         }
 
         async function loadMessages() {
@@ -470,18 +449,24 @@
             const { data, error } = await sb
                 .from('chat_messages')
                 .select(`
-                    id, message, created_at, user_id,
-                    players!inner(username)
+                    id,
+                    content,
+                    created_at,
+                    user_id,
+                    players:user_id (username)
                 `)
                 .eq('room_id', currentRoom.id)
-                .eq('is_deleted', false)
                 .order('created_at', { ascending: true });
 
             if (error) {
                 console.error('Error loading messages:', error);
                 return;
             }
-            currentMessages = data || [];
+            // Transform: players is an array, take first element
+            currentMessages = (data || []).map(msg => ({
+                ...msg,
+                players: msg.players[0]
+            }));
             renderMessages();
         }
 
@@ -498,143 +483,98 @@
                         <span class="message-username">${escapeHtml(msg.players.username)}</span>
                         <span class="message-time">${new Date(msg.created_at).toLocaleTimeString()}</span>
                     </div>
-                    <div class="message-text">${escapeHtml(msg.message)}</div>
+                    <div class="message-text">${escapeHtml(msg.content)}</div>
                 </div>
             `).join('');
             container.scrollTop = container.scrollHeight;
         }
 
-        async function loadMembers() {
-            if (!currentRoom) return;
-            const { data, error } = await sb
-                .from('chat_room_members')
-                .select(`
-                    user_id,
-                    role,
-                    banned_until,
-                    players!inner(username)
-                `)
-                .eq('room_id', currentRoom.id)
-                .order('role', { ascending: false });
+        // Setup Realtime channel for the current room
+        function setupRoomChannel() {
+            if (!currentRoom || !currentPlayer) return;
 
-            if (error) {
-                console.error('Error loading members:', error);
-                return;
-            }
-            members = data || [];
-            document.getElementById('memberCount').textContent = `${members.length} members`;
-            renderMembers();
+            // Channel name: room:<roomId>
+            roomChannel = sb.channel(`room:${currentRoom.id}`);
+
+            // Presence: sync event
+            roomChannel.on('presence', { event: 'sync' }, () => {
+                const state = roomChannel.presenceState();
+                const userList = [];
+                Object.keys(state).forEach(key => {
+                    userList.push(...state[key]);
+                });
+                onlineUsers = userList;
+                document.getElementById('onlineCount').textContent = `${onlineUsers.length} online`;
+                renderMembers();
+            });
+
+            // Broadcast: receive messages
+            roomChannel.on('broadcast', { event: 'message' }, (payload) => {
+                const newMsg = payload.payload;
+                // Avoid duplicate if we just sent it (optimistic already added)
+                if (!currentMessages.some(m => m.id === newMsg.id)) {
+                    currentMessages.push(newMsg);
+                    renderMessages();
+                }
+            });
+
+            // Subscribe to the channel
+            roomChannel.subscribe(async (status) => {
+                if (status === 'SUBSCRIBED') {
+                    // Track own presence
+                    await roomChannel.track({
+                        user_id: currentPlayer.id,
+                        username: currentPlayer.username,
+                        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentPlayer.id}`
+                    });
+                }
+            });
         }
 
-        function renderMembers() {
-            const container = document.getElementById('membersList');
-            if (!members.length) {
-                container.innerHTML = '<div class="empty">No members</div>';
-                return;
-            }
-
-            const playerId = currentPlayer.id;
-            const currentUserMember = members.find(m => m.user_id === playerId);
-            const isAdmin = currentUserMember?.role === 'admin';
-            const isOperator = isAdmin || currentUserMember?.role === 'operator';
-
-            container.innerHTML = members.map(m => {
-                const isBanned = m.banned_until && new Date(m.banned_until) > new Date();
-                return `
-                    <div class="member-item">
-                        <div>
-                            <span class="member-name">${escapeHtml(m.players.username)}</span>
-                            <span class="member-role ${m.role}">${m.role}</span>
-                            ${isBanned ? '<span style="color:red;">(banned)</span>' : ''}
-                        </div>
-                        <div class="member-actions">
-                            ${(isAdmin && m.user_id !== playerId) ? `
-                                ${m.role !== 'admin' ? `<button class="promote-btn" onclick="promoteUser('${m.user_id}')">⬆️</button>` : ''}
-                                ${m.role !== 'member' ? `<button class="demote-btn" onclick="demoteUser('${m.user_id}')">⬇️</button>` : ''}
-                                <button class="kick-btn" onclick="kickUser('${m.user_id}')">Kick</button>
-                                <button class="ban-btn" onclick="showBanModal('${m.user_id}', '${escapeHtml(m.players.username)}')">Ban</button>
-                            ` : (isOperator && m.user_id !== playerId && m.role !== 'admin') ? `
-                                <button class="kick-btn" onclick="kickUser('${m.user_id}')">Kick</button>
-                            ` : ''}
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        function subscribeToMessages() {
-            if (!currentRoom) return;
-            messagesSubscription = sb
-                .channel(`room-${currentRoom.id}`)
-                .on('postgres_changes', {
-                    event: 'INSERT',
-                    schema: 'public',
-                    table: 'chat_messages',
-                    filter: `room_id=eq.${currentRoom.id}`
-                }, payload => {
-                    console.log('New message payload:', payload);
-                    if (!payload.new.is_deleted) {
-                        // Avoid adding our own optimistic message (duplicate check)
-                        if (!isDuplicateMessage(payload.new, currentMessages)) {
-                            currentMessages.push(payload.new);
-                            renderMessages();
-                        }
-                    }
-                })
-                .on('postgres_changes', {
-                    event: 'UPDATE',
-                    schema: 'public',
-                    table: 'chat_messages',
-                    filter: `room_id=eq.${currentRoom.id}`
-                }, payload => {
-                    const index = currentMessages.findIndex(m => m.id === payload.new.id);
-                    if (index !== -1) {
-                        if (payload.new.is_deleted) {
-                            currentMessages.splice(index, 1);
-                        } else {
-                            currentMessages[index] = { ...currentMessages[index], ...payload.new };
-                        }
-                        renderMessages();
-                    }
-                })
-                .subscribe();
-        }
-
+        // Send a message (optimistic UI + broadcast + persist)
         async function sendMessage() {
             const input = document.getElementById('messageInput');
             const text = input.value.trim();
             if (!text || !currentRoom) return;
 
-            const playerId = currentPlayer.id;
             const tempId = `temp-${Date.now()}`;
-            const localMessage = {
+            const newMsg = {
                 id: tempId,
-                message: text,
+                content: text,
                 created_at: new Date().toISOString(),
-                user_id: playerId,
+                user_id: currentPlayer.id,
                 players: { username: currentPlayer.username }
             };
 
-            // Add to UI immediately
-            currentMessages.push(localMessage);
+            // Optimistic add
+            currentMessages.push(newMsg);
             renderMessages();
             input.value = '';
 
-            // Send to server
+            // Broadcast to others (we will also receive it, but duplicate detection prevents double render)
+            if (roomChannel) {
+                await roomChannel.send({
+                    type: 'broadcast',
+                    event: 'message',
+                    payload: newMsg
+                });
+            }
+
+            // Persist to database
             const { error } = await sb
                 .from('chat_messages')
                 .insert({
                     room_id: currentRoom.id,
-                    user_id: playerId,
-                    message: text
+                    user_id: currentPlayer.id,
+                    content: text
                 });
 
             if (error) {
-                console.error('Failed to send message:', error);
-                showToast('Failed to send message', 'error');
-                // Remove the optimistic message on error
+                console.error('Failed to persist message:', error);
+                // Optionally show an error and remove the optimistic message
                 currentMessages = currentMessages.filter(m => m.id !== tempId);
                 renderMessages();
+                alert('Failed to send message. Please try again.');
             }
         }
 
@@ -645,99 +585,51 @@
 
         async function createRoom() {
             const name = document.getElementById('roomName').value.trim();
-            const description = document.getElementById('roomDescription').value.trim();
             if (!name) {
-                showToast('Room name required', 'error');
+                alert('Room name required');
                 return;
             }
-            const { data, error } = await sb.rpc('create_chat_room', {
-                p_name: name,
-                p_description: description || null
-            });
-            if (error || !data.success) {
-                showToast(error?.message || data?.error || 'Failed to create room', 'error');
+            const { data, error } = await sb
+                .from('chat_rooms')
+                .insert({
+                    name: name,
+                    type: 'channel',
+                    created_by: currentPlayer.id,
+                    description: document.getElementById('roomDescription').value.trim() || null
+                })
+                .select('id')
+                .single();
+
+            if (error) {
+                alert(error.message);
             } else {
-                showToast('Room created!', 'success');
+                alert('Room created!');
                 closeModal('createRoomModal');
                 await loadRooms();
-                selectRoom(data.room_id);
+                selectRoom(data.id);
             }
         }
 
-        // Moderation actions
-        async function kickUser(userId) {
-            if (!confirm('Kick this user from the room?')) return;
-            const { data, error } = await sb.rpc('kick_user', {
-                p_room_id: currentRoom.id,
-                p_user_id: userId
-            });
-            if (error || !data.success) {
-                showToast(error?.message || data?.error || 'Failed to kick', 'error');
-            } else {
-                showToast('User kicked', 'success');
-                await loadMembers();
-            }
-        }
+        // Join a channel (for simplicity, we'll add a join button later – but for now, creator auto-joins)
+        // We can add a "Join" button next to channels that the user is not a member of.
 
-        let banTargetId = null;
-        function showBanModal(userId, username) {
-            banTargetId = userId;
-            document.getElementById('banUserName').innerText = `Ban ${username}`;
-            document.getElementById('banModal').style.display = 'block';
-        }
-
-        async function confirmBan() {
-            const reason = document.getElementById('banReason').value.trim();
-            const durationHours = parseInt(document.getElementById('banDuration').value);
-            const { data, error } = await sb.rpc('ban_user', {
-                p_room_id: currentRoom.id,
-                p_user_id: banTargetId,
-                p_reason: reason || null,
-                p_duration_hours: durationHours
-            });
-            if (error || !data.success) {
-                showToast(error?.message || data?.error || 'Failed to ban', 'error');
-            } else {
-                showToast('User banned', 'success');
-                closeModal('banModal');
-                await loadMembers();
+        function renderMembers() {
+            const container = document.getElementById('membersList');
+            if (!onlineUsers.length) {
+                container.innerHTML = '<div class="empty">No one else is online in this room.</div>';
+                return;
             }
-        }
-
-        async function promoteUser(userId) {
-            const { data, error } = await sb.rpc('set_member_role', {
-                p_room_id: currentRoom.id,
-                p_user_id: userId,
-                p_role: 'operator'
-            });
-            if (error || !data.success) {
-                showToast(error?.message || data?.error || 'Failed to promote', 'error');
-            } else {
-                showToast('Promoted to operator', 'success');
-                await loadMembers();
-            }
-        }
-
-        async function demoteUser(userId) {
-            const { data, error } = await sb.rpc('set_member_role', {
-                p_room_id: currentRoom.id,
-                p_user_id: userId,
-                p_role: 'member'
-            });
-            if (error || !data.success) {
-                showToast(error?.message || data?.error || 'Failed to demote', 'error');
-            } else {
-                showToast('Demoted to member', 'success');
-                await loadMembers();
-            }
+            container.innerHTML = onlineUsers.map(user => `
+                <div class="member-item">
+                    <div class="member-avatar">${user.username.charAt(0).toUpperCase()}</div>
+                    <div class="member-name">${escapeHtml(user.username)}</div>
+                    <div class="member-status"></div>
+                </div>
+            `).join('');
         }
 
         function closeModal(modalId) {
             document.getElementById(modalId).style.display = 'none';
-        }
-
-        function showToast(message, type) {
-            alert(message); // simple fallback
         }
 
         function escapeHtml(text) {
