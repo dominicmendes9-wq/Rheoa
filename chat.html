@@ -285,7 +285,7 @@
             text-decoration: none;
         }
 
-        /* Toast notifications (if not already present) */
+        /* Toast notifications */
         .toast-container {
             position: fixed;
             top: 20px;
@@ -373,7 +373,7 @@
             "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
         );
 
-        // Toast notification (reuse existing or define here)
+        // Toast notification – we'll keep it for success/info messages
         function showToast(message, type = 'info', duration = 3000) {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
@@ -411,7 +411,7 @@
             const { data: allRooms, error } = await sb.from('chat_rooms').select('*').order('created_at');
             if (error) {
                 console.error('Error loading rooms:', error);
-                showToast('Error loading rooms', 'error');
+                // No toast for this error – only console
                 return;
             }
 
@@ -484,7 +484,6 @@
 
             if (error) {
                 console.error('Error loading messages:', error);
-                showToast('Error loading messages', 'error');
                 return;
             }
             currentMessages = (data || []).map(msg => ({
@@ -531,7 +530,7 @@
 
             roomChannel.on('broadcast', { event: 'message' }, (payload) => {
                 const newMsg = payload.payload;
-                // Avoid duplicates: don't add if already present (by id or by content within last few seconds)
+                // Avoid duplicates: don't add if already present (by id)
                 if (!currentMessages.some(m => m.id === newMsg.id)) {
                     currentMessages.push(newMsg);
                     renderMessages();
@@ -588,8 +587,7 @@
 
             if (error) {
                 console.error('Failed to persist message:', error);
-                showToast('Message saved locally but could not sync to server', 'error');
-                // Do NOT remove the optimistic message – keep it in UI
+                // No red toast – only log to console
             }
         }
 
