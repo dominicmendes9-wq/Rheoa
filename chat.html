@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chatroom - Rheoa RPG</title>
     <style>
-        /* (CSS unchanged from previous version – keep the same styling) */
         * {
             margin: 0;
             padding: 0;
@@ -373,20 +372,30 @@
         let messagesSubscription = null;
         let currentMessages = [];
 
-        // Helper to get player's UUID from auth
-        async function getPlayerId() {
-            if (currentPlayer) return currentPlayer.id;
+        // Helper to get player's UUID and username from auth
+        async function getPlayer() {
             const { data: { user } } = await sb.auth.getUser();
             if (!user) return null;
-            const { data: player } = await sb.from('players').select('id').eq('auth_id', user.id).single();
+            const { data: player } = await sb.from('players').select('id, username').eq('auth_id', user.id).single();
             if (player) currentPlayer = player;
-            return player?.id;
+            return player;
+        }
+
+        // Helper to check for duplicate messages (same user, same text, within last 5 seconds)
+        function isDuplicateMessage(newMsg, existingMessages) {
+            const now = new Date();
+            const recentMessages = existingMessages.filter(m => {
+                const msgTime = new Date(m.created_at);
+                const diff = (now - msgTime) / 1000;
+                return diff < 5 && m.user_id === newMsg.user_id && m.message === newMsg.message;
+            });
+            return recentMessages.length > 0;
         }
 
         // Load rooms the user can see (global + joined channels)
         async function loadRooms() {
-            const playerId = await getPlayerId();
-            if (!playerId) return;
+            const player = await getPlayer();
+            if (!player) return;
 
             // Fetch all active rooms with a left join to memberships
             const { data: roomsData, error } = await sb
@@ -405,13 +414,12 @@
             // Keep global room always; keep channels only if user is a member
             const visibleRooms = roomsData.filter(room => {
                 if (room.type === 'global') return true;
-                // For channels, user must have a membership row
-                return room.chat_room_members.some(m => m.user_id === playerId);
+                return room.chat_room_members.some(m => m.user_id === player.id);
             });
 
             rooms = visibleRooms.map(room => ({
                 ...room,
-                role: room.chat_room_members.find(m => m.user_id === playerId)?.role || null
+                role: room.chat_room_members.find(m => m.user_id === player.id)?.role || null
             }));
 
             renderRooms();
@@ -564,9 +572,13 @@
                     table: 'chat_messages',
                     filter: `room_id=eq.${currentRoom.id}`
                 }, payload => {
+                    console.log('New message payload:', payload);
                     if (!payload.new.is_deleted) {
-                        currentMessages.push(payload.new);
-                        renderMessages();
+                        // Avoid adding our own optimistic message (duplicate check)
+                        if (!isDuplicateMessage(payload.new, currentMessages)) {
+                            currentMessages.push(payload.new);
+                            renderMessages();
+                        }
                     }
                 })
                 .on('postgres_changes', {
@@ -594,6 +606,21 @@
             if (!text || !currentRoom) return;
 
             const playerId = currentPlayer.id;
+            const tempId = `temp-${Date.now()}`;
+            const localMessage = {
+                id: tempId,
+                message: text,
+                created_at: new Date().toISOString(),
+                user_id: playerId,
+                players: { username: currentPlayer.username }
+            };
+
+            // Add to UI immediately
+            currentMessages.push(localMessage);
+            renderMessages();
+            input.value = '';
+
+            // Send to server
             const { error } = await sb
                 .from('chat_messages')
                 .insert({
@@ -601,13 +628,17 @@
                     user_id: playerId,
                     message: text
                 });
+
             if (error) {
+                console.error('Failed to send message:', error);
                 showToast('Failed to send message', 'error');
-            } else {
-                input.value = '';
+                // Remove the optimistic message on error
+                currentMessages = currentMessages.filter(m => m.id !== tempId);
+                renderMessages();
             }
         }
 
+        // Room creation
         function showCreateRoomModal() {
             document.getElementById('createRoomModal').style.display = 'block';
         }
@@ -629,11 +660,11 @@
                 showToast('Room created!', 'success');
                 closeModal('createRoomModal');
                 await loadRooms();
-                // Auto-select the new room
                 selectRoom(data.room_id);
             }
         }
 
+        // Moderation actions
         async function kickUser(userId) {
             if (!confirm('Kick this user from the room?')) return;
             const { data, error } = await sb.rpc('kick_user', {
@@ -706,7 +737,6 @@
         }
 
         function showToast(message, type) {
-            // Replace with your toast implementation if needed
             alert(message); // simple fallback
         }
 
@@ -718,8 +748,8 @@
 
         // Initialize
         (async function init() {
-            const playerId = await getPlayerId();
-            if (!playerId) {
+            const player = await getPlayer();
+            if (!player) {
                 window.location.href = 'index.html';
                 return;
             }
