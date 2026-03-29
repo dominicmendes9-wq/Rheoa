@@ -6,29 +6,42 @@
     <title>Freelancer Marketplace - Rheoa RPG</title>
     <style>
         body { font-family: 'Courier New', monospace; background: #f8f8f0; padding: 20px; }
-        .template-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+        .template-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px; }
         .template-card { border: 2px solid #2196F3; border-radius: 10px; padding: 15px; background: white; }
-        .order-btn { background: #4CAF50; color: white; padding: 8px; border: none; cursor: pointer; }
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
-        .modal-content { background: white; margin: 10% auto; padding: 20px; width: 500px; border-radius: 10px; }
+        .preview { margin-bottom: 15px; background: #f0f0f0; border-radius: 8px; overflow: hidden; }
+        .order-btn { background: #4CAF50; color: white; padding: 8px; border: none; cursor: pointer; width: 100%; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; }
+        .modal-content { background: white; margin: 5% auto; padding: 20px; width: 90%; max-width: 600px; border-radius: 10px; max-height: 80vh; overflow-y: auto; }
+        .modal textarea { width: 100%; height: 100px; margin: 10px 0; }
         .back-btn { display: block; width: 200px; margin: 30px auto; text-align: center; background: #666; color: white; padding: 10px; border-radius: 8px; text-decoration: none; }
+        .category-filter { margin-bottom: 20px; text-align: center; }
+        .category-filter select { padding: 8px; font-family: inherit; }
     </style>
 </head>
 <body>
     <h1>📋 Freelancer Templates</h1>
+    <div class="category-filter">
+        <label>Category: </label>
+        <select id="categorySelect" onchange="filterTemplates()">
+            <option value="all">All</option>
+            <option value="Menu">Menu</option>
+            <option value="Resume">Resume</option>
+            <option value="Poster">Poster</option>
+            <option value="Brochure">Brochure</option>
+        </select>
+    </div>
     <div id="templateList" class="template-grid">Loading...</div>
     <a href="dashboard.html" class="back-btn">← Back to Dashboard</a>
 
     <div id="orderModal" class="modal">
         <div class="modal-content">
-            <h2>Complete Payment</h2>
+            <h2>Customize & Order</h2>
             <p>Template: <span id="modalTemplateName"></span></p>
-            <p>Amount: <span id="modalAmount"></span> USDT</p>
-            <p>Send exactly this amount to:</p>
-            <code id="escrowAddress"></code>
-            <p>After payment, click <button id="verifyPayment">Verify Payment</button></p>
-            <div id="paymentStatus"></div>
-            <button onclick="closeModal()">Close</button>
+            <p>Base Price: $<span id="modalPrice"></span></p>
+            <label>Additional Instructions (optional):</label>
+            <textarea id="customInstructions" placeholder="e.g., change colors, add text..."></textarea>
+            <button id="proceedBtn" onclick="proceedToPayment()">Proceed to Payment</button>
+            <button onclick="closeModal()">Cancel</button>
         </div>
     </div>
 
@@ -42,79 +55,72 @@
         let currentTemplate = null;
         let currentOrder = null;
 
-        // Load templates from freelance_templates
+        // Load templates with category filter
         async function loadTemplates() {
             const { data, error } = await sb.from('freelance_templates').select('*');
             if (error) return console.error(error);
+            window.allTemplates = data;
+            filterTemplates();
+        }
+
+        function filterTemplates() {
+            const category = document.getElementById('categorySelect').value;
+            const filtered = category === 'all' ? window.allTemplates : window.allTemplates.filter(t => t.category === category);
+            renderTemplates(filtered);
+        }
+
+        function renderTemplates(templates) {
             const container = document.getElementById('templateList');
-            container.innerHTML = data.map(t => `
+            if (!templates.length) {
+                container.innerHTML = '<p>No templates found.</p>';
+                return;
+            }
+            container.innerHTML = templates.map(t => `
                 <div class="template-card">
+                    <div class="preview">${t.design_html || '<img src="' + (t.preview_url || 'https://via.placeholder.com/300x200') + '" style="width:100%;">'}</div>
                     <h3>${t.title}</h3>
                     <p>${t.description || ''}</p>
-                    <p>Price: ${t.price} USDT</p>
+                    <p>Price: $${t.price} USDT</p>
                     <button class="order-btn" onclick="orderTemplate('${t.id}')">Order & Customize</button>
                 </div>
             `).join('');
         }
 
         async function orderTemplate(templateId) {
-            // Get template details
             const { data: template, error } = await sb.from('freelance_templates').select('*').eq('id', templateId).single();
             if (error) return alert('Error loading template');
+            currentTemplate = template;
+            document.getElementById('modalTemplateName').innerText = template.title;
+            document.getElementById('modalPrice').innerText = template.price;
+            document.getElementById('customInstructions').value = '';
+            document.getElementById('orderModal').style.display = 'block';
+        }
 
-            // Get employer wallet from MetaMask/Trust Wallet
+        async function proceedToPayment() {
+            const instructions = document.getElementById('customInstructions').value.trim();
+            const customization = { instructions }; // you can extend with structured fields later
             let employerWallet = null;
             if (typeof window.ethereum !== 'undefined') {
                 try {
                     const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
                     employerWallet = accounts[0];
-                } catch (e) { console.warn('Web3 wallet not connected'); }
+                } catch (e) { console.warn('Wallet not connected'); }
             }
 
-            // Create order (RPC)
             const { data, error: rpcError } = await sb.rpc('create_order', {
-                p_template_id: templateId,
+                p_template_id: currentTemplate.id,
                 p_employer_wallet: employerWallet,
-                p_customizations: {} // you can add customization UI later
+                p_customizations: customization
             });
             if (rpcError) return alert('Order failed: ' + rpcError.message);
             if (!data.success) return alert(data.error);
 
             currentOrder = data;
-            currentTemplate = template;
-
-            document.getElementById('modalTemplateName').innerText = template.title;
-            document.getElementById('modalAmount').innerText = data.amount;
-            document.getElementById('escrowAddress').innerText = data.escrow_wallet;
-            document.getElementById('orderModal').style.display = 'block';
-        }
-
-        window.verifyPayment = async function() {
-            const statusDiv = document.getElementById('paymentStatus');
-            statusDiv.innerText = 'Checking payment...';
-            const txHash = prompt('Enter the transaction hash (0x...)');
-            if (!txHash) return;
-
-            const provider = new ethers.providers.JsonRpcProvider('https://bsc-dataseed.binance.org/');
-            try {
-                const tx = await provider.getTransaction(txHash);
-                if (!tx) throw new Error('Transaction not found');
-                if (tx.to.toLowerCase() !== currentOrder.escrow_wallet.toLowerCase()) throw new Error('Wrong recipient');
-                if (parseFloat(ethers.utils.formatEther(tx.value)) !== currentOrder.amount) throw new Error('Wrong amount');
-                // Wait for confirmations? For simplicity, assume it's confirmed.
-
-                // Notify backend
-                const { data, error } = await sb.rpc('assign_order', {
-                    p_order_id: currentOrder.order_id,
-                    p_payment_tx_hash: txHash
-                });
-                if (error) throw error;
-                if (!data.success) throw new Error(data.error);
-                alert('Payment verified! Order assigned to freelancer. Check order status: /order-status.html?order=' + currentOrder.order_id);
-                closeModal();
-            } catch (err) {
-                statusDiv.innerText = 'Error: ' + err.message;
-            }
+            alert(`Order created! Please send ${data.amount} USDT to:\n${data.escrow_wallet}\n\nTransaction hash will be verified.`);
+            // Optionally, you could show a QR code or redirect to a payment page.
+            closeModal();
+            // After payment, you'll need to manually verify; for now we rely on user entering hash.
+            // In production, you'd listen for the payment event.
         }
 
         function closeModal() {
