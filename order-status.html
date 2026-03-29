@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Status - Rheoa RPG</title>
+    <style>
+        body { font-family: 'Courier New', monospace; background: #f8f8f0; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        button { background: #4CAF50; color: white; border: none; padding: 10px; cursor: pointer; }
+        .back-btn { display: block; width: 200px; margin: 30px auto; text-align: center; background: #666; color: white; padding: 10px; border-radius: 8px; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Order Status</h1>
+        <div id="orderInfo"></div>
+        <div id="action"></div>
+    </div>
+    <a href="dashboard.html" class="back-btn">← Back to Dashboard</a>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+    <script>
+        const supabaseUrl = 'https://mtiwodvsrwvrujbhmmrn.supabase.co';
+        const supabaseKey = 'sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp';
+        const sb = supabase.createClient(supabaseUrl, supabaseKey);
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const orderId = urlParams.get('order');
+        if (!orderId) {
+            document.body.innerHTML = '<p>No order ID specified.</p>';
+        } else {
+            loadOrder();
+        }
+
+        async function loadOrder() {
+            const { data: order, error } = await sb.from('freelance_orders').select('*, freelance_templates(title)').eq('id', orderId).single();
+            if (error) {
+                document.getElementById('orderInfo').innerHTML = 'Order not found';
+                return;
+            }
+            document.getElementById('orderInfo').innerHTML = `
+                <p>Template: ${order.freelance_templates.title}</p>
+                <p>Amount: ${order.amount} USDT</p>
+                <p>Status: <strong>${order.status}</strong></p>
+            `;
+            if (order.status === 'completed') {
+                document.getElementById('action').innerHTML = `
+                    <p>Order is ready. Please confirm you have received the work.</p>
+                    <button onclick="confirmReceipt()">Confirm Receipt</button>
+                `;
+            } else if (order.status === 'released') {
+                document.getElementById('action').innerHTML = '<p>Payment released. Thank you!</p>';
+            }
+        }
+
+        async function confirmReceipt() {
+            const { data, error } = await sb.rpc('confirm_receipt', { p_order_id: orderId });
+            if (error || !data.success) {
+                alert(error?.message || data?.error);
+            } else {
+                alert('Confirmed! Payment will be sent to freelancer.');
+                loadOrder();
+            }
+        }
+    </script>
+</body>
+</html>
