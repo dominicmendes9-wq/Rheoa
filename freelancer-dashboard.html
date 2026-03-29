@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Freelancer Dashboard - Rheoa RPG</title>
+    <style>
+        body { font-family: 'Courier New', monospace; background: #f8f8f0; padding: 20px; }
+        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; }
+        .status { padding: 10px; margin-bottom: 20px; border: 1px solid #ccc; border-radius: 5px; }
+        .online { background: #e8f5e8; color: green; }
+        .busy { background: #fff3e0; color: orange; }
+        .offline { background: #ffebee; color: red; }
+        button { background: #2196F3; color: white; border: none; padding: 5px 10px; cursor: pointer; margin: 5px; }
+        .back-btn { display: block; width: 200px; margin: 30px auto; text-align: center; background: #666; color: white; padding: 10px; border-radius: 8px; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Freelancer Dashboard</h1>
+        <div id="profile"></div>
+        <div id="statusDisplay" class="status"></div>
+        <div id="currentOrder"></div>
+        <div id="queuePosition"></div>
+        <hr>
+        <h3>My Templates</h3>
+        <div id="myTemplates"></div>
+        <button onclick="showCreateTemplate()">Create New Template</button>
+        <div id="createTemplateForm" style="display:none; margin-top:20px;">
+            <h4>New Template</h4>
+            <input type="text" id="title" placeholder="Title"><br>
+            <textarea id="desc" placeholder="Description"></textarea><br>
+            <input type="number" id="price" placeholder="Price (USDT)"><br>
+            <input type="text" id="category" placeholder="Category"><br>
+            <input type="text" id="previewUrl" placeholder="Preview Image URL"><br>
+            <button onclick="createTemplate()">Create</button>
+            <button onclick="cancelCreateTemplate()">Cancel</button>
+        </div>
+    </div>
+    <a href="dashboard.html" class="back-btn">← Back to Dashboard</a>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+    <script>
+        const supabaseUrl = 'https://mtiwodvsrwvrujbhmmrn.supabase.co';
+        const supabaseKey = 'sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp';
+        const sb = supabase.createClient(supabaseUrl, supabaseKey);
+
+        let currentFreelancer = null;
+
+        async function loadFreelancer() {
+            // In production, use Supabase Auth. For demo, prompt for email.
+            const email = prompt("Enter your registered email:");
+            if (!email) return;
+            const { data, error } = await sb.from('freelancers').select('*').eq('email', email).single();
+            if (error) {
+                alert('Freelancer not found');
+                return;
+            }
+            currentFreelancer = data;
+            renderDashboard();
+        }
+
+        async function renderDashboard() {
+            document.getElementById('profile').innerHTML = `
+                <h3>Welcome, ${currentFreelancer.name}</h3>
+                <p>Wallet: ${currentFreelancer.wallet_address}</p>
+                <p>Status: ${currentFreelancer.status}</p>
+                <button onclick="setStatus('online')">Go Online</button>
+                <button onclick="setStatus('offline')">Go Offline</button>
+            `;
+
+            const statusDiv = document.getElementById('statusDisplay');
+            statusDiv.className = `status ${currentFreelancer.status}`;
+            statusDiv.innerHTML = `You are currently <strong>${currentFreelancer.status}</strong>.`;
+
+            // Current order (if any)
+            if (currentFreelancer.status === 'busy') {
+                const { data: order } = await sb.from('freelance_orders').select('*').eq('freelancer_id', currentFreelancer.id).eq('status', 'assigned').single();
+                if (order) {
+                    const { data: template } = await sb.from('freelance_templates').select('*').eq('id', order.template_id).single();
+                    document.getElementById('currentOrder').innerHTML = `
+                        <h3>Current Order</h3>
+                        <p>Template: ${template.title}</p>
+                        <p>Amount: ${order.amount} USDT (you will get ${order.freelancer_payout})</p>
+                        <button onclick="completeOrder('${order.id}')">Mark as Completed</button>
+                    `;
+                }
+            } else {
+                document.getElementById('currentOrder').innerHTML = '<p>No active order.</p>';
+            }
+
+            // Queue position (simplified)
+            const { data: onlineList } = await sb.from('freelancers').select('id').eq('status', 'online').order('updated_at');
+            const index = onlineList.findIndex(f => f.id === currentFreelancer.id);
+            if (index >= 0) {
+                document.getElementById('queuePosition').innerHTML = `<p>Your position in queue: ${index + 1}</p>`;
+            } else {
+                document.getElementById('queuePosition').innerHTML = '<p>You are not in the queue (offline or busy). Go online to enter queue.</p>';
+            }
+
+            // My templates
+            const { data: templates } = await sb.from('freelance_templates').select('*').eq('freelancer_id', currentFreelancer.id);
+            const templateList = document.getElementById('myTemplates');
+            if (!templates.length) {
+                templateList.innerHTML = '<p>No templates uploaded yet.</p>';
+            } else {
+                templateList.innerHTML = templates.map(t => `
+                    <div style="border:1px solid #ccc; margin:5px; padding:5px;">
+                        <strong>${t.title}</strong> - $${t.price}<br>
+                        ${t.description}<br>
+                        <button onclick="deleteTemplate('${t.id}')">Delete</button>
+                    </div>
+                `).join('');
+            }
+        }
+
+        async function setStatus(status) {
+            const { data, error } = await sb.rpc('update_freelancer_status', { p_status: status });
+            if (error || !data.success) {
+                alert(error?.message || data?.error);
+            } else {
+                currentFreelancer.status = status;
+                renderDashboard();
+            }
+        }
+
+        async function completeOrder(orderId) {
+            const { data, error } = await sb.rpc('complete_order', { p_order_id: orderId });
+            if (error || !data.success) {
+                alert(error?.message || data?.error);
+            } else {
+                alert('Order marked as completed. Awaiting employer confirmation.');
+                renderDashboard();
+            }
+        }
+
+        function showCreateTemplate() {
+            document.getElementById('createTemplateForm').style.display = 'block';
+        }
+
+        function cancelCreateTemplate() {
+            document.getElementById('createTemplateForm').style.display = 'none';
+        }
+
+        async function createTemplate() {
+            const template = {
+                freelancer_id: currentFreelancer.id,
+                title: document.getElementById('title').value,
+                description: document.getElementById('desc').value,
+                price: parseFloat(document.getElementById('price').value),
+                category: document.getElementById('category').value,
+                preview_url: document.getElementById('previewUrl').value,
+                customization_options: {}
+            };
+            const { error } = await sb.from('freelance_templates').insert(template);
+            if (error) {
+                alert(error.message);
+            } else {
+                alert('Template created');
+                cancelCreateTemplate();
+                renderDashboard();
+            }
+        }
+
+        async function deleteTemplate(templateId) {
+            if (!confirm('Delete this template?')) return;
+            const { error } = await sb.from('freelance_templates').delete().eq('id', templateId);
+            if (error) alert(error.message);
+            else renderDashboard();
+        }
+
+        loadFreelancer();
+    </script>
+</body>
+</html>
