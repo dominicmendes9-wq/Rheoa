@@ -46,11 +46,13 @@
         const sb = supabase.createClient(supabaseUrl, supabaseKey);
 
         let currentFreelancer = null;
+        let freelancerEmail = null; // store email from login
 
         async function loadFreelancer() {
-            // In production, use Supabase Auth. For demo, prompt for email.
+            // Prompt for email (since we don't have auth integration yet)
             const email = prompt("Enter your registered email:");
             if (!email) return;
+            freelancerEmail = email;
             const { data, error } = await sb.from('freelancers').select('*').eq('email', email).single();
             if (error) {
                 alert('Freelancer not found');
@@ -115,7 +117,7 @@
         }
 
         async function setStatus(status) {
-            const { data, error } = await sb.rpc('update_freelancer_status', { p_status: status });
+            const { data, error } = await sb.rpc('update_freelancer_status', { p_email: freelancerEmail, p_status: status });
             if (error || !data.success) {
                 alert(error?.message || data?.error);
             } else {
@@ -125,7 +127,7 @@
         }
 
         async function completeOrder(orderId) {
-            const { data, error } = await sb.rpc('complete_order', { p_order_id: orderId });
+            const { data, error } = await sb.rpc('complete_order', { p_email: freelancerEmail, p_order_id: orderId });
             if (error || !data.success) {
                 alert(error?.message || data?.error);
             } else {
