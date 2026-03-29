@@ -11,11 +11,14 @@
         .preview { margin-bottom: 15px; background: #f0f0f0; border-radius: 8px; overflow: hidden; }
         .order-btn { background: #4CAF50; color: white; padding: 8px; border: none; cursor: pointer; width: 100%; }
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; }
-        .modal-content { background: white; margin: 5% auto; padding: 20px; width: 90%; max-width: 600px; border-radius: 10px; max-height: 80vh; overflow-y: auto; }
-        .modal textarea { width: 100%; height: 100px; margin: 10px 0; }
+        .modal-content { background: white; margin: 5% auto; padding: 20px; width: 90%; max-width: 500px; border-radius: 10px; max-height: 80vh; overflow-y: auto; }
+        .modal textarea, .modal input { width: 100%; margin: 10px 0; padding: 8px; }
+        .qr-container { text-align: center; margin: 15px 0; }
+        #qrcode { display: inline-block; padding: 10px; background: white; }
         .back-btn { display: block; width: 200px; margin: 30px auto; text-align: center; background: #666; color: white; padding: 10px; border-radius: 8px; text-decoration: none; }
         .category-filter { margin-bottom: 20px; text-align: center; }
         .category-filter select { padding: 8px; font-family: inherit; }
+        button { cursor: pointer; }
     </style>
 </head>
 <body>
@@ -33,20 +36,38 @@
     <div id="templateList" class="template-grid">Loading...</div>
     <a href="dashboard.html" class="back-btn">← Back to Dashboard</a>
 
-    <div id="orderModal" class="modal">
+    <!-- Customization Modal -->
+    <div id="customizeModal" class="modal">
         <div class="modal-content">
             <h2>Customize & Order</h2>
             <p>Template: <span id="modalTemplateName"></span></p>
             <p>Base Price: $<span id="modalPrice"></span></p>
             <label>Additional Instructions (optional):</label>
             <textarea id="customInstructions" placeholder="e.g., change colors, add text..."></textarea>
-            <button id="proceedBtn" onclick="proceedToPayment()">Proceed to Payment</button>
-            <button onclick="closeModal()">Cancel</button>
+            <button id="proceedBtn" onclick="createOrder()">Proceed to Payment</button>
+            <button onclick="closeModal('customizeModal')">Cancel</button>
+        </div>
+    </div>
+
+    <!-- Payment Modal -->
+    <div id="paymentModal" class="modal">
+        <div class="modal-content">
+            <h2>Payment Instructions</h2>
+            <p>Amount to send: <strong id="paymentAmount"></strong> USDT</p>
+            <p>Send to wallet address:</p>
+            <code id="escrowAddress" style="word-break: break-all;"></code>
+            <div class="qr-container" id="qrcode"></div>
+            <p>After sending, paste the transaction hash below and click Verify.</p>
+            <input type="text" id="txHashInput" placeholder="Transaction hash (0x...)" />
+            <button onclick="verifyPayment()">Verify Payment</button>
+            <div id="paymentStatus"></div>
+            <button onclick="closeModal('paymentModal')">Close</button>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
     <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs2-fix/qrcode.min.js"></script>
     <script>
         const supabaseUrl = 'https://mtiwodvsrwvrujbhmmrn.supabase.co';
         const supabaseKey = 'sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp';
@@ -55,7 +76,6 @@
         let currentTemplate = null;
         let currentOrder = null;
 
-        // Load templates with category filter
         async function loadTemplates() {
             const { data, error } = await sb.from('freelance_templates').select('*');
             if (error) return console.error(error);
@@ -93,12 +113,12 @@
             document.getElementById('modalTemplateName').innerText = template.title;
             document.getElementById('modalPrice').innerText = template.price;
             document.getElementById('customInstructions').value = '';
-            document.getElementById('orderModal').style.display = 'block';
+            openModal('customizeModal');
         }
 
-        async function proceedToPayment() {
+        async function createOrder() {
             const instructions = document.getElementById('customInstructions').value.trim();
-            const customization = { instructions }; // you can extend with structured fields later
+            const customization = { instructions };
             let employerWallet = null;
             if (typeof window.ethereum !== 'undefined') {
                 try {
@@ -116,15 +136,60 @@
             if (!data.success) return alert(data.error);
 
             currentOrder = data;
-            alert(`Order created! Please send ${data.amount} USDT to:\n${data.escrow_wallet}\n\nTransaction hash will be verified.`);
-            // Optionally, you could show a QR code or redirect to a payment page.
-            closeModal();
-            // After payment, you'll need to manually verify; for now we rely on user entering hash.
-            // In production, you'd listen for the payment event.
+            closeModal('customizeModal');
+
+            // Show payment modal with QR code
+            document.getElementById('paymentAmount').innerText = data.amount;
+            document.getElementById('escrowAddress').innerText = data.escrow_wallet;
+            // Clear previous QR
+            const qrDiv = document.getElementById('qrcode');
+            qrDiv.innerHTML = '';
+            new QRCode(qrDiv, {
+                text: data.escrow_wallet,
+                width: 200,
+                height: 200,
+                colorDark: "#000000",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.M
+            });
+            document.getElementById('txHashInput').value = '';
+            document.getElementById('paymentStatus').innerHTML = '';
+            openModal('paymentModal');
         }
 
-        function closeModal() {
-            document.getElementById('orderModal').style.display = 'none';
+        async function verifyPayment() {
+            const txHash = document.getElementById('txHashInput').value.trim();
+            if (!txHash) {
+                document.getElementById('paymentStatus').innerHTML = '<span style="color:red;">Please enter transaction hash.</span>';
+                return;
+            }
+            document.getElementById('paymentStatus').innerHTML = 'Verifying...';
+            // Optionally, you could verify the transaction on-chain (simplified)
+            // For now, we trust the user input and call the RPC.
+            const { data, error } = await sb.rpc('assign_order', {
+                p_order_id: currentOrder.order_id,
+                p_payment_tx_hash: txHash
+            });
+            if (error) {
+                document.getElementById('paymentStatus').innerHTML = '<span style="color:red;">Error: ' + error.message + '</span>';
+                return;
+            }
+            if (!data.success) {
+                document.getElementById('paymentStatus').innerHTML = '<span style="color:red;">' + data.error + '</span>';
+                return;
+            }
+            document.getElementById('paymentStatus').innerHTML = '<span style="color:green;">Payment verified! Order assigned to freelancer.</span>';
+            setTimeout(() => {
+                closeModal('paymentModal');
+                alert('Order assigned. You can track status at /order-status.html?order=' + currentOrder.order_id);
+            }, 2000);
+        }
+
+        function openModal(modalId) {
+            document.getElementById(modalId).style.display = 'block';
+        }
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
         }
 
         loadTemplates();
