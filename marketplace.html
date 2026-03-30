@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Freelancer Marketplace - Rheoa RPG</title>
     <style>
+        /* (same as before, plus extra for employer login) */
         body { font-family: 'Courier New', monospace; background: #f8f8f0; padding: 20px; }
         .template-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px; }
         .template-card { border: 2px solid #2196F3; border-radius: 10px; padding: 15px; background: white; }
@@ -19,9 +20,15 @@
         .category-filter { margin-bottom: 20px; text-align: center; }
         .category-filter select { padding: 8px; font-family: inherit; }
         button { cursor: pointer; }
+        .employer-header { text-align: right; margin-bottom: 20px; }
+        .employer-header a { margin-left: 15px; }
     </style>
 </head>
 <body>
+    <div class="employer-header">
+        <a href="employer-dashboard.html" target="_blank">📋 Employer Dashboard</a>
+        <button onclick="showEmployerLogin()">👤 Employer Login/Register</button>
+    </div>
     <h1>📋 Freelancer Templates</h1>
     <div class="category-filter">
         <label>Category: </label>
@@ -35,6 +42,24 @@
     </div>
     <div id="templateList" class="template-grid">Loading...</div>
     <a href="dashboard.html" class="back-btn">← Back to Dashboard</a>
+
+    <!-- Employer Login Modal -->
+    <div id="employerModal" class="modal">
+        <div class="modal-content">
+            <h2>Employer Login / Register</h2>
+            <input type="email" id="empEmail" placeholder="Email">
+            <button onclick="employerLogin()">Login</button>
+            <button onclick="showEmpRegister()">Register</button>
+            <div id="empRegisterForm" style="display:none;">
+                <input type="text" id="empName" placeholder="Name">
+                <input type="text" id="empWallet" placeholder="Wallet Address (optional)">
+                <button onclick="employerRegister()">Register</button>
+                <button onclick="hideEmpRegister()">Cancel</button>
+            </div>
+            <div id="empStatus"></div>
+            <button onclick="closeModal('employerModal')">Close</button>
+        </div>
+    </div>
 
     <!-- Customization Modal -->
     <div id="customizeModal" class="modal">
@@ -75,6 +100,7 @@
 
         let currentTemplate = null;
         let currentOrder = null;
+        let currentEmployer = null; // will hold { id, email, name, wallet }
 
         async function loadTemplates() {
             const { data, error } = await sb.from('freelance_templates').select('*');
@@ -106,6 +132,49 @@
             `).join('');
         }
 
+        function showEmployerLogin() {
+            openModal('employerModal');
+        }
+
+        async function employerLogin() {
+            const email = document.getElementById('empEmail').value;
+            const { data, error } = await sb.rpc('employer_login', { p_email: email });
+            if (error || !data.success) {
+                document.getElementById('empStatus').innerText = 'Login failed: ' + (error?.message || data.error);
+                return;
+            }
+            currentEmployer = data.employer;
+            localStorage.setItem('employerEmail', email);
+            document.getElementById('empStatus').innerText = 'Logged in as ' + currentEmployer.name;
+            setTimeout(() => closeModal('employerModal'), 1500);
+        }
+
+        function showEmpRegister() {
+            document.getElementById('empRegisterForm').style.display = 'block';
+        }
+        function hideEmpRegister() {
+            document.getElementById('empRegisterForm').style.display = 'none';
+        }
+        async function employerRegister() {
+            const name = document.getElementById('empName').value;
+            const email = document.getElementById('empEmail').value;
+            const wallet = document.getElementById('empWallet').value;
+            const { data, error } = await sb.rpc('register_employer', {
+                p_name: name,
+                p_email: email,
+                p_wallet_address: wallet || null
+            });
+            if (error || !data.success) {
+                document.getElementById('empStatus').innerText = 'Registration failed: ' + (error?.message || data.error);
+                return;
+            }
+            document.getElementById('empStatus').innerText = 'Registration successful. You can now login.';
+            hideEmpRegister();
+            // Optionally auto-login
+            document.getElementById('empEmail').value = email;
+            employerLogin();
+        }
+
         async function orderTemplate(templateId) {
             const { data: template, error } = await sb.from('freelance_templates').select('*').eq('id', templateId).single();
             if (error) return alert('Error loading template');
@@ -120,17 +189,26 @@
             const instructions = document.getElementById('customInstructions').value.trim();
             const customization = { instructions };
             let employerWallet = null;
-            if (typeof window.ethereum !== 'undefined') {
-                try {
-                    const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
-                    employerWallet = accounts[0];
-                } catch (e) { console.warn('Wallet not connected'); }
+            let employerId = null;
+
+            if (currentEmployer) {
+                employerId = currentEmployer.id;
+                employerWallet = currentEmployer.wallet_address;
+            } else {
+                // If not logged in, try to get wallet from MetaMask
+                if (typeof window.ethereum !== 'undefined') {
+                    try {
+                        const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+                        employerWallet = accounts[0];
+                    } catch (e) { console.warn('Wallet not connected'); }
+                }
             }
 
             const { data, error: rpcError } = await sb.rpc('create_order', {
                 p_template_id: currentTemplate.id,
                 p_employer_wallet: employerWallet,
-                p_customizations: customization
+                p_customizations: customization,
+                p_employer_id: employerId
             });
             if (rpcError) return alert('Order failed: ' + rpcError.message);
             if (!data.success) return alert(data.error);
@@ -138,10 +216,8 @@
             currentOrder = data;
             closeModal('customizeModal');
 
-            // Show payment modal with QR code
             document.getElementById('paymentAmount').innerText = data.amount;
             document.getElementById('escrowAddress').innerText = data.escrow_wallet;
-            // Clear previous QR
             const qrDiv = document.getElementById('qrcode');
             qrDiv.innerHTML = '';
             new QRCode(qrDiv, {
@@ -164,8 +240,6 @@
                 return;
             }
             document.getElementById('paymentStatus').innerHTML = 'Verifying...';
-            // Optionally, you could verify the transaction on-chain (simplified)
-            // For now, we trust the user input and call the RPC.
             const { data, error } = await sb.rpc('assign_order', {
                 p_order_id: currentOrder.order_id,
                 p_payment_tx_hash: txHash
@@ -181,7 +255,7 @@
             document.getElementById('paymentStatus').innerHTML = '<span style="color:green;">Payment verified! Order assigned to freelancer.</span>';
             setTimeout(() => {
                 closeModal('paymentModal');
-                alert('Order assigned. You can track status at /order-status.html?order=' + currentOrder.order_id);
+                alert('Order assigned. You can track status at /employer-dashboard.html');
             }, 2000);
         }
 
@@ -190,6 +264,17 @@
         }
         function closeModal(modalId) {
             document.getElementById(modalId).style.display = 'none';
+        }
+
+        // Auto-login if stored email exists
+        const savedEmail = localStorage.getItem('employerEmail');
+        if (savedEmail) {
+            // Optional: auto-login without showing modal
+            sb.rpc('employer_login', { p_email: savedEmail }).then(({ data, error }) => {
+                if (!error && data.success) {
+                    currentEmployer = data.employer;
+                }
+            });
         }
 
         loadTemplates();
