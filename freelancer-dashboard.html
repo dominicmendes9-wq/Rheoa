@@ -6,13 +6,22 @@
     <title>Freelancer Dashboard - Rheoa RPG</title>
     <style>
         body { font-family: 'Courier New', monospace; background: #f8f8f0; padding: 20px; }
-        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; }
         .status { padding: 10px; margin-bottom: 20px; border: 1px solid #ccc; border-radius: 5px; }
         .online { background: #e8f5e8; color: green; }
         .busy { background: #fff3e0; color: orange; }
         .offline { background: #ffebee; color: red; }
         button { background: #2196F3; color: white; border: none; padding: 5px 10px; cursor: pointer; margin: 5px; }
         .back-btn { display: block; width: 200px; margin: 30px auto; text-align: center; background: #666; color: white; padding: 10px; border-radius: 8px; text-decoration: none; }
+        .order-details { background: #f9f9f9; padding: 15px; border-radius: 8px; margin: 15px 0; }
+        .chat-area { border: 1px solid #ddd; border-radius: 8px; margin-top: 20px; }
+        .chat-messages { height: 300px; overflow-y: auto; padding: 10px; background: #fafafa; }
+        .chat-message { margin-bottom: 10px; padding: 5px; }
+        .message-sender { font-weight: bold; }
+        .message-time { font-size: 0.7rem; color: #666; margin-left: 10px; }
+        .chat-input { display: flex; gap: 10px; padding: 10px; border-top: 1px solid #ddd; }
+        .chat-input input { flex: 1; padding: 8px; }
+        .chat-input button { padding: 8px 15px; }
     </style>
 </head>
 <body>
@@ -46,13 +55,16 @@
         const sb = supabase.createClient(supabaseUrl, supabaseKey);
 
         let currentFreelancer = null;
-        let freelancerEmail = null; // store email from login
+        let currentOrder = null;
+        let chatSubscription = null;
+
+        function showToast(message, type = 'info') {
+            alert(message); // replace with your toast if desired
+        }
 
         async function loadFreelancer() {
-            // Prompt for email (since we don't have auth integration yet)
             const email = prompt("Enter your registered email:");
             if (!email) return;
-            freelancerEmail = email;
             const { data, error } = await sb.from('freelancers').select('*').eq('email', email).single();
             if (error) {
                 alert('Freelancer not found');
@@ -60,6 +72,10 @@
             }
             currentFreelancer = data;
             renderDashboard();
+            subscribeToOrderAssignments();
+            if (currentFreelancer.status === 'busy') {
+                await loadCurrentOrder();
+            }
         }
 
         async function renderDashboard() {
@@ -74,22 +90,6 @@
             const statusDiv = document.getElementById('statusDisplay');
             statusDiv.className = `status ${currentFreelancer.status}`;
             statusDiv.innerHTML = `You are currently <strong>${currentFreelancer.status}</strong>.`;
-
-            // Current order (if any)
-            if (currentFreelancer.status === 'busy') {
-                const { data: order } = await sb.from('freelance_orders').select('*').eq('freelancer_id', currentFreelancer.id).eq('status', 'assigned').single();
-                if (order) {
-                    const { data: template } = await sb.from('freelance_templates').select('*').eq('id', order.template_id).single();
-                    document.getElementById('currentOrder').innerHTML = `
-                        <h3>Current Order</h3>
-                        <p>Template: ${template.title}</p>
-                        <p>Amount: ${order.amount} USDT (you will get ${order.freelancer_payout})</p>
-                        <button onclick="completeOrder('${order.id}')">Mark as Completed</button>
-                    `;
-                }
-            } else {
-                document.getElementById('currentOrder').innerHTML = '<p>No active order.</p>';
-            }
 
             // Queue position (simplified)
             const { data: onlineList } = await sb.from('freelancers').select('id').eq('status', 'online').order('updated_at');
@@ -117,7 +117,7 @@
         }
 
         async function setStatus(status) {
-            const { data, error } = await sb.rpc('update_freelancer_status', { p_email: freelancerEmail, p_status: status });
+            const { data, error } = await sb.rpc('update_freelancer_status', { p_status: status, p_email: currentFreelancer.email });
             if (error || !data.success) {
                 alert(error?.message || data?.error);
             } else {
@@ -126,24 +126,140 @@
             }
         }
 
-        async function completeOrder(orderId) {
-            const { data, error } = await sb.rpc('complete_order', { p_email: freelancerEmail, p_order_id: orderId });
+        async function loadCurrentOrder() {
+            const { data: order, error } = await sb
+                .from('freelance_orders')
+                .select('*, freelance_templates(title, price)')
+                .eq('freelancer_id', currentFreelancer.id)
+                .eq('status', 'assigned')
+                .single();
+            if (error && error.code !== 'PGRST116') {
+                console.error(error);
+                return;
+            }
+            if (order) {
+                currentOrder = order;
+                renderCurrentOrder();
+                subscribeToChat(order.id);
+            } else {
+                currentOrder = null;
+                document.getElementById('currentOrder').innerHTML = '<p>No active order.</p>';
+                if (chatSubscription) chatSubscription.unsubscribe();
+            }
+        }
+
+        function renderCurrentOrder() {
+            if (!currentOrder) return;
+            const template = currentOrder.freelance_templates;
+            document.getElementById('currentOrder').innerHTML = `
+                <div class="order-details">
+                    <h3>Current Order</h3>
+                    <p><strong>Template:</strong> ${template.title}</p>
+                    <p><strong>Amount:</strong> $${currentOrder.amount} USDT (you will get $${currentOrder.freelancer_payout})</p>
+                    <p><strong>Employer Email:</strong> ${currentOrder.employer_email}</p>
+                    <p><strong>Instructions:</strong> ${currentOrder.customization_data?.instructions || 'None'}</p>
+                    <button onclick="completeOrder()">Mark as Completed</button>
+                </div>
+                <div class="chat-area">
+                    <div class="chat-messages" id="chatMessages"></div>
+                    <div class="chat-input">
+                        <input type="text" id="chatInput" placeholder="Type your message...">
+                        <button onclick="sendMessage()">Send</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function completeOrder() {
+            const { data, error } = await sb.rpc('complete_order', { p_order_id: currentOrder.id, p_email: currentFreelancer.email });
             if (error || !data.success) {
                 alert(error?.message || data?.error);
             } else {
                 alert('Order marked as completed. Awaiting employer confirmation.');
-                renderDashboard();
+                await loadCurrentOrder(); // will clear the order
             }
         }
 
+        function subscribeToOrderAssignments() {
+            sb
+                .channel(`order-assignments-${currentFreelancer.id}`)
+                .on('postgres_changes', {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'freelance_orders',
+                    filter: `freelancer_id=eq.${currentFreelancer.id}`
+                }, (payload) => {
+                    if (payload.new.status === 'assigned' && (!currentOrder || currentOrder.id !== payload.new.id)) {
+                        showToast('🔔 New job assigned! Check your current order.', 'success');
+                        loadCurrentOrder();
+                    }
+                })
+                .subscribe();
+        }
+
+        async function subscribeToChat(orderId) {
+            if (chatSubscription) chatSubscription.unsubscribe();
+            chatSubscription = sb
+                .channel(`freelance-order-messages-${orderId}`)
+                .on('postgres_changes', {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'freelance_order_messages',
+                    filter: `order_id=eq.${orderId}`
+                }, (payload) => {
+                    addMessageToChat(payload.new);
+                })
+                .subscribe();
+            loadChatMessages(orderId);
+        }
+
+        async function loadChatMessages(orderId) {
+            const { data, error } = await sb
+                .from('freelance_order_messages')
+                .select('*')
+                .eq('order_id', orderId)
+                .order('created_at', { ascending: true });
+            if (error) console.error(error);
+            else data.forEach(addMessageToChat);
+        }
+
+        function addMessageToChat(msg) {
+            const container = document.getElementById('chatMessages');
+            if (!container) return;
+            const sender = msg.sender_type === 'freelancer' ? 'You' : 'Employer';
+            const time = new Date(msg.created_at).toLocaleTimeString();
+            const div = document.createElement('div');
+            div.className = 'chat-message';
+            div.innerHTML = `
+                <span class="message-sender">${sender}</span>
+                <span class="message-time">${time}</span>
+                <div>${escapeHtml(msg.message)}</div>
+            `;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const text = input.value.trim();
+            if (!text || !currentOrder) return;
+            const { error } = await sb.from('freelance_order_messages').insert({
+                order_id: currentOrder.id,
+                sender_type: 'freelancer',
+                sender_id: currentFreelancer.id,
+                message: text
+            });
+            if (error) console.error(error);
+            else input.value = '';
+        }
+
+        // Template management
         function showCreateTemplate() {
             document.getElementById('createTemplateForm').style.display = 'block';
         }
-
         function cancelCreateTemplate() {
             document.getElementById('createTemplateForm').style.display = 'none';
         }
-
         async function createTemplate() {
             const template = {
                 freelancer_id: currentFreelancer.id,
@@ -155,20 +271,24 @@
                 customization_options: {}
             };
             const { error } = await sb.from('freelance_templates').insert(template);
-            if (error) {
-                alert(error.message);
-            } else {
+            if (error) alert(error.message);
+            else {
                 alert('Template created');
                 cancelCreateTemplate();
                 renderDashboard();
             }
         }
-
         async function deleteTemplate(templateId) {
             if (!confirm('Delete this template?')) return;
             const { error } = await sb.from('freelance_templates').delete().eq('id', templateId);
             if (error) alert(error.message);
             else renderDashboard();
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
 
         loadFreelancer();
