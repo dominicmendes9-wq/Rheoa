@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employer Dashboard - Rheoa RPG</title>
+    <style>
+        body { font-family: 'Courier New', monospace; background: #f8f8f0; padding: 20px; }
+        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; }
+        .order-card { border: 1px solid #2196F3; margin: 10px 0; padding: 10px; border-radius: 5px; cursor: pointer; }
+        .order-card:hover { background: #e3f2fd; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; }
+        .modal-content { background: white; margin: 5% auto; padding: 20px; width: 80%; max-width: 600px; border-radius: 10px; max-height: 80vh; overflow-y: auto; }
+        .chat-messages { height: 300px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; }
+        .message { margin-bottom: 10px; }
+        .message.employer { text-align: right; color: #2196F3; }
+        .message.freelancer { color: #4CAF50; }
+        .back-btn { display: block; width: 200px; margin: 30px auto; text-align: center; background: #666; color: white; padding: 10px; border-radius: 8px; text-decoration: none; }
+        .status { padding: 2px 6px; border-radius: 12px; font-size: 0.8rem; }
+        .status-pending { background: #ff9800; color: white; }
+        .status-paid { background: #2196F3; color: white; }
+        .status-assigned { background: #9c27b0; color: white; }
+        .status-completed { background: #4CAF50; color: white; }
+        .status-released { background: #4CAF50; color: white; }
+        .login-form { margin-bottom: 20px; }
+        input, button { padding: 8px; margin: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Employer Dashboard</h1>
+        <div id="authArea">
+            <div class="login-form">
+                <input type="email" id="loginEmail" placeholder="Email">
+                <button onclick="login()">Login</button>
+                <button onclick="showRegister()">Register</button>
+            </div>
+            <div id="registerForm" style="display:none;">
+                <input type="text" id="regName" placeholder="Name">
+                <input type="email" id="regEmail" placeholder="Email">
+                <input type="text" id="regWallet" placeholder="Wallet Address (optional)">
+                <button onclick="register()">Register</button>
+                <button onclick="hideRegister()">Cancel</button>
+            </div>
+        </div>
+        <div id="ordersSection" style="display:none;">
+            <h2>Your Orders</h2>
+            <div id="ordersList"></div>
+        </div>
+    </div>
+    <a href="dashboard.html" class="back-btn">← Back to Dashboard</a>
+
+    <!-- Order Details Modal -->
+    <div id="orderModal" class="modal">
+        <div class="modal-content">
+            <h2>Order Details</h2>
+            <div id="orderDetail"></div>
+            <hr>
+            <h3>Chat with Freelancer</h3>
+            <div id="chatMessages" class="chat-messages"></div>
+            <input type="text" id="chatInput" placeholder="Type your message..." style="width:80%">
+            <button onclick="sendMessage()">Send</button>
+            <div id="orderAction"></div>
+            <button onclick="closeModal()">Close</button>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+    <script>
+        const sb = window.supabase.createClient(
+            "https://mtiwodvsrwvrujbhmmrn.supabase.co",
+            "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
+        );
+
+        let currentEmployer = null;
+        let currentOrder = null;
+        let chatSubscription = null;
+
+        function showToast(msg, type) { alert(msg); } // simple placeholder
+
+        async function login() {
+            const email = document.getElementById('loginEmail').value;
+            const { data, error } = await sb.rpc('employer_login', { p_email: email });
+            if (error || !data.success) {
+                alert(error?.message || data.error || 'Login failed');
+                return;
+            }
+            currentEmployer = data.employer;
+            localStorage.setItem('employerEmail', email);
+            document.getElementById('authArea').style.display = 'none';
+            document.getElementById('ordersSection').style.display = 'block';
+            loadOrders();
+        }
+
+        function showRegister() {
+            document.getElementById('registerForm').style.display = 'block';
+        }
+        function hideRegister() {
+            document.getElementById('registerForm').style.display = 'none';
+        }
+
+        async function register() {
+            const name = document.getElementById('regName').value;
+            const email = document.getElementById('regEmail').value;
+            const wallet = document.getElementById('regWallet').value;
+            const { data, error } = await sb.rpc('register_employer', {
+                p_name: name,
+                p_email: email,
+                p_wallet_address: wallet || null
+            });
+            if (error || !data.success) {
+                alert(error?.message || data.error || 'Registration failed');
+                return;
+            }
+            alert('Registration successful. You can now login.');
+            hideRegister();
+            document.getElementById('loginEmail').value = email;
+            login();
+        }
+
+        async function loadOrders() {
+            const { data, error } = await sb
+                .from('freelance_orders')
+                .select('*, freelance_templates(title)')
+                .eq('employer_id', currentEmployer.id)
+                .order('created_at', { ascending: false });
+            if (error) {
+                console.error(error);
+                return;
+            }
+            const ordersList = document.getElementById('ordersList');
+            if (!data.length) {
+                ordersList.innerHTML = '<p>No orders yet.</p>';
+                return;
+            }
+            ordersList.innerHTML = data.map(order => `
+                <div class="order-card" onclick="viewOrder('${order.id}')">
+                    <strong>${order.freelance_templates.title}</strong> - ${order.status}
+                    <br>Amount: $${order.amount} | Created: ${new Date(order.created_at).toLocaleDateString()}
+                </div>
+            `).join('');
+        }
+
+        async function viewOrder(orderId) {
+            const { data: order, error } = await sb
+                .from('freelance_orders')
+                .select('*, freelance_templates(title), freelancers(name)')
+                .eq('id', orderId)
+                .single();
+            if (error) return;
+            currentOrder = order;
+            document.getElementById('orderDetail').innerHTML = `
+                <p>Template: ${order.freelance_templates.title}</p>
+                <p>Freelancer: ${order.freelancers?.name || 'Not assigned yet'}</p>
+                <p>Amount: $${order.amount}</p>
+                <p>Status: ${order.status}</p>
+                <p>Customizations: ${JSON.stringify(order.customization_data)}</p>
+            `;
+            const actionDiv = document.getElementById('orderAction');
+            if (order.status === 'completed') {
+                actionDiv.innerHTML = `<button onclick="confirmReceipt('${order.id}')">Confirm Receipt</button>`;
+            } else {
+                actionDiv.innerHTML = '';
+            }
+            await loadMessages(orderId);
+            subscribeToMessages(orderId);
+            document.getElementById('orderModal').style.display = 'block';
+        }
+
+        async function loadMessages(orderId) {
+            const { data, error } = await sb.rpc('get_order_messages', { p_order_id: orderId });
+            if (error) return;
+            renderMessages(data);
+        }
+
+        function renderMessages(messages) {
+            const container = document.getElementById('chatMessages');
+            if (!messages.length) {
+                container.innerHTML = '<p>No messages yet.</p>';
+                return;
+            }
+            container.innerHTML = messages.map(msg => `
+                <div class="message ${msg.sender_type}">
+                    <strong>${msg.sender_type === 'employer' ? 'You' : 'Freelancer'}:</strong> ${msg.message}<br>
+                    <small>${new Date(msg.created_at).toLocaleTimeString()}</small>
+                </div>
+            `).join('');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function subscribeToMessages(orderId) {
+            if (chatSubscription) chatSubscription.unsubscribe();
+            chatSubscription = sb
+                .channel(`order-${orderId}`)
+                .on('postgres_changes', {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'order_messages',
+                    filter: `order_id=eq.${orderId}`
+                }, payload => {
+                    // Add new message to chat
+                    loadMessages(orderId);
+                })
+                .subscribe();
+        }
+
+        async function sendMessage() {
+            const msg = document.getElementById('chatInput').value.trim();
+            if (!msg || !currentOrder) return;
+            const { data, error } = await sb.rpc('send_order_message', {
+                p_order_id: currentOrder.id,
+                p_sender_type: 'employer',
+                p_sender_id: currentEmployer.id,
+                p_message: msg
+            });
+            if (error) {
+                alert('Failed to send message');
+            } else {
+                document.getElementById('chatInput').value = '';
+                // message will appear via subscription
+            }
+        }
+
+        async function confirmReceipt(orderId) {
+            const { data, error } = await sb.rpc('confirm_receipt', { p_order_id: orderId });
+            if (error || !data.success) {
+                alert(error?.message || data.error || 'Failed to confirm');
+                return;
+            }
+            alert('Receipt confirmed. Payment will be released to freelancer.');
+            loadOrders();
+            closeModal();
+        }
+
+        function closeModal() {
+            if (chatSubscription) chatSubscription.unsubscribe();
+            document.getElementById('orderModal').style.display = 'none';
+        }
+
+        // Check if employer already logged in
+        const savedEmail = localStorage.getItem('employerEmail');
+        if (savedEmail) {
+            document.getElementById('loginEmail').value = savedEmail;
+            login();
+        }
+    </script>
+</body>
+</html>
