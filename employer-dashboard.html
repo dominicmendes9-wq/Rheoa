@@ -6,243 +6,162 @@
     <title>Employer Dashboard - Rheoa RPG</title>
     <style>
         body { font-family: 'Courier New', monospace; background: #f8f8f0; padding: 20px; }
-        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; }
-        .order-card { border: 1px solid #2196F3; margin: 10px 0; padding: 10px; border-radius: 5px; cursor: pointer; }
-        .order-card:hover { background: #e3f2fd; }
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; }
-        .modal-content { background: white; margin: 5% auto; padding: 20px; width: 80%; max-width: 600px; border-radius: 10px; max-height: 80vh; overflow-y: auto; }
-        .chat-messages { height: 300px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; }
-        .message { margin-bottom: 10px; }
-        .message.employer { text-align: right; color: #2196F3; }
-        .message.freelancer { color: #4CAF50; }
-        .back-btn { display: block; width: 200px; margin: 30px auto; text-align: center; background: #666; color: white; padding: 10px; border-radius: 8px; text-decoration: none; }
-        .status { padding: 2px 6px; border-radius: 12px; font-size: 0.8rem; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; }
+        .order-card { border: 1px solid #ccc; border-radius: 8px; padding: 15px; margin-bottom: 20px; }
+        .order-status { font-weight: bold; padding: 3px 8px; border-radius: 4px; display: inline-block; }
         .status-pending { background: #ff9800; color: white; }
-        .status-paid { background: #2196F3; color: white; }
-        .status-assigned { background: #9c27b0; color: white; }
+        .status-assigned { background: #2196F3; color: white; }
         .status-completed { background: #4CAF50; color: white; }
-        .status-released { background: #4CAF50; color: white; }
-        .login-form { margin-bottom: 20px; }
-        input, button { padding: 8px; margin: 5px; }
+        .status-released { background: #9c27b0; color: white; }
+        button { background: #4CAF50; color: white; border: none; padding: 5px 10px; cursor: pointer; margin: 5px; }
+        .chat-area { border: 1px solid #ddd; border-radius: 8px; margin-top: 15px; }
+        .chat-messages { height: 200px; overflow-y: auto; padding: 10px; background: #fafafa; }
+        .chat-input { display: flex; gap: 10px; padding: 10px; border-top: 1px solid #ddd; }
+        .chat-input input { flex: 1; padding: 8px; }
+        .back-btn { display: block; width: 200px; margin: 30px auto; text-align: center; background: #666; color: white; padding: 10px; border-radius: 8px; text-decoration: none; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Employer Dashboard</h1>
-        <div id="authArea">
-            <div class="login-form">
-                <input type="email" id="loginEmail" placeholder="Email">
-                <button onclick="login()">Login</button>
-                <button onclick="showRegister()">Register</button>
-            </div>
-            <div id="registerForm" style="display:none;">
-                <input type="text" id="regName" placeholder="Name">
-                <input type="email" id="regEmail" placeholder="Email">
-                <input type="text" id="regWallet" placeholder="Wallet Address (optional)">
-                <button onclick="register()">Register</button>
-                <button onclick="hideRegister()">Cancel</button>
-            </div>
-        </div>
-        <div id="ordersSection" style="display:none;">
-            <h2>Your Orders</h2>
-            <div id="ordersList"></div>
-        </div>
+        <div id="ordersList">Loading your orders...</div>
     </div>
     <a href="dashboard.html" class="back-btn">← Back to Dashboard</a>
 
-    <!-- Order Details Modal -->
-    <div id="orderModal" class="modal">
-        <div class="modal-content">
-            <h2>Order Details</h2>
-            <div id="orderDetail"></div>
-            <hr>
-            <h3>Chat with Freelancer</h3>
-            <div id="chatMessages" class="chat-messages"></div>
-            <input type="text" id="chatInput" placeholder="Type your message..." style="width:80%">
-            <button onclick="sendMessage()">Send</button>
-            <div id="orderAction"></div>
-            <button onclick="closeModal()">Close</button>
-        </div>
-    </div>
-
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
     <script>
-        const sb = window.supabase.createClient(
-            "https://mtiwodvsrwvrujbhmmrn.supabase.co",
-            "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
-        );
+        const supabaseUrl = 'https://mtiwodvsrwvrujbhmmrn.supabase.co';
+        const supabaseKey = 'sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp';
+        const sb = supabase.createClient(supabaseUrl, supabaseKey);
 
-        let currentEmployer = null;
-        let currentOrder = null;
-        let chatSubscription = null;
+        let employerEmail = null;
+        let orders = [];
+        let chatSubscriptions = {};
 
-        function showToast(msg, type) { alert(msg); } // simple placeholder
-
-        async function login() {
-            const email = document.getElementById('loginEmail').value;
-            const { data, error } = await sb.rpc('employer_login', { p_email: email });
-            if (error || !data.success) {
-                alert(error?.message || data.error || 'Login failed');
-                return;
-            }
-            currentEmployer = data.employer;
-            localStorage.setItem('employerEmail', email);
-            document.getElementById('authArea').style.display = 'none';
-            document.getElementById('ordersSection').style.display = 'block';
-            loadOrders();
-        }
-
-        function showRegister() {
-            document.getElementById('registerForm').style.display = 'block';
-        }
-        function hideRegister() {
-            document.getElementById('registerForm').style.display = 'none';
-        }
-
-        async function register() {
-            const name = document.getElementById('regName').value;
-            const email = document.getElementById('regEmail').value;
-            const wallet = document.getElementById('regWallet').value;
-            const { data, error } = await sb.rpc('register_employer', {
-                p_name: name,
-                p_email: email,
-                p_wallet_address: wallet || null
-            });
-            if (error || !data.success) {
-                alert(error?.message || data.error || 'Registration failed');
-                return;
-            }
-            alert('Registration successful. You can now login.');
-            hideRegister();
-            document.getElementById('loginEmail').value = email;
-            login();
-        }
-
-        async function loadOrders() {
+        async function loadEmployerOrders() {
+            employerEmail = prompt("Enter your email address used when ordering:");
+            if (!employerEmail) return;
             const { data, error } = await sb
                 .from('freelance_orders')
                 .select('*, freelance_templates(title)')
-                .eq('employer_id', currentEmployer.id)
+                .eq('employer_email', employerEmail)
                 .order('created_at', { ascending: false });
             if (error) {
-                console.error(error);
+                alert('Error loading orders');
                 return;
             }
-            const ordersList = document.getElementById('ordersList');
-            if (!data.length) {
-                ordersList.innerHTML = '<p>No orders yet.</p>';
-                return;
-            }
-            ordersList.innerHTML = data.map(order => `
-                <div class="order-card" onclick="viewOrder('${order.id}')">
-                    <strong>${order.freelance_templates.title}</strong> - ${order.status}
-                    <br>Amount: $${order.amount} | Created: ${new Date(order.created_at).toLocaleDateString()}
-                </div>
-            `).join('');
+            orders = data || [];
+            renderOrders();
+            // Subscribe to new messages for each order
+            orders.forEach(order => subscribeToOrderChat(order.id));
         }
 
-        async function viewOrder(orderId) {
-            const { data: order, error } = await sb
-                .from('freelance_orders')
-                .select('*, freelance_templates(title), freelancers(name)')
-                .eq('id', orderId)
-                .single();
-            if (error) return;
-            currentOrder = order;
-            document.getElementById('orderDetail').innerHTML = `
-                <p>Template: ${order.freelance_templates.title}</p>
-                <p>Freelancer: ${order.freelancers?.name || 'Not assigned yet'}</p>
-                <p>Amount: $${order.amount}</p>
-                <p>Status: ${order.status}</p>
-                <p>Customizations: ${JSON.stringify(order.customization_data)}</p>
+        function renderOrders() {
+            const container = document.getElementById('ordersList');
+            if (!orders.length) {
+                container.innerHTML = '<p>No orders found.</p>';
+                return;
+            }
+            container.innerHTML = orders.map(order => `
+                <div class="order-card" id="order-${order.id}">
+                    <h3>Order #${order.id.slice(0,8)}</h3>
+                    <p><strong>Template:</strong> ${order.freelance_templates?.title || 'Unknown'}</p>
+                    <p><strong>Amount:</strong> $${order.amount} USDT</p>
+                    <p><strong>Status:</strong> <span class="order-status status-${order.status}">${order.status}</span></p>
+                    <p><strong>Instructions:</strong> ${order.customization_data?.instructions || 'None'}</p>
+                    <div id="chat-${order.id}"></div>
+                    ${order.status === 'completed' ? `<button onclick="confirmReceipt('${order.id}')">Confirm Receipt</button>` : ''}
+                </div>
+            `).join('');
+            // After rendering, attach chat UI for each order
+            orders.forEach(order => attachChatUI(order.id));
+        }
+
+        function attachChatUI(orderId) {
+            const chatContainer = document.getElementById(`chat-${orderId}`);
+            if (!chatContainer) return;
+            chatContainer.innerHTML = `
+                <div class="chat-area">
+                    <div class="chat-messages" id="chatMessages-${orderId}"></div>
+                    <div class="chat-input">
+                        <input type="text" id="chatInput-${orderId}" placeholder="Type your message...">
+                        <button onclick="sendMessage('${orderId}')">Send</button>
+                    </div>
+                </div>
             `;
-            const actionDiv = document.getElementById('orderAction');
-            if (order.status === 'completed') {
-                actionDiv.innerHTML = `<button onclick="confirmReceipt('${order.id}')">Confirm Receipt</button>`;
-            } else {
-                actionDiv.innerHTML = '';
-            }
-            await loadMessages(orderId);
-            subscribeToMessages(orderId);
-            document.getElementById('orderModal').style.display = 'block';
+            loadChatMessages(orderId);
         }
 
-        async function loadMessages(orderId) {
-            const { data, error } = await sb.rpc('get_order_messages', { p_order_id: orderId });
-            if (error) return;
-            renderMessages(data);
+        async function loadChatMessages(orderId) {
+            const { data, error } = await sb
+                .from('freelance_order_messages')
+                .select('*')
+                .eq('order_id', orderId)
+                .order('created_at', { ascending: true });
+            if (error) console.error(error);
+            else data.forEach(msg => addMessageToChat(orderId, msg));
         }
 
-        function renderMessages(messages) {
-            const container = document.getElementById('chatMessages');
-            if (!messages.length) {
-                container.innerHTML = '<p>No messages yet.</p>';
-                return;
-            }
-            container.innerHTML = messages.map(msg => `
-                <div class="message ${msg.sender_type}">
-                    <strong>${msg.sender_type === 'employer' ? 'You' : 'Freelancer'}:</strong> ${msg.message}<br>
-                    <small>${new Date(msg.created_at).toLocaleTimeString()}</small>
-                </div>
-            `).join('');
+        function subscribeToOrderChat(orderId) {
+            const channel = sb.channel(`freelance-order-messages-${orderId}`);
+            channel.on('postgres_changes', {
+                event: 'INSERT',
+                schema: 'public',
+                table: 'freelance_order_messages',
+                filter: `order_id=eq.${orderId}`
+            }, (payload) => {
+                addMessageToChat(orderId, payload.new);
+            }).subscribe();
+            chatSubscriptions[orderId] = channel;
+        }
+
+        function addMessageToChat(orderId, msg) {
+            const container = document.getElementById(`chatMessages-${orderId}`);
+            if (!container) return;
+            const sender = msg.sender_type === 'employer' ? 'You' : 'Freelancer';
+            const time = new Date(msg.created_at).toLocaleTimeString();
+            const div = document.createElement('div');
+            div.className = 'chat-message';
+            div.innerHTML = `
+                <span class="message-sender">${sender}</span>
+                <span class="message-time">${time}</span>
+                <div>${escapeHtml(msg.message)}</div>
+            `;
+            container.appendChild(div);
             container.scrollTop = container.scrollHeight;
         }
 
-        function subscribeToMessages(orderId) {
-            if (chatSubscription) chatSubscription.unsubscribe();
-            chatSubscription = sb
-                .channel(`order-${orderId}`)
-                .on('postgres_changes', {
-                    event: 'INSERT',
-                    schema: 'public',
-                    table: 'order_messages',
-                    filter: `order_id=eq.${orderId}`
-                }, payload => {
-                    // Add new message to chat
-                    loadMessages(orderId);
-                })
-                .subscribe();
-        }
-
-        async function sendMessage() {
-            const msg = document.getElementById('chatInput').value.trim();
-            if (!msg || !currentOrder) return;
-            const { data, error } = await sb.rpc('send_order_message', {
-                p_order_id: currentOrder.id,
-                p_sender_type: 'employer',
-                p_sender_id: currentEmployer.id,
-                p_message: msg
+        async function sendMessage(orderId) {
+            const input = document.getElementById(`chatInput-${orderId}`);
+            const text = input.value.trim();
+            if (!text) return;
+            const { error } = await sb.from('freelance_order_messages').insert({
+                order_id: orderId,
+                sender_type: 'employer',
+                sender_id: employerEmail,
+                message: text
             });
-            if (error) {
-                alert('Failed to send message');
-            } else {
-                document.getElementById('chatInput').value = '';
-                // message will appear via subscription
-            }
+            if (error) console.error(error);
+            else input.value = '';
         }
 
         async function confirmReceipt(orderId) {
             const { data, error } = await sb.rpc('confirm_receipt', { p_order_id: orderId });
             if (error || !data.success) {
-                alert(error?.message || data.error || 'Failed to confirm');
-                return;
+                alert(error?.message || data?.error);
+            } else {
+                alert('Confirmed! Payment will be sent to freelancer.');
+                loadEmployerOrders(); // refresh
             }
-            alert('Receipt confirmed. Payment will be released to freelancer.');
-            loadOrders();
-            closeModal();
         }
 
-        function closeModal() {
-            if (chatSubscription) chatSubscription.unsubscribe();
-            document.getElementById('orderModal').style.display = 'none';
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
 
-        // Check if employer already logged in
-        const savedEmail = localStorage.getItem('employerEmail');
-        if (savedEmail) {
-            document.getElementById('loginEmail').value = savedEmail;
-            login();
-        }
+        loadEmployerOrders();
     </script>
 </body>
 </html>
