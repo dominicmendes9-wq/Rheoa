@@ -39,12 +39,21 @@
         let chatSubscriptions = {};
 
         async function loadEmployerOrders() {
-            employerEmail = prompt("Enter your email address used when ordering:");
-            if (!employerEmail) return;
+            // Try to get stored email
+            let storedEmail = localStorage.getItem('freelance_employer_email');
+            if (storedEmail) {
+                employerEmail = storedEmail;
+                console.log('Using stored email:', employerEmail);
+            } else {
+                employerEmail = prompt("Enter your email address used when ordering:");
+                if (!employerEmail) return;
+                localStorage.setItem('freelance_employer_email', employerEmail);
+            }
+            const emailLower = employerEmail.toLowerCase();
             const { data, error } = await sb
                 .from('freelance_orders')
                 .select('*, freelance_templates(title)')
-                .eq('employer_email', employerEmail)
+                .eq('employer_email', emailLower)
                 .order('created_at', { ascending: false });
             if (error) {
                 alert('Error loading orders');
@@ -52,7 +61,6 @@
             }
             orders = data || [];
             renderOrders();
-            // Subscribe to new messages for each order
             orders.forEach(order => subscribeToOrderChat(order.id));
         }
 
@@ -73,7 +81,6 @@
                     ${order.status === 'completed' ? `<button onclick="confirmReceipt('${order.id}')">Confirm Receipt</button>` : ''}
                 </div>
             `).join('');
-            // After rendering, attach chat UI for each order
             orders.forEach(order => attachChatUI(order.id));
         }
 
@@ -103,7 +110,7 @@
         }
 
         function subscribeToOrderChat(orderId) {
-            const channel = sb.channel(`freelance-order-messages-${orderId}`);
+            const channel = sb.channel(`order-messages-${orderId}`);
             channel.on('postgres_changes', {
                 event: 'INSERT',
                 schema: 'public',
