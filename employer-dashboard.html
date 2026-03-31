@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Employer Dashboard - Rheoa RPG</title>
     <style>
+        /* same as before */
         body { font-family: 'Courier New', monospace; background: #f8f8f0; padding: 20px; }
         .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; }
         .order-card { border: 1px solid #ccc; border-radius: 8px; padding: 15px; margin-bottom: 20px; }
@@ -39,11 +40,9 @@
         let chatSubscriptions = {};
 
         async function loadEmployerOrders() {
-            // Try to get stored email
             let storedEmail = localStorage.getItem('freelance_employer_email');
             if (storedEmail) {
                 employerEmail = storedEmail;
-                console.log('Using stored email:', employerEmail);
             } else {
                 employerEmail = prompt("Enter your email address used when ordering:");
                 if (!employerEmail) return;
