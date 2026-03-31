@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Freelancer Dashboard - Rheoa RPG</title>
     <style>
+        /* same as before – keep your existing styles */
         body { font-family: 'Courier New', monospace; background: #f8f8f0; padding: 20px; }
         .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; }
         .status { padding: 10px; margin-bottom: 20px; border: 1px solid #ccc; border-radius: 5px; }
@@ -91,7 +92,6 @@
             statusDiv.className = `status ${currentFreelancer.status}`;
             statusDiv.innerHTML = `You are currently <strong>${currentFreelancer.status}</strong>.`;
 
-            // Queue position (simplified)
             const { data: onlineList } = await sb.from('freelancers').select('id').eq('status', 'online').order('updated_at');
             const index = onlineList.findIndex(f => f.id === currentFreelancer.id);
             if (index >= 0) {
@@ -100,7 +100,6 @@
                 document.getElementById('queuePosition').innerHTML = '<p>You are not in the queue (offline or busy). Go online to enter queue.</p>';
             }
 
-            // My templates
             const { data: templates } = await sb.from('freelance_templates').select('*').eq('freelancer_id', currentFreelancer.id);
             const templateList = document.getElementById('myTemplates');
             if (!templates.length) {
@@ -200,7 +199,7 @@
         async function subscribeToChat(orderId) {
             if (chatSubscription) chatSubscription.unsubscribe();
             chatSubscription = sb
-                .channel(`freelance-order-messages-${orderId}`)
+                .channel(`order-messages-${orderId}`)
                 .on('postgres_changes', {
                     event: 'INSERT',
                     schema: 'public',
@@ -253,7 +252,7 @@
             else input.value = '';
         }
 
-        // Template management
+        // Template management (unchanged)
         function showCreateTemplate() {
             document.getElementById('createTemplateForm').style.display = 'block';
         }
