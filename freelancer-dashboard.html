@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Freelancer Dashboard - Rheoa RPG</title>
     <style>
-        /* same as before */
         body { font-family: 'Courier New', monospace; background: #f8f8f0; padding: 20px; }
         .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; }
         .status { padding: 10px; margin-bottom: 20px; border: 1px solid #ccc; border-radius: 5px; }
@@ -259,8 +258,8 @@
         }
 
         function subscribeToOrderAssignments() {
-            sb
-                .channel(`order-assignments-${currentFreelancer.id}`)
+            const channel = sb.channel(`freelancer-${currentFreelancer.id}`);
+            channel
                 .on('postgres_changes', {
                     event: 'UPDATE',
                     schema: 'public',
@@ -272,7 +271,9 @@
                         loadCurrentOrder();
                     }
                 })
-                .subscribe();
+                .subscribe((status) => {
+                    if (status === 'SUBSCRIBED') console.log('Subscribed to freelance_orders updates');
+                });
         }
 
         async function subscribeToChat(orderId) {
