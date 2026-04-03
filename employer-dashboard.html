@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Employer Dashboard - Rheoa RPG</title>
     <style>
-        /* same as before */
         body { font-family: 'Courier New', monospace; background: #f8f8f0; padding: 20px; }
         .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; }
         .order-card { border: 1px solid #ccc; border-radius: 8px; padding: 15px; margin-bottom: 20px; }
@@ -193,7 +192,7 @@
                 }, (payload) => {
                     if (payload.new.status === 'completed' && payload.old.status !== 'completed') {
                         showToast('📢 Job completed! Review and confirm receipt.');
-                        loadEmployerOrders(); // refresh
+                        loadEmployerOrders();
                     } else if (payload.new.status === 'revision' && payload.old.status !== 'revision') {
                         showToast('🔄 Revision requested. Waiting for freelancer.');
                         loadEmployerOrders();
