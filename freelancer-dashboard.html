@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Freelancer Dashboard - Rheoa RPG</title>
     <style>
+        /* same as before */
         body { font-family: 'Courier New', monospace; background: #f8f8f0; padding: 20px; }
         .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; }
         .status { padding: 10px; margin-bottom: 20px; border: 1px solid #ccc; border-radius: 5px; }
@@ -31,6 +32,8 @@
         .past-orders summary { font-weight: bold; cursor: pointer; margin-bottom: 10px; }
         .past-order { border: 1px solid #ccc; border-radius: 5px; padding: 10px; margin-bottom: 10px; background: #fafafa; }
         .revision-badge { background: #ff9800; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; margin-left: 5px; }
+        .toast { position: fixed; bottom: 20px; right: 20px; background: #333; color: white; padding: 10px 20px; border-radius: 8px; z-index: 1000; animation: fadein 0.5s; }
+        @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
     </style>
 </head>
 <body>
@@ -77,8 +80,12 @@
         let currentOrder = null;
         let chatSubscription = null;
 
-        function showToast(message, type = 'info') {
-            alert(message); // replace with your toast if desired
+        function showToast(message) {
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerText = message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
         }
 
         async function loadFreelancer() {
@@ -184,7 +191,7 @@
                 .select('*, freelance_templates(title, price)')
                 .eq('freelancer_id', currentFreelancer.id)
                 .in('status', ['assigned', 'revision'])
-                .maybeSingle(); // use maybeSingle to avoid error when none
+                .maybeSingle();
             if (error) {
                 console.error(error);
                 return;
@@ -261,7 +268,7 @@
                     filter: `freelancer_id=eq.${currentFreelancer.id}`
                 }, (payload) => {
                     if ((payload.new.status === 'assigned' || payload.new.status === 'revision') && (!currentOrder || currentOrder.id !== payload.new.id)) {
-                        showToast('🔔 New job assigned or revision requested! Check your current order.', 'success');
+                        showToast('🔔 New job assigned or revision requested! Check your current order.');
                         loadCurrentOrder();
                     }
                 })
