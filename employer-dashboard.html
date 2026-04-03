@@ -17,6 +17,10 @@
         button { background: #4CAF50; color: white; border: none; padding: 5px 10px; cursor: pointer; margin: 5px; }
         .chat-area { border: 1px solid #ddd; border-radius: 8px; margin-top: 15px; }
         .chat-messages { height: 200px; overflow-y: auto; padding: 10px; background: #fafafa; }
+        .chat-message { margin-bottom: 10px; padding: 5px; border-bottom: 1px solid #eee; }
+        .message-sender { font-weight: bold; }
+        .message-time { font-size: 0.7rem; color: #666; margin-left: 10px; }
+        .message-text { margin-top: 3px; }
         .chat-input { display: flex; gap: 10px; padding: 10px; border-top: 1px solid #ddd; }
         .chat-input input { flex: 1; padding: 8px; }
         .back-btn { display: block; width: 200px; margin: 30px auto; text-align: center; background: #666; color: white; padding: 10px; border-radius: 8px; text-decoration: none; }
@@ -68,7 +72,7 @@
             const emailLower = employerEmail.toLowerCase();
             const { data, error } = await sb
                 .from('freelance_orders')
-                .select('*, freelance_templates(title)')
+                .select('*, freelance_templates(title), freelancers(name)')
                 .eq('employer_email', emailLower)
                 .order('created_at', { ascending: false });
             if (error) {
@@ -168,14 +172,15 @@
         function addMessageToChat(orderId, msg) {
             const container = document.getElementById(`chatMessages-${orderId}`);
             if (!container) return;
-            const sender = msg.sender_type === 'employer' ? 'You' : 'Freelancer';
+            const order = orders.find(o => o.id === orderId);
+            const freelancerName = order?.freelancers?.name || 'Freelancer';
+            const senderLabel = msg.sender_type === 'employer' ? `Employer (${employerEmail})` : `Freelancer (${freelancerName})`;
             const time = new Date(msg.created_at).toLocaleTimeString();
             const div = document.createElement('div');
             div.className = 'chat-message';
             div.innerHTML = `
-                <span class="message-sender">${sender}</span>
-                <span class="message-time">${time}</span>
-                <div>${escapeHtml(msg.message)}</div>
+                <div class="message-sender">${senderLabel} <span class="message-time">${time}</span></div>
+                <div class="message-text">${escapeHtml(msg.message)}</div>
             `;
             container.appendChild(div);
             container.scrollTop = container.scrollHeight;
