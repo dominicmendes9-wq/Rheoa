@@ -16,9 +16,10 @@
         .order-details { background: #f9f9f9; padding: 15px; border-radius: 8px; margin: 15px 0; }
         .chat-area { border: 1px solid #ddd; border-radius: 8px; margin-top: 20px; }
         .chat-messages { height: 300px; overflow-y: auto; padding: 10px; background: #fafafa; }
-        .chat-message { margin-bottom: 10px; padding: 5px; }
+        .chat-message { margin-bottom: 10px; padding: 5px; border-bottom: 1px solid #eee; }
         .message-sender { font-weight: bold; }
         .message-time { font-size: 0.7rem; color: #666; margin-left: 10px; }
+        .message-text { margin-top: 3px; }
         .chat-input { display: flex; gap: 10px; padding: 10px; border-top: 1px solid #ddd; }
         .chat-input input { flex: 1; padding: 8px; }
         .chat-input button { padding: 8px 15px; }
@@ -91,9 +92,7 @@
             currentFreelancer = data;
             renderDashboard();
             subscribeToOrderAssignments();
-            if (currentFreelancer.status === 'busy' || currentFreelancer.status === 'revision?') {
-                await loadCurrentOrder();
-            }
+            await loadCurrentOrder();
             await loadPastOrders();
         }
 
@@ -185,8 +184,8 @@
                 .select('*, freelance_templates(title, price)')
                 .eq('freelancer_id', currentFreelancer.id)
                 .in('status', ['assigned', 'revision'])
-                .single();
-            if (error && error.code !== 'PGRST116') {
+                .maybeSingle(); // use maybeSingle to avoid error when none
+            if (error) {
                 console.error(error);
                 return;
             }
@@ -234,9 +233,9 @@
                 alert(error?.message || data?.error);
             } else {
                 alert('Order marked as completed. Awaiting employer confirmation.');
-                await loadCurrentOrder(); // will clear the order
+                await loadCurrentOrder();
                 await loadPastOrders();
-                renderDashboard(); // refresh stats
+                renderDashboard();
             }
         }
 
@@ -262,7 +261,7 @@
                     filter: `freelancer_id=eq.${currentFreelancer.id}`
                 }, (payload) => {
                     if ((payload.new.status === 'assigned' || payload.new.status === 'revision') && (!currentOrder || currentOrder.id !== payload.new.id)) {
-                        showToast('🔔 New job assigned! Check your current order.', 'success');
+                        showToast('🔔 New job assigned or revision requested! Check your current order.', 'success');
                         loadCurrentOrder();
                     }
                 })
@@ -298,14 +297,13 @@
         function addMessageToChat(msg) {
             const container = document.getElementById('chatMessages');
             if (!container) return;
-            const sender = msg.sender_type === 'freelancer' ? 'You' : 'Employer';
+            const senderLabel = msg.sender_type === 'freelancer' ? `Freelancer (${currentFreelancer.name})` : `Employer (${currentOrder.employer_email})`;
             const time = new Date(msg.created_at).toLocaleTimeString();
             const div = document.createElement('div');
             div.className = 'chat-message';
             div.innerHTML = `
-                <span class="message-sender">${sender}</span>
-                <span class="message-time">${time}</span>
-                <div>${escapeHtml(msg.message)}</div>
+                <div class="message-sender">${senderLabel} <span class="message-time">${time}</span></div>
+                <div class="message-text">${escapeHtml(msg.message)}</div>
             `;
             container.appendChild(div);
             container.scrollTop = container.scrollHeight;
