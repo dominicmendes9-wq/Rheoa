@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Freelancer Dashboard - Rheoa RPG</title>
     <style>
-        /* same as before – keep your existing styles */
         body { font-family: 'Courier New', monospace; background: #f8f8f0; padding: 20px; }
         .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; }
         .status { padding: 10px; margin-bottom: 20px; border: 1px solid #ccc; border-radius: 5px; }
@@ -23,6 +22,14 @@
         .chat-input { display: flex; gap: 10px; padding: 10px; border-top: 1px solid #ddd; }
         .chat-input input { flex: 1; padding: 8px; }
         .chat-input button { padding: 8px 15px; }
+        .summary { display: flex; gap: 20px; margin-bottom: 20px; }
+        .summary-card { background: #e3f2fd; padding: 15px; border-radius: 8px; text-align: center; flex: 1; }
+        .summary-card h3 { margin: 0; color: #2196F3; }
+        .summary-card p { font-size: 1.5rem; font-weight: bold; margin: 5px 0; }
+        .past-orders { margin-top: 20px; border-top: 2px solid #ddd; padding-top: 15px; }
+        .past-orders summary { font-weight: bold; cursor: pointer; margin-bottom: 10px; }
+        .past-order { border: 1px solid #ccc; border-radius: 5px; padding: 10px; margin-bottom: 10px; background: #fafafa; }
+        .revision-badge { background: #ff9800; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; margin-left: 5px; }
     </style>
 </head>
 <body>
@@ -30,6 +37,10 @@
         <h1>Freelancer Dashboard</h1>
         <div id="profile"></div>
         <div id="statusDisplay" class="status"></div>
+        <div class="summary">
+            <div class="summary-card"><h3>💰 Total Earned</h3><p id="totalEarned">$0</p></div>
+            <div class="summary-card"><h3>📦 In‑Hand Value</h3><p id="inHandValue">$0</p></div>
+        </div>
         <div id="currentOrder"></div>
         <div id="queuePosition"></div>
         <hr>
@@ -45,6 +56,12 @@
             <input type="text" id="previewUrl" placeholder="Preview Image URL"><br>
             <button onclick="createTemplate()">Create</button>
             <button onclick="cancelCreateTemplate()">Cancel</button>
+        </div>
+        <div class="past-orders">
+            <details>
+                <summary>📜 Past Orders (click to expand)</summary>
+                <div id="pastOrdersList"></div>
+            </details>
         </div>
     </div>
     <a href="dashboard.html" class="back-btn">← Back to Dashboard</a>
@@ -74,9 +91,37 @@
             currentFreelancer = data;
             renderDashboard();
             subscribeToOrderAssignments();
-            if (currentFreelancer.status === 'busy') {
+            if (currentFreelancer.status === 'busy' || currentFreelancer.status === 'revision?') {
                 await loadCurrentOrder();
             }
+            await loadPastOrders();
+        }
+
+        async function loadPastOrders() {
+            const { data, error } = await sb
+                .from('freelance_orders')
+                .select('*, freelance_templates(title, price)')
+                .eq('freelancer_id', currentFreelancer.id)
+                .in('status', ['completed', 'released', 'cancelled'])
+                .order('created_at', { ascending: false });
+            if (error) console.error(error);
+            else renderPastOrders(data);
+        }
+
+        function renderPastOrders(orders) {
+            const container = document.getElementById('pastOrdersList');
+            if (!orders.length) {
+                container.innerHTML = '<p>No past orders.</p>';
+                return;
+            }
+            container.innerHTML = orders.map(order => `
+                <div class="past-order">
+                    <strong>${order.freelance_templates?.title || 'Template'}</strong><br>
+                    Amount: $${order.amount} (payout $${order.freelancer_payout})<br>
+                    Status: ${order.status}<br>
+                    Completed: ${order.completed_at ? new Date(order.completed_at).toLocaleString() : 'N/A'}
+                </div>
+            `).join('');
         }
 
         async function renderDashboard() {
@@ -92,6 +137,14 @@
             statusDiv.className = `status ${currentFreelancer.status}`;
             statusDiv.innerHTML = `You are currently <strong>${currentFreelancer.status}</strong>.`;
 
+            // Calculate totals
+            const { data: allOrders } = await sb.from('freelance_orders').select('amount, freelancer_payout, status').eq('freelancer_id', currentFreelancer.id);
+            const totalEarned = allOrders?.filter(o => o.status === 'released').reduce((s, o) => s + o.freelancer_payout, 0) || 0;
+            const inHand = allOrders?.filter(o => o.status === 'assigned' || o.status === 'revision').reduce((s, o) => s + o.freelancer_payout, 0) || 0;
+            document.getElementById('totalEarned').innerText = `$${totalEarned.toFixed(2)}`;
+            document.getElementById('inHandValue').innerText = `$${inHand.toFixed(2)}`;
+
+            // Queue position
             const { data: onlineList } = await sb.from('freelancers').select('id').eq('status', 'online').order('updated_at');
             const index = onlineList.findIndex(f => f.id === currentFreelancer.id);
             if (index >= 0) {
@@ -100,6 +153,7 @@
                 document.getElementById('queuePosition').innerHTML = '<p>You are not in the queue (offline or busy). Go online to enter queue.</p>';
             }
 
+            // My templates
             const { data: templates } = await sb.from('freelance_templates').select('*').eq('freelancer_id', currentFreelancer.id);
             const templateList = document.getElementById('myTemplates');
             if (!templates.length) {
@@ -130,7 +184,7 @@
                 .from('freelance_orders')
                 .select('*, freelance_templates(title, price)')
                 .eq('freelancer_id', currentFreelancer.id)
-                .eq('status', 'assigned')
+                .in('status', ['assigned', 'revision'])
                 .single();
             if (error && error.code !== 'PGRST116') {
                 console.error(error);
@@ -150,14 +204,19 @@
         function renderCurrentOrder() {
             if (!currentOrder) return;
             const template = currentOrder.freelance_templates;
+            const isRevision = currentOrder.status === 'revision';
             document.getElementById('currentOrder').innerHTML = `
                 <div class="order-details">
-                    <h3>Current Order</h3>
+                    <h3>Current Order ${isRevision ? '<span class="revision-badge">Revision Required</span>' : ''}</h3>
                     <p><strong>Template:</strong> ${template.title}</p>
                     <p><strong>Amount:</strong> $${currentOrder.amount} USDT (you will get $${currentOrder.freelancer_payout})</p>
                     <p><strong>Employer Email:</strong> ${currentOrder.employer_email}</p>
                     <p><strong>Instructions:</strong> ${currentOrder.customization_data?.instructions || 'None'}</p>
-                    <button onclick="completeOrder()">Mark as Completed</button>
+                    ${isRevision ? '<p style="color:orange;">⚠️ This order needs revision. Please check employer feedback in chat.</p>' : ''}
+                    <div>
+                        <button onclick="completeOrder()">Mark as Completed</button>
+                        ${!isRevision ? `<button onclick="passOrder()">Pass to Next Freelancer</button>` : ''}
+                    </div>
                 </div>
                 <div class="chat-area">
                     <div class="chat-messages" id="chatMessages"></div>
@@ -176,6 +235,20 @@
             } else {
                 alert('Order marked as completed. Awaiting employer confirmation.');
                 await loadCurrentOrder(); // will clear the order
+                await loadPastOrders();
+                renderDashboard(); // refresh stats
+            }
+        }
+
+        async function passOrder() {
+            if (!confirm('Pass this order to the next available freelancer?')) return;
+            const { data, error } = await sb.rpc('pass_order', { p_order_id: currentOrder.id, p_freelancer_email: currentFreelancer.email });
+            if (error || !data.success) {
+                alert(error?.message || data?.error);
+            } else {
+                alert('Order passed to next freelancer.');
+                await loadCurrentOrder();
+                renderDashboard();
             }
         }
 
@@ -188,7 +261,7 @@
                     table: 'freelance_orders',
                     filter: `freelancer_id=eq.${currentFreelancer.id}`
                 }, (payload) => {
-                    if (payload.new.status === 'assigned' && (!currentOrder || currentOrder.id !== payload.new.id)) {
+                    if ((payload.new.status === 'assigned' || payload.new.status === 'revision') && (!currentOrder || currentOrder.id !== payload.new.id)) {
                         showToast('🔔 New job assigned! Check your current order.', 'success');
                         loadCurrentOrder();
                     }
@@ -252,7 +325,7 @@
             else input.value = '';
         }
 
-        // Template management (unchanged)
+        // Template management
         function showCreateTemplate() {
             document.getElementById('createTemplateForm').style.display = 'block';
         }
