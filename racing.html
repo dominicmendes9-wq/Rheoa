@@ -979,7 +979,7 @@ function renderVehicles() {
     return `
       <div class="vehicle-card">
         <div class="vehicle-header">
-          <span class="vehicle-name">${v.nickname || type.name}</span>
+          <span class="vehicle-name">${escapeHtml(v.nickname || type.name)}</span>
           <span class="vehicle-type">${type.name}</span>
         </div>
         <div class="vehicle-stats">
@@ -1089,7 +1089,8 @@ function renderRaces() {
             const vehicleName = vehicle ? (vehicle.nickname || (vehicle.vehicle_types?.name || 'Unknown')) : 'Unknown';
             return `
               <div class="participant-item">
-                <span>${p.players?.username || 'Unknown'} (${vehicleName})</span>
+                <span>${escapeHtml(p.players?.username || 'Unknown')
+} (${escapeHtml(vehicleName)})</span>
                 ${p.player_id !== currentPlayer.id ? `
                   <button class="bet-btn" style="padding: 2px 8px; font-size: 0.8rem;" 
                           onclick="openBetModal('${race.id}', '${p.id}', '${p.players?.username || 'Unknown'}')">
