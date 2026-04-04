@@ -175,7 +175,7 @@
         }
 
         async function setStatus(status) {
-            const { data, error } = await sb.rpc('update_freelancer_status', { p_status: status, p_email: currentFreelancer.email });
+            const { data, error } = await sb.rpc('update_freelancer_status', { p_status: status });
             if (error || !data.success) {
                 alert(error?.message || data?.error);
             } else {
@@ -234,7 +234,7 @@
         }
 
         async function completeOrder() {
-            const { data, error } = await sb.rpc('complete_order', { p_order_id: currentOrder.id, p_email: currentFreelancer.email });
+            const { data, error } = await sb.rpc('complete_order', { p_order_id: currentOrder.id });
             if (error || !data.success) {
                 alert(error?.message || data?.error);
             } else {
@@ -247,7 +247,7 @@
 
         async function passOrder() {
             if (!confirm('Pass this order to the next available freelancer?')) return;
-            const { data, error } = await sb.rpc('pass_order', { p_order_id: currentOrder.id, p_freelancer_email: currentFreelancer.email });
+            const { data, error } = await sb.rpc('pass_order', { p_order_id: currentOrder.id });
             if (error || !data.success) {
                 alert(error?.message || data?.error);
             } else {
