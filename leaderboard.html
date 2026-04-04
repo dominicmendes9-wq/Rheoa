@@ -322,7 +322,16 @@ const sb = window.supabase.createClient(
   "https://mtiwodvsrwvrujbhmmrn.supabase.co",
   "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
 );
-
+// XSS protection – turns dangerous characters into safe text
+function escapeHtml(str) {
+    if (!str) return '';
+    return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
 let currentPlayer = null;
 let currentCategory = 'crimes';
 let leaderboardData = [];
@@ -524,7 +533,7 @@ function renderLeaderboard(category, data) {
         <div class="player-info">
           <div class="player-avatar">${player.username.charAt(0).toUpperCase()}</div>
           <div class="player-name">
-            ${player.username}
+            ${escapeHtml(player.username)}
             ${isCurrentPlayer ? '<span class="current-badge">You</span>' : ''}
           </div>
         </div>
