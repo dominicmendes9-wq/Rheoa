@@ -431,7 +431,16 @@ const sb = window.supabase.createClient(
   "https://mtiwodvsrwvrujbhmmrn.supabase.co",
   "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
 );
-
+// XSS protection – turns dangerous characters into safe text
+function escapeHtml(str) {
+    if (!str) return '';
+    return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
 let player = null;
 let playerChannel = null;
 let boostInterval = null;
@@ -587,7 +596,7 @@ async function loadShop() {
       <div class="item-card">
         <div class="item-icon">${icon}</div>
         <span class="item-badge ${badgeClass}">${item.type.replace('_', ' ')}</span>
-        <div class="item-name">${item.name}</div>
+        <div class="item-name">${escapeHtml(item.name)}</div>
         <div class="item-description">${item.description || effectDesc}</div>
         <div class="item-details">
           <p>Effect <span class="effect">+${item.effect_value}</span></p>
