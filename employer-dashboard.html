@@ -234,7 +234,7 @@
 
         async function rejectOrder(orderId) {
             if (!confirm('Request revision? The freelancer will be notified and must update the work. Only one revision allowed.')) return;
-            const { data, error } = await sb.rpc('reject_order', { p_order_id: orderId});
+            const { data, error } = await sb.rpc('reject_order', { p_order_id: orderId, p_employer_email: employerEmail });
             if (error || !data.success) {
                 alert(error?.message || data?.error);
             } else {
