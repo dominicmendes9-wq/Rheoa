@@ -507,7 +507,16 @@ const sb = window.supabase.createClient(
   "https://mtiwodvsrwvrujbhmmrn.supabase.co",
   "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
 );
-
+// XSS protection – turns dangerous characters into safe text
+function escapeHtml(str) {
+    if (!str) return '';
+    return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
 let currentPlayer = null;
 let currentStats = null;
 let selectedOpponent = null;
@@ -632,8 +641,7 @@ function renderOpponents() {
            onclick="selectOpponent('${opp.player_id}')">
         <div class="opponent-rank">#${opp.rank_points}</div>
         <div class="opponent-info">
-          <span class="opponent-name">${opp.players.username}</span>
-          <span class="opponent-title">${opp.rank_title}</span>
+<span class="opponent-name">${escapeHtml(opp.players.username)}</span>          <span class="opponent-title">${opp.rank_title}</span>
         </div>
         <div class="opponent-power">⚡${power}</div>
       </div>
@@ -784,7 +792,8 @@ function renderBattleHistory() {
           ${won ? 'WIN' : 'LOSS'}
         </div>
         <div class="history-details">
-          vs <strong>${opponentName}</strong><br>
+          vs <strong>${escapeHtml(opponentName)
+}</strong><br>
           <small>${new Date(battle.created_at).toLocaleDateString()}</small>
         </div>
         <div class="history-loot ${won ? 'win' : 'loss'}">
