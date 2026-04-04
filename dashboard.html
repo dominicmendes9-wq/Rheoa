@@ -446,7 +446,16 @@ const sb = window.supabase.createClient(
   "https://mtiwodvsrwvrujbhmmrn.supabase.co",
   "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
 );
-
+// XSS protection – turns dangerous characters into safe text
+function escapeHtml(str) {
+    if (!str) return '';
+    return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
 let player = null;
 let confettiAnimation = null;
 let playerChannel = null;
@@ -791,7 +800,7 @@ function renderStats() {
   statsDiv.innerHTML = `
     <div class="stat-card">
       <b>👤 Username</b>
-      <div class="value">${player.username}</div>
+      <div class="value">${escapeHtml(player.username)}</div>
     </div>
     <div class="stat-card">
       <b>💰 Cash</b>
