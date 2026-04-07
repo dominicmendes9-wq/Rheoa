@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Employer Dashboard - Rheoa RPG</title>
     <style>
+        /* (keep existing styles, unchanged) */
         body { font-family: 'Courier New', monospace; background: #f8f8f0; padding: 20px; }
         .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; }
         .order-card { border: 1px solid #ccc; border-radius: 8px; padding: 15px; margin-bottom: 20px; }
@@ -80,15 +81,19 @@
                 localStorage.setItem('freelance_employer_email', employerEmail);
             }
             const emailLower = employerEmail.toLowerCase();
+            // Fixed query: only join with freelance_templates, remove freelancers join
             const { data, error } = await sb
-    .from('freelance_orders')
-    .select(`*,
-        freelance_templates (title)
-    `)
-    .eq('employer_email', emailLower)
-    .order('created_at', { ascending: false });
+                .from('freelance_orders')
+                .select(`
+                    *,
+                    freelance_templates (title)
+                `)
+                .eq('employer_email', emailLower)
+                .order('created_at', { ascending: false });
+            
             if (error) {
-                alert('Error loading orders');
+                console.error('Error loading orders:', error);
+                document.getElementById('ordersList').innerHTML = '<p style="color:red;">Error loading orders: ' + error.message + '</p>';
                 return;
             }
             orders = data || [];
@@ -99,8 +104,8 @@
             });
 
             // Calculate totals
-            const totalSpent = orders.reduce((sum, o) => sum + o.amount, 0);
-            const pendingValue = orders.filter(o => o.status === 'assigned' || o.status === 'revision').reduce((sum, o) => sum + o.amount, 0);
+            const totalSpent = orders.reduce((sum, o) => sum + (o.amount || 0), 0);
+            const pendingValue = orders.filter(o => o.status === 'assigned' || o.status === 'revision').reduce((sum, o) => sum + (o.amount || 0), 0);
             document.getElementById('totalSpent').innerText = `$${totalSpent.toFixed(2)}`;
             document.getElementById('pendingValue').innerText = `$${pendingValue.toFixed(2)}`;
 
@@ -206,9 +211,8 @@
         function addMessageToChat(orderId, msg) {
             const container = document.getElementById(`chatMessages-${orderId}`);
             if (!container) return;
-            const order = orders.find(o => o.id === orderId);
-            const freelancerName ='Freelancer';
-            const senderLabel = msg.sender_type === 'employer' ? `Employer (${employerEmail})` : `Freelancer (${freelancerName})`;
+            // No freelancer name needed; just show "Freelancer"
+            const senderLabel = msg.sender_type === 'employer' ? `Employer (${employerEmail})` : `Freelancer`;
             const time = new Date(msg.created_at).toLocaleTimeString();
             const div = document.createElement('div');
             div.className = 'chat-message';
