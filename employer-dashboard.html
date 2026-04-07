@@ -37,6 +37,7 @@
         @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
         input, button { font-family: inherit; }
         .error { color: red; margin-top: 10px; }
+        .debug-info { background: #f0f0f0; padding: 10px; margin: 10px 0; font-size: 12px; white-space: pre-wrap; word-break: break-all; }
     </style>
 </head>
 <body>
@@ -91,7 +92,7 @@
         loadEmployerOrders(); // will re-render dashboard
     };
 
-    // ---------- DASHBOARD ----------
+    // ---------- DASHBOARD WITH DEBUG ----------
     async function loadEmployerOrders() {
         let storedEmail = localStorage.getItem('freelance_employer_email');
         if (!storedEmail) {
@@ -101,28 +102,60 @@
         employerEmail = storedEmail;
         const emailLower = employerEmail.toLowerCase();
 
-        // Fixed query: only join with freelance_templates, not freelancers
-        const { data, error } = await sb
-            .from('freelance_orders')
-            .select(`
-                *,
-                freelance_templates (title)
-            `)
-            .eq('employer_email', emailLower)
-            .order('created_at', { ascending: false });
+        // DEBUG: Show loading state
+        document.getElementById('app').innerHTML = `<div class="container"><p>Loading orders for ${escapeHtml(employerEmail)}...</p></div>`;
 
-        if (error) {
-            console.error('Error loading orders:', error);
-            document.getElementById('app').innerHTML = `<div class="container"><p style="color:red;">Error loading orders. Please try again.</p><button onclick="logout()">Logout</button></div>`;
-            return;
+        try {
+            // First, test a simple query without joins
+            const { data: testData, error: testError } = await sb
+                .from('freelance_orders')
+                .select('id, employer_email, status')
+                .eq('employer_email', emailLower);
+
+            if (testError) {
+                throw new Error(`Simple query failed: ${testError.message}`);
+            }
+            console.log('Simple query result:', testData);
+
+            // Now the full query with template join
+            const { data, error } = await sb
+                .from('freelance_orders')
+                .select(`
+                    *,
+                    freelance_templates (title)
+                `)
+                .eq('employer_email', emailLower)
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                throw new Error(`Full query failed: ${error.message}`);
+            }
+
+            orders = data || [];
+            renderDashboard();
+            orders.forEach(order => {
+                subscribeToOrderChat(order.id);
+                subscribeToOrderStatus(order.id);
+            });
+        } catch (err) {
+            console.error('Error loading orders:', err);
+            document.getElementById('app').innerHTML = `
+                <div class="container">
+                    <h2>Error Loading Orders</h2>
+                    <div class="debug-info">
+                        <strong>Error details:</strong><br>
+                        ${escapeHtml(err.message)}
+                    </div>
+                    <p>Possible causes:</p>
+                    <ul>
+                        <li>The table 'freelance_orders' does not have an 'employer_email' column (check your schema).</li>
+                        <li>The table 'freelance_templates' does not have a 'title' column.</li>
+                        <li>Your Supabase RLS policies are blocking access.</li>
+                    </ul>
+                    <button onclick="logout()">Logout</button>
+                </div>
+            `;
         }
-
-        orders = data || [];
-        renderDashboard();
-        orders.forEach(order => {
-            subscribeToOrderChat(order.id);
-            subscribeToOrderStatus(order.id);
-        });
     }
 
     function renderDashboard() {
@@ -133,7 +166,7 @@
 
         let ordersHtml = '';
         if (orders.length === 0) {
-            ordersHtml = '<p>No orders found.</p>';
+            ordersHtml = '<p>No orders found for this email.</p>';
         } else {
             ordersHtml = orders.map(order => `
                 <div class="order-card" id="order-${order.id}">
@@ -243,7 +276,7 @@
         const container = document.getElementById(`chatMessages-${orderId}`);
         if (!container) return;
         const order = orders.find(o => o.id === orderId);
-        const freelancerName = 'Freelancer'; // we don't have freelancer name without extra join
+        const freelancerName = 'Freelancer';
         const senderLabel = msg.sender_type === 'employer' ? `Employer (${employerEmail})` : `Freelancer (${freelancerName})`;
         const time = new Date(msg.created_at).toLocaleTimeString();
         const div = document.createElement('div');
