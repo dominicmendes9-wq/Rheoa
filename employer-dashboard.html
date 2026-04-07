@@ -81,10 +81,12 @@
             }
             const emailLower = employerEmail.toLowerCase();
             const { data, error } = await sb
-                .from('freelance_orders')
-                .select('*, freelance_templates(title), freelancers(name)')
-                .eq('employer_email', emailLower)
-                .order('created_at', { ascending: false });
+    .from('freelance_orders')
+    .select(`*,
+        freelance_templates (title)
+    `)
+    .eq('employer_email', emailLower)
+    .order('created_at', { ascending: false });
             if (error) {
                 alert('Error loading orders');
                 return;
@@ -205,7 +207,7 @@
             const container = document.getElementById(`chatMessages-${orderId}`);
             if (!container) return;
             const order = orders.find(o => o.id === orderId);
-            const freelancerName = order?.freelancers?.name || 'Freelancer';
+            const freelancerName ='Freelancer';
             const senderLabel = msg.sender_type === 'employer' ? `Employer (${employerEmail})` : `Freelancer (${freelancerName})`;
             const time = new Date(msg.created_at).toLocaleTimeString();
             const div = document.createElement('div');
