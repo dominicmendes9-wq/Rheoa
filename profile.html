@@ -77,7 +77,7 @@
             border-radius: 20px;
             font-size: 0.8rem;
         }
-        .friend-avatar {
+        .friend-avatar, .suggestion-avatar, .result-avatar {
             font-size: 2rem;
             background: #e1e9f5;
             width: 50px;
@@ -87,12 +87,12 @@
             align-items: center;
             justify-content: center;
         }
-        .friends-grid, .testimonials-list {
+        .friends-grid, .suggestions-grid, .results-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
             gap: 15px;
         }
-        .friend-card, .testimonial-card {
+        .friend-card, .suggestion-card, .result-card {
             background: #f9f9ff;
             border: 1px solid #d4e0ee;
             border-radius: 10px;
@@ -102,8 +102,14 @@
             gap: 12px;
         }
         .testimonial-card {
+            background: #f9f9ff;
+            border: 1px solid #d4e0ee;
+            border-radius: 10px;
+            padding: 10px;
+            display: flex;
             flex-direction: column;
             align-items: flex-start;
+            gap: 5px;
         }
         .testimonial-author {
             font-weight: bold;
@@ -137,6 +143,23 @@
             border-radius: 5px;
             font-family: inherit;
         }
+        .search-filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 15px;
+            align-items: flex-end;
+        }
+        .filter-group {
+            flex: 1;
+            min-width: 120px;
+        }
+        .filter-group label {
+            font-size: 0.8rem;
+            font-weight: bold;
+            display: block;
+            margin-bottom: 3px;
+        }
         .scrap-form {
             background: #f9f9ff;
             padding: 10px;
@@ -165,9 +188,14 @@
             color: #1e5799;
             text-decoration: none;
         }
+        hr {
+            margin: 15px 0;
+            border-color: #d4e0ee;
+        }
         @media (max-width: 600px) {
             .profile-header { flex-direction: column; text-align: center; }
-            .friends-grid { grid-template-columns: 1fr; }
+            .friends-grid, .suggestions-grid, .results-grid { grid-template-columns: 1fr; }
+            .search-filters { flex-direction: column; }
         }
     </style>
 </head>
@@ -190,6 +218,8 @@ let friendships = [];
 let testimonials = [];
 let pendingRequests = [];
 let profileViews = [];
+let suggestions = [];
+let searchResults = [];
 
 function showToast(msg) {
     const toast = document.createElement('div'); toast.className = 'toast'; toast.innerText = msg;
@@ -252,6 +282,7 @@ async function loadProfile(playerId) {
     await loadTestimonials();
     await loadPendingRequests();
     await loadProfileViews();
+    await loadSuggestions();      // new
     renderProfile();
 }
 
@@ -289,6 +320,96 @@ async function loadProfileViews() {
         .order('viewed_at', { ascending: false })
         .limit(20);
     profileViews = data || [];
+}
+
+// New: load suggested friends (registered in last 15 days)
+async function loadSuggestions() {
+    if (profileOwner.id !== currentPlayer?.id) return;
+    const fifteenDaysAgo = new Date();
+    fifteenDaysAgo.setDate(fifteenDaysAgo.getDate() - 15);
+    
+    // Get IDs of existing friends
+    const friendIds = friendships.map(f => 
+        f.requester_id === currentPlayer.id ? f.addressee_id : f.requester_id
+    );
+    friendIds.push(currentPlayer.id); // exclude self
+    
+    const { data } = await sb
+        .from('players')
+        .select('id, username, avatar_url, gender, country, location, join_date')
+        .gte('join_date', fifteenDaysAgo.toISOString())
+        .not('id', 'in', `(${friendIds.join(',')})`)
+        .limit(12);
+    suggestions = data || [];
+    renderSuggestions();
+}
+
+// Search users by criteria
+async function searchUsers() {
+    const username = document.getElementById('searchUsername')?.value.trim();
+    const email = document.getElementById('searchEmail')?.value.trim();
+    const gender = document.getElementById('searchGender')?.value;
+    const location = document.getElementById('searchLocation')?.value.trim();
+    const country = document.getElementById('searchCountry')?.value.trim();
+    
+    let query = sb.from('players').select('id, username, avatar_url, gender, country, location, email');
+    
+    if (username) query = query.ilike('username', `%${username}%`);
+    if (email) query = query.ilike('email', `%${email}%`);
+    if (gender && gender !== '') query = query.eq('gender', gender);
+    if (location) query = query.ilike('location', `%${location}%`);
+    if (country) query = query.ilike('country', `%${country}%`);
+    
+    // Exclude self and existing friends
+    const friendIds = friendships.map(f => 
+        f.requester_id === currentPlayer.id ? f.addressee_id : f.requester_id
+    );
+    friendIds.push(currentPlayer.id);
+    query = query.not('id', 'in', `(${friendIds.join(',')})`);
+    
+    const { data } = await query.limit(30);
+    searchResults = data || [];
+    renderSearchResults();
+}
+
+function renderSuggestions() {
+    const container = document.getElementById('suggestionsGrid');
+    if (!container) return;
+    if (!suggestions.length) {
+        container.innerHTML = '<p>No new members in the last 15 days.</p>';
+        return;
+    }
+    container.innerHTML = suggestions.map(u => `
+        <div class="suggestion-card">
+            <div class="suggestion-avatar">${u.avatar_url || '👤'}</div>
+            <div>
+                <div><strong>${escapeHtml(u.username)}</strong></div>
+                <div style="font-size:0.7rem; color:#666;">${escapeHtml(u.location || '')} ${escapeHtml(u.country || '')}</div>
+                <button onclick="sendFriendRequest('${u.id}')">➕ Add Friend</button>
+                <button onclick="viewProfile('${u.id}')">View</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function renderSearchResults() {
+    const container = document.getElementById('searchResultsGrid');
+    if (!container) return;
+    if (!searchResults.length) {
+        container.innerHTML = '<p>No users found.</p>';
+        return;
+    }
+    container.innerHTML = searchResults.map(u => `
+        <div class="result-card">
+            <div class="result-avatar">${u.avatar_url || '👤'}</div>
+            <div>
+                <div><strong>${escapeHtml(u.username)}</strong></div>
+                <div style="font-size:0.7rem; color:#666;">${escapeHtml(u.gender || '')} | ${escapeHtml(u.location || '')} ${escapeHtml(u.country || '')}</div>
+                <button onclick="sendFriendRequest('${u.id}')">➕ Add Friend</button>
+                <button onclick="viewProfile('${u.id}')">View</button>
+            </div>
+        </div>
+    `).join('');
 }
 
 function renderProfile() {
@@ -337,6 +458,52 @@ function renderProfile() {
     
     let friendsHtml = `<div class="card"><div class="card-header">Friends (${totalFriends})</div><div class="card-content"><div class="friends-grid" id="friendsGrid"></div></div></div>`;
     
+    let findFriendsHtml = '';
+    if (isOwner) {
+        findFriendsHtml = `
+            <div class="card">
+                <div class="card-header">🔍 Find Friends</div>
+                <div class="card-content">
+                    <div class="search-filters">
+                        <div class="filter-group">
+                            <label>Username</label>
+                            <input type="text" id="searchUsername" placeholder="Username">
+                        </div>
+                        <div class="filter-group">
+                            <label>Email</label>
+                            <input type="email" id="searchEmail" placeholder="Email">
+                        </div>
+                        <div class="filter-group">
+                            <label>Gender</label>
+                            <select id="searchGender">
+                                <option value="">Any</option>
+                                <option value="male">Male</option>
+                                <option value="female">Female</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label>Location</label>
+                            <input type="text" id="searchLocation" placeholder="City">
+                        </div>
+                        <div class="filter-group">
+                            <label>Country</label>
+                            <input type="text" id="searchCountry" placeholder="Country">
+                        </div>
+                        <div class="filter-group">
+                            <label>&nbsp;</label>
+                            <button onclick="searchUsers()">Search</button>
+                        </div>
+                    </div>
+                    <div id="searchResultsGrid" class="results-grid"></div>
+                    <hr>
+                    <div><strong>✨ Suggested Friends (New members, last 15 days)</strong></div>
+                    <div id="suggestionsGrid" class="suggestions-grid"></div>
+                </div>
+            </div>
+        `;
+    }
+    
     let testimonialsHtml = `<div class="card"><div class="card-header">📝 Scrapbook</div><div class="card-content">`;
     if (isOwner) {
         testimonialsHtml += `<div class="scrap-form"><textarea id="scrapContent" rows="2" placeholder="Write a scrap to yourself..."></textarea><button onclick="addTestimonial()">Post Scrap</button></div>`;
@@ -371,7 +538,7 @@ function renderProfile() {
         friendActionHtml = `<div class="card"><div class="card-header">Friendship</div><div class="card-content">${btnHtml}</div></div>`;
     }
     
-    const finalHtml = headerHtml + bioHtml + friendActionHtml + friendsHtml + testimonialsHtml + requestsHtml + visitorsHtml;
+    const finalHtml = headerHtml + bioHtml + friendActionHtml + friendsHtml + findFriendsHtml + testimonialsHtml + requestsHtml + visitorsHtml;
     document.getElementById('profileView').innerHTML = finalHtml;
     
     renderFriends();
@@ -379,8 +546,13 @@ function renderProfile() {
     if (isOwner) {
         renderPendingRequests();
         renderVisitors();
+        renderSuggestions();     // fill suggestions grid
+        renderSearchResults();   // initially empty
     }
 }
+
+// The rest of the functions (renderFriends, renderTestimonials, etc.) remain the same as before.
+// I'll copy them from the previous version for completeness.
 
 function renderFriends() {
     const container = document.getElementById('friendsGrid');
