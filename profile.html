@@ -36,7 +36,7 @@
         .toast { position: fixed; bottom: 20px; right: 20px; background: #333; color: white; padding: 10px 20px; border-radius: 8px; z-index: 1000; }
         .back-link { display: inline-block; margin-top: 20px; color: #1e5799; text-decoration: none; }
         hr { margin: 15px 0; border-color: #d4e0ee; }
-        .debug-panel { background: #f0f0f0; padding: 10px; margin-bottom: 20px; font-size: 0.8rem; border-left: 4px solid #ff9800; }
+        .debug-panel { background: #f0f0f0; padding: 10px; margin-bottom: 20px; font-size: 0.8rem; border-left: 4px solid #ff9800; white-space: pre-wrap; font-family: monospace; }
         @media (max-width: 600px) {
             .profile-header { flex-direction: column; text-align: center; }
             .friends-grid, .suggestions-grid, .results-grid { grid-template-columns: 1fr; }
@@ -76,26 +76,40 @@ async function loadCurrentUser() {
         if (userError) throw new Error(userError.message);
         if (!user) { window.location.href = 'index.html'; return; }
         
-        // Find player by username or create if not exists
+        // Try to find player by auth_id
         let { data: player, error: playerError } = await sb
             .from('players')
             .select('*')
-            .eq('username', user.email?.split('@')[0] || user.id)
+            .eq('auth_id', user.id)
             .single();
         
         if (playerError || !player) {
-            // Create new player
-            const { data: newPlayer, error: createError } = await sb
+            // Fallback: try by email
+            const { data: playerByEmail } = await sb
                 .from('players')
-                .insert({
-                    username: user.email?.split('@')[0] || 'Player_' + user.id.slice(0,6),
-                    join_date: new Date(),
-                    last_seen: new Date()
-                })
-                .select()
+                .select('*')
+                .eq('email', user.email)
                 .single();
-            if (createError) throw new Error(createError.message);
-            player = newPlayer;
+            if (playerByEmail) {
+                player = playerByEmail;
+                // Update auth_id for future
+                await sb.from('players').update({ auth_id: user.id }).eq('id', player.id);
+            } else {
+                // Create new player
+                const { data: newPlayer, error: createError } = await sb
+                    .from('players')
+                    .insert({
+                        username: user.email?.split('@')[0] || 'Player_' + user.id.slice(0,6),
+                        email: user.email,
+                        auth_id: user.id,
+                        join_date: new Date(),
+                        last_seen: new Date()
+                    })
+                    .select()
+                    .single();
+                if (createError) throw new Error(createError.message);
+                player = newPlayer;
+            }
         }
         
         currentPlayer = player;
@@ -200,7 +214,7 @@ async function searchUsers() {
     const location = document.getElementById('searchLocation')?.value.trim() || '';
     const country = document.getElementById('searchCountry')?.value.trim() || '';
     
-    let query = sb.from('players').select('id, username, avatar_url, gender, location, country');
+    let query = sb.from('players').select('id, username, avatar_url, gender, location, country, email');
     query = query.neq('id', currentPlayer.id);
     
     if (username) query = query.ilike('username', `%${username}%`);
@@ -224,6 +238,12 @@ async function searchUsers() {
         isFriend: friendIds.includes(u.id)
     }));
     renderSearchResults();
+    
+    // Debug info
+    const debugDiv = document.getElementById('debugInfo');
+    if (debugDiv) {
+        debugDiv.innerHTML = `🔍 Search returned ${searchResults.length} users (excluding self). Total other players in DB: ${data?.length || 0}`;
+    }
 }
 
 async function resetSearch() {
@@ -284,7 +304,7 @@ function renderProfile() {
     
     let headerHtml = `
         <div class="profile-header">
-            <div class="avatar">👤</div>
+            <div class="avatar">${profileOwner.avatar_url || '👤'}</div>
             <div class="profile-info">
                 <div class="profile-name">${escapeHtml(profileOwner.username)}</div>
                 <div class="profile-location">${escapeHtml(profileOwner.location || '')} ${escapeHtml(profileOwner.country ? ', ' + profileOwner.country : '')}</div>
@@ -298,7 +318,7 @@ function renderProfile() {
         </div>
     `;
     
-    let bioHtml = `<div class="card"><div class="card-header">About Me</div><div class="card-content">${profileOwner.bio || 'No bio yet.'}</div></div>`;
+    let bioHtml = `<div class="card"><div class="card-header">About Me</div><div class="card-content">${profileOwner.bio || 'This user has not written a description yet.'}</div></div>`;
     if (isOwner) {
         bioHtml = `
             <div class="card">
@@ -313,7 +333,8 @@ function renderProfile() {
                         <option value="female" ${profileOwner.gender === 'female' ? 'selected' : ''}>Female</option>
                         <option value="other" ${profileOwner.gender === 'other' ? 'selected' : ''}>Other</option>
                     </select>
-                    <input type="text" id="avatarUrlInput" placeholder="Avatar emoji" value="${profileOwner.avatar_url || ''}">
+                    <input type="text" id="avatarUrlInput" placeholder="Avatar emoji or URL" value="${profileOwner.avatar_url || ''}">
+                    <label><input type="checkbox" id="privacyToggle" ${profileOwner.is_public ? 'checked' : ''}> Public profile</label>
                     <button onclick="updateProfile()">Save Changes</button>
                 </div>
             </div>
@@ -337,6 +358,7 @@ function renderProfile() {
                         <div class="filter-group"><button onclick="resetSearch()">⟳ Reset</button></div>
                     </div>
                     <div id="searchResultsGrid" class="results-grid"></div>
+                    <div id="debugInfo" class="debug-panel"></div>
                     <hr>
                     <div><strong>✨ Suggested Friends (New members, last 15 days)</strong></div>
                     <div id="suggestionsGrid" class="suggestions-grid"></div>
@@ -388,10 +410,11 @@ function renderProfile() {
         renderPendingRequests();
         renderVisitors();
         renderSuggestions();
-        searchUsers();
+        searchUsers(); // auto-load all other users on page load
     }
 }
 
+// ---------- Helper functions (same as before, but ensure they use correct column names) ----------
 function renderFriends() {
     const container = document.getElementById('friendsGrid');
     if (!container) return;
@@ -534,7 +557,8 @@ async function updateProfile() {
     const country = document.getElementById('countryInput')?.value;
     const gender = document.getElementById('genderInput')?.value;
     const avatar_url = document.getElementById('avatarUrlInput')?.value;
-    const { error } = await sb.from('players').update({ bio, location, country, gender, avatar_url }).eq('id', currentPlayer.id);
+    const is_public = document.getElementById('privacyToggle')?.checked;
+    const { error } = await sb.from('players').update({ bio, location, country, gender, avatar_url, is_public }).eq('id', currentPlayer.id);
     if (error) showToast(error.message);
     else { showToast('Profile updated'); await loadProfile(currentPlayer.id); }
 }
