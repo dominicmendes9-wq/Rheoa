@@ -5,11 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            background: #eef2ff;
-            font-family: 'Verdana', 'Geneva', sans-serif;
-            padding: 20px;
-        }
+        body { background: #eef2ff; font-family: 'Verdana', 'Geneva', sans-serif; padding: 20px; }
         .orkut-container { max-width: 1000px; margin: 0 auto; }
         .card { background: white; border-radius: 12px; border: 1px solid #9cb2d1; margin-bottom: 20px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .card-header { background: #e1e9f5; padding: 10px 15px; border-bottom: 1px solid #9cb2d1; font-weight: bold; color: #1a3b6e; font-size: 1.1rem; }
@@ -40,6 +36,7 @@
         .toast { position: fixed; bottom: 20px; right: 20px; background: #333; color: white; padding: 10px 20px; border-radius: 8px; z-index: 1000; }
         .back-link { display: inline-block; margin-top: 20px; color: #1e5799; text-decoration: none; }
         hr { margin: 15px 0; border-color: #d4e0ee; }
+        .debug-panel { background: #f0f0f0; padding: 10px; margin-bottom: 20px; font-size: 0.8rem; border-left: 4px solid #ff9800; }
         @media (max-width: 600px) {
             .profile-header { flex-direction: column; text-align: center; }
             .friends-grid, .suggestions-grid, .results-grid { grid-template-columns: 1fr; }
@@ -79,16 +76,30 @@ async function loadCurrentUser() {
         if (userError) throw new Error(userError.message);
         if (!user) { window.location.href = 'index.html'; return; }
         
-        const { data: player, error: playerError } = await sb
+        // Find player by username or create if not exists
+        let { data: player, error: playerError } = await sb
             .from('players')
             .select('*')
-            .eq('auth_id', user.id)
+            .eq('username', user.email?.split('@')[0] || user.id)
             .single();
-        if (playerError) throw new Error(playerError.message);
-        if (!player) throw new Error('Player not found');
+        
+        if (playerError || !player) {
+            // Create new player
+            const { data: newPlayer, error: createError } = await sb
+                .from('players')
+                .insert({
+                    username: user.email?.split('@')[0] || 'Player_' + user.id.slice(0,6),
+                    join_date: new Date(),
+                    last_seen: new Date()
+                })
+                .select()
+                .single();
+            if (createError) throw new Error(createError.message);
+            player = newPlayer;
+        }
         
         currentPlayer = player;
-        console.log('Current player loaded:', currentPlayer.username, currentPlayer.id);
+        console.log('Current player:', currentPlayer);
         
         const urlParams = new URLSearchParams(window.location.search);
         const targetId = urlParams.get('id');
@@ -98,10 +109,7 @@ async function loadCurrentUser() {
             await loadProfile(currentPlayer.id);
         }
     } catch (err) {
-        document.getElementById('profileView').innerHTML = `
-            <div class="card"><div class="card-header">Error</div><div class="card-content">${err.message}</div></div>
-        `;
-        console.error(err);
+        document.getElementById('profileView').innerHTML = `<div class="card"><div class="card-header">Error</div><div class="card-content">${err.message}</div></div>`;
     }
 }
 
@@ -112,7 +120,6 @@ async function loadProfile(playerId) {
         return;
     }
     profileOwner = player;
-    console.log('Profile loaded:', profileOwner.username);
     
     if (currentPlayer && profileOwner.id !== currentPlayer.id) {
         await sb.from('profile_views').upsert({
@@ -137,7 +144,6 @@ async function loadFriendships() {
         .or(`requester_id.eq.${profileOwner.id},addressee_id.eq.${profileOwner.id}`)
         .eq('status', 'accepted');
     friendships = data || [];
-    console.log('Friendships loaded:', friendships.length);
 }
 
 async function loadTestimonials() {
@@ -188,18 +194,13 @@ async function loadSuggestions() {
     renderSuggestions();
 }
 
-// ========== SEARCH USERS (DEBUGGED) ==========
 async function searchUsers() {
     const username = document.getElementById('searchUsername')?.value.trim() || '';
     const gender = document.getElementById('searchGender')?.value || '';
     const location = document.getElementById('searchLocation')?.value.trim() || '';
     const country = document.getElementById('searchCountry')?.value.trim() || '';
     
-    console.log('Searching with filters:', { username, gender, location, country });
-    
     let query = sb.from('players').select('id, username, avatar_url, gender, location, country');
-    
-    // Always exclude self
     query = query.neq('id', currentPlayer.id);
     
     if (username) query = query.ilike('username', `%${username}%`);
@@ -209,14 +210,11 @@ async function searchUsers() {
     
     const { data, error } = await query.limit(50);
     if (error) {
-        console.error('Search error:', error);
         showToast('Search error: ' + error.message);
+        console.error(error);
         return;
     }
     
-    console.log('Search results count:', data?.length);
-    
-    // Mark existing friends
     const friendIds = friendships.map(f => 
         f.requester_id === currentPlayer.id ? f.addressee_id : f.requester_id
     );
@@ -286,12 +284,12 @@ function renderProfile() {
     
     let headerHtml = `
         <div class="profile-header">
-            <div class="avatar">${profileOwner.avatar_url || '👤'}</div>
+            <div class="avatar">👤</div>
             <div class="profile-info">
                 <div class="profile-name">${escapeHtml(profileOwner.username)}</div>
                 <div class="profile-location">${escapeHtml(profileOwner.location || '')} ${escapeHtml(profileOwner.country ? ', ' + profileOwner.country : '')}</div>
                 <div class="profile-stats">
-                    <div class="stat">⭐ Level ${profileOwner.level}</div>
+                    <div class="stat">⭐ Level ${profileOwner.level || 1}</div>
                     <div class="stat">👥 Friends ${totalFriends}</div>
                     <div class="stat">👁️ Visitors ${viewCount}</div>
                     <div class="stat">📅 Joined ${new Date(profileOwner.join_date).toLocaleDateString()}</div>
@@ -300,7 +298,7 @@ function renderProfile() {
         </div>
     `;
     
-    let bioHtml = `<div class="card"><div class="card-header">About Me</div><div class="card-content">${profileOwner.bio || 'This user has not written a description yet.'}</div></div>`;
+    let bioHtml = `<div class="card"><div class="card-header">About Me</div><div class="card-content">${profileOwner.bio || 'No bio yet.'}</div></div>`;
     if (isOwner) {
         bioHtml = `
             <div class="card">
@@ -315,8 +313,7 @@ function renderProfile() {
                         <option value="female" ${profileOwner.gender === 'female' ? 'selected' : ''}>Female</option>
                         <option value="other" ${profileOwner.gender === 'other' ? 'selected' : ''}>Other</option>
                     </select>
-                    <input type="text" id="avatarUrlInput" placeholder="Avatar (emoji or URL)" value="${profileOwner.avatar_url || ''}">
-                    <label><input type="checkbox" id="privacyToggle" ${profileOwner.is_public ? 'checked' : ''}> Public profile</label>
+                    <input type="text" id="avatarUrlInput" placeholder="Avatar emoji" value="${profileOwner.avatar_url || ''}">
                     <button onclick="updateProfile()">Save Changes</button>
                 </div>
             </div>
@@ -391,7 +388,6 @@ function renderProfile() {
         renderPendingRequests();
         renderVisitors();
         renderSuggestions();
-        // Automatically load all users (excluding self) on page load
         searchUsers();
     }
 }
@@ -538,8 +534,7 @@ async function updateProfile() {
     const country = document.getElementById('countryInput')?.value;
     const gender = document.getElementById('genderInput')?.value;
     const avatar_url = document.getElementById('avatarUrlInput')?.value;
-    const is_public = document.getElementById('privacyToggle')?.checked;
-    const { error } = await sb.from('players').update({ bio, location, country, gender, avatar_url, is_public }).eq('id', currentPlayer.id);
+    const { error } = await sb.from('players').update({ bio, location, country, gender, avatar_url }).eq('id', currentPlayer.id);
     if (error) showToast(error.message);
     else { showToast('Profile updated'); await loadProfile(currentPlayer.id); }
 }
