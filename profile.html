@@ -282,7 +282,7 @@ async function loadProfile(playerId) {
     await loadTestimonials();
     await loadPendingRequests();
     await loadProfileViews();
-    await loadSuggestions();      // new
+    await loadSuggestions();
     renderProfile();
 }
 
@@ -322,7 +322,7 @@ async function loadProfileViews() {
     profileViews = data || [];
 }
 
-// New: load suggested friends (registered in last 15 days)
+// Suggested friends: users who joined in last 15 days
 async function loadSuggestions() {
     if (profileOwner.id !== currentPlayer?.id) return;
     const fifteenDaysAgo = new Date();
@@ -344,28 +344,28 @@ async function loadSuggestions() {
     renderSuggestions();
 }
 
-// Search users by criteria
+// Search users (no email)
 async function searchUsers() {
     const username = document.getElementById('searchUsername')?.value.trim();
-    const email = document.getElementById('searchEmail')?.value.trim();
     const gender = document.getElementById('searchGender')?.value;
     const location = document.getElementById('searchLocation')?.value.trim();
     const country = document.getElementById('searchCountry')?.value.trim();
     
-    let query = sb.from('players').select('id, username, avatar_url, gender, country, location, email');
+    let query = sb.from('players').select('id, username, avatar_url, gender, location, country');
     
     if (username) query = query.ilike('username', `%${username}%`);
-    if (email) query = query.ilike('email', `%${email}%`);
     if (gender && gender !== '') query = query.eq('gender', gender);
     if (location) query = query.ilike('location', `%${location}%`);
     if (country) query = query.ilike('country', `%${country}%`);
     
-    // Exclude self and existing friends
+    // Exclude current user and existing friends
     const friendIds = friendships.map(f => 
         f.requester_id === currentPlayer.id ? f.addressee_id : f.requester_id
     );
     friendIds.push(currentPlayer.id);
-    query = query.not('id', 'in', `(${friendIds.join(',')})`);
+    if (friendIds.length) {
+        query = query.not('id', 'in', `(${friendIds.join(',')})`);
+    }
     
     const { data } = await query.limit(30);
     searchResults = data || [];
@@ -470,10 +470,6 @@ function renderProfile() {
                             <input type="text" id="searchUsername" placeholder="Username">
                         </div>
                         <div class="filter-group">
-                            <label>Email</label>
-                            <input type="email" id="searchEmail" placeholder="Email">
-                        </div>
-                        <div class="filter-group">
                             <label>Gender</label>
                             <select id="searchGender">
                                 <option value="">Any</option>
@@ -546,13 +542,10 @@ function renderProfile() {
     if (isOwner) {
         renderPendingRequests();
         renderVisitors();
-        renderSuggestions();     // fill suggestions grid
-        renderSearchResults();   // initially empty
+        renderSuggestions();
+        renderSearchResults(); // initially empty
     }
 }
-
-// The rest of the functions (renderFriends, renderTestimonials, etc.) remain the same as before.
-// I'll copy them from the previous version for completeness.
 
 function renderFriends() {
     const container = document.getElementById('friendsGrid');
