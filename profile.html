@@ -17,9 +17,9 @@
         .profile-location { font-size: 0.9rem; opacity: 0.9; }
         .profile-stats { display: flex; gap: 20px; margin-top: 10px; flex-wrap: wrap; }
         .stat { background: rgba(255,255,255,0.15); padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; }
-        .friend-avatar, .suggestion-avatar, .result-avatar { font-size: 2rem; background: #e1e9f5; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
-        .friends-grid, .suggestions-grid, .results-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; }
-        .friend-card, .suggestion-card, .result-card { background: #f9f9ff; border: 1px solid #d4e0ee; border-radius: 10px; padding: 10px; display: flex; align-items: center; gap: 12px; }
+        .friend-avatar, .result-avatar { font-size: 2rem; background: #e1e9f5; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        .friends-grid, .results-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; }
+        .friend-card, .result-card { background: #f9f9ff; border: 1px solid #d4e0ee; border-radius: 10px; padding: 10px; display: flex; align-items: center; gap: 12px; }
         .testimonial-card { background: #f9f9ff; border: 1px solid #d4e0ee; border-radius: 10px; padding: 10px; display: flex; flex-direction: column; align-items: flex-start; gap: 5px; }
         .testimonial-author { font-weight: bold; color: #1a3b6e; }
         .testimonial-text { font-size: 0.9rem; margin: 8px 0; line-height: 1.4; }
@@ -36,10 +36,9 @@
         .toast { position: fixed; bottom: 20px; right: 20px; background: #333; color: white; padding: 10px 20px; border-radius: 8px; z-index: 1000; }
         .back-link { display: inline-block; margin-top: 20px; color: #1e5799; text-decoration: none; }
         hr { margin: 15px 0; border-color: #d4e0ee; }
-        .debug-panel { background: #f0f0f0; padding: 10px; margin-bottom: 20px; font-size: 0.8rem; border-left: 4px solid #ff9800; white-space: pre-wrap; font-family: monospace; }
         @media (max-width: 600px) {
             .profile-header { flex-direction: column; text-align: center; }
-            .friends-grid, .suggestions-grid, .results-grid { grid-template-columns: 1fr; }
+            .friends-grid, .results-grid { grid-template-columns: 1fr; }
             .search-filters { flex-direction: column; }
         }
     </style>
@@ -62,7 +61,6 @@ let friendships = [];
 let testimonials = [];
 let pendingRequests = [];
 let profileViews = [];
-let suggestions = [];
 let searchResults = [];
 
 function showToast(msg) {
@@ -76,7 +74,6 @@ async function loadCurrentUser() {
         if (userError) throw new Error(userError.message);
         if (!user) { window.location.href = 'index.html'; return; }
         
-        // Try to find player by auth_id
         let { data: player, error: playerError } = await sb
             .from('players')
             .select('*')
@@ -84,7 +81,6 @@ async function loadCurrentUser() {
             .single();
         
         if (playerError || !player) {
-            // Fallback: try by email
             const { data: playerByEmail } = await sb
                 .from('players')
                 .select('*')
@@ -92,10 +88,8 @@ async function loadCurrentUser() {
                 .single();
             if (playerByEmail) {
                 player = playerByEmail;
-                // Update auth_id for future
                 await sb.from('players').update({ auth_id: user.id }).eq('id', player.id);
             } else {
-                // Create new player
                 const { data: newPlayer, error: createError } = await sb
                     .from('players')
                     .insert({
@@ -113,7 +107,6 @@ async function loadCurrentUser() {
         }
         
         currentPlayer = player;
-        console.log('Current player:', currentPlayer);
         
         const urlParams = new URLSearchParams(window.location.search);
         const targetId = urlParams.get('id');
@@ -148,7 +141,6 @@ async function loadProfile(playerId) {
     await loadTestimonials();
     await loadPendingRequests();
     await loadProfileViews();
-    await loadSuggestions();
     renderProfile();
 }
 
@@ -188,26 +180,6 @@ async function loadProfileViews() {
     profileViews = data || [];
 }
 
-async function loadSuggestions() {
-    if (profileOwner.id !== currentPlayer?.id) return;
-    const fifteenDaysAgo = new Date();
-    fifteenDaysAgo.setDate(fifteenDaysAgo.getDate() - 15);
-    
-    const friendIds = friendships.map(f => 
-        f.requester_id === currentPlayer.id ? f.addressee_id : f.requester_id
-    );
-    const excludeIds = [currentPlayer.id, ...friendIds];
-    
-    const { data } = await sb
-        .from('players')
-        .select('id, username, avatar_url, gender, country, location, join_date')
-        .gte('join_date', fifteenDaysAgo.toISOString())
-        .not('id', 'in', `(${excludeIds.join(',')})`)
-        .limit(12);
-    suggestions = data || [];
-    renderSuggestions();
-}
-
 async function searchUsers() {
     const username = document.getElementById('searchUsername')?.value.trim() || '';
     const gender = document.getElementById('searchGender')?.value || '';
@@ -225,7 +197,6 @@ async function searchUsers() {
     const { data, error } = await query.limit(50);
     if (error) {
         showToast('Search error: ' + error.message);
-        console.error(error);
         return;
     }
     
@@ -238,12 +209,6 @@ async function searchUsers() {
         isFriend: friendIds.includes(u.id)
     }));
     renderSearchResults();
-    
-    // Debug info
-    const debugDiv = document.getElementById('debugInfo');
-    if (debugDiv) {
-        debugDiv.innerHTML = `🔍 Search returned ${searchResults.length} users (excluding self). Total other players in DB: ${data?.length || 0}`;
-    }
 }
 
 async function resetSearch() {
@@ -251,14 +216,14 @@ async function resetSearch() {
     document.getElementById('searchGender').value = '';
     document.getElementById('searchLocation').value = '';
     document.getElementById('searchCountry').value = '';
-    await searchUsers();
+    document.getElementById('searchResultsGrid').innerHTML = '';
 }
 
 function renderSearchResults() {
     const container = document.getElementById('searchResultsGrid');
     if (!container) return;
     if (!searchResults.length) {
-        container.innerHTML = '<p>No users found. Try different filters, or there may be no other players yet.</p>';
+        container.innerHTML = '<p>No users found. Try different filters.</p>';
         return;
     }
     container.innerHTML = searchResults.map(u => `
@@ -271,26 +236,6 @@ function renderSearchResults() {
                     '<button disabled style="background:#6c757d;">✓ Already Friend</button>' : 
                     `<button onclick="sendFriendRequest('${u.id}')">➕ Add Friend</button>`
                 }
-                <button onclick="viewProfile('${u.id}')">View</button>
-            </div>
-        </div>
-    `).join('');
-}
-
-function renderSuggestions() {
-    const container = document.getElementById('suggestionsGrid');
-    if (!container) return;
-    if (!suggestions.length) {
-        container.innerHTML = '<p>No new members in the last 15 days.</p>';
-        return;
-    }
-    container.innerHTML = suggestions.map(u => `
-        <div class="suggestion-card">
-            <div class="suggestion-avatar">${u.avatar_url || '👤'}</div>
-            <div>
-                <div><strong>${escapeHtml(u.username)}</strong></div>
-                <div style="font-size:0.7rem; color:#666;">${escapeHtml(u.location || '')} ${escapeHtml(u.country || '')}</div>
-                <button onclick="sendFriendRequest('${u.id}')">➕ Add Friend</button>
                 <button onclick="viewProfile('${u.id}')">View</button>
             </div>
         </div>
@@ -358,10 +303,6 @@ function renderProfile() {
                         <div class="filter-group"><button onclick="resetSearch()">⟳ Reset</button></div>
                     </div>
                     <div id="searchResultsGrid" class="results-grid"></div>
-                    <div id="debugInfo" class="debug-panel"></div>
-                    <hr>
-                    <div><strong>✨ Suggested Friends (New members, last 15 days)</strong></div>
-                    <div id="suggestionsGrid" class="suggestions-grid"></div>
                 </div>
             </div>
         `;
@@ -409,12 +350,9 @@ function renderProfile() {
     if (isOwner) {
         renderPendingRequests();
         renderVisitors();
-        renderSuggestions();
-        searchUsers(); // auto-load all other users on page load
     }
 }
 
-// ---------- Helper functions (same as before, but ensure they use correct column names) ----------
 function renderFriends() {
     const container = document.getElementById('friendsGrid');
     if (!container) return;
