@@ -207,7 +207,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 <script>
-// Supabase client
 const supabaseUrl = 'https://mtiwodvsrwvrujbhmmrn.supabase.co';
 const supabaseKey = 'sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp';
 const sb = window.supabase.createClient(supabaseUrl, supabaseKey);
@@ -268,7 +267,6 @@ async function loadProfile(playerId) {
     }
     profileOwner = player;
     
-    // Record view (if not yourself)
     if (currentPlayer && profileOwner.id !== currentPlayer.id) {
         await sb.from('profile_views').upsert({
             profile_id: profileOwner.id,
@@ -322,17 +320,15 @@ async function loadProfileViews() {
     profileViews = data || [];
 }
 
-// Suggested friends: users who joined in last 15 days
 async function loadSuggestions() {
     if (profileOwner.id !== currentPlayer?.id) return;
     const fifteenDaysAgo = new Date();
     fifteenDaysAgo.setDate(fifteenDaysAgo.getDate() - 15);
     
-    // Get IDs of existing friends
     const friendIds = friendships.map(f => 
         f.requester_id === currentPlayer.id ? f.addressee_id : f.requester_id
     );
-    friendIds.push(currentPlayer.id); // exclude self
+    friendIds.push(currentPlayer.id);
     
     const { data } = await sb
         .from('players')
@@ -344,7 +340,6 @@ async function loadSuggestions() {
     renderSuggestions();
 }
 
-// Search users (no email)
 async function searchUsers() {
     const username = document.getElementById('searchUsername')?.value.trim();
     const gender = document.getElementById('searchGender')?.value;
@@ -352,13 +347,11 @@ async function searchUsers() {
     const country = document.getElementById('searchCountry')?.value.trim();
     
     let query = sb.from('players').select('id, username, avatar_url, gender, location, country');
-    
     if (username) query = query.ilike('username', `%${username}%`);
     if (gender && gender !== '') query = query.eq('gender', gender);
     if (location) query = query.ilike('location', `%${location}%`);
     if (country) query = query.ilike('country', `%${country}%`);
     
-    // Exclude current user and existing friends
     const friendIds = friendships.map(f => 
         f.requester_id === currentPlayer.id ? f.addressee_id : f.requester_id
     );
@@ -465,31 +458,11 @@ function renderProfile() {
                 <div class="card-header">🔍 Find Friends</div>
                 <div class="card-content">
                     <div class="search-filters">
-                        <div class="filter-group">
-                            <label>Username</label>
-                            <input type="text" id="searchUsername" placeholder="Username">
-                        </div>
-                        <div class="filter-group">
-                            <label>Gender</label>
-                            <select id="searchGender">
-                                <option value="">Any</option>
-                                <option value="male">Male</option>
-                                <option value="female">Female</option>
-                                <option value="other">Other</option>
-                            </select>
-                        </div>
-                        <div class="filter-group">
-                            <label>Location</label>
-                            <input type="text" id="searchLocation" placeholder="City">
-                        </div>
-                        <div class="filter-group">
-                            <label>Country</label>
-                            <input type="text" id="searchCountry" placeholder="Country">
-                        </div>
-                        <div class="filter-group">
-                            <label>&nbsp;</label>
-                            <button onclick="searchUsers()">Search</button>
-                        </div>
+                        <div class="filter-group"><label>Username</label><input type="text" id="searchUsername" placeholder="Username"></div>
+                        <div class="filter-group"><label>Gender</label><select id="searchGender"><option value="">Any</option><option value="male">Male</option><option value="female">Female</option><option value="other">Other</option></select></div>
+                        <div class="filter-group"><label>Location</label><input type="text" id="searchLocation" placeholder="City"></div>
+                        <div class="filter-group"><label>Country</label><input type="text" id="searchCountry" placeholder="Country"></div>
+                        <div class="filter-group"><label>&nbsp;</label><button onclick="searchUsers()">Search</button></div>
                     </div>
                     <div id="searchResultsGrid" class="results-grid"></div>
                     <hr>
@@ -543,7 +516,7 @@ function renderProfile() {
         renderPendingRequests();
         renderVisitors();
         renderSuggestions();
-        renderSearchResults(); // initially empty
+        renderSearchResults();
     }
 }
 
@@ -566,18 +539,51 @@ function renderFriends() {
     }).join('');
 }
 
+// Updated renderTestimonials with Edit button for author
 function renderTestimonials() {
     const container = document.getElementById('testimonialsList');
     if (!container) return;
     if (!testimonials.length) { container.innerHTML = '<p>No scraps yet. Be the first to write!</p>'; return; }
     container.innerHTML = testimonials.map(t => `
-        <div class="testimonial-card">
+        <div class="testimonial-card" id="testimonial-${t.id}">
             <div class="testimonial-author">${escapeHtml(t.author.username)} wrote:</div>
             <div class="testimonial-text">${escapeHtml(t.content)}</div>
             <div class="testimonial-date">${new Date(t.created_at).toLocaleString()}</div>
-            ${currentPlayer && (currentPlayer.id === t.author_id || currentPlayer.id === profileOwner.id) ? `<button class="secondary" onclick="deleteTestimonial('${t.id}')">Delete</button>` : ''}
+            <div>
+                ${currentPlayer && currentPlayer.id === t.author_id ? `
+                    <button class="secondary" onclick="editTestimonial('${t.id}', '${escapeHtml(t.content).replace(/'/g, "\\'")}')">✏️ Edit</button>
+                ` : ''}
+                ${currentPlayer && (currentPlayer.id === t.author_id || currentPlayer.id === profileOwner.id) ? `
+                    <button class="decline" onclick="deleteTestimonial('${t.id}')">🗑️ Delete</button>
+                ` : ''}
+            </div>
         </div>
     `).join('');
+}
+
+// Edit testimonial function
+async function editTestimonial(testimonialId, oldContent) {
+    const newContent = prompt('Edit your scrap:', oldContent);
+    if (!newContent || newContent === oldContent) return;
+    const { error } = await sb.from('testimonials').update({ content: newContent, updated_at: new Date() }).eq('id', testimonialId);
+    if (error) showToast(error.message);
+    else {
+        showToast('Scrap updated!');
+        await loadTestimonials();
+        renderTestimonials();
+    }
+}
+
+// Delete testimonial function (fixed)
+async function deleteTestimonial(testimonialId) {
+    if (!confirm('Delete this scrap?')) return;
+    const { error } = await sb.from('testimonials').delete().eq('id', testimonialId);
+    if (error) showToast(error.message);
+    else {
+        showToast('Scrap deleted');
+        await loadTestimonials();
+        renderTestimonials();
+    }
 }
 
 function renderPendingRequests() {
@@ -613,7 +619,7 @@ function renderVisitors() {
     `).join('');
 }
 
-// Friend actions
+// Friend actions (unchanged)
 async function sendFriendRequest(targetId) {
     const { error } = await sb.from('friendships').insert({ requester_id: currentPlayer.id, addressee_id: targetId, status: 'pending' });
     if (error) showToast(error.message);
@@ -654,7 +660,7 @@ async function removeFriend(friendId) {
     else { showToast('Friend removed'); await loadProfile(profileOwner.id); }
 }
 
-// Testimonials
+// Testimonial add (unchanged)
 async function addTestimonial() {
     const content = document.getElementById('scrapContent').value.trim();
     if (!content) { showToast('Please write something.'); return; }
@@ -673,14 +679,7 @@ async function addTestimonial() {
     }
 }
 
-async function deleteTestimonial(testimonialId) {
-    if (!confirm('Delete this scrap?')) return;
-    const { error } = await sb.from('testimonials').delete().eq('id', testimonialId);
-    if (error) showToast(error.message);
-    else { showToast('Scrap deleted'); await loadTestimonials(); renderTestimonials(); }
-}
-
-// Profile update
+// Profile update (unchanged)
 async function updateProfile() {
     const bio = document.getElementById('bioInput')?.value;
     const location = document.getElementById('locationInput')?.value;
