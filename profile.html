@@ -17,22 +17,26 @@
         .stat-value { font-size: 1.3rem; font-weight: bold; }
         .profile-content { padding: 20px; }
         .section-title { font-size: 1.3rem; margin-bottom: 15px; color: #9c27b0; border-bottom: 2px solid #9c27b0; padding-bottom: 5px; }
-        .friends-grid, .viewers-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
-        .friend-card, .viewer-card { background: #f5f5f5; border-radius: 10px; padding: 12px; display: flex; align-items: center; gap: 10px; }
-        .friend-avatar, .viewer-avatar { font-size: 2rem; }
-        .friend-info, .viewer-info { flex: 1; }
-        .friend-name, .viewer-name { font-weight: bold; }
+        .friends-grid, .viewers-list, .search-results-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .friend-card, .viewer-card, .search-result-card { background: #f5f5f5; border-radius: 10px; padding: 12px; display: flex; align-items: center; gap: 10px; }
+        .friend-avatar, .viewer-avatar, .search-avatar { font-size: 2rem; }
+        .friend-info, .viewer-info, .search-info { flex: 1; }
+        .friend-name, .viewer-name, .search-name { font-weight: bold; }
         .friend-actions button, .viewer-time { font-size: 0.8rem; }
         button { background: #4CAF50; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; margin: 2px; }
         button.decline { background: #f44336; }
         button.cancel { background: #999; }
-        input, textarea { width: 100%; padding: 8px; margin: 8px 0; font-family: inherit; border: 1px solid #ccc; border-radius: 5px; }
+        input, select, textarea { width: 100%; padding: 8px; margin: 8px 0; font-family: inherit; border: 1px solid #ccc; border-radius: 5px; }
+        .search-filters { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px; align-items: flex-end; }
+        .filter-group { flex: 1; min-width: 120px; }
+        .filter-group label { font-size: 0.8rem; font-weight: bold; display: block; margin-bottom: 3px; }
+        .username-suggestions { background: white; border: 1px solid #ccc; border-radius: 5px; max-height: 150px; overflow-y: auto; position: absolute; width: calc(100% - 16px); z-index: 10; }
+        .suggestion-item { padding: 8px; cursor: pointer; }
+        .suggestion-item:hover { background: #e0e0e0; }
+        .relative { position: relative; }
         .back-btn { display: block; width: 200px; margin: 20px auto; text-align: center; background: #666; color: white; padding: 10px; border-radius: 8px; text-decoration: none; }
-        .search-bar { display: flex; gap: 10px; margin-bottom: 20px; }
-        .search-bar input { flex: 1; }
-        .toggle-privacy { display: flex; align-items: center; gap: 10px; margin: 15px 0; }
         .toast { position: fixed; bottom: 20px; right: 20px; background: #333; color: white; padding: 10px 20px; border-radius: 8px; z-index: 1000; }
-        @media (max-width: 600px) { .profile-stats { flex-direction: column; align-items: center; } }
+        @media (max-width: 600px) { .profile-stats { flex-direction: column; align-items: center; } .search-filters { flex-direction: column; } }
     </style>
 </head>
 <body>
@@ -49,7 +53,7 @@ const sb = window.supabase.createClient(
 );
 
 let currentPlayer = null;
-let profilePlayer = null; // could be different if viewing someone else
+let profilePlayer = null;
 let friendships = [];
 let friendRequests = [];
 let profileViews = [];
@@ -66,7 +70,6 @@ async function loadCurrentUser() {
     if (!player) { window.location.href = 'index.html'; return; }
     currentPlayer = player;
     
-    // Check URL param ?id=... for viewing another profile
     const urlParams = new URLSearchParams(window.location.search);
     const targetId = urlParams.get('id');
     if (targetId && targetId !== currentPlayer.id) {
@@ -77,18 +80,17 @@ async function loadCurrentUser() {
 }
 
 async function loadProfile(playerId) {
-    // Fetch player data
     const { data: player, error } = await sb.from('players').select('*').eq('id', playerId).single();
     if (error || !player) { document.getElementById('profileView').innerHTML = '<p>Profile not found</p>'; return; }
     profilePlayer = player;
     
-    // Record view (if viewing someone else)
     if (currentPlayer && profilePlayer.id !== currentPlayer.id) {
-        await sb.from('profile_views').upsert({
+        await sb.from('profile_views').insert({
             profile_id: profilePlayer.id,
             viewer_id: currentPlayer.id,
-            viewed_at: new Date()
-        }, { onConflict: 'profile_id,viewer_id,date(viewed_at)' });
+            viewed_at: new Date(),
+            view_date: new Date().toISOString().split('T')[0]
+        }).onConflict('profile_id,viewer_id,view_date').ignore();
     }
     
     await loadFriendships();
@@ -142,6 +144,13 @@ function renderProfile() {
             <textarea id="bioInput" placeholder="Write something about yourself...">${profilePlayer.bio || ''}</textarea>
             <input type="text" id="locationInput" placeholder="Location" value="${profilePlayer.location || ''}">
             <input type="text" id="avatarUrlInput" placeholder="Avatar emoji or URL" value="${profilePlayer.avatar_url || ''}">
+            <select id="genderInput">
+                <option value="">Select gender</option>
+                <option value="male" ${profilePlayer.gender === 'male' ? 'selected' : ''}>Male</option>
+                <option value="female" ${profilePlayer.gender === 'female' ? 'selected' : ''}>Female</option>
+                <option value="other" ${profilePlayer.gender === 'other' ? 'selected' : ''}>Other</option>
+            </select>
+            <input type="text" id="countryInput" placeholder="Country" value="${profilePlayer.country || ''}">
         `;
     }
     
@@ -164,16 +173,42 @@ function renderProfile() {
                 <div class="section-title">👥 Friends (${totalFriends})</div>
                 <div class="friends-grid" id="friendsGrid"></div>
                 
-                ${isOwnProfile ? `<div class="section-title">🔍 Find Friends</div>
-                <div class="search-bar"><input type="text" id="searchFriend" placeholder="Search by username..."><button onclick="searchUsers()">Search</button></div>
-                <div id="searchResults"></div>
+                ${isOwnProfile ? `
+                <div class="section-title">🔍 Find Friends</div>
+                <div class="search-filters">
+                    <div class="filter-group">
+                        <label>Username</label>
+                        <div class="relative">
+                            <input type="text" id="searchUsername" placeholder="Type username..." autocomplete="off">
+                            <div id="usernameSuggestions" class="username-suggestions" style="display:none;"></div>
+                        </div>
+                    </div>
+                    <div class="filter-group">
+                        <label>Gender</label>
+                        <select id="filterGender">
+                            <option value="">Any</option>
+                            <option value="male">Male</option>
+                            <option value="female">Female</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Country</label>
+                        <input type="text" id="filterCountry" placeholder="Country">
+                    </div>
+                    <div class="filter-group">
+                        <label>&nbsp;</label>
+                        <button onclick="searchUsers()">Search</button>
+                    </div>
+                </div>
+                <div id="searchResults" class="search-results-grid"></div>
                 
                 <div class="section-title">📨 Friend Requests</div>
                 <div id="requestsList"></div>
                 
                 <div class="section-title">👁️ Who viewed your profile</div>
-                <div class="viewers-list" id="viewersList"></div>` : 
-                `<div id="friendAction"></div>`}
+                <div class="viewers-list" id="viewersList"></div>
+                ` : `<div id="friendAction"></div>`}
             </div>
         </div>
     `;
@@ -184,9 +219,85 @@ function renderProfile() {
         renderFriendRequests();
         renderViewers();
         document.getElementById('privacyToggle').addEventListener('change', updateProfile);
+        // Setup autocomplete
+        const usernameInput = document.getElementById('searchUsername');
+        usernameInput.addEventListener('input', debounce(showUsernameSuggestions, 300));
+        document.addEventListener('click', function(e) {
+            if (!usernameInput.contains(e.target)) {
+                document.getElementById('usernameSuggestions').style.display = 'none';
+            }
+        });
     } else {
         renderFriendAction();
     }
+}
+
+async function showUsernameSuggestions() {
+    const input = document.getElementById('searchUsername');
+    const query = input.value.trim();
+    const suggestionsDiv = document.getElementById('usernameSuggestions');
+    if (query.length < 2) {
+        suggestionsDiv.style.display = 'none';
+        return;
+    }
+    const { data } = await sb.from('players')
+        .select('id, username, avatar_url, gender, country')
+        .ilike('username', `%${query}%`)
+        .limit(5);
+    if (!data || data.length === 0) {
+        suggestionsDiv.style.display = 'none';
+        return;
+    }
+    suggestionsDiv.innerHTML = data.map(u => `
+        <div class="suggestion-item" onclick="selectSuggestion('${escapeHtml(u.username)}')">
+            ${escapeHtml(u.username)} (${u.gender || '?'}, ${u.country || '?'})
+        </div>
+    `).join('');
+    suggestionsDiv.style.display = 'block';
+}
+
+function selectSuggestion(username) {
+    document.getElementById('searchUsername').value = username;
+    document.getElementById('usernameSuggestions').style.display = 'none';
+    searchUsers(); // auto search
+}
+
+function debounce(func, delay) {
+    let timer;
+    return function() {
+        clearTimeout(timer);
+        timer = setTimeout(() => func.apply(this, arguments), delay);
+    };
+}
+
+async function searchUsers() {
+    const username = document.getElementById('searchUsername').value.trim();
+    const gender = document.getElementById('filterGender').value;
+    const country = document.getElementById('filterCountry').value.trim();
+    
+    let query = sb.from('players').select('id, username, avatar_url, gender, country, level')
+        .neq('id', currentPlayer.id);
+    if (username) query = query.ilike('username', `%${username}%`);
+    if (gender) query = query.eq('gender', gender);
+    if (country) query = query.ilike('country', `%${country}%`);
+    const { data } = await query.limit(20);
+    
+    const container = document.getElementById('searchResults');
+    if (!data || data.length === 0) {
+        container.innerHTML = '<p>No users found.</p>';
+        return;
+    }
+    container.innerHTML = data.map(u => `
+        <div class="search-result-card">
+            <div class="search-avatar">${u.avatar_url || '👤'}</div>
+            <div class="search-info">
+                <div class="search-name">${escapeHtml(u.username)}</div>
+                <div>Lvl ${u.level} | ${u.gender || '?'} | ${u.country || '?'}</div>
+                <button onclick="sendFriendRequest('${u.id}')">➕ Add Friend</button>
+                <button onclick="viewProfile('${u.id}')">View</button>
+            </div>
+        </div>
+    `).join('');
 }
 
 function renderFriends() {
@@ -212,7 +323,6 @@ function renderFriends() {
 function renderFriendAction() {
     const container = document.getElementById('friendAction');
     if (!container) return;
-    // Check if already friends
     const isFriend = friendships.some(f => 
         (f.requester_id === currentPlayer.id && f.addressee_id === profilePlayer.id) ||
         (f.addressee_id === currentPlayer.id && f.requester_id === profilePlayer.id)
@@ -221,7 +331,6 @@ function renderFriendAction() {
         container.innerHTML = '<button disabled>✓ Already friends</button>';
         return;
     }
-    // Check pending request
     const pendingSent = friendships.some(f => f.requester_id === currentPlayer.id && f.addressee_id === profilePlayer.id && f.status === 'pending');
     const pendingReceived = friendships.some(f => f.addressee_id === currentPlayer.id && f.requester_id === profilePlayer.id && f.status === 'pending');
     if (pendingSent) {
@@ -236,7 +345,7 @@ function renderFriendAction() {
 async function sendFriendRequest(targetId) {
     const { error } = await sb.from('friendships').insert({ requester_id: currentPlayer.id, addressee_id: targetId, status: 'pending' });
     if (error) showToast(error.message);
-    else { showToast('Friend request sent!'); renderFriendAction(); }
+    else { showToast('Friend request sent!'); if (profilePlayer.id === targetId) renderFriendAction(); else searchUsers(); }
 }
 
 async function acceptFriendRequest() {
@@ -259,23 +368,6 @@ async function removeFriend(friendId) {
         .or(`and(requester_id.eq.${currentPlayer.id},addressee_id.eq.${friendId}),and(requester_id.eq.${friendId},addressee_id.eq.${currentPlayer.id})`);
     if (error) showToast(error.message);
     else { showToast('Friend removed'); await loadProfile(profilePlayer.id); }
-}
-
-async function searchUsers() {
-    const term = document.getElementById('searchFriend').value.trim();
-    if (!term) return;
-    const { data } = await sb.from('players').select('id, username, avatar_url').ilike('username', `%${term}%`).limit(10);
-    const container = document.getElementById('searchResults');
-    if (!data.length) { container.innerHTML = '<p>No users found</p>'; return; }
-    container.innerHTML = data.map(u => `
-        <div class="friend-card">
-            <div class="friend-avatar">${u.avatar_url || '👤'}</div>
-            <div class="friend-info">
-                <div class="friend-name">${escapeHtml(u.username)}</div>
-                <button onclick="viewProfile('${u.id}')">View Profile</button>
-            </div>
-        </div>
-    `).join('');
 }
 
 function renderFriendRequests() {
@@ -328,7 +420,9 @@ async function updateProfile() {
     const bio = document.getElementById('bioInput')?.value;
     const location = document.getElementById('locationInput')?.value;
     const avatar_url = document.getElementById('avatarUrlInput')?.value;
-    const { error } = await sb.from('players').update({ bio, location, avatar_url, is_public: isPublic }).eq('id', currentPlayer.id);
+    const gender = document.getElementById('genderInput')?.value;
+    const country = document.getElementById('countryInput')?.value;
+    const { error } = await sb.from('players').update({ bio, location, avatar_url, is_public: isPublic, gender, country }).eq('id', currentPlayer.id);
     if (error) showToast(error.message);
     else { showToast('Profile updated'); await loadProfile(currentPlayer.id); }
 }
