@@ -173,19 +173,19 @@ async function loadSuggestions() {
     const friendIds = friendships.map(f => 
         f.requester_id === currentPlayer.id ? f.addressee_id : f.requester_id
     );
-    friendIds.push(currentPlayer.id);
+    const excludeIds = [currentPlayer.id, ...friendIds];
     
     const { data } = await sb
         .from('players')
         .select('id, username, avatar_url, gender, country, location, join_date')
         .gte('join_date', fifteenDaysAgo.toISOString())
-        .not('id', 'in', `(${friendIds.join(',')})`)
+        .not('id', 'in', `(${excludeIds.join(',')})`)
         .limit(12);
     suggestions = data || [];
     renderSuggestions();
 }
 
-// ========== SEARCH USERS (WORKS) ==========
+// ========== SEARCH USERS (FIXED) ==========
 async function searchUsers() {
     const username = document.getElementById('searchUsername')?.value.trim() || '';
     const gender = document.getElementById('searchGender')?.value || '';
@@ -199,34 +199,41 @@ async function searchUsers() {
     if (location) query = query.ilike('location', `%${location}%`);
     if (country) query = query.ilike('country', `%${country}%`);
     
-    // Exclude self and existing friends
+    // Exclude self only (friends will be marked)
+    query = query.neq('id', currentPlayer.id);
+    
+    const { data, error } = await query.limit(50);
+    if (error) {
+        showToast('Search error: ' + error.message);
+        return;
+    }
+    
+    // Mark which ones are already friends
     const friendIds = friendships.map(f => 
         f.requester_id === currentPlayer.id ? f.addressee_id : f.requester_id
     );
-    friendIds.push(currentPlayer.id);
-    if (friendIds.length) {
-        query = query.not('id', 'in', `(${friendIds.join(',')})`);
-    }
     
-    const { data } = await query.limit(50);
-    searchResults = data || [];
+    searchResults = (data || []).map(u => ({
+        ...u,
+        isFriend: friendIds.includes(u.id)
+    }));
     renderSearchResults();
 }
 
-// Reset search filters and show all users (excluding self & friends)
+// Reset search: clear filters and show all users (except self)
 async function resetSearch() {
     document.getElementById('searchUsername').value = '';
     document.getElementById('searchGender').value = '';
     document.getElementById('searchLocation').value = '';
     document.getElementById('searchCountry').value = '';
-    await searchUsers(); // now shows all (since filters empty)
+    await searchUsers();
 }
 
 function renderSearchResults() {
     const container = document.getElementById('searchResultsGrid');
     if (!container) return;
     if (!searchResults.length) {
-        container.innerHTML = '<p>No users found.</p>';
+        container.innerHTML = '<p>No users found. Try different filters, or there may be no other players yet.</p>';
         return;
     }
     container.innerHTML = searchResults.map(u => `
@@ -235,7 +242,10 @@ function renderSearchResults() {
             <div>
                 <div><strong>${escapeHtml(u.username)}</strong></div>
                 <div style="font-size:0.7rem; color:#666;">${escapeHtml(u.gender || '')} | ${escapeHtml(u.location || '')} ${escapeHtml(u.country || '')}</div>
-                <button onclick="sendFriendRequest('${u.id}')">➕ Add Friend</button>
+                ${u.isFriend ? 
+                    '<button disabled style="background:#6c757d;">✓ Already Friend</button>' : 
+                    `<button onclick="sendFriendRequest('${u.id}')">➕ Add Friend</button>`
+                }
                 <button onclick="viewProfile('${u.id}')">View</button>
             </div>
         </div>
@@ -374,13 +384,10 @@ function renderProfile() {
         renderPendingRequests();
         renderVisitors();
         renderSuggestions();
-        // Initially load all users (excluding self & friends) when the page loads
+        // Load all users (except self) when the page loads
         searchUsers();
     }
 }
-
-// Rest of the functions (renderFriends, renderTestimonials, etc.) remain the same as before.
-// I'll include them for completeness.
 
 function renderFriends() {
     const container = document.getElementById('friendsGrid');
