@@ -10,188 +10,36 @@
             font-family: 'Verdana', 'Geneva', sans-serif;
             padding: 20px;
         }
-        .orkut-container {
-            max-width: 1000px;
-            margin: 0 auto;
-        }
-        .card {
-            background: white;
-            border-radius: 12px;
-            border: 1px solid #9cb2d1;
-            margin-bottom: 20px;
-            overflow: hidden;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-        }
-        .card-header {
-            background: #e1e9f5;
-            padding: 10px 15px;
-            border-bottom: 1px solid #9cb2d1;
-            font-weight: bold;
-            color: #1a3b6e;
-            font-size: 1.1rem;
-        }
-        .card-content {
-            padding: 15px;
-        }
-        .profile-header {
-            background: linear-gradient(135deg, #1e5799 0%, #2b6fae 100%);
-            color: white;
-            padding: 20px;
-            border-radius: 12px 12px 0 0;
-            display: flex;
-            gap: 20px;
-            flex-wrap: wrap;
-            align-items: center;
-        }
-        .avatar {
-            font-size: 5rem;
-            background: rgba(255,255,255,0.2);
-            width: 100px;
-            height: 100px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .profile-info {
-            flex: 1;
-        }
-        .profile-name {
-            font-size: 1.8rem;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-        .profile-location {
-            font-size: 0.9rem;
-            opacity: 0.9;
-        }
-        .profile-stats {
-            display: flex;
-            gap: 20px;
-            margin-top: 10px;
-            flex-wrap: wrap;
-        }
-        .stat {
-            background: rgba(255,255,255,0.15);
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-        }
-        .friend-avatar, .suggestion-avatar, .result-avatar {
-            font-size: 2rem;
-            background: #e1e9f5;
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .friends-grid, .suggestions-grid, .results-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-            gap: 15px;
-        }
-        .friend-card, .suggestion-card, .result-card {
-            background: #f9f9ff;
-            border: 1px solid #d4e0ee;
-            border-radius: 10px;
-            padding: 10px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        .testimonial-card {
-            background: #f9f9ff;
-            border: 1px solid #d4e0ee;
-            border-radius: 10px;
-            padding: 10px;
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 5px;
-        }
-        .testimonial-author {
-            font-weight: bold;
-            color: #1a3b6e;
-        }
-        .testimonial-text {
-            font-size: 0.9rem;
-            margin: 8px 0;
-            line-height: 1.4;
-        }
-        .testimonial-date {
-            font-size: 0.7rem;
-            color: #666;
-        }
-        button, .btn {
-            background: #1e5799;
-            color: white;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 0.8rem;
-        }
+        .orkut-container { max-width: 1000px; margin: 0 auto; }
+        .card { background: white; border-radius: 12px; border: 1px solid #9cb2d1; margin-bottom: 20px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .card-header { background: #e1e9f5; padding: 10px 15px; border-bottom: 1px solid #9cb2d1; font-weight: bold; color: #1a3b6e; font-size: 1.1rem; }
+        .card-content { padding: 15px; }
+        .profile-header { background: linear-gradient(135deg, #1e5799 0%, #2b6fae 100%); color: white; padding: 20px; border-radius: 12px 12px 0 0; display: flex; gap: 20px; flex-wrap: wrap; align-items: center; }
+        .avatar { font-size: 5rem; background: rgba(255,255,255,0.2); width: 100px; height: 100px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        .profile-info { flex: 1; }
+        .profile-name { font-size: 1.8rem; font-weight: bold; margin-bottom: 5px; }
+        .profile-location { font-size: 0.9rem; opacity: 0.9; }
+        .profile-stats { display: flex; gap: 20px; margin-top: 10px; flex-wrap: wrap; }
+        .stat { background: rgba(255,255,255,0.15); padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; }
+        .friend-avatar, .suggestion-avatar, .result-avatar { font-size: 2rem; background: #e1e9f5; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        .friends-grid, .suggestions-grid, .results-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; }
+        .friend-card, .suggestion-card, .result-card { background: #f9f9ff; border: 1px solid #d4e0ee; border-radius: 10px; padding: 10px; display: flex; align-items: center; gap: 12px; }
+        .testimonial-card { background: #f9f9ff; border: 1px solid #d4e0ee; border-radius: 10px; padding: 10px; display: flex; flex-direction: column; align-items: flex-start; gap: 5px; }
+        .testimonial-author { font-weight: bold; color: #1a3b6e; }
+        .testimonial-text { font-size: 0.9rem; margin: 8px 0; line-height: 1.4; }
+        .testimonial-date { font-size: 0.7rem; color: #666; }
+        button, .btn { background: #1e5799; color: white; border: none; padding: 6px 12px; border-radius: 5px; cursor: pointer; font-size: 0.8rem; }
         button.decline { background: #a94442; }
         button.secondary { background: #6c757d; }
-        input, textarea, select {
-            width: 100%;
-            padding: 8px;
-            margin: 5px 0 12px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            font-family: inherit;
-        }
-        .search-filters {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-bottom: 15px;
-            align-items: flex-end;
-        }
-        .filter-group {
-            flex: 1;
-            min-width: 120px;
-        }
-        .filter-group label {
-            font-size: 0.8rem;
-            font-weight: bold;
-            display: block;
-            margin-bottom: 3px;
-        }
-        .scrap-form {
-            background: #f9f9ff;
-            padding: 10px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-        }
-        .online-status {
-            color: #4caf50;
-            font-size: 0.7rem;
-            display: inline-block;
-            margin-left: 5px;
-        }
-        .toast {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: #333;
-            color: white;
-            padding: 10px 20px;
-            border-radius: 8px;
-            z-index: 1000;
-        }
-        .back-link {
-            display: inline-block;
-            margin-top: 20px;
-            color: #1e5799;
-            text-decoration: none;
-        }
-        hr {
-            margin: 15px 0;
-            border-color: #d4e0ee;
-        }
+        input, textarea, select { width: 100%; padding: 8px; margin: 5px 0 12px; border: 1px solid #ccc; border-radius: 5px; font-family: inherit; }
+        .search-filters { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; align-items: flex-end; }
+        .filter-group { flex: 1; min-width: 120px; }
+        .filter-group label { font-size: 0.8rem; font-weight: bold; display: block; margin-bottom: 3px; }
+        .scrap-form { background: #f9f9ff; padding: 10px; border-radius: 8px; margin-bottom: 15px; }
+        .online-status { color: #4caf50; font-size: 0.7rem; display: inline-block; margin-left: 5px; }
+        .toast { position: fixed; bottom: 20px; right: 20px; background: #333; color: white; padding: 10px 20px; border-radius: 8px; z-index: 1000; }
+        .back-link { display: inline-block; margin-top: 20px; color: #1e5799; text-decoration: none; }
+        hr { margin: 15px 0; border-color: #d4e0ee; }
         @media (max-width: 600px) {
             .profile-header { flex-direction: column; text-align: center; }
             .friends-grid, .suggestions-grid, .results-grid { grid-template-columns: 1fr; }
@@ -250,10 +98,7 @@ async function loadCurrentUser() {
         }
     } catch (err) {
         document.getElementById('profileView').innerHTML = `
-            <div class="card">
-                <div class="card-header">Error</div>
-                <div class="card-content">${err.message}</div>
-            </div>
+            <div class="card"><div class="card-header">Error</div><div class="card-content">${err.message}</div></div>
         `;
         console.error(err);
     }
@@ -340,18 +185,21 @@ async function loadSuggestions() {
     renderSuggestions();
 }
 
+// ========== SEARCH USERS (WORKS) ==========
 async function searchUsers() {
-    const username = document.getElementById('searchUsername')?.value.trim();
-    const gender = document.getElementById('searchGender')?.value;
-    const location = document.getElementById('searchLocation')?.value.trim();
-    const country = document.getElementById('searchCountry')?.value.trim();
+    const username = document.getElementById('searchUsername')?.value.trim() || '';
+    const gender = document.getElementById('searchGender')?.value || '';
+    const location = document.getElementById('searchLocation')?.value.trim() || '';
+    const country = document.getElementById('searchCountry')?.value.trim() || '';
     
     let query = sb.from('players').select('id, username, avatar_url, gender, location, country');
+    
     if (username) query = query.ilike('username', `%${username}%`);
-    if (gender && gender !== '') query = query.eq('gender', gender);
+    if (gender) query = query.eq('gender', gender);
     if (location) query = query.ilike('location', `%${location}%`);
     if (country) query = query.ilike('country', `%${country}%`);
     
+    // Exclude self and existing friends
     const friendIds = friendships.map(f => 
         f.requester_id === currentPlayer.id ? f.addressee_id : f.requester_id
     );
@@ -360,29 +208,18 @@ async function searchUsers() {
         query = query.not('id', 'in', `(${friendIds.join(',')})`);
     }
     
-    const { data } = await query.limit(30);
+    const { data } = await query.limit(50);
     searchResults = data || [];
     renderSearchResults();
 }
 
-function renderSuggestions() {
-    const container = document.getElementById('suggestionsGrid');
-    if (!container) return;
-    if (!suggestions.length) {
-        container.innerHTML = '<p>No new members in the last 15 days.</p>';
-        return;
-    }
-    container.innerHTML = suggestions.map(u => `
-        <div class="suggestion-card">
-            <div class="suggestion-avatar">${u.avatar_url || '👤'}</div>
-            <div>
-                <div><strong>${escapeHtml(u.username)}</strong></div>
-                <div style="font-size:0.7rem; color:#666;">${escapeHtml(u.location || '')} ${escapeHtml(u.country || '')}</div>
-                <button onclick="sendFriendRequest('${u.id}')">➕ Add Friend</button>
-                <button onclick="viewProfile('${u.id}')">View</button>
-            </div>
-        </div>
-    `).join('');
+// Reset search filters and show all users (excluding self & friends)
+async function resetSearch() {
+    document.getElementById('searchUsername').value = '';
+    document.getElementById('searchGender').value = '';
+    document.getElementById('searchLocation').value = '';
+    document.getElementById('searchCountry').value = '';
+    await searchUsers(); // now shows all (since filters empty)
 }
 
 function renderSearchResults() {
@@ -398,6 +235,26 @@ function renderSearchResults() {
             <div>
                 <div><strong>${escapeHtml(u.username)}</strong></div>
                 <div style="font-size:0.7rem; color:#666;">${escapeHtml(u.gender || '')} | ${escapeHtml(u.location || '')} ${escapeHtml(u.country || '')}</div>
+                <button onclick="sendFriendRequest('${u.id}')">➕ Add Friend</button>
+                <button onclick="viewProfile('${u.id}')">View</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function renderSuggestions() {
+    const container = document.getElementById('suggestionsGrid');
+    if (!container) return;
+    if (!suggestions.length) {
+        container.innerHTML = '<p>No new members in the last 15 days.</p>';
+        return;
+    }
+    container.innerHTML = suggestions.map(u => `
+        <div class="suggestion-card">
+            <div class="suggestion-avatar">${u.avatar_url || '👤'}</div>
+            <div>
+                <div><strong>${escapeHtml(u.username)}</strong></div>
+                <div style="font-size:0.7rem; color:#666;">${escapeHtml(u.location || '')} ${escapeHtml(u.country || '')}</div>
                 <button onclick="sendFriendRequest('${u.id}')">➕ Add Friend</button>
                 <button onclick="viewProfile('${u.id}')">View</button>
             </div>
@@ -462,7 +319,8 @@ function renderProfile() {
                         <div class="filter-group"><label>Gender</label><select id="searchGender"><option value="">Any</option><option value="male">Male</option><option value="female">Female</option><option value="other">Other</option></select></div>
                         <div class="filter-group"><label>Location</label><input type="text" id="searchLocation" placeholder="City"></div>
                         <div class="filter-group"><label>Country</label><input type="text" id="searchCountry" placeholder="Country"></div>
-                        <div class="filter-group"><label>&nbsp;</label><button onclick="searchUsers()">Search</button></div>
+                        <div class="filter-group"><button onclick="searchUsers()">🔍 Search</button></div>
+                        <div class="filter-group"><button onclick="resetSearch()">⟳ Reset</button></div>
                     </div>
                     <div id="searchResultsGrid" class="results-grid"></div>
                     <hr>
@@ -516,9 +374,13 @@ function renderProfile() {
         renderPendingRequests();
         renderVisitors();
         renderSuggestions();
-        renderSearchResults();
+        // Initially load all users (excluding self & friends) when the page loads
+        searchUsers();
     }
 }
+
+// Rest of the functions (renderFriends, renderTestimonials, etc.) remain the same as before.
+// I'll include them for completeness.
 
 function renderFriends() {
     const container = document.getElementById('friendsGrid');
@@ -539,7 +401,6 @@ function renderFriends() {
     }).join('');
 }
 
-// Updated renderTestimonials with Edit button for author
 function renderTestimonials() {
     const container = document.getElementById('testimonialsList');
     if (!container) return;
@@ -550,40 +411,26 @@ function renderTestimonials() {
             <div class="testimonial-text">${escapeHtml(t.content)}</div>
             <div class="testimonial-date">${new Date(t.created_at).toLocaleString()}</div>
             <div>
-                ${currentPlayer && currentPlayer.id === t.author_id ? `
-                    <button class="secondary" onclick="editTestimonial('${t.id}', '${escapeHtml(t.content).replace(/'/g, "\\'")}')">✏️ Edit</button>
-                ` : ''}
-                ${currentPlayer && (currentPlayer.id === t.author_id || currentPlayer.id === profileOwner.id) ? `
-                    <button class="decline" onclick="deleteTestimonial('${t.id}')">🗑️ Delete</button>
-                ` : ''}
+                ${currentPlayer && currentPlayer.id === t.author_id ? `<button class="secondary" onclick="editTestimonial('${t.id}', '${escapeHtml(t.content).replace(/'/g, "\\'")}')">✏️ Edit</button>` : ''}
+                ${currentPlayer && (currentPlayer.id === t.author_id || currentPlayer.id === profileOwner.id) ? `<button class="decline" onclick="deleteTestimonial('${t.id}')">🗑️ Delete</button>` : ''}
             </div>
         </div>
     `).join('');
 }
 
-// Edit testimonial function
 async function editTestimonial(testimonialId, oldContent) {
     const newContent = prompt('Edit your scrap:', oldContent);
     if (!newContent || newContent === oldContent) return;
     const { error } = await sb.from('testimonials').update({ content: newContent, updated_at: new Date() }).eq('id', testimonialId);
     if (error) showToast(error.message);
-    else {
-        showToast('Scrap updated!');
-        await loadTestimonials();
-        renderTestimonials();
-    }
+    else { showToast('Scrap updated!'); await loadTestimonials(); renderTestimonials(); }
 }
 
-// Delete testimonial function (fixed)
 async function deleteTestimonial(testimonialId) {
     if (!confirm('Delete this scrap?')) return;
     const { error } = await sb.from('testimonials').delete().eq('id', testimonialId);
     if (error) showToast(error.message);
-    else {
-        showToast('Scrap deleted');
-        await loadTestimonials();
-        renderTestimonials();
-    }
+    else { showToast('Scrap deleted'); await loadTestimonials(); renderTestimonials(); }
 }
 
 function renderPendingRequests() {
@@ -595,10 +442,7 @@ function renderPendingRequests() {
             <div class="friend-avatar">${req.requester.avatar_url || '👤'}</div>
             <div>
                 <strong>${escapeHtml(req.requester.username)}</strong>
-                <div>
-                    <button onclick="acceptFriendRequestById('${req.id}')">Accept</button>
-                    <button class="decline" onclick="declineFriendRequestById('${req.id}')">Decline</button>
-                </div>
+                <div><button onclick="acceptFriendRequestById('${req.id}')">Accept</button><button class="decline" onclick="declineFriendRequestById('${req.id}')">Decline</button></div>
             </div>
         </div>
     `).join('');
@@ -611,15 +455,11 @@ function renderVisitors() {
     container.innerHTML = profileViews.map(v => `
         <div class="friend-card">
             <div class="friend-avatar">${v.viewer?.avatar_url || '👤'}</div>
-            <div>
-                <strong>${escapeHtml(v.viewer?.username || 'Unknown')}</strong>
-                <div>${new Date(v.viewed_at).toLocaleString()}</div>
-            </div>
+            <div><strong>${escapeHtml(v.viewer?.username || 'Unknown')}</strong><div>${new Date(v.viewed_at).toLocaleString()}</div></div>
         </div>
     `).join('');
 }
 
-// Friend actions (unchanged)
 async function sendFriendRequest(targetId) {
     const { error } = await sb.from('friendships').insert({ requester_id: currentPlayer.id, addressee_id: targetId, status: 'pending' });
     if (error) showToast(error.message);
@@ -660,7 +500,6 @@ async function removeFriend(friendId) {
     else { showToast('Friend removed'); await loadProfile(profileOwner.id); }
 }
 
-// Testimonial add (unchanged)
 async function addTestimonial() {
     const content = document.getElementById('scrapContent').value.trim();
     if (!content) { showToast('Please write something.'); return; }
@@ -679,7 +518,6 @@ async function addTestimonial() {
     }
 }
 
-// Profile update (unchanged)
 async function updateProfile() {
     const bio = document.getElementById('bioInput')?.value;
     const location = document.getElementById('locationInput')?.value;
@@ -698,12 +536,7 @@ function viewProfile(userId) {
 
 function escapeHtml(str) {
     if (!str) return '';
-    return str.replace(/[&<>]/g, function(m) {
-        if (m === '&') return '&amp;';
-        if (m === '<') return '&lt;';
-        if (m === '>') return '&gt;';
-        return m;
-    });
+    return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m]));
 }
 
 loadCurrentUser();
