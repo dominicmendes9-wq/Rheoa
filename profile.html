@@ -88,6 +88,7 @@ async function loadCurrentUser() {
         if (!player) throw new Error('Player not found');
         
         currentPlayer = player;
+        console.log('Current player loaded:', currentPlayer.username, currentPlayer.id);
         
         const urlParams = new URLSearchParams(window.location.search);
         const targetId = urlParams.get('id');
@@ -111,6 +112,7 @@ async function loadProfile(playerId) {
         return;
     }
     profileOwner = player;
+    console.log('Profile loaded:', profileOwner.username);
     
     if (currentPlayer && profileOwner.id !== currentPlayer.id) {
         await sb.from('profile_views').upsert({
@@ -135,6 +137,7 @@ async function loadFriendships() {
         .or(`requester_id.eq.${profileOwner.id},addressee_id.eq.${profileOwner.id}`)
         .eq('status', 'accepted');
     friendships = data || [];
+    console.log('Friendships loaded:', friendships.length);
 }
 
 async function loadTestimonials() {
@@ -185,30 +188,35 @@ async function loadSuggestions() {
     renderSuggestions();
 }
 
-// ========== SEARCH USERS (FIXED) ==========
+// ========== SEARCH USERS (DEBUGGED) ==========
 async function searchUsers() {
     const username = document.getElementById('searchUsername')?.value.trim() || '';
     const gender = document.getElementById('searchGender')?.value || '';
     const location = document.getElementById('searchLocation')?.value.trim() || '';
     const country = document.getElementById('searchCountry')?.value.trim() || '';
     
+    console.log('Searching with filters:', { username, gender, location, country });
+    
     let query = sb.from('players').select('id, username, avatar_url, gender, location, country');
+    
+    // Always exclude self
+    query = query.neq('id', currentPlayer.id);
     
     if (username) query = query.ilike('username', `%${username}%`);
     if (gender) query = query.eq('gender', gender);
     if (location) query = query.ilike('location', `%${location}%`);
     if (country) query = query.ilike('country', `%${country}%`);
     
-    // Exclude self only (friends will be marked)
-    query = query.neq('id', currentPlayer.id);
-    
     const { data, error } = await query.limit(50);
     if (error) {
+        console.error('Search error:', error);
         showToast('Search error: ' + error.message);
         return;
     }
     
-    // Mark which ones are already friends
+    console.log('Search results count:', data?.length);
+    
+    // Mark existing friends
     const friendIds = friendships.map(f => 
         f.requester_id === currentPlayer.id ? f.addressee_id : f.requester_id
     );
@@ -220,7 +228,6 @@ async function searchUsers() {
     renderSearchResults();
 }
 
-// Reset search: clear filters and show all users (except self)
 async function resetSearch() {
     document.getElementById('searchUsername').value = '';
     document.getElementById('searchGender').value = '';
@@ -384,7 +391,7 @@ function renderProfile() {
         renderPendingRequests();
         renderVisitors();
         renderSuggestions();
-        // Load all users (except self) when the page loads
+        // Automatically load all users (excluding self) on page load
         searchUsers();
     }
 }
