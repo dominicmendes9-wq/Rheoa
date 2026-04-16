@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Rheoa RPG - Forum</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { 
+      font-family: 'Courier New', monospace; 
+      background: #f8f8f0; 
+      color: #222; 
+      padding: 20px;
+      min-height: 100vh;
+    }
+    h1 { text-align: center; margin-bottom: 10px; color: #2196F3; }
+    .subtitle { text-align: center; color: #666; margin-bottom: 20px; }
+    
+    /* Layout */
+    .forum-container {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 20px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    
+    /* Sidebar */
+    .sidebar {
+      background: white;
+      border: 2px solid black;
+      border-radius: 12px;
+      padding: 15px;
+      height: fit-content;
+    }
+    .sidebar-header {
+      font-weight: bold;
+      font-size: 1.2rem;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #eee;
+    }
+    .community-list {
+      list-style: none;
+    }
+    .community-item {
+      padding: 8px 10px;
+      margin: 5px 0;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: background 0.2s;
+    }
+    .community-item:hover { background: #f0f0f0; }
+    .community-item.active { background: #2196F3; color: white; }
+    .community-icon { font-size: 1.3rem; }
+    .community-info { flex: 1; }
+    .community-name { font-weight: bold; }
+    .community-stats { font-size: 0.7rem; opacity: 0.8; }
+    .create-community-btn {
+      width: 100%;
+      margin-top: 15px;
+      padding: 10px;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    
+    /* Main content */
+    .main-content {
+      background: white;
+      border: 2px solid black;
+      border-radius: 12px;
+      padding: 20px;
+      min-height: 500px;
+    }
+    
+    /* Community header */
+    .community-header {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 2px solid #eee;
+    }
+    .community-header-icon { font-size: 3rem; }
+    .community-header-info h2 { margin-bottom: 5px; }
+    .community-header-desc { color: #666; }
+    
+    /* Post form */
+    .post-form {
+      background: #f5f5f5;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 20px;
+    }
+    .post-form input, .post-form textarea {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 10px;
+      font-family: inherit;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    .post-form button {
+      padding: 10px 20px;
+      background: #2196F3;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    
+    /* Post list */
+    .post-item {
+      padding: 15px;
+      border-bottom: 1px solid #eee;
+      cursor: pointer;
+      transition: background 0.2s;
+      display: flex;
+      gap: 10px;
+    }
+    .post-item:hover { background: #fafafa; }
+    .post-votes {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-width: 40px;
+    }
+    .vote-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 1.2rem;
+      color: #888;
+    }
+    .vote-btn.upvoted { color: #ff4500; }
+    .vote-btn.downvoted { color: #7193ff; }
+    .post-content { flex: 1; }
+    .post-title { font-size: 1.2rem; font-weight: bold; margin-bottom: 5px; }
+    .post-meta { font-size: 0.8rem; color: #666; }
+    .post-stats { display: flex; gap: 15px; margin-top: 5px; font-size: 0.8rem; }
+    
+    /* Single post view */
+    .back-link {
+      display: inline-block;
+      margin-bottom: 15px;
+      color: #2196F3;
+      cursor: pointer;
+    }
+    .post-detail-card {
+      background: #f9f9f9;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .post-detail-title { font-size: 1.8rem; margin-bottom: 10px; }
+    .post-detail-content { margin: 20px 0; line-height: 1.6; }
+    
+    /* Comments */
+    .comment-form {
+      margin: 20px 0;
+    }
+    .comment-form textarea {
+      width: 100%;
+      padding: 10px;
+      font-family: inherit;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      margin-bottom: 10px;
+    }
+    .comment {
+      margin: 10px 0;
+      padding-left: 20px;
+      border-left: 2px solid #ddd;
+    }
+    .comment-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 5px;
+    }
+    .comment-author { font-weight: bold; }
+    .comment-time { font-size: 0.7rem; color: #666; }
+    .comment-content { margin: 8px 0; }
+    .comment-actions {
+      display: flex;
+      gap: 15px;
+      font-size: 0.8rem;
+    }
+    .comment-actions button {
+      background: none;
+      border: none;
+      color: #666;
+      cursor: pointer;
+      font-size: 0.8rem;
+    }
+    .reply-btn { color: #2196F3; }
+    
+    /* Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+    }
+    .modal-content {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      padding: 25px;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 500px;
+    }
+    .modal input, .modal textarea {
+      width: 100%;
+      margin: 10px 0;
+      padding: 8px;
+      font-family: inherit;
+    }
+    
+    .toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; }
+    .toast { padding: 12px 20px; margin-bottom: 10px; border-radius: 8px; color: white; font-weight: bold; }
+    .toast.success { background: #4CAF50; }
+    .toast.error { background: #f44336; }
+    .toast.info { background: #2196F3; }
+    
+    .back-button {
+      display: block;
+      width: 200px;
+      margin: 30px auto 0;
+      padding: 12px;
+      background: #666;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      text-align: center;
+      font-weight: bold;
+    }
+    
+    @media (max-width: 700px) {
+      .forum-container { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<h1>💬 Rheoa Forum</h1>
+<div class="subtitle">Discuss, share, and connect with the community</div>
+
+<div class="forum-container">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-header">🌐 Communities</div>
+    <ul class="community-list" id="communityList"></ul>
+    <button class="create-community-btn" onclick="showCreateCommunityModal()">+ Create Community</button>
+  </div>
+  
+  <!-- Main Content Area -->
+  <div class="main-content" id="mainContent">
+    <!-- Dynamic content loaded here -->
+  </div>
+</div>
+
+<button class="back-button" onclick="window.location.href='dashboard.html'">← Back to Dashboard</button>
+
+<!-- Create Community Modal -->
+<div id="createCommunityModal" class="modal">
+  <div class="modal-content">
+    <h3>Create a New Community</h3>
+    <input type="text" id="newCommunityName" placeholder="Name (unique, lowercase, no spaces)" maxlength="20">
+    <input type="text" id="newCommunityDisplayName" placeholder="Display Name">
+    <textarea id="newCommunityDesc" placeholder="Description"></textarea>
+    <input type="text" id="newCommunityIcon" placeholder="Icon (emoji)" value="🌐">
+    <input type="color" id="newCommunityColor" value="#2196F3">
+    <select id="newCommunityParent">
+      <option value="">None (Main Community)</option>
+    </select>
+    <button onclick="createCommunity()">Create</button>
+    <button onclick="closeModal('createCommunityModal')">Cancel</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<script>
+const sb = window.supabase.createClient(
+  "https://mtiwodvsrwvrujbhmmrn.supabase.co",
+  "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
+);
+
+let currentUser = null;
+let currentPlayer = null;
+let currentCommunity = null;
+let currentPost = null;
+let communities = [];
+
+// Utility: Toast
+function showToast(msg, type='info') {
+  const container = document.getElementById('toastContainer');
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.textContent = msg;
+  container.appendChild(toast);
+  setTimeout(() => toast.remove(), 3000);
+}
+
+// Escape HTML
+function escapeHtml(s) {
+  if (!s) return '';
+  return s.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));
+}
+
+// Initialize
+async function init() {
+  const { data: { user } } = await sb.auth.getUser();
+  if (!user) return window.location.href = 'index.html';
+  currentUser = user;
+  
+  const { data: player } = await sb.from('players').select('*').eq('auth_id', user.id).single();
+  currentPlayer = player;
+  
+  await loadCommunities();
+  
+  // Check URL params for community/post
+  const params = new URLSearchParams(window.location.search);
+  const communityName = params.get('c');
+  const postId = params.get('p');
+  
+  if (postId) {
+    await loadPostView(postId);
+  } else if (communityName) {
+    const comm = communities.find(c => c.name === communityName);
+    if (comm) await selectCommunity(comm);
+  } else {
+    // Default: show general feed (all posts from all communities)
+    await loadFeed();
+  }
+}
+
+// Load communities list
+async function loadCommunities() {
+  const { data } = await sb.from('communities').select('*').order('name');
+  communities = data || [];
+  renderCommunitySidebar();
+}
+
+function renderCommunitySidebar() {
+  const list = document.getElementById('communityList');
+  list.innerHTML = communities.map(c => `
+    <li class="community-item ${currentCommunity && currentCommunity.id === c.id ? 'active' : ''}" 
+        onclick="selectCommunityById('${c.id}')">
+      <span class="community-icon">${c.icon || '🌐'}</span>
+      <div class="community-info">
+        <div class="community-name">${escapeHtml(c.display_name)}</div>
+        <div class="community-stats">${c.member_count || 0} members</div>
+      </div>
+    </li>
+  `).join('');
+  
+  // Update parent select in create modal
+  const select = document.getElementById('newCommunityParent');
+  if (select) {
+    select.innerHTML = '<option value="">None (Main Community)</option>' +
+      communities.filter(c => !c.parent_id).map(c => 
+        `<option value="${c.id}">${c.display_name}</option>`
+      ).join('');
+  }
+}
+
+async function selectCommunityById(id) {
+  const comm = communities.find(c => c.id === id);
+  if (comm) await selectCommunity(comm);
+}
+
+async function selectCommunity(community) {
+  currentCommunity = community;
+  currentPost = null;
+  window.history.pushState({}, '', `?c=${community.name}`);
+  renderCommunitySidebar();
+  await loadCommunityView();
+}
+
+async function loadCommunityView() {
+  if (!currentCommunity) return;
+  
+  const { data: posts } = await sb
+    .from('posts')
+    .select(`
+      *,
+      author:players!posts_author_id_fkey(username)
+    `)
+    .eq('community_id', currentCommunity.id)
+    .order('created_at', { ascending: false });
+  
+  const isMember = await checkMembership(currentCommunity.id);
+  
+  let html = `
+    <div class="community-header" style="border-bottom-color: ${currentCommunity.banner_color || '#2196F3'};">
+      <div class="community-header-icon">${currentCommunity.icon || '🌐'}</div>
+      <div class="community-header-info">
+        <h2>${escapeHtml(currentCommunity.display_name)}</h2>
+        <div class="community-header-desc">${escapeHtml(currentCommunity.description || '')}</div>
+      </div>
+    </div>
+  `;
+  
+  if (isMember) {
+    html += `
+      <div class="post-form">
+        <input type="text" id="postTitle" placeholder="Post title" maxlength="200">
+        <textarea id="postContent" placeholder="What's on your mind?" rows="3"></textarea>
+        <button onclick="createPost()">Create Post</button>
+      </div>
+    `;
+  } else {
+    html += `<button onclick="joinCommunity('${currentCommunity.id}')">Join Community</button>`;
+  }
+  
+  html += `<div id="postsList">`;
+  if (!posts || posts.length === 0) {
+    html += '<p style="padding:20px;text-align:center;">No posts yet. Be the first!</p>';
+  } else {
+    posts.forEach(post => {
+      html += renderPostItem(post);
+    });
+  }
+  html += `</div>`;
+  
+  document.getElementById('mainContent').innerHTML = html;
+}
+
+function renderPostItem(post) {
+  const score = (post.upvotes || 0) - (post.downvotes || 0);
+  return `
+    <div class="post-item" onclick="viewPost('${post.id}')">
+      <div class="post-votes" onclick="event.stopPropagation()">
+        <button class="vote-btn" onclick="vote('post', '${post.id}', 1)">▲</button>
+        <span>${score}</span>
+        <button class="vote-btn" onclick="vote('post', '${post.id}', -1)">▼</button>
+      </div>
+      <div class="post-content">
+        <div class="post-title">${escapeHtml(post.title)}</div>
+        <div class="post-meta">Posted by ${escapeHtml(post.author?.username || 'Unknown')} • ${new Date(post.created_at).toLocaleString()}</div>
+        <div class="post-stats">
+          <span>💬 ${post.comment_count || 0} comments</span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+async function viewPost(postId) {
+  currentPost = postId;
+  const params = new URLSearchParams(window.location.search);
+  params.set('p', postId);
+  window.history.pushState({}, '', `?${params.toString()}`);
+  await loadPostView(postId);
+}
+
+async function loadPostView(postId) {
+  const { data: post } = await sb
+    .from('posts')
+    .select(`
+      *,
+      author:players!posts_author_id_fkey(username),
+      community:communities(*)
+    `)
+    .eq('id', postId)
+    .single();
+  
+  if (!post) {
+    document.getElementById('mainContent').innerHTML = '<p>Post not found</p>';
+    return;
+  }
+  
+  currentCommunity = post.community;
+  currentPost = post;
+  renderCommunitySidebar();
+  
+  const comments = await loadComments(postId);
+  const userVote = await getUserVote('post', postId);
+  
+  let html = `
+    <div class="back-link" onclick="selectCommunityById('${post.community.id}')">← Back to ${escapeHtml(post.community.display_name)}</div>
+    <div class="post-detail-card">
+      <div class="post-detail-title">${escapeHtml(post.title)}</div>
+      <div class="post-meta">Posted by ${escapeHtml(post.author?.username)} • ${new Date(post.created_at).toLocaleString()}</div>
+      <div class="post-detail-content">${escapeHtml(post.content).replace(/\n/g, '<br>')}</div>
+      <div class="post-actions" style="display:flex; gap:15px;">
+        <button class="vote-btn ${userVote === 1 ? 'upvoted' : ''}" onclick="vote('post', '${post.id}', 1)">▲ ${post.upvotes}</button>
+        <button class="vote-btn ${userVote === -1 ? 'downvoted' : ''}" onclick="vote('post', '${post.id}', -1)">▼ ${post.downvotes}</button>
+        ${post.author_id === currentPlayer.id ? `
+          <button onclick="editPost('${post.id}')">Edit</button>
+          <button onclick="deletePost('${post.id}')">Delete</button>
+        ` : ''}
+      </div>
+    </div>
+    <h3>Comments</h3>
+    <div class="comment-form">
+      <textarea id="commentContent" placeholder="Write a comment..."></textarea>
+      <button onclick="submitComment(null)">Post Comment</button>
+    </div>
+    <div id="commentsContainer">${renderComments(comments)}</div>
+  `;
+  
+  document.getElementById('mainContent').innerHTML = html;
+}
+
+async function loadComments(postId) {
+  const { data } = await sb.rpc('get_post_comments', { p_post_id: postId });
+  return data || [];
+}
+
+function renderComments(comments, parentId = null) {
+  const filtered = comments.filter(c => c.parent_id === parentId);
+  if (filtered.length === 0) return '';
+  
+  return filtered.map(c => {
+    const childrenHtml = renderComments(comments, c.id);
+    const score = (c.upvotes || 0) - (c.downvotes || 0);
+    return `
+      <div class="comment" style="margin-left: ${c.depth * 20}px;">
+        <div class="comment-header">
+          <span class="comment-author">${escapeHtml(c.author_name)}</span>
+          <span class="comment-time">${new Date(c.created_at).toLocaleString()}</span>
+        </div>
+        <div class="comment-content">${escapeHtml(c.content)}</div>
+        <div class="comment-actions">
+          <button class="vote-btn ${c.user_vote === 1 ? 'upvoted' : ''}" onclick="vote('comment', '${c.id}', 1)">▲</button>
+          <span>${score}</span>
+          <button class="vote-btn ${c.user_vote === -1 ? 'downvoted' : ''}" onclick="vote('comment', '${c.id}', -1)">▼</button>
+          <button class="reply-btn" onclick="showReplyForm('${c.id}')">Reply</button>
+          ${c.author_id === currentPlayer.id ? `
+            <button onclick="editComment('${c.id}')">Edit</button>
+            <button onclick="deleteComment('${c.id}')">Delete</button>
+          ` : ''}
+        </div>
+        <div id="reply-form-${c.id}" style="display:none; margin-top:10px;">
+          <textarea id="reply-content-${c.id}" rows="2" placeholder="Write a reply..."></textarea>
+          <button onclick="submitComment('${c.id}')">Reply</button>
+          <button onclick="hideReplyForm('${c.id}')">Cancel</button>
+        </div>
+        ${childrenHtml}
+      </div>
+    `;
+  }).join('');
+}
+
+// Voting
+async function vote(targetType, targetId, value) {
+  const { data, error } = await sb.rpc('handle_vote', {
+    p_player_id: currentPlayer.id,
+    p_target_type: targetType,
+    p_target_id: targetId,
+    p_vote_value: value
+  });
+  if (error) return showToast(error.message, 'error');
+  
+  // Refresh view
+  if (currentPost) await loadPostView(currentPost.id);
+  else if (currentCommunity) await loadCommunityView();
+  else await loadFeed();
+}
+
+// Create post
+async function createPost() {
+  const title = document.getElementById('postTitle').value.trim();
+  const content = document.getElementById('postContent').value.trim();
+  if (!title) return showToast('Title required', 'error');
+  
+  const { error } = await sb.from('posts').insert({
+    title, content, community_id: currentCommunity.id, author_id: currentPlayer.id
+  });
+  if (error) return showToast(error.message, 'error');
+  showToast('Post created!', 'success');
+  loadCommunityView();
+}
+
+// Submit comment/reply
+async function submitComment(parentId) {
+  const content = parentId 
+    ? document.getElementById(`reply-content-${parentId}`).value.trim()
+    : document.getElementById('commentContent').value.trim();
+  if (!content) return showToast('Comment cannot be empty', 'error');
+  
+  const { error } = await sb.from('comments').insert({
+    content, post_id: currentPost.id, author_id: currentPlayer.id,
+    parent_id: parentId || null,
+    depth: parentId ? (await getParentDepth(parentId)) + 1 : 0
+  });
+  if (error) return showToast(error.message, 'error');
+  showToast('Comment posted', 'success');
+  loadPostView(currentPost.id);
+}
+
+async function getParentDepth(parentId) {
+  const { data } = await sb.from('comments').select('depth').eq('id', parentId).single();
+  return data?.depth || 0;
+}
+
+function showReplyForm(commentId) {
+  document.getElementById(`reply-form-${commentId}`).style.display = 'block';
+}
+function hideReplyForm(commentId) {
+  document.getElementById(`reply-form-${commentId}`).style.display = 'none';
+}
+
+// Community creation
+function showCreateCommunityModal() {
+  document.getElementById('createCommunityModal').style.display = 'block';
+}
+async function createCommunity() {
+  const name = document.getElementById('newCommunityName').value.trim().toLowerCase().replace(/\s+/g, '');
+  const display_name = document.getElementById('newCommunityDisplayName').value.trim();
+  if (!name || !display_name) return showToast('Name and display name required', 'error');
+  
+  const { error } = await sb.from('communities').insert({
+    name, display_name,
+    description: document.getElementById('newCommunityDesc').value,
+    icon: document.getElementById('newCommunityIcon').value,
+    banner_color: document.getElementById('newCommunityColor').value,
+    parent_id: document.getElementById('newCommunityParent').value || null,
+    created_by: currentPlayer.id
+  });
+  if (error) return showToast(error.message, 'error');
+  showToast('Community created!', 'success');
+  closeModal('createCommunityModal');
+  loadCommunities();
+}
+
+// Helper functions
+async function checkMembership(communityId) {
+  const { count } = await sb.from('community_members')
+    .select('*', { count: 'exact', head: true })
+    .eq('community_id', communityId)
+    .eq('player_id', currentPlayer.id);
+  return count > 0;
+}
+
+async function joinCommunity(communityId) {
+  const { error } = await sb.from('community_members').insert({
+    community_id: communityId, player_id: currentPlayer.id
+  });
+  if (error) return showToast(error.message, 'error');
+  showToast('Joined community!', 'success');
+  loadCommunityView();
+}
+
+async function getUserVote(targetType, targetId) {
+  const { data } = await sb.from('votes')
+    .select('vote_value')
+    .eq('player_id', currentPlayer.id)
+    .eq('target_type', targetType)
+    .eq('target_id', targetId)
+    .maybeSingle();
+  return data?.vote_value || 0;
+}
+
+function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+// Global functions for onclick
+window.selectCommunityById = selectCommunityById;
+window.vote = vote;
+window.createPost = createPost;
+window.submitComment = submitComment;
+window.showReplyForm = showReplyForm;
+window.hideReplyForm = hideReplyForm;
+window.showCreateCommunityModal = showCreateCommunityModal;
+window.createCommunity = createCommunity;
+window.joinCommunity = joinCommunity;
+window.viewPost = viewPost;
+
+// Start
+init();
+</script>
+</body>
+</html>
