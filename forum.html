@@ -344,7 +344,7 @@ async function init() {
     const comm = communities.find(c => c.name === communityName);
     if (comm) await selectCommunity(comm);
   } else {
-    // Default: show general feed (all posts from all communities)
+    // Default: show feed from all communities
     await loadFeed();
   }
 }
@@ -374,7 +374,7 @@ function renderCommunitySidebar() {
   if (select) {
     select.innerHTML = '<option value="">None (Main Community)</option>' +
       communities.filter(c => !c.parent_id).map(c => 
-        `<option value="${c.id}">${c.display_name}</option>`
+        `<option value="${c.id}">${escapeHtml(c.display_name)}</option>`
       ).join('');
   }
 }
@@ -441,6 +441,56 @@ async function loadCommunityView() {
   document.getElementById('mainContent').innerHTML = html;
 }
 
+// Default feed (all posts from all communities)
+async function loadFeed() {
+  currentCommunity = null;
+  currentPost = null;
+  window.history.pushState({}, '', window.location.pathname);
+  renderCommunitySidebar();
+  
+  const { data: posts } = await sb
+    .from('posts')
+    .select(`
+      *,
+      author:players!posts_author_id_fkey(username),
+      community:communities(name, display_name, icon)
+    `)
+    .order('created_at', { ascending: false })
+    .limit(50);
+  
+  let html = `<h2>📰 Latest Posts</h2>`;
+  if (!posts || posts.length === 0) {
+    html += '<p style="padding:20px;text-align:center;">No posts yet. Join a community and create one!</p>';
+  } else {
+    html += `<div id="postsList">`;
+    posts.forEach(post => {
+      const score = (post.upvotes || 0) - (post.downvotes || 0);
+      html += `
+        <div class="post-item" onclick="viewPost('${post.id}')">
+          <div class="post-votes" onclick="event.stopPropagation()">
+            <button class="vote-btn" onclick="vote('post', '${post.id}', 1)">▲</button>
+            <span>${score}</span>
+            <button class="vote-btn" onclick="vote('post', '${post.id}', -1)">▼</button>
+          </div>
+          <div class="post-content">
+            <div class="post-title">${escapeHtml(post.title)}</div>
+            <div class="post-meta">
+              Posted in ${post.community?.icon || '🌐'} ${escapeHtml(post.community?.display_name || 'Unknown')} 
+              by ${escapeHtml(post.author?.username || 'Unknown')} • ${new Date(post.created_at).toLocaleString()}
+            </div>
+            <div class="post-stats">
+              <span>💬 ${post.comment_count || 0} comments</span>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+    html += `</div>`;
+  }
+  
+  document.getElementById('mainContent').innerHTML = html;
+}
+
 function renderPostItem(post) {
   const score = (post.upvotes || 0) - (post.downvotes || 0);
   return `
@@ -469,6 +519,7 @@ async function viewPost(postId) {
   await loadPostView(postId);
 }
 
+// CORRECTED: loadPostView with proper async comment loading
 async function loadPostView(postId) {
   const { data: post } = await sb
     .from('posts')
@@ -489,6 +540,7 @@ async function loadPostView(postId) {
   currentPost = post;
   renderCommunitySidebar();
   
+  // Load comments first
   const comments = await loadComments(postId);
   const userVote = await getUserVote('post', postId);
   
@@ -497,17 +549,17 @@ async function loadPostView(postId) {
     <div class="post-detail-card">
       <div class="post-detail-title">${escapeHtml(post.title)}</div>
       <div class="post-meta">Posted by ${escapeHtml(post.author?.username)} • ${new Date(post.created_at).toLocaleString()}</div>
-      <div class="post-detail-content">${escapeHtml(post.content).replace(/\n/g, '<br>')}</div>
+      <div class="post-detail-content">${escapeHtml(post.content || '').replace(/\n/g, '<br>')}</div>
       <div class="post-actions" style="display:flex; gap:15px;">
-        <button class="vote-btn ${userVote === 1 ? 'upvoted' : ''}" onclick="vote('post', '${post.id}', 1)">▲ ${post.upvotes}</button>
-        <button class="vote-btn ${userVote === -1 ? 'downvoted' : ''}" onclick="vote('post', '${post.id}', -1)">▼ ${post.downvotes}</button>
+        <button class="vote-btn ${userVote === 1 ? 'upvoted' : ''}" onclick="vote('post', '${post.id}', 1)">▲ ${post.upvotes || 0}</button>
+        <button class="vote-btn ${userVote === -1 ? 'downvoted' : ''}" onclick="vote('post', '${post.id}', -1)">▼ ${post.downvotes || 0}</button>
         ${post.author_id === currentPlayer.id ? `
           <button onclick="editPost('${post.id}')">Edit</button>
           <button onclick="deletePost('${post.id}')">Delete</button>
         ` : ''}
       </div>
     </div>
-    <h3>Comments</h3>
+    <h3>Comments (${comments.length})</h3>
     <div class="comment-form">
       <textarea id="commentContent" placeholder="Write a comment..."></textarea>
       <button onclick="submitComment(null)">Post Comment</button>
@@ -518,31 +570,48 @@ async function loadPostView(postId) {
   document.getElementById('mainContent').innerHTML = html;
 }
 
+// CORRECTED: loadComments using RPC
 async function loadComments(postId) {
-  const { data } = await sb.rpc('get_post_comments', { p_post_id: postId });
-  return data || [];
+  try {
+    const { data, error } = await sb.rpc('get_post_comments', { p_post_id: postId });
+    if (error) {
+      console.error('Error loading comments:', error);
+      showToast('Error loading comments', 'error');
+      return [];
+    }
+    console.log('Comments loaded:', data);
+    return data || [];
+  } catch (err) {
+    console.error('Exception loading comments:', err);
+    return [];
+  }
 }
 
+// CORRECTED: renderComments with proper recursive rendering
 function renderComments(comments, parentId = null) {
+  if (!comments || comments.length === 0) return '';
+  
   const filtered = comments.filter(c => c.parent_id === parentId);
   if (filtered.length === 0) return '';
   
   return filtered.map(c => {
     const childrenHtml = renderComments(comments, c.id);
     const score = (c.upvotes || 0) - (c.downvotes || 0);
+    const userVote = c.user_vote || 0;
+    
     return `
-      <div class="comment" style="margin-left: ${c.depth * 20}px;">
+      <div class="comment" style="margin-left: ${(c.depth || 0) * 20}px;">
         <div class="comment-header">
-          <span class="comment-author">${escapeHtml(c.author_name)}</span>
+          <span class="comment-author">${escapeHtml(c.author_name || 'Unknown')}</span>
           <span class="comment-time">${new Date(c.created_at).toLocaleString()}</span>
         </div>
-        <div class="comment-content">${escapeHtml(c.content)}</div>
+        <div class="comment-content">${escapeHtml(c.content || '').replace(/\n/g, '<br>')}</div>
         <div class="comment-actions">
-          <button class="vote-btn ${c.user_vote === 1 ? 'upvoted' : ''}" onclick="vote('comment', '${c.id}', 1)">▲</button>
+          <button class="vote-btn ${userVote === 1 ? 'upvoted' : ''}" onclick="vote('comment', '${c.id}', 1)">▲</button>
           <span>${score}</span>
-          <button class="vote-btn ${c.user_vote === -1 ? 'downvoted' : ''}" onclick="vote('comment', '${c.id}', -1)">▼</button>
+          <button class="vote-btn ${userVote === -1 ? 'downvoted' : ''}" onclick="vote('comment', '${c.id}', -1)">▼</button>
           <button class="reply-btn" onclick="showReplyForm('${c.id}')">Reply</button>
-          ${c.author_id === currentPlayer.id ? `
+          ${c.author_id === currentPlayer?.id ? `
             <button onclick="editComment('${c.id}')">Edit</button>
             <button onclick="deleteComment('${c.id}')">Delete</button>
           ` : ''}
@@ -617,6 +686,35 @@ function hideReplyForm(commentId) {
   document.getElementById(`reply-form-${commentId}`).style.display = 'none';
 }
 
+// Edit/Delete functions (stubs – can be expanded)
+async function editPost(postId) {
+  const newContent = prompt('Edit your post:', currentPost.content);
+  if (newContent !== null) {
+    await sb.from('posts').update({ content: newContent }).eq('id', postId);
+    loadPostView(postId);
+  }
+}
+async function deletePost(postId) {
+  if (confirm('Delete this post?')) {
+    await sb.from('posts').delete().eq('id', postId);
+    if (currentCommunity) loadCommunityView();
+    else loadFeed();
+  }
+}
+async function editComment(commentId) {
+  const newContent = prompt('Edit your comment:');
+  if (newContent) {
+    await sb.from('comments').update({ content: newContent }).eq('id', commentId);
+    loadPostView(currentPost.id);
+  }
+}
+async function deleteComment(commentId) {
+  if (confirm('Delete this comment?')) {
+    await sb.from('comments').delete().eq('id', commentId);
+    loadPostView(currentPost.id);
+  }
+}
+
 // Community creation
 function showCreateCommunityModal() {
   document.getElementById('createCommunityModal').style.display = 'block';
@@ -681,6 +779,10 @@ window.showCreateCommunityModal = showCreateCommunityModal;
 window.createCommunity = createCommunity;
 window.joinCommunity = joinCommunity;
 window.viewPost = viewPost;
+window.editPost = editPost;
+window.deletePost = deletePost;
+window.editComment = editComment;
+window.deleteComment = deleteComment;
 
 // Start
 init();
