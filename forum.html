@@ -15,7 +15,6 @@
     h1 { text-align: center; margin-bottom: 10px; color: #2196F3; }
     .subtitle { text-align: center; color: #666; margin-bottom: 20px; }
     
-    /* Layout */
     .forum-container {
       display: grid;
       grid-template-columns: 280px 1fr;
@@ -24,7 +23,6 @@
       margin: 0 auto;
     }
     
-    /* Sidebar */
     .sidebar {
       background: white;
       border: 2px solid black;
@@ -39,9 +37,7 @@
       padding-bottom: 10px;
       border-bottom: 2px solid #eee;
     }
-    .community-list {
-      list-style: none;
-    }
+    .community-list { list-style: none; }
     .community-item {
       padding: 8px 10px;
       margin: 5px 0;
@@ -70,7 +66,6 @@
       font-weight: bold;
     }
     
-    /* Main content */
     .main-content {
       background: white;
       border: 2px solid black;
@@ -79,7 +74,6 @@
       min-height: 500px;
     }
     
-    /* Community header */
     .community-header {
       display: flex;
       align-items: center;
@@ -92,7 +86,6 @@
     .community-header-info h2 { margin-bottom: 5px; }
     .community-header-desc { color: #666; }
     
-    /* Post form */
     .post-form {
       background: #f5f5f5;
       border-radius: 8px;
@@ -117,7 +110,6 @@
       font-weight: bold;
     }
     
-    /* Post list */
     .post-item {
       padding: 15px;
       border-bottom: 1px solid #eee;
@@ -147,7 +139,6 @@
     .post-meta { font-size: 0.8rem; color: #666; }
     .post-stats { display: flex; gap: 15px; margin-top: 5px; font-size: 0.8rem; }
     
-    /* Single post view */
     .back-link {
       display: inline-block;
       margin-bottom: 15px;
@@ -163,7 +154,6 @@
     .post-detail-title { font-size: 1.8rem; margin-bottom: 10px; }
     .post-detail-content { margin: 20px 0; line-height: 1.6; }
     
-    /* Comments */
     .comment-form {
       margin: 20px 0;
     }
@@ -203,7 +193,6 @@
     }
     .reply-btn { color: #2196F3; }
     
-    /* Modal */
     .modal {
       display: none;
       position: fixed;
@@ -261,22 +250,18 @@
 <div class="subtitle">Discuss, share, and connect with the community</div>
 
 <div class="forum-container">
-  <!-- Sidebar -->
   <div class="sidebar">
     <div class="sidebar-header">🌐 Communities</div>
     <ul class="community-list" id="communityList"></ul>
     <button class="create-community-btn" onclick="showCreateCommunityModal()">+ Create Community</button>
   </div>
   
-  <!-- Main Content Area -->
   <div class="main-content" id="mainContent">
-    <!-- Dynamic content loaded here -->
   </div>
 </div>
 
 <button class="back-button" onclick="window.location.href='dashboard.html'">← Back to Dashboard</button>
 
-<!-- Create Community Modal -->
 <div id="createCommunityModal" class="modal">
   <div class="modal-content">
     <h3>Create a New Community</h3>
@@ -306,7 +291,6 @@ let currentCommunity = null;
 let currentPost = null;
 let communities = [];
 
-// Utility: Toast
 function showToast(msg, type='info') {
   const container = document.getElementById('toastContainer');
   const toast = document.createElement('div');
@@ -316,13 +300,11 @@ function showToast(msg, type='info') {
   setTimeout(() => toast.remove(), 3000);
 }
 
-// Escape HTML
 function escapeHtml(s) {
   if (!s) return '';
   return s.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));
 }
 
-// Initialize
 async function init() {
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return window.location.href = 'index.html';
@@ -333,7 +315,6 @@ async function init() {
   
   await loadCommunities();
   
-  // Check URL params for community/post
   const params = new URLSearchParams(window.location.search);
   const communityName = params.get('c');
   const postId = params.get('p');
@@ -344,12 +325,10 @@ async function init() {
     const comm = communities.find(c => c.name === communityName);
     if (comm) await selectCommunity(comm);
   } else {
-    // Default: show feed from all communities
     await loadFeed();
   }
 }
 
-// Load communities list
 async function loadCommunities() {
   const { data } = await sb.from('communities').select('*').order('name');
   communities = data || [];
@@ -369,7 +348,6 @@ function renderCommunitySidebar() {
     </li>
   `).join('');
   
-  // Update parent select in create modal
   const select = document.getElementById('newCommunityParent');
   if (select) {
     select.innerHTML = '<option value="">None (Main Community)</option>' +
@@ -397,10 +375,7 @@ async function loadCommunityView() {
   
   const { data: posts } = await sb
     .from('posts')
-    .select(`
-      *,
-      author:players!posts_author_id_fkey(username)
-    `)
+    .select(`*, author:players!posts_author_id_fkey(username)`)
     .eq('community_id', currentCommunity.id)
     .order('created_at', { ascending: false });
   
@@ -433,7 +408,23 @@ async function loadCommunityView() {
     html += '<p style="padding:20px;text-align:center;">No posts yet. Be the first!</p>';
   } else {
     posts.forEach(post => {
-      html += renderPostItem(post);
+      const score = (post.upvotes || 0) - (post.downvotes || 0);
+      html += `
+        <div class="post-item" onclick="viewPost('${post.id}')">
+          <div class="post-votes" onclick="event.stopPropagation()">
+            <button class="vote-btn" onclick="vote('post', '${post.id}', 1)">▲</button>
+            <span>${score}</span>
+            <button class="vote-btn" onclick="vote('post', '${post.id}', -1)">▼</button>
+          </div>
+          <div class="post-content">
+            <div class="post-title">${escapeHtml(post.title)}</div>
+            <div class="post-meta">Posted by ${escapeHtml(post.author?.username || 'Unknown')} • ${new Date(post.created_at).toLocaleString()}</div>
+            <div class="post-stats">
+              <span>💬 ${post.comment_count || 0} comments</span>
+            </div>
+          </div>
+        </div>
+      `;
     });
   }
   html += `</div>`;
@@ -441,7 +432,6 @@ async function loadCommunityView() {
   document.getElementById('mainContent').innerHTML = html;
 }
 
-// Default feed (all posts from all communities)
 async function loadFeed() {
   currentCommunity = null;
   currentPost = null;
@@ -450,11 +440,7 @@ async function loadFeed() {
   
   const { data: posts } = await sb
     .from('posts')
-    .select(`
-      *,
-      author:players!posts_author_id_fkey(username),
-      community:communities(name, display_name, icon)
-    `)
+    .select(`*, author:players!posts_author_id_fkey(username), community:communities(name, display_name, icon)`)
     .order('created_at', { ascending: false })
     .limit(50);
   
@@ -491,26 +477,6 @@ async function loadFeed() {
   document.getElementById('mainContent').innerHTML = html;
 }
 
-function renderPostItem(post) {
-  const score = (post.upvotes || 0) - (post.downvotes || 0);
-  return `
-    <div class="post-item" onclick="viewPost('${post.id}')">
-      <div class="post-votes" onclick="event.stopPropagation()">
-        <button class="vote-btn" onclick="vote('post', '${post.id}', 1)">▲</button>
-        <span>${score}</span>
-        <button class="vote-btn" onclick="vote('post', '${post.id}', -1)">▼</button>
-      </div>
-      <div class="post-content">
-        <div class="post-title">${escapeHtml(post.title)}</div>
-        <div class="post-meta">Posted by ${escapeHtml(post.author?.username || 'Unknown')} • ${new Date(post.created_at).toLocaleString()}</div>
-        <div class="post-stats">
-          <span>💬 ${post.comment_count || 0} comments</span>
-        </div>
-      </div>
-    </div>
-  `;
-}
-
 async function viewPost(postId) {
   currentPost = postId;
   const params = new URLSearchParams(window.location.search);
@@ -519,15 +485,10 @@ async function viewPost(postId) {
   await loadPostView(postId);
 }
 
-// CORRECTED: loadPostView with proper async comment loading
 async function loadPostView(postId) {
   const { data: post } = await sb
     .from('posts')
-    .select(`
-      *,
-      author:players!posts_author_id_fkey(username),
-      community:communities(*)
-    `)
+    .select(`*, author:players!posts_author_id_fkey(username), community:communities(*)`)
     .eq('id', postId)
     .single();
   
@@ -540,7 +501,7 @@ async function loadPostView(postId) {
   currentPost = post;
   renderCommunitySidebar();
   
-  // Load comments first
+  // Load comments
   const comments = await loadComments(postId);
   const userVote = await getUserVote('post', postId);
   
@@ -570,24 +531,60 @@ async function loadPostView(postId) {
   document.getElementById('mainContent').innerHTML = html;
 }
 
-// CORRECTED: loadComments using RPC
+// FIXED: loadComments with fallback and logging
 async function loadComments(postId) {
   try {
-    const { data, error } = await sb.rpc('get_post_comments', { p_post_id: postId });
-    if (error) {
-      console.error('Error loading comments:', error);
+    console.log('Loading comments for post:', postId);
+    
+    // First try RPC
+    const { data: rpcData, error: rpcError } = await sb.rpc('get_post_comments', { p_post_id: postId });
+    console.log('RPC response:', { rpcData, rpcError });
+    
+    if (!rpcError && rpcData) {
+      return rpcData;
+    }
+    
+    // Fallback: direct query
+    console.log('RPC failed, using direct query fallback');
+    const { data: directData, error: directError } = await sb
+      .from('comments')
+      .select(`
+        id,
+        content,
+        author_id,
+        players!comments_author_id_fkey(username),
+        parent_id,
+        created_at,
+        updated_at,
+        upvotes,
+        downvotes,
+        depth
+      `)
+      .eq('post_id', postId)
+      .is('is_deleted', false)
+      .order('depth', { ascending: true })
+      .order('created_at', { ascending: true });
+    
+    console.log('Direct query response:', { directData, directError });
+    
+    if (directError) {
       showToast('Error loading comments', 'error');
       return [];
     }
-    console.log('Comments loaded:', data);
-    return data || [];
+    
+    // Transform to expected format
+    return (directData || []).map(c => ({
+      ...c,
+      author_name: c.players?.username || 'Unknown',
+      user_vote: 0 // Direct query doesn't include user_vote
+    }));
+    
   } catch (err) {
-    console.error('Exception loading comments:', err);
+    console.error('Exception in loadComments:', err);
     return [];
   }
 }
 
-// CORRECTED: renderComments with proper recursive rendering
 function renderComments(comments, parentId = null) {
   if (!comments || comments.length === 0) return '';
   
@@ -627,9 +624,8 @@ function renderComments(comments, parentId = null) {
   }).join('');
 }
 
-// Voting
 async function vote(targetType, targetId, value) {
-  const { data, error } = await sb.rpc('handle_vote', {
+  const { error } = await sb.rpc('handle_vote', {
     p_player_id: currentPlayer.id,
     p_target_type: targetType,
     p_target_id: targetId,
@@ -637,13 +633,11 @@ async function vote(targetType, targetId, value) {
   });
   if (error) return showToast(error.message, 'error');
   
-  // Refresh view
   if (currentPost) await loadPostView(currentPost.id);
   else if (currentCommunity) await loadCommunityView();
   else await loadFeed();
 }
 
-// Create post
 async function createPost() {
   const title = document.getElementById('postTitle').value.trim();
   const content = document.getElementById('postContent').value.trim();
@@ -657,7 +651,6 @@ async function createPost() {
   loadCommunityView();
 }
 
-// Submit comment/reply
 async function submitComment(parentId) {
   const content = parentId 
     ? document.getElementById(`reply-content-${parentId}`).value.trim()
@@ -686,7 +679,6 @@ function hideReplyForm(commentId) {
   document.getElementById(`reply-form-${commentId}`).style.display = 'none';
 }
 
-// Edit/Delete functions (stubs – can be expanded)
 async function editPost(postId) {
   const newContent = prompt('Edit your post:', currentPost.content);
   if (newContent !== null) {
@@ -715,7 +707,6 @@ async function deleteComment(commentId) {
   }
 }
 
-// Community creation
 function showCreateCommunityModal() {
   document.getElementById('createCommunityModal').style.display = 'block';
 }
@@ -738,7 +729,6 @@ async function createCommunity() {
   loadCommunities();
 }
 
-// Helper functions
 async function checkMembership(communityId) {
   const { count } = await sb.from('community_members')
     .select('*', { count: 'exact', head: true })
@@ -768,7 +758,6 @@ async function getUserVote(targetType, targetId) {
 
 function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
-// Global functions for onclick
 window.selectCommunityById = selectCommunityById;
 window.vote = vote;
 window.createPost = createPost;
@@ -784,7 +773,6 @@ window.deletePost = deletePost;
 window.editComment = editComment;
 window.deleteComment = deleteComment;
 
-// Start
 init();
 </script>
 </body>
