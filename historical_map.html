@@ -26,7 +26,7 @@
         #map-container {
             flex: 1;
             position: relative;
-            background: #e8d5b5;  /* parchment tone when no tiles */
+            background: var(--bg-parchment);
         }
 
         #map {
@@ -237,12 +237,12 @@
 
         const BASE_YEAR = -4000;
         const TOTAL_STEPS = 80;
-        let currentTargetYear = BASE_YEAR;  // will be set from slider
-        let currentEraId = null;            // still needed for some functions, but we'll derive from year
+        let currentTargetYear = BASE_YEAR;
+        let currentEraId = null;
         let currentRegionId = null;
         let player = null;
 
-        // Map – no tile layer, just the background color from CSS
+        // ----- Map with the ORIGINAL tile layer -----
         const map = L.map('map', {
             center: [20, 0],
             zoom: 2,
@@ -252,9 +252,11 @@
             zoomControl: true
         });
 
-        // Empty tile layer – we just set the background color on the container
-        // We add a dummy layer to prevent errors
-        L.tileLayer('', { attribution: '' }).addTo(map);  // this does nothing
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+            subdomains: 'abcd',
+            maxZoom: 19
+        }).addTo(map);
 
         let geoJSONLayer = L.geoJSON(null, {
             style: feature => ({
@@ -286,11 +288,10 @@
             drawTicks();
         }
 
-        // ----- Ruler Ticks (clickable major, minor lines) -----
+        // ----- Ruler Ticks (clickable majors, minor ticks) -----
         function drawTicks() {
             const container = document.getElementById('ticks-container');
             container.innerHTML = '';
-            // Major ticks every 10 steps (1000 years), minor every step (100 years)
             for (let step = 0; step <= TOTAL_STEPS; step++) {
                 const isMajor = (step % 10 === 0);
                 const year = BASE_YEAR + step * 100;
@@ -303,7 +304,6 @@
                 }
                 container.appendChild(tickDiv);
             }
-            // Add click events to major labels
             document.querySelectorAll('.tick-label.major').forEach(span => {
                 span.addEventListener('click', (e) => {
                     const step = parseInt(e.target.getAttribute('data-step'));
@@ -322,7 +322,6 @@
         });
 
         async function loadYear(targetYear) {
-            // Update era label using historical_eras
             const { data: era } = await sb.from('historical_eras')
                 .select('*').lte('year_start', targetYear).gte('year_end', targetYear).single();
             if (era) {
@@ -337,13 +336,11 @@
         function formatYear(y) { return y < 0 ? `${Math.abs(y)} BCE` : `${y} CE`; }
 
         async function loadRegions(targetYear) {
-            const { data: regions, error } = await sb
+            const { data: regions } = await sb
                 .from('historical_regions')
                 .select('id, name, geojson, owner_type, owner_id, start_year, end_year')
                 .lte('start_year', targetYear)
                 .gte('end_year', targetYear);
-            if (error) { console.error(error); return; }
-
             if (!regions || regions.length === 0) {
                 geoJSONLayer.clearLayers();
                 return;
