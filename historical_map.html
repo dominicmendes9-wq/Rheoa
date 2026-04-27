@@ -206,7 +206,13 @@
                 .single();
             if (!playerData) { alert('Player not found'); return; }
             player = playerData;
-            await loadEraByStep(0);
+
+            // ✅ Step 1.3: Start at year 1000 CE (step 50)
+            const startStep = 50;
+            slider.value = startStep;
+            await loadEraByStep(startStep);
+            eraLabel.textContent = formatYear(BASE_YEAR + startStep * 100);
+
             setupRealtime();
         }
 
@@ -317,7 +323,6 @@
         });
 
         document.getElementById('btn-trade').addEventListener('click', async () => {
-            // Simplified: list a trade offer for this region's resources
             const resource = prompt('Resource type (food, wood, metal):');
             const quantity = parseInt(prompt('Quantity:'));
             const price = parseInt(prompt('Price per unit:'));
@@ -346,7 +351,6 @@
                     table: 'historical_regions',
                     filter: `era_id=eq.${currentEraId}`
                 }, payload => {
-                    // Refresh the current era map when any region changes
                     if (currentEraId) loadRegions(currentEraId);
                 })
                 .subscribe();
