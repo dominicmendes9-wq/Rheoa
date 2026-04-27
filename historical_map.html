@@ -178,6 +178,11 @@
         }
         hr { margin: 15px 0; border: 0; border-top: 1px solid #8d6e63; }
         .hidden { display: none; }
+
+        /* Stats display */
+        .region-stats-item {
+            margin: 5px 0;
+        }
     </style>
 </head>
 <body>
@@ -338,7 +343,7 @@
         async function loadRegions(targetYear) {
             const { data: regions } = await sb
                 .from('historical_regions')
-                .select('id, name, geojson, owner_type, owner_id, start_year, end_year')
+                .select('id, name, geojson, owner_type, owner_id, start_year, end_year, population, resources')
                 .lte('start_year', targetYear)
                 .gte('end_year', targetYear);
             if (!regions || regions.length === 0) {
@@ -360,7 +365,9 @@
                         owner_id: r.owner_id,
                         fillColor,
                         start_year: r.start_year,
-                        end_year: r.end_year
+                        end_year: r.end_year,
+                        population: r.population,
+                        resources: r.resources
                     }
                 };
             });
@@ -376,6 +383,18 @@
             const owner = props.owner_type === 'player' ? (props.owner_id === player.id ? 'You' : 'Another Player') :
                           props.owner_type === 'npc' ? 'NPC Civilization' : 'Unclaimed';
             document.getElementById('region-owner').textContent = `Controlled by: ${owner}`;
+
+            // --- Feature 1: Population & Resources ---
+            const pop = props.population ? props.population.toLocaleString() : '0';
+            const resources = props.resources || {};
+            const food = resources.food || 0;
+            const wood = resources.wood || 0;
+            const metal = resources.metal || 0;
+            document.getElementById('region-stats').innerHTML = `
+                <p class="region-stats-item">👥 Population: <strong>${pop}</strong></p>
+                <p class="region-stats-item">🌾 Food: ${food} &nbsp; 🪵 Wood: ${wood} &nbsp; ⛏️ Metal: ${metal}</p>
+            `;
+            // --- End Feature 1 ---
 
             const isMine = (props.owner_type === 'player' && props.owner_id === player.id);
             document.getElementById('btn-conquer').style.display = isMine ? 'none' : 'block';
