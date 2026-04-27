@@ -41,6 +41,8 @@
         @keyframes dash { to { stroke-dashoffset: -16; } }
         .ai-btn { background: #4CAF50; }
         .ai-btn:hover { background: #45a049; }
+        .modal { display: none; position: fixed; left:0; top:0; width:100%; height:100%; background: rgba(0,0,0,0.5); z-index: 3000; }
+        .modal-content { background: white; margin: 10% auto; padding: 20px; width: 400px; border-radius: 10px; max-height: 70vh; overflow-y: auto; }
     </style>
 </head>
 <body>
@@ -55,12 +57,21 @@
         </div>
     </div>
 
+    <div id="diplomacy-modal" class="modal">
+        <div class="modal-content">
+            <h2>📨 Diplomacy</h2>
+            <div id="diplomacy-content"></div>
+            <button onclick="document.getElementById('diplomacy-modal').style.display='none'" style="margin-top:10px;">Close</button>
+        </div>
+    </div>
+
     <div id="map-container">
         <div id="map"></div>
         <div id="sidebar">
             <button class="sidebar-close" onclick="document.getElementById('sidebar').style.display='none'">×</button>
             <h3 id="region-name">Region</h3>
             <p id="region-owner"></p>
+            <input type="hidden" id="diplomacy-target" value="">
             <div id="region-stats"></div>
             <div id="region-army"></div>
             <div id="region-buildings"></div>
@@ -77,6 +88,8 @@
             </div>
             <button class="action-btn" id="btn-tech" style="display:none;">🧪 Tech Tree</button>
             <div id="tech-tree" style="display:none; margin-top:10px;"></div>
+            <button class="action-btn" id="btn-diplomacy" style="display:none;">🤝 Diplomacy</button>
+            <div id="diplomacy-panel" style="display:none; margin-top:10px;"></div>
             <button class="action-btn" id="btn-events" style="display:none;">📜 Events</button>
             <p id="action-feedback" class="cooldown-text"></p>
 
@@ -99,6 +112,7 @@
             <input type="range" id="timeline-slider" min="0" max="80" value="0" step="1">
             <button id="btn-empire-stats">📊 My Empire</button>
             <button id="btn-npc-turn" class="ai-btn">⚙️ Run NPC Turn</button>
+            <button id="btn-open-diplomacy">📨 Diplomacy</button>
             <button onclick="window.location.href='dashboard.html'">← Dashboard</button>
         </div>
         <div id="ticks-container" class="ticks-container"></div>
@@ -118,23 +132,29 @@
         let currentRegionId = null;
         let player = null;
         let attackBaseRegionId = null;
+        let allies = [];
 
         const map = L.map('map', { center: [20, 0], zoom: 2, maxZoom: 8, minZoom: 2, worldCopyJump: true, zoomControl: true });
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; OpenStreetMap contributors &copy; CARTO', subdomains: 'abcd', maxZoom: 19 }).addTo(map);
 
         let geoJSONLayer = L.geoJSON(null, {
-            style: feature => ({ fillColor: feature.properties.fillColor || '#c8ad7f', weight: 2, opacity: 1, color: '#3e2723', fillOpacity: 0.6 }),
+            style: feature => {
+                const isAlly = allies.includes(feature.properties.owner_id) && feature.properties.owner_type === 'player';
+                return {
+                    fillColor: feature.properties.fillColor || '#c8ad7f',
+                    weight: isAlly ? 3 : 2,
+                    opacity: 1,
+                    color: isAlly ? '#2196F3' : '#3e2723',
+                    fillOpacity: 0.6
+                };
+            },
             onEachFeature: (feature, layer) => { layer.on('click', () => openSidebar(feature.properties)); }
         }).addTo(map);
 
         const tradeRouteLayer = L.layerGroup().addTo(map);
         const buildingMarkersLayer = L.layerGroup().addTo(map);
 
-        function getCentroid(geojson) {
-            const geo = L.geoJSON(geojson);
-            const bounds = geo.getBounds();
-            return bounds.getCenter();
-        }
+        function getCentroid(geojson) { const geo = L.geoJSON(geojson); return geo.getBounds().getCenter(); }
 
         async function init() {
             const { data: { user } } = await sb.auth.getUser();
@@ -146,9 +166,16 @@
             const startStep = 50;
             document.getElementById('timeline-slider').value = startStep;
             currentTargetYear = BASE_YEAR + startStep * 100;
+            await loadAllies();
             await loadYear(currentTargetYear);
             setupRealtime();
             drawTicks();
+        }
+
+        async function loadAllies() {
+            const { data } = await sb.from('alliances').select('player1_id, player2_id').or(`player1_id.eq.${player.id},player2_id.eq.${player.id}`);
+            if (!data) { allies = []; return; }
+            allies = data.map(a => a.player1_id === player.id ? a.player2_id : a.player1_id);
         }
 
         function drawTicks() {
@@ -192,7 +219,7 @@
             } else document.getElementById('era-label').textContent = formatYear(targetYear);
             await loadRegions(targetYear);
             await loadTradeRoutes();
-            await loadBuildings();   // Feature 8
+            await loadBuildings();
         }
 
         async function loadRegions(targetYear) {
@@ -228,33 +255,19 @@
         async function loadBuildings() {
             buildingMarkersLayer.clearLayers();
             if (!currentTargetYear) return;
-            // Fetch all buildings for regions active in this year
             const { data: buildings } = await sb
                 .from('era_buildings')
                 .select('*, region:region_id(*)')
                 .filter('region.start_year', 'lte', currentTargetYear)
                 .filter('region.end_year', 'gte', currentTargetYear);
             if (!buildings) return;
-
-            const buildingIcons = {
-                outpost: { emoji: '🛡️', color: '#2196F3' },
-                fortress: { emoji: '🏰', color: '#f44336' },
-                market: { emoji: '📦', color: '#4CAF50' }
-            };
-
+            const buildingIcons = { outpost: { emoji: '🛡️', color: '#2196F3' }, fortress: { emoji: '🏰', color: '#f44336' }, market: { emoji: '📦', color: '#4CAF50' } };
             for (const b of buildings) {
                 if (!b.region || !b.region.geojson) continue;
                 const centroid = getCentroid(b.region.geojson);
                 if (!centroid) continue;
                 const iconDef = buildingIcons[b.building_type] || { emoji: '🏗️', color: '#888' };
-                const icon = L.divIcon({
-                    className: 'building-icon',
-                    html: `<div style="background:${iconDef.color}; color:white; border-radius:50%; width:24px; height:24px; display:flex; align-items:center; justify-content:center; font-size:14px;">${iconDef.emoji}</div>`,
-                    iconSize: [24, 24],
-                    iconAnchor: [12, 12]
-                });
-                L.marker(centroid, { icon }).addTo(buildingMarkersLayer)
-                    .bindTooltip(`${b.building_type} (Lvl ${b.level})`, { permanent: false });
+                L.marker(centroid, { icon: L.divIcon({ className: 'building-icon', html: `<div style="background:${iconDef.color}; color:white; border-radius:50%; width:24px; height:24px; display:flex; align-items:center; justify-content:center; font-size:14px;">${iconDef.emoji}</div>`, iconSize: [24,24], iconAnchor: [12,12] }) }).addTo(buildingMarkersLayer).bindTooltip(`${b.building_type} (Lvl ${b.level})`, { permanent: false });
             }
         }
 
@@ -262,9 +275,9 @@
             currentRegionId = props.id;
             document.getElementById('sidebar').style.display = 'block';
             document.getElementById('region-name').textContent = props.name + ` (${formatYear(props.start_year)}–${formatYear(props.end_year)})`;
-            const owner = props.owner_type === 'player' ? (props.owner_id === player.id ? 'You' : 'Another Player') :
-                          props.owner_type === 'npc' ? 'NPC Civilization' : 'Unclaimed';
+            const owner = props.owner_type === 'player' ? (props.owner_id === player.id ? 'You' : 'Another Player') : props.owner_type === 'npc' ? 'NPC Civilization' : 'Unclaimed';
             document.getElementById('region-owner').textContent = `Controlled by: ${owner}`;
+            document.getElementById('diplomacy-target').value = props.owner_type === 'player' ? props.owner_id : '';
 
             const pop = props.population ? props.population.toLocaleString() : '0';
             const resources = props.resources || {};
@@ -273,6 +286,7 @@
             document.getElementById('region-army').innerHTML = `<p>⚔️ Army: <strong>${props.army || 0}</strong></p>`;
 
             const isMine = (props.owner_type === 'player' && props.owner_id === player.id);
+            const isOtherPlayer = props.owner_type === 'player' && props.owner_id !== player.id;
             document.getElementById('btn-recruit').style.display = isMine ? 'block' : 'none';
             document.getElementById('btn-move').style.display = isMine ? 'block' : 'none';
             document.getElementById('btn-set-base').style.display = isMine ? 'block' : 'none';
@@ -280,6 +294,8 @@
             document.getElementById('btn-trade').style.display = isMine ? 'block' : 'none';
             document.getElementById('btn-route').style.display = isMine ? 'block' : 'none';
             document.getElementById('btn-tech').style.display = isMine ? 'block' : 'none';
+            document.getElementById('btn-diplomacy').style.display = isOtherPlayer ? 'block' : 'none';
+            document.getElementById('diplomacy-panel').style.display = 'none';
 
             const canAttack = !isMine && attackBaseRegionId != null;
             document.getElementById('btn-conquer').style.display = canAttack ? 'block' : 'none';
@@ -289,26 +305,16 @@
             document.getElementById('route-management').style.display = 'none';
             document.getElementById('tech-tree').style.display = 'none';
 
-            // Load region buildings into sidebar
             loadRegionBuildings(props.id);
         }
 
         async function loadRegionBuildings(regionId) {
-            const { data: buildings } = await sb
-                .from('era_buildings')
-                .select('*')
-                .eq('region_id', regionId);
+            const { data: buildings } = await sb.from('era_buildings').select('*').eq('region_id', regionId);
             const div = document.getElementById('region-buildings');
-            if (!buildings || buildings.length === 0) {
-                div.innerHTML = '<p>No buildings constructed.</p>';
-            } else {
-                div.innerHTML = '<strong>🏗️ Buildings:</strong><br>' + buildings.map(b =>
-                    `<div class="building-item">${b.building_type} (Lvl ${b.level})</div>`
-                ).join('');
-            }
+            if (!buildings || buildings.length === 0) { div.innerHTML = '<p>No buildings constructed.</p>'; }
+            else { div.innerHTML = '<strong>🏗️ Buildings:</strong><br>' + buildings.map(b => `<div class="building-item">${b.building_type} (Lvl ${b.level})</div>`).join(''); }
         }
 
-        // ---- NPC AI Turn ----
         document.getElementById('btn-npc-turn').addEventListener('click', async () => {
             const btn = document.getElementById('btn-npc-turn');
             btn.disabled = true; btn.textContent = '⏳ Processing...';
@@ -319,7 +325,6 @@
             else alert(data.error);
         });
 
-        // ---- Tech Tree ----
         document.getElementById('btn-tech').addEventListener('click', async () => {
             const techDiv = document.getElementById('tech-tree');
             if (techDiv.style.display === 'block') { techDiv.style.display = 'none'; return; }
@@ -348,7 +353,6 @@
             loadYear(currentTargetYear);
         };
 
-        // ---- Army ----
         document.getElementById('btn-recruit').addEventListener('click', async () => {
             const qty = prompt('How many troops to recruit? (10 food + 5 gold each)');
             if (!qty) return;
@@ -376,7 +380,6 @@
             document.getElementById('action-feedback').textContent = `Base set to: ${document.getElementById('region-name').textContent}`;
         });
 
-        // ---- Conquer ----
         document.getElementById('btn-conquer').addEventListener('click', async () => {
             if (!attackBaseRegionId) { alert('Set an attack base first.'); return; }
             const overlay = document.getElementById('battle-overlay');
@@ -411,18 +414,16 @@
             setTimeout(() => { overlay.style.display = 'none'; loadYear(currentTargetYear); }, 3000);
         });
 
-        // ---- Build ----
         document.getElementById('btn-build').addEventListener('click', async () => {
             const building = prompt('What to build? (outpost/fortress/market)');
             if (!building) return;
             const { data, error } = await sb.rpc('build_structure', { p_region_id: currentRegionId, p_building_type: building });
             if (error) { showFeedback(error.message); return; }
             showFeedback(data.message || data.error);
-            loadYear(currentTargetYear);  // refresh buildings on map
+            loadYear(currentTargetYear);
             loadRegionBuildings(currentRegionId);
         });
 
-        // ---- Trade Offers ----
         document.getElementById('btn-trade').addEventListener('click', async () => {
             const resource = prompt('Resource (food/wood/metal):');
             if (!resource) return;
@@ -454,7 +455,6 @@
             else alert(data.error || 'Purchase failed');
         };
 
-        // ---- Trade Routes ----
         document.getElementById('btn-route').addEventListener('click', async () => {
             const mgmt = document.getElementById('route-management');
             if (mgmt.style.display === 'block') { mgmt.style.display = 'none'; return; }
@@ -490,7 +490,76 @@
             await loadTradeRoutes();
         });
 
-        // ---- Historical Events ----
+        // Diplomacy functions
+        document.getElementById('btn-diplomacy').addEventListener('click', async () => {
+            const panel = document.getElementById('diplomacy-panel');
+            if (panel.style.display === 'block') { panel.style.display = 'none'; return; }
+            const targetPlayerId = document.getElementById('diplomacy-target').value;
+            if (!targetPlayerId) return;
+            panel.style.display = 'block';
+            const { data: alliance } = await sb.from('alliances').select('*')
+                .or(`and(player1_id.eq.${player.id},player2_id.eq.${targetPlayerId}),and(player1_id.eq.${targetPlayerId},player2_id.eq.${player.id})`)
+                .maybeSingle();
+            const { data: pending } = await sb.from('alliance_requests').select('*')
+                .eq('from_player_id', player.id).eq('to_player_id', targetPlayerId).eq('status', 'pending').maybeSingle();
+            let html = '';
+            if (alliance) html = '<p>Allied.</p><button onclick="cancelAlliance(\'' + targetPlayerId + '\')">Cancel Alliance</button>';
+            else if (pending) html = '<p>Request pending.</p>';
+            else html = '<button onclick="sendAllianceRequest(\'' + targetPlayerId + '\')">Send Alliance Request</button>';
+            panel.innerHTML = html;
+        });
+
+        window.sendAllianceRequest = async (toId) => {
+            const { data, error } = await sb.rpc('send_alliance_request', { p_to_player_id: toId });
+            if (error) { showFeedback(error.message); return; }
+            showFeedback(data.message);
+            document.getElementById('diplomacy-panel').style.display = 'none';
+        };
+        window.cancelAlliance = async (allyId) => {
+            if (!confirm('Cancel alliance?')) return;
+            const { data, error } = await sb.rpc('cancel_alliance', { p_ally_player_id: allyId });
+            if (error) { showFeedback(error.message); return; }
+            showFeedback(data.message);
+            await loadAllies();
+            loadYear(currentTargetYear);
+        };
+
+        document.getElementById('btn-open-diplomacy').addEventListener('click', async () => {
+            const modal = document.getElementById('diplomacy-modal');
+            modal.style.display = 'block';
+            const content = document.getElementById('diplomacy-content');
+            content.innerHTML = '<p>Loading...</p>';
+            const { data: requests } = await sb.from('alliance_requests').select('*, from_player:players!from_player_id(username)').eq('to_player_id', player.id).eq('status', 'pending');
+            const { data: alliances } = await sb.from('alliances').select('*, player1:players!player1_id(username), player2:players!player2_id(username)').or(`player1_id.eq.${player.id},player2_id.eq.${player.id}`);
+
+            let html = '<h3>Incoming Requests</h3>';
+            if (!requests || requests.length === 0) html += '<p>No pending requests.</p>';
+            else requests.forEach(r => html += `<p>${r.from_player.username} wants to ally. <button onclick="acceptRequest('${r.id}')">Accept</button> <button onclick="rejectRequest('${r.id}')">Reject</button></p>`);
+
+            html += '<h3>My Alliances</h3>';
+            if (!alliances || alliances.length === 0) html += '<p>No alliances.</p>';
+            else alliances.forEach(a => {
+                const allyName = a.player1_id === player.id ? a.player2.username : a.player1.username;
+                html += `<p>${allyName} <button onclick="cancelAlliance('${a.player1_id === player.id ? a.player2_id : a.player1_id}')">Cancel</button></p>`;
+            });
+            content.innerHTML = html;
+        });
+
+        window.acceptRequest = async (reqId) => {
+            const { data, error } = await sb.rpc('accept_alliance_request', { p_request_id: reqId });
+            if (error) { alert(error.message); return; }
+            showFeedback(data.message);
+            document.getElementById('diplomacy-modal').style.display = 'none';
+            await loadAllies();
+            loadYear(currentTargetYear);
+        };
+        window.rejectRequest = async (reqId) => {
+            const { data, error } = await sb.rpc('reject_alliance_request', { p_request_id: reqId });
+            if (error) { alert(error.message); return; }
+            showFeedback(data.message);
+            document.getElementById('diplomacy-modal').style.display = 'none';
+        };
+
         document.getElementById('btn-events').addEventListener('click', async () => {
             const eventsDiv = document.getElementById('events-list');
             if (!eventsDiv.classList.contains('hidden')) { eventsDiv.classList.add('hidden'); return; }
