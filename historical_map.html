@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rheoa RPG – Historical Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        :root {
+            --bg-parchment: #f4e4c1;
+            --border-dark: #3e2723;
+            --accent: #8d6e63;
+            --action-bg: #efebe9;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Georgia', 'Times New Roman', serif;
+            background: var(--bg-parchment);
+            color: #3e2723;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #map-container {
+            flex: 1;
+            position: relative;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Timeline Slider */
+        #timeline-panel {
+            background: rgba(255,255,255,0.85);
+            border-top: 3px solid var(--border-dark);
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        #timeline-slider {
+            flex: 1;
+            -webkit-appearance: none;
+            height: 8px;
+            background: var(--border-dark);
+            border-radius: 4px;
+            outline: none;
+        }
+        #timeline-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 24px;
+            height: 24px;
+            background: #5d4037;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid #3e2723;
+        }
+
+        #era-label {
+            font-weight: bold;
+            font-size: 1.2rem;
+            min-width: 160px;
+            text-align: center;
+        }
+
+        button {
+            background: var(--border-dark);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            font-family: inherit;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background: #5d4037;
+        }
+
+        /* Sidebar */
+        #sidebar {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 320px;
+            max-height: calc(100% - 20px);
+            background: rgba(255,255,255,0.95);
+            border: 2px solid var(--border-dark);
+            border-radius: 8px;
+            padding: 15px;
+            overflow-y: auto;
+            display: none;
+            z-index: 1000;
+        }
+
+        #sidebar h3 {
+            margin-top: 0;
+        }
+
+        .action-btn {
+            display: block;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .region-owner {
+            font-size: 0.9rem;
+            margin: 10px 0;
+        }
+
+        .cooldown-text {
+            font-size: 0.8rem;
+            color: #b71c1c;
+        }
+
+        .event-marker {
+            background: #d4a017;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            margin-left: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="map-container">
+        <div id="map"></div>
+        <div id="sidebar">
+            <h3 id="region-name">Region</h3>
+            <p id="region-owner"></p>
+            <div id="region-stats"></div>
+            <button class="action-btn" id="btn-conquer" style="display:none;">⚔️ Conquer</button>
+            <button class="action-btn" id="btn-build" style="display:none;">🏗️ Build</button>
+            <button class="action-btn" id="btn-trade" style="display:none;">💰 Trade</button>
+            <button class="action-btn" id="btn-events" style="display:none;">📜 Events</button>
+            <p id="action-feedback" class="cooldown-text"></p>
+        </div>
+    </div>
+
+    <div id="timeline-panel">
+        <span id="era-label">4000 BCE</span>
+        <input type="range" id="timeline-slider" min="0" max="80" value="0" step="1">
+        <button id="btn-empire-stats">📊 My Empire</button>
+        <button onclick="window.location.href='dashboard.html'">← Dashboard</button>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+    <script>
+        const SUPABASE_URL = 'https://mtiwodvsrwvrujbhmmrn.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp';
+        const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // ----- Configuration -----
+        const BASE_YEAR = -4000;   // BCE are negative, e.g., 0 = 4000 BCE
+        const TOTAL_STEPS = 80;    // 4000 BCE to 4000 CE in 100-year steps = 80 steps
+        let currentEraId = null;
+        let currentRegionId = null;
+        let player = null;
+        let playerEmpire = {};
+
+        // Leaflet map and layers
+        const map = L.map('map', {
+            center: [20, 0],
+            zoom: 2,
+            maxZoom: 8,
+            minZoom: 2,
+            worldCopyJump: true
+        });
+
+        // Neutral basemap – using a parchment-like tile layer
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+            subdomains: 'abcd',
+            maxZoom: 19
+        }).addTo(map);
+
+        let geoJSONLayer = L.geoJSON(null, {
+            style: feature => ({
+                fillColor: feature.properties.fillColor || '#c8ad7f',
+                weight: 2,
+                opacity: 1,
+                color: '#3e2723',
+                fillOpacity: 0.6
+            }),
+            onEachFeature: (feature, layer) => {
+                layer.on('click', () => openSidebar(feature.properties));
+            }
+        }).addTo(map);
+
+        // ----- Supabase Auth & Player -----
+        async function init() {
+            const { data: { user } } = await sb.auth.getUser();
+            if (!user) { window.location.href = 'index.html'; return; }
+            const { data: playerData } = await sb.from('players')
+                .select('id, username, cash, energy')
+                .eq('auth_id', user.id)
+                .single();
+            if (!playerData) { alert('Player not found'); return; }
+            player = playerData;
+            await loadEraByStep(0);
+            setupRealtime();
+        }
+
+        // ----- Timeline -----
+        const slider = document.getElementById('timeline-slider');
+        const eraLabel = document.getElementById('era-label');
+
+        slider.addEventListener('input', async () => {
+            const step = parseInt(slider.value);
+            const year = BASE_YEAR + step * 100;
+            eraLabel.textContent = formatYear(year);
+            await loadEraByStep(step);
+        });
+
+        function formatYear(y) {
+            return y < 0 ? `${Math.abs(y)} BCE` : `${y} CE`;
+        }
+
+        async function loadEraByStep(step) {
+            const targetYear = BASE_YEAR + step * 100;
+            // Find era that contains this year
+            const { data: era, error } = await sb
+                .from('historical_eras')
+                .select('*')
+                .lte('year_start', targetYear)
+                .gte('year_end', targetYear)
+                .single();
+            if (error || !era) {
+                console.error('Era not found for year', targetYear);
+                return;
+            }
+            currentEraId = era.id;
+            document.getElementById('era-label').textContent = `${era.name} (${formatYear(era.year_start)}–${formatYear(era.year_end)})`;
+            await loadRegions(era.id);
+        }
+
+        async function loadRegions(eraId) {
+            const { data: regions, error } = await sb
+                .from('historical_regions')
+                .select('id, name, geojson, owner_type, owner_id')
+                .eq('era_id', eraId);
+            if (error) { console.error(error); return; }
+
+            const features = regions.map(r => {
+                const geo = typeof r.geojson === 'string' ? JSON.parse(r.geojson) : r.geojson;
+                let fillColor = '#c8ad7f'; // unclaimed
+                if (r.owner_type === 'npc') fillColor = '#8d6e63';
+                else if (r.owner_type === 'player') fillColor = '#4caf50';
+                return {
+                    ...geo,
+                    properties: {
+                        id: r.id,
+                        name: r.name,
+                        owner_type: r.owner_type,
+                        owner_id: r.owner_id,
+                        fillColor
+                    }
+                };
+            });
+
+            geoJSONLayer.clearLayers();
+            geoJSONLayer.addData({ type: 'FeatureCollection', features });
+            document.getElementById('sidebar').style.display = 'none';
+        }
+
+        // ----- Sidebar -----
+        function openSidebar(props) {
+            currentRegionId = props.id;
+            document.getElementById('sidebar').style.display = 'block';
+            document.getElementById('region-name').textContent = props.name;
+            const owner = props.owner_type === 'player' ? (props.owner_id === player.id ? 'You' : 'Another Player') :
+                          props.owner_type === 'npc' ? 'NPC Civilization' : 'Unclaimed';
+            document.getElementById('region-owner').textContent = `Controlled by: ${owner}`;
+
+            // Show actions based on ownership
+            document.getElementById('btn-conquer').style.display = (props.owner_type !== 'player' || props.owner_id !== player.id) ? 'block' : 'none';
+            document.getElementById('btn-build').style.display = (props.owner_type === 'player' && props.owner_id === player.id) ? 'block' : 'none';
+            document.getElementById('btn-trade').style.display = (props.owner_type === 'player' && props.owner_id === player.id) ? 'block' : 'none';
+            document.getElementById('btn-events').style.display = 'block'; // Always visible
+            document.getElementById('action-feedback').textContent = '';
+        }
+
+        // ----- Actions -----
+        document.getElementById('btn-conquer').addEventListener('click', async () => {
+            if (!currentRegionId || !currentEraId) return;
+            const { data, error } = await sb.rpc('conquer_region', {
+                p_region_id: currentRegionId,
+                p_era_id: currentEraId
+            });
+            if (error) { showFeedback(error.message); return; }
+            if (data.success) {
+                showFeedback('Conquest successful!');
+                loadRegions(currentEraId);
+            } else {
+                showFeedback(data.error || 'Conquest failed.');
+            }
+        });
+
+        document.getElementById('btn-build').addEventListener('click', async () => {
+            const building = prompt('What to build? (outpost/fortress/market)');
+            if (!building) return;
+            const { data, error } = await sb.rpc('build_structure', {
+                p_region_id: currentRegionId,
+                p_building_type: building
+            });
+            if (error) { showFeedback(error.message); return; }
+            showFeedback(data.message || data.error);
+        });
+
+        document.getElementById('btn-trade').addEventListener('click', async () => {
+            // Simplified: list a trade offer for this region's resources
+            const resource = prompt('Resource type (food, wood, metal):');
+            const quantity = parseInt(prompt('Quantity:'));
+            const price = parseInt(prompt('Price per unit:'));
+            if (!resource || !quantity || !price) return;
+            const { data, error } = await sb.rpc('create_trade_offer', {
+                p_region_id: currentRegionId,
+                p_resource: resource,
+                p_quantity: quantity,
+                p_price: price
+            });
+            if (error) { showFeedback(error.message); return; }
+            showFeedback('Trade offer listed!');
+        });
+
+        function showFeedback(msg) {
+            document.getElementById('action-feedback').textContent = msg;
+            setTimeout(() => document.getElementById('action-feedback').textContent = '', 4000);
+        }
+
+        // ----- Real-time subscriptions -----
+        function setupRealtime() {
+            sb.channel('historical-regions')
+                .on('postgres_changes', {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'historical_regions',
+                    filter: `era_id=eq.${currentEraId}`
+                }, payload => {
+                    // Refresh the current era map when any region changes
+                    if (currentEraId) loadRegions(currentEraId);
+                })
+                .subscribe();
+        }
+
+        // ----- Empire Stats (placeholder) -----
+        document.getElementById('btn-empire-stats').addEventListener('click', async () => {
+            const { data, error } = await sb.rpc('get_empire_stats', { p_player_id: player.id });
+            if (error) { alert(error.message); return; }
+            let msg = `Total Regions: ${data.total_regions}\nArmy: ${data.army}\nGold: ${data.gold}`;
+            alert(msg);
+        });
+
+        init();
+    </script>
+</body>
+</html>
