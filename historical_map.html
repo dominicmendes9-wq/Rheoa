@@ -85,7 +85,7 @@
             position: absolute;
             top: 10px;
             right: 10px;
-            width: 320px;
+            width: 340px;
             max-height: calc(100% - 20px);
             background: rgba(255,255,255,0.95);
             border: 2px solid var(--border-dark);
@@ -96,7 +96,7 @@
             z-index: 1000;
         }
 
-        #sidebar h3 { margin-top: 0; }
+        #sidebar h3 { margin-top: 0; margin-bottom: 5px; }
         .action-btn { display: block; width: 100%; margin-top: 10px; }
         .region-owner { font-size: 0.9rem; margin: 10px 0; }
         .cooldown-text { font-size: 0.8rem; color: #b71c1c; }
@@ -114,11 +114,13 @@
         }
         .dice-box { display: flex; justify-content: center; gap: 50px; font-size: 3rem; margin: 20px 0; }
 
-        /* Market styles */
-        .market-offer {
+        /* Market / Events list */
+        .market-offer, .event-item {
             border: 1px solid #ccc; margin: 5px 0; padding: 5px; font-size: 0.9rem;
         }
         hr { margin: 15px 0; border: 0; border-top: 1px solid #8d6e63; }
+
+        .hidden { display: none; }
     </style>
 </head>
 <body>
@@ -143,7 +145,11 @@
             <button class="action-btn" id="btn-conquer" style="display:none;">⚔️ Conquer</button>
             <button class="action-btn" id="btn-build" style="display:none;">🏗️ Build</button>
             <button class="action-btn" id="btn-trade" style="display:none;">💰 Trade</button>
+
+            <!-- Events Section -->
             <button class="action-btn" id="btn-events" style="display:none;">📜 Events</button>
+            <div id="events-list" class="hidden"></div>
+
             <p id="action-feedback" class="cooldown-text"></p>
 
             <!-- Market Section -->
@@ -202,13 +208,13 @@
             if (!playerData) { alert('Player not found'); return; }
             player = playerData;
 
-            const startStep = 50;
+            const startStep = 50;  // year 1000 CE
             document.getElementById('timeline-slider').value = startStep;
             await loadEraByStep(startStep);
             setupRealtime();
         }
 
-        // ----- Timeline -----
+        // ----- Timeline & Map -----
         document.getElementById('timeline-slider').addEventListener('input', async (e) => {
             const step = parseInt(e.target.value);
             await loadEraByStep(step);
@@ -255,10 +261,12 @@
             document.getElementById('btn-conquer').style.display = isMine ? 'none' : 'block';
             document.getElementById('btn-build').style.display = isMine ? 'block' : 'none';
             document.getElementById('btn-trade').style.display = isMine ? 'block' : 'none';
-            document.getElementById('btn-events').style.display = 'block';
+            document.getElementById('btn-events').style.display = 'block';   // always visible
+
             document.getElementById('action-feedback').textContent = '';
             document.getElementById('market-view').style.display = 'none';
             document.getElementById('market-actions').style.display = 'block';
+            document.getElementById('events-list').classList.add('hidden');
         }
 
         // ----- Dice Battle -----
@@ -294,11 +302,10 @@
             const building = prompt('What to build? (outpost/fortress/market)');
             if (!building) return;
             const { data, error } = await sb.rpc('build_structure', { p_region_id: currentRegionId, p_building_type: building });
-            if (error) { showFeedback(error.message); return; }
-            showFeedback(data.message || data.error);
+            showFeedback(error ? error.message : data.message || data.error);
         });
 
-        // ----- Trade: Create Offer -----
+        // ----- Trade -----
         document.getElementById('btn-trade').addEventListener('click', async () => {
             const resource = prompt('Resource type (food, wood, metal):');
             if (!resource) return;
@@ -313,7 +320,6 @@
             });
             if (error) { showFeedback(error.message); return; }
             showFeedback('Trade offer listed!');
-            // If market is visible, refresh it
             if (document.getElementById('market-view').style.display === 'block') loadMarket();
         });
 
@@ -323,14 +329,11 @@
             document.getElementById('market-actions').style.display = 'none';
             await loadMarket();
         });
-
         document.getElementById('btn-close-market').addEventListener('click', () => {
             document.getElementById('market-view').style.display = 'none';
             document.getElementById('market-actions').style.display = 'block';
         });
-
         document.getElementById('btn-create-offer').addEventListener('click', () => {
-            // Reuse the same create-offer prompt (like trade button)
             document.getElementById('btn-trade').click();
         });
 
@@ -365,6 +368,33 @@
             }
         };
 
+        // ----- Historical Events -----
+        document.getElementById('btn-events').addEventListener('click', async () => {
+            const eventsDiv = document.getElementById('events-list');
+            // Toggle visibility
+            if (!eventsDiv.classList.contains('hidden')) {
+                eventsDiv.classList.add('hidden');
+                return;
+            }
+            // Fetch events for current era
+            const { data: events } = await sb.from('historical_events')
+                .select('*')
+                .eq('era_id', currentEraId)
+                .order('created_at', { ascending: false });
+            if (!events || events.length === 0) {
+                eventsDiv.innerHTML = '<p>No events recorded for this era.</p>';
+            } else {
+                eventsDiv.innerHTML = events.map(e => `
+                    <div class="event-item">
+                        <strong>${e.title}</strong> (${e.description})<br>
+                        Effect: ${JSON.stringify(e.effect)}
+                    </div>
+                `).join('');
+            }
+            eventsDiv.classList.remove('hidden');
+        });
+
+        // ----- Helpers -----
         function showFeedback(msg) {
             document.getElementById('action-feedback').textContent = msg;
             setTimeout(() => document.getElementById('action-feedback').textContent = '', 4000);
