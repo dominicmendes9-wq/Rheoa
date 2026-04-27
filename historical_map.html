@@ -39,6 +39,8 @@
         .hidden { display: none; }
         .trade-route-line { stroke-dasharray: 10 6; animation: dash 1s linear infinite; }
         @keyframes dash { to { stroke-dashoffset: -16; } }
+        .ai-btn { background: #4CAF50; }
+        .ai-btn:hover { background: #45a049; }
     </style>
 </head>
 <body>
@@ -95,6 +97,7 @@
             <span id="era-label">4000 BCE</span>
             <input type="range" id="timeline-slider" min="0" max="80" value="0" step="1">
             <button id="btn-empire-stats">📊 My Empire</button>
+            <button id="btn-npc-turn" class="ai-btn">⚙️ Run NPC Turn</button>
             <button onclick="window.location.href='dashboard.html'">← Dashboard</button>
         </div>
         <div id="ticks-container" class="ticks-container"></div>
@@ -246,6 +249,26 @@
             document.getElementById('tech-tree').style.display = 'none';
         }
 
+        // ---- NPC AI Turn Button ----
+        document.getElementById('btn-npc-turn').addEventListener('click', async () => {
+            const btn = document.getElementById('btn-npc-turn');
+            btn.disabled = true;
+            btn.textContent = '⏳ Processing...';
+            const { data, error } = await sb.rpc('npc_ai_tick', { p_target_year: currentTargetYear });
+            btn.disabled = false;
+            btn.textContent = '⚙️ Run NPC Turn';
+            if (error) {
+                alert('AI Error: ' + error.message);
+                return;
+            }
+            if (data.success) {
+                showFeedback(data.message);
+                loadYear(currentTargetYear); // refresh map
+            } else {
+                alert(data.error);
+            }
+        });
+
         // ---- Tech Tree ----
         document.getElementById('btn-tech').addEventListener('click', async () => {
             const techDiv = document.getElementById('tech-tree');
@@ -286,7 +309,7 @@
             loadYear(currentTargetYear);
         };
 
-        // ---- Army ----
+        // ---- Army actions (same) ----
         document.getElementById('btn-recruit').addEventListener('click', async () => {
             const qty = prompt('How many troops to recruit? (10 food + 5 gold each)');
             if (!qty) return;
