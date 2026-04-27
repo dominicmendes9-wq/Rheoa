@@ -11,9 +11,7 @@
             --border-dark: #3e2723;
             --accent: #8d6e63;
         }
-
         * { box-sizing: border-box; margin: 0; padding: 0; }
-
         body {
             font-family: 'Georgia', 'Times New Roman', serif;
             background: var(--bg-parchment);
@@ -22,19 +20,12 @@
             display: flex;
             flex-direction: column;
         }
-
         #map-container {
             flex: 1;
             position: relative;
             background: var(--bg-parchment);
         }
-
-        #map {
-            width: 100%;
-            height: 100%;
-        }
-
-        /* Timeline Panel */
+        #map { width: 100%; height: 100%; }
         #timeline-panel {
             background: rgba(255,255,255,0.85);
             border-top: 3px solid var(--border-dark);
@@ -44,14 +35,12 @@
             gap: 0;
             position: relative;
         }
-
         .timeline-controls {
             display: flex;
             align-items: center;
             gap: 15px;
             flex-wrap: wrap;
         }
-
         #timeline-slider {
             flex: 1;
             -webkit-appearance: none;
@@ -69,15 +58,12 @@
             cursor: pointer;
             border: 2px solid #3e2723;
         }
-
         #era-label {
             font-weight: bold;
             font-size: 1.2rem;
             min-width: 160px;
             text-align: center;
         }
-
-        /* Ruler ticks */
         .ticks-container {
             display: flex;
             justify-content: space-between;
@@ -111,10 +97,7 @@
             font-weight: bold;
             font-size: 0.75rem;
         }
-        .tick-label:hover {
-            text-decoration: underline;
-        }
-
+        .tick-label:hover { text-decoration: underline; }
         button {
             background: var(--border-dark);
             color: white;
@@ -126,7 +109,6 @@
             transition: background 0.2s;
         }
         button:hover { background: #5d4037; }
-
         #sidebar {
             position: absolute;
             top: 10px;
@@ -155,12 +137,10 @@
             line-height: 1;
         }
         .sidebar-close:hover { color: #a00; }
-
         #sidebar h3 { margin-top: 0; margin-bottom: 5px; padding-right: 20px; }
         .action-btn { display: block; width: 100%; margin-top: 10px; }
         .region-owner { font-size: 0.9rem; margin: 10px 0; }
         .cooldown-text { font-size: 0.8rem; color: #b71c1c; }
-
         #battle-overlay {
             display: none;
             position: fixed; top:0; left:0; width:100%; height:100%;
@@ -172,17 +152,11 @@
             background: white; padding: 30px; border-radius: 15px; text-align: center;
         }
         .dice-box { display: flex; justify-content: center; gap: 50px; font-size: 3rem; margin: 20px 0; }
-
         .market-offer, .event-item {
             border: 1px solid #ccc; margin: 5px 0; padding: 5px; font-size: 0.9rem;
         }
         hr { margin: 15px 0; border: 0; border-top: 1px solid #8d6e63; }
         .hidden { display: none; }
-
-        /* Stats display */
-        .region-stats-item {
-            margin: 5px 0;
-        }
     </style>
 </head>
 <body>
@@ -204,6 +178,10 @@
             <h3 id="region-name">Region</h3>
             <p id="region-owner"></p>
             <div id="region-stats"></div>
+            <div id="region-army"></div>
+            <button class="action-btn" id="btn-recruit" style="display:none;">🛡️ Recruit Army</button>
+            <button class="action-btn" id="btn-move" style="display:none;">🚚 Move Army</button>
+            <button class="action-btn" id="btn-set-base" style="display:none;">🎯 Set as Attack Base</button>
             <button class="action-btn" id="btn-conquer" style="display:none;">⚔️ Conquer</button>
             <button class="action-btn" id="btn-build" style="display:none;">🏗️ Build</button>
             <button class="action-btn" id="btn-trade" style="display:none;">💰 Trade</button>
@@ -246,37 +224,26 @@
         let currentEraId = null;
         let currentRegionId = null;
         let player = null;
+        let attackBaseRegionId = null;   // Feature 2
 
-        // ----- Map with the ORIGINAL tile layer -----
         const map = L.map('map', {
-            center: [20, 0],
-            zoom: 2,
-            maxZoom: 8,
-            minZoom: 2,
-            worldCopyJump: true,
-            zoomControl: true
+            center: [20, 0], zoom: 2, maxZoom: 8, minZoom: 2, worldCopyJump: true, zoomControl: true
         });
-
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
             attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-            subdomains: 'abcd',
-            maxZoom: 19
+            subdomains: 'abcd', maxZoom: 19
         }).addTo(map);
 
         let geoJSONLayer = L.geoJSON(null, {
             style: feature => ({
                 fillColor: feature.properties.fillColor || '#c8ad7f',
-                weight: 2,
-                opacity: 1,
-                color: '#3e2723',
-                fillOpacity: 0.6
+                weight: 2, opacity: 1, color: '#3e2723', fillOpacity: 0.6
             }),
             onEachFeature: (feature, layer) => {
                 layer.on('click', () => openSidebar(feature.properties));
             }
         }).addTo(map);
 
-        // ----- Auth & Init -----
         async function init() {
             const { data: { user } } = await sb.auth.getUser();
             if (!user) { window.location.href = 'index.html'; return; }
@@ -285,7 +252,7 @@
             if (!playerData) { alert('Player not found'); return; }
             player = playerData;
 
-            const startStep = 50;  // year 1000 CE
+            const startStep = 50;
             document.getElementById('timeline-slider').value = startStep;
             currentTargetYear = BASE_YEAR + startStep * 100;
             await loadYear(currentTargetYear);
@@ -293,7 +260,6 @@
             drawTicks();
         }
 
-        // ----- Ruler Ticks (clickable majors, minor ticks) -----
         function drawTicks() {
             const container = document.getElementById('ticks-container');
             container.innerHTML = '';
@@ -319,7 +285,6 @@
             });
         }
 
-        // ----- Timeline listener -----
         document.getElementById('timeline-slider').addEventListener('input', async (e) => {
             const step = parseInt(e.target.value);
             currentTargetYear = BASE_YEAR + step * 100;
@@ -343,14 +308,13 @@
         async function loadRegions(targetYear) {
             const { data: regions } = await sb
                 .from('historical_regions')
-                .select('id, name, geojson, owner_type, owner_id, start_year, end_year, population, resources')
+                .select('id, name, geojson, owner_type, owner_id, start_year, end_year, population, resources, army')
                 .lte('start_year', targetYear)
                 .gte('end_year', targetYear);
             if (!regions || regions.length === 0) {
                 geoJSONLayer.clearLayers();
                 return;
             }
-
             const features = regions.map(r => {
                 const geo = typeof r.geojson === 'string' ? JSON.parse(r.geojson) : r.geojson;
                 let fillColor = '#c8ad7f';
@@ -367,7 +331,8 @@
                         start_year: r.start_year,
                         end_year: r.end_year,
                         population: r.population,
-                        resources: r.resources
+                        resources: r.resources,
+                        army: r.army
                     }
                 };
             });
@@ -375,7 +340,6 @@
             geoJSONLayer.addData({ type: 'FeatureCollection', features });
         }
 
-        // ----- Sidebar -----
         function openSidebar(props) {
             currentRegionId = props.id;
             document.getElementById('sidebar').style.display = 'block';
@@ -384,34 +348,89 @@
                           props.owner_type === 'npc' ? 'NPC Civilization' : 'Unclaimed';
             document.getElementById('region-owner').textContent = `Controlled by: ${owner}`;
 
-            // --- Feature 1: Population & Resources ---
             const pop = props.population ? props.population.toLocaleString() : '0';
             const resources = props.resources || {};
             const food = resources.food || 0;
             const wood = resources.wood || 0;
             const metal = resources.metal || 0;
             document.getElementById('region-stats').innerHTML = `
-                <p class="region-stats-item">👥 Population: <strong>${pop}</strong></p>
-                <p class="region-stats-item">🌾 Food: ${food} &nbsp; 🪵 Wood: ${wood} &nbsp; ⛏️ Metal: ${metal}</p>
+                <p>👥 Population: <strong>${pop}</strong></p>
+                <p>🌾 Food: ${food} &nbsp; 🪵 Wood: ${wood} &nbsp; ⛏️ Metal: ${metal}</p>
             `;
-            // --- End Feature 1 ---
+            const army = props.army || 0;
+            document.getElementById('region-army').innerHTML = `<p>⚔️ Army: <strong>${army}</strong></p>`;
 
             const isMine = (props.owner_type === 'player' && props.owner_id === player.id);
-            document.getElementById('btn-conquer').style.display = isMine ? 'none' : 'block';
+            document.getElementById('btn-recruit').style.display = isMine ? 'block' : 'none';
+            document.getElementById('btn-move').style.display = isMine ? 'block' : 'none';
+            document.getElementById('btn-set-base').style.display = isMine ? 'block' : 'none';
             document.getElementById('btn-build').style.display = isMine ? 'block' : 'none';
             document.getElementById('btn-trade').style.display = isMine ? 'block' : 'none';
-            document.getElementById('btn-events').style.display = 'block';
 
+            const canAttack = !isMine && attackBaseRegionId != null;
+            document.getElementById('btn-conquer').style.display = canAttack ? 'block' : 'none';
+            document.getElementById('btn-events').style.display = 'block';
             document.getElementById('action-feedback').textContent = '';
             document.getElementById('market-view').style.display = 'none';
             document.getElementById('market-actions').style.display = 'block';
-            document.getElementById('events-list').classList.add('hidden');
         }
 
-        // ----- Dice Battle -----
-        const diceFaces = ['⚀','⚁','⚂','⚃','⚄','⚅'];
+        // --- Recruit ---
+        document.getElementById('btn-recruit').addEventListener('click', async () => {
+            const qty = prompt('How many troops to recruit? (10 food + 5 gold each)');
+            if (!qty) return;
+            const { data, error } = await sb.rpc('recruit_army', {
+                p_region_id: currentRegionId,
+                p_quantity: parseInt(qty)
+            });
+            if (error) { showFeedback(error.message); return; }
+            showFeedback(data.message || data.error);
+            loadYear(currentTargetYear);
+        });
+
+        // --- Move ---
+        document.getElementById('btn-move').addEventListener('click', async () => {
+            const targetYear = currentTargetYear;
+            const { data: owned } = await sb
+                .from('historical_regions')
+                .select('id, name, army')
+                .eq('owner_type', 'player')
+                .eq('owner_id', player.id)
+                .lte('start_year', targetYear)
+                .gte('end_year', targetYear)
+                .neq('id', currentRegionId);
+            if (!owned || owned.length === 0) {
+                alert('You have no other owned regions to move troops to.');
+                return;
+            }
+            let list = owned.map(r => `${r.name} (ID:${r.id.slice(0,4)}) - Army: ${r.army}`).join('\n');
+            const destId = prompt(`Choose destination region:\n${list}\n\nEnter the region ID:`);
+            if (!destId) return;
+            const qty = prompt('How many troops to move?');
+            if (!qty) return;
+            const { data, error } = await sb.rpc('move_army', {
+                p_from_region_id: currentRegionId,
+                p_to_region_id: destId,
+                p_quantity: parseInt(qty)
+            });
+            if (error) { showFeedback(error.message); return; }
+            showFeedback(data.message || data.error);
+            loadYear(currentTargetYear);
+        });
+
+        // --- Set Attack Base ---
+        document.getElementById('btn-set-base').addEventListener('click', () => {
+            attackBaseRegionId = currentRegionId;
+            document.getElementById('action-feedback').textContent = `Attack base set to: ${document.getElementById('region-name').textContent}`;
+            // Refresh sidebar for any enemy region that might be open? Not necessary.
+        });
+
+        // --- Conquer (Attack) ---
         document.getElementById('btn-conquer').addEventListener('click', async () => {
-            if (!currentRegionId) return;
+            if (!attackBaseRegionId) {
+                alert('Please first select one of your regions as an attack base.');
+                return;
+            }
             const overlay = document.getElementById('battle-overlay');
             const attDice = document.getElementById('attacker-dice');
             const defDice = document.getElementById('defender-dice');
@@ -419,12 +438,13 @@
             overlay.style.display = 'block';
             msg.textContent = 'Rolling...';
             let rollInterval = setInterval(() => {
-                attDice.textContent = diceFaces[Math.floor(Math.random()*6)];
-                defDice.textContent = diceFaces[Math.floor(Math.random()*6)];
+                attDice.textContent = ['⚀','⚁','⚂','⚃','⚄','⚅'][Math.floor(Math.random()*6)];
+                defDice.textContent = ['⚀','⚁','⚂','⚃','⚄','⚅'][Math.floor(Math.random()*6)];
             }, 100);
 
-            const { data, error } = await sb.rpc('conquer_region', {
-                p_region_id: currentRegionId,
+            const { data, error } = await sb.rpc('attack_region', {
+                p_target_region_id: currentRegionId,
+                p_source_region_id: attackBaseRegionId,
                 p_target_year: currentTargetYear
             });
             clearInterval(rollInterval);
@@ -440,6 +460,7 @@
             setTimeout(() => { overlay.style.display = 'none'; loadYear(currentTargetYear); }, 2000);
         });
 
+        // --- Build ---
         document.getElementById('btn-build').addEventListener('click', async () => {
             const building = prompt('What to build? (outpost/fortress/market)');
             if (!building) return;
@@ -450,7 +471,7 @@
             showFeedback(error ? error.message : data.message || data.error);
         });
 
-        // ----- Trade -----
+        // --- Trade (same as before) ---
         document.getElementById('btn-trade').addEventListener('click', async () => {
             const resource = prompt('Resource type (food, wood, metal):');
             if (!resource) return;
@@ -468,7 +489,7 @@
             if (document.getElementById('market-view').style.display === 'block') loadMarket();
         });
 
-        // ----- Market Panel -----
+        // Market panel (identical to Feature 1)
         document.getElementById('btn-show-market').addEventListener('click', async () => {
             document.getElementById('market-view').style.display = 'block';
             document.getElementById('market-actions').style.display = 'none';
@@ -513,7 +534,7 @@
             }
         };
 
-        // ----- Historical Events -----
+        // Events button
         document.getElementById('btn-events').addEventListener('click', async () => {
             const eventsDiv = document.getElementById('events-list');
             if (!eventsDiv.classList.contains('hidden')) {
@@ -543,7 +564,6 @@
             setTimeout(() => document.getElementById('action-feedback').textContent = '', 4000);
         }
 
-        // ----- Realtime -----
         function setupRealtime() {
             sb.channel('historical-regions')
                 .on('postgres_changes', {
