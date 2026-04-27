@@ -164,7 +164,6 @@
         hr { margin: 15px 0; border: 0; border-top: 1px solid #8d6e63; }
         .hidden { display: none; }
 
-        /* Trade route line animation */
         .trade-route-line {
             stroke-dasharray: 10 6;
             animation: dash 1s linear infinite;
@@ -266,7 +265,6 @@
 
         const tradeRouteLayer = L.layerGroup().addTo(map);
 
-        // Helper: compute centroid of a GeoJSON geometry
         function getCentroid(geojson) {
             const geo = L.geoJSON(geojson);
             const bounds = geo.getBounds();
@@ -281,7 +279,7 @@
             if (!playerData) { alert('Player not found'); return; }
             player = playerData;
 
-            const startStep = 50;  // year 1000 CE
+            const startStep = 50;
             document.getElementById('timeline-slider').value = startStep;
             currentTargetYear = BASE_YEAR + startStep * 100;
             await loadYear(currentTargetYear);
@@ -482,6 +480,7 @@
             document.getElementById('action-feedback').textContent = `Attack base set to: ${document.getElementById('region-name').textContent}`;
         });
 
+        // ---- Conquer with Historical Event Trigger ----
         document.getElementById('btn-conquer').addEventListener('click', async () => {
             if (!attackBaseRegionId) { alert('Select an attack base first.'); return; }
             const overlay = document.getElementById('battle-overlay');
@@ -494,22 +493,39 @@
                 attDice.textContent = ['⚀','⚁','⚂','⚃','⚄','⚅'][Math.floor(Math.random()*6)];
                 defDice.textContent = ['⚀','⚁','⚂','⚃','⚄','⚅'][Math.floor(Math.random()*6)];
             }, 100);
+
             const { data, error } = await sb.rpc('attack_region', {
                 p_target_region_id: currentRegionId,
                 p_source_region_id: attackBaseRegionId,
                 p_target_year: currentTargetYear
             });
             clearInterval(rollInterval);
+
             if (error) {
                 msg.textContent = 'Error: ' + error.message;
             } else if (data.success) {
-                msg.textContent = 'Victory! Region conquered!';
+                let victoryMsg = 'Victory! Region conquered!';
+                if (data.triggered_event) {
+                    victoryMsg += `\n📜 ${data.triggered_event.title}: ${data.triggered_event.description}`;
+                    // Place a temporary marker on the region
+                    const targetRegion = await sb.from('historical_regions')
+                        .select('geojson').eq('id', currentRegionId).single();
+                    if (targetRegion) {
+                        const centroid = getCentroid(targetRegion.geojson);
+                        const marker = L.marker(centroid, {
+                            icon: L.divIcon({className: 'event-marker', html: `<div style="background:#d4a017; color:white; padding:2px 6px; border-radius:12px; font-size:0.8rem;">📜</div>`, iconSize: [20,20], iconAnchor: [10,10]})
+                        }).addTo(map);
+                        marker.bindTooltip(data.triggered_event.title, {permanent: true}).openTooltip();
+                        setTimeout(() => map.removeLayer(marker), 8000);
+                    }
+                }
+                msg.textContent = victoryMsg;
                 attDice.textContent = '⚅'; defDice.textContent = '⚁';
             } else {
                 msg.textContent = 'Defeat! ' + (data.error || '');
                 attDice.textContent = '⚀'; defDice.textContent = '⚅';
             }
-            setTimeout(() => { overlay.style.display = 'none'; loadYear(currentTargetYear); }, 2000);
+            setTimeout(() => { overlay.style.display = 'none'; loadYear(currentTargetYear); }, 3000);
         });
 
         document.getElementById('btn-build').addEventListener('click', async () => {
