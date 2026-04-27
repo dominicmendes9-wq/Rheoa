@@ -34,10 +34,18 @@
             height: 100%;
         }
 
+        /* Timeline Panel */
         #timeline-panel {
             background: rgba(255,255,255,0.85);
             border-top: 3px solid var(--border-dark);
-            padding: 15px 20px;
+            padding: 15px 20px 5px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            position: relative;
+        }
+
+        .timeline-controls {
             display: flex;
             align-items: center;
             gap: 15px;
@@ -69,6 +77,35 @@
             text-align: center;
         }
 
+        /* Ruler ticks */
+        .ticks-container {
+            display: flex;
+            justify-content: space-between;
+            padding: 0 12px;  /* align with slider thumb edges */
+            font-size: 0.7rem;
+            color: #5d4037;
+            pointer-events: none;
+            user-select: none;
+        }
+        .tick {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 1px;
+        }
+        .tick-line {
+            width: 1px;
+            height: 10px;
+            background: #3e2723;
+            margin-bottom: 2px;
+        }
+        .tick-label {
+            white-space: nowrap;
+            transform: rotate(-45deg);
+            transform-origin: top left;
+            margin-top: 2px;
+        }
+
         button {
             background: var(--border-dark);
             color: white;
@@ -81,6 +118,7 @@
         }
         button:hover { background: #5d4037; }
 
+        /* Sidebar */
         #sidebar {
             position: absolute;
             top: 10px;
@@ -96,7 +134,22 @@
             z-index: 1000;
         }
 
-        #sidebar h3 { margin-top: 0; margin-bottom: 5px; }
+        .sidebar-close {
+            position: absolute;
+            top: 5px;
+            right: 10px;
+            background: none;
+            border: none;
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: #3e2723;
+            cursor: pointer;
+            padding: 0;
+            line-height: 1;
+        }
+        .sidebar-close:hover { color: #a00; }
+
+        #sidebar h3 { margin-top: 0; margin-bottom: 5px; padding-right: 20px; }
         .action-btn { display: block; width: 100%; margin-top: 10px; }
         .region-owner { font-size: 0.9rem; margin: 10px 0; }
         .cooldown-text { font-size: 0.8rem; color: #b71c1c; }
@@ -119,7 +172,6 @@
             border: 1px solid #ccc; margin: 5px 0; padding: 5px; font-size: 0.9rem;
         }
         hr { margin: 15px 0; border: 0; border-top: 1px solid #8d6e63; }
-
         .hidden { display: none; }
     </style>
 </head>
@@ -139,6 +191,7 @@
     <div id="map-container">
         <div id="map"></div>
         <div id="sidebar">
+            <button class="sidebar-close" onclick="document.getElementById('sidebar').style.display='none'">×</button>
             <h3 id="region-name">Region</h3>
             <p id="region-owner"></p>
             <div id="region-stats"></div>
@@ -167,10 +220,14 @@
     </div>
 
     <div id="timeline-panel">
-        <span id="era-label">4000 BCE</span>
-        <input type="range" id="timeline-slider" min="0" max="80" value="0" step="1">
-        <button id="btn-empire-stats">📊 My Empire</button>
-        <button onclick="window.location.href='dashboard.html'">← Dashboard</button>
+        <div class="timeline-controls">
+            <span id="era-label">4000 BCE</span>
+            <input type="range" id="timeline-slider" min="0" max="80" value="0" step="1">
+            <button id="btn-empire-stats">📊 My Empire</button>
+            <button onclick="window.location.href='dashboard.html'">← Dashboard</button>
+        </div>
+        <!-- Ruler ticks -->
+        <div id="ticks-container" class="ticks-container"></div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -212,6 +269,24 @@
             document.getElementById('timeline-slider').value = startStep;
             await loadEraByStep(startStep);
             setupRealtime();
+            drawTicks();
+        }
+
+        // ----- Ruler Ticks -----
+        function drawTicks() {
+            const container = document.getElementById('ticks-container');
+            container.innerHTML = '';
+            // Major ticks every 10 steps (1000 years)
+            for (let step = 0; step <= 80; step += 10) {
+                const year = BASE_YEAR + step * 100;
+                const label = year < 0 ? `${Math.abs(year)} BCE` : `${year} CE`;
+                const tickDiv = document.createElement('div');
+                tickDiv.className = 'tick';
+                tickDiv.innerHTML = `<div class="tick-line"></div><div class="tick-label">${label}</div>`;
+                container.appendChild(tickDiv);
+            }
+            // Add minor ticks (every step) with just a line? For visual, we can keep major only.
+            // If you want every step, remove the step%10 condition and adjust styling.
         }
 
         // ----- Timeline & Map -----
@@ -261,13 +336,15 @@
             document.getElementById('btn-conquer').style.display = isMine ? 'none' : 'block';
             document.getElementById('btn-build').style.display = isMine ? 'block' : 'none';
             document.getElementById('btn-trade').style.display = isMine ? 'block' : 'none';
-            document.getElementById('btn-events').style.display = 'block';   // always visible
+            document.getElementById('btn-events').style.display = 'block';
 
             document.getElementById('action-feedback').textContent = '';
             document.getElementById('market-view').style.display = 'none';
             document.getElementById('market-actions').style.display = 'block';
             document.getElementById('events-list').classList.add('hidden');
         }
+
+        // (Close button is already handled inline via onclick)
 
         // ----- Dice Battle -----
         const diceFaces = ['⚀','⚁','⚂','⚃','⚄','⚅'];
@@ -371,12 +448,10 @@
         // ----- Historical Events -----
         document.getElementById('btn-events').addEventListener('click', async () => {
             const eventsDiv = document.getElementById('events-list');
-            // Toggle visibility
             if (!eventsDiv.classList.contains('hidden')) {
                 eventsDiv.classList.add('hidden');
                 return;
             }
-            // Fetch events for current era
             const { data: events } = await sb.from('historical_events')
                 .select('*')
                 .eq('era_id', currentEraId)
@@ -394,7 +469,6 @@
             eventsDiv.classList.remove('hidden');
         });
 
-        // ----- Helpers -----
         function showFeedback(msg) {
             document.getElementById('action-feedback').textContent = msg;
             setTimeout(() => document.getElementById('action-feedback').textContent = '', 4000);
