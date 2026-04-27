@@ -10,7 +10,6 @@
             --bg-parchment: #f4e4c1;
             --border-dark: #3e2723;
             --accent: #8d6e63;
-            --action-bg: #efebe9;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -27,6 +26,7 @@
         #map-container {
             flex: 1;
             position: relative;
+            background: #e8d5b5;  /* parchment tone when no tiles */
         }
 
         #map {
@@ -38,10 +38,10 @@
         #timeline-panel {
             background: rgba(255,255,255,0.85);
             border-top: 3px solid var(--border-dark);
-            padding: 15px 20px 5px;
+            padding: 10px 20px 5px;
             display: flex;
             flex-direction: column;
-            gap: 5px;
+            gap: 0;
             position: relative;
         }
 
@@ -81,29 +81,38 @@
         .ticks-container {
             display: flex;
             justify-content: space-between;
-            padding: 0 12px;  /* align with slider thumb edges */
+            padding: 0 12px;
             font-size: 0.7rem;
             color: #5d4037;
-            pointer-events: none;
             user-select: none;
+            margin-top: 5px;
         }
         .tick {
             display: flex;
             flex-direction: column;
             align-items: center;
             width: 1px;
+            position: relative;
         }
         .tick-line {
             width: 1px;
-            height: 10px;
+            height: 8px;
             background: #3e2723;
             margin-bottom: 2px;
         }
         .tick-label {
             white-space: nowrap;
-            transform: rotate(-45deg);
-            transform-origin: top left;
+            font-size: 0.6rem;
+            cursor: pointer;
+            color: #3e2723;
             margin-top: 2px;
+        }
+        .tick-label.major {
+            font-weight: bold;
+            font-size: 0.75rem;
+        }
+        .tick-label:hover {
+            text-decoration: underline;
         }
 
         button {
@@ -118,7 +127,6 @@
         }
         button:hover { background: #5d4037; }
 
-        /* Sidebar */
         #sidebar {
             position: absolute;
             top: 10px;
@@ -133,7 +141,6 @@
             display: none;
             z-index: 1000;
         }
-
         .sidebar-close {
             position: absolute;
             top: 5px;
@@ -154,7 +161,6 @@
         .region-owner { font-size: 0.9rem; margin: 10px 0; }
         .cooldown-text { font-size: 0.8rem; color: #b71c1c; }
 
-        /* Battle overlay */
         #battle-overlay {
             display: none;
             position: fixed; top:0; left:0; width:100%; height:100%;
@@ -167,7 +173,6 @@
         }
         .dice-box { display: flex; justify-content: center; gap: 50px; font-size: 3rem; margin: 20px 0; }
 
-        /* Market / Events list */
         .market-offer, .event-item {
             border: 1px solid #ccc; margin: 5px 0; padding: 5px; font-size: 0.9rem;
         }
@@ -176,7 +181,6 @@
     </style>
 </head>
 <body>
-    <!-- Battle Overlay -->
     <div id="battle-overlay">
         <div>
             <h2>⚔️ Battle ⚔️</h2>
@@ -198,14 +202,9 @@
             <button class="action-btn" id="btn-conquer" style="display:none;">⚔️ Conquer</button>
             <button class="action-btn" id="btn-build" style="display:none;">🏗️ Build</button>
             <button class="action-btn" id="btn-trade" style="display:none;">💰 Trade</button>
-
-            <!-- Events Section -->
             <button class="action-btn" id="btn-events" style="display:none;">📜 Events</button>
-            <div id="events-list" class="hidden"></div>
-
             <p id="action-feedback" class="cooldown-text"></p>
 
-            <!-- Market Section -->
             <hr>
             <h3>📦 Market</h3>
             <div id="market-actions">
@@ -226,7 +225,6 @@
             <button id="btn-empire-stats">📊 My Empire</button>
             <button onclick="window.location.href='dashboard.html'">← Dashboard</button>
         </div>
-        <!-- Ruler ticks -->
         <div id="ticks-container" class="ticks-container"></div>
     </div>
 
@@ -238,22 +236,37 @@
         const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         const BASE_YEAR = -4000;
-        let currentEraId = null;
+        const TOTAL_STEPS = 80;
+        let currentTargetYear = BASE_YEAR;  // will be set from slider
+        let currentEraId = null;            // still needed for some functions, but we'll derive from year
         let currentRegionId = null;
         let player = null;
 
-        const map = L.map('map', { center: [20, 0], zoom: 2, maxZoom: 8, minZoom: 2, worldCopyJump: true });
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-            subdomains: 'abcd', maxZoom: 19
-        }).addTo(map);
+        // Map – no tile layer, just the background color from CSS
+        const map = L.map('map', {
+            center: [20, 0],
+            zoom: 2,
+            maxZoom: 8,
+            minZoom: 2,
+            worldCopyJump: true,
+            zoomControl: true
+        });
+
+        // Empty tile layer – we just set the background color on the container
+        // We add a dummy layer to prevent errors
+        L.tileLayer('', { attribution: '' }).addTo(map);  // this does nothing
 
         let geoJSONLayer = L.geoJSON(null, {
             style: feature => ({
                 fillColor: feature.properties.fillColor || '#c8ad7f',
-                weight: 2, opacity: 1, color: '#3e2723', fillOpacity: 0.6
+                weight: 2,
+                opacity: 1,
+                color: '#3e2723',
+                fillOpacity: 0.6
             }),
-            onEachFeature: (feature, layer) => layer.on('click', () => openSidebar(feature.properties))
+            onEachFeature: (feature, layer) => {
+                layer.on('click', () => openSidebar(feature.properties));
+            }
         }).addTo(map);
 
         // ----- Auth & Init -----
@@ -267,57 +280,92 @@
 
             const startStep = 50;  // year 1000 CE
             document.getElementById('timeline-slider').value = startStep;
-            await loadEraByStep(startStep);
+            currentTargetYear = BASE_YEAR + startStep * 100;
+            await loadYear(currentTargetYear);
             setupRealtime();
             drawTicks();
         }
 
-        // ----- Ruler Ticks -----
+        // ----- Ruler Ticks (clickable major, minor lines) -----
         function drawTicks() {
             const container = document.getElementById('ticks-container');
             container.innerHTML = '';
-            // Major ticks every 10 steps (1000 years)
-            for (let step = 0; step <= 80; step += 10) {
+            // Major ticks every 10 steps (1000 years), minor every step (100 years)
+            for (let step = 0; step <= TOTAL_STEPS; step++) {
+                const isMajor = (step % 10 === 0);
                 const year = BASE_YEAR + step * 100;
-                const label = year < 0 ? `${Math.abs(year)} BCE` : `${year} CE`;
                 const tickDiv = document.createElement('div');
                 tickDiv.className = 'tick';
-                tickDiv.innerHTML = `<div class="tick-line"></div><div class="tick-label">${label}</div>`;
+                tickDiv.innerHTML = `<div class="tick-line" style="height:${isMajor ? 10 : 5}px;"></div>`;
+                if (isMajor) {
+                    const label = year < 0 ? `${Math.abs(year)} BCE` : `${year} CE`;
+                    tickDiv.innerHTML += `<span class="tick-label major" data-step="${step}">${label}</span>`;
+                }
                 container.appendChild(tickDiv);
             }
-            // Add minor ticks (every step) with just a line? For visual, we can keep major only.
-            // If you want every step, remove the step%10 condition and adjust styling.
+            // Add click events to major labels
+            document.querySelectorAll('.tick-label.major').forEach(span => {
+                span.addEventListener('click', (e) => {
+                    const step = parseInt(e.target.getAttribute('data-step'));
+                    document.getElementById('timeline-slider').value = step;
+                    currentTargetYear = BASE_YEAR + step * 100;
+                    loadYear(currentTargetYear);
+                });
+            });
         }
 
-        // ----- Timeline & Map -----
+        // ----- Timeline listener -----
         document.getElementById('timeline-slider').addEventListener('input', async (e) => {
             const step = parseInt(e.target.value);
-            await loadEraByStep(step);
+            currentTargetYear = BASE_YEAR + step * 100;
+            await loadYear(currentTargetYear);
         });
+
+        async function loadYear(targetYear) {
+            // Update era label using historical_eras
+            const { data: era } = await sb.from('historical_eras')
+                .select('*').lte('year_start', targetYear).gte('year_end', targetYear).single();
+            if (era) {
+                currentEraId = era.id;
+                document.getElementById('era-label').textContent = `${era.name} (${formatYear(era.year_start)}–${formatYear(era.year_end)})`;
+            } else {
+                document.getElementById('era-label').textContent = formatYear(targetYear);
+            }
+            await loadRegions(targetYear);
+        }
 
         function formatYear(y) { return y < 0 ? `${Math.abs(y)} BCE` : `${y} CE`; }
 
-        async function loadEraByStep(step) {
-            const targetYear = BASE_YEAR + step * 100;
-            const { data: era } = await sb.from('historical_eras')
-                .select('*').lte('year_start', targetYear).gte('year_end', targetYear).single();
-            if (!era) return;
-            currentEraId = era.id;
-            document.getElementById('era-label').textContent = `${era.name} (${formatYear(era.year_start)}–${formatYear(era.year_end)})`;
-            await loadRegions(era.id);
-        }
+        async function loadRegions(targetYear) {
+            const { data: regions, error } = await sb
+                .from('historical_regions')
+                .select('id, name, geojson, owner_type, owner_id, start_year, end_year')
+                .lte('start_year', targetYear)
+                .gte('end_year', targetYear);
+            if (error) { console.error(error); return; }
 
-        async function loadRegions(eraId) {
-            const { data: regions } = await sb.from('historical_regions')
-                .select('id, name, geojson, owner_type, owner_id').eq('era_id', eraId);
-            if (!regions) return;
+            if (!regions || regions.length === 0) {
+                geoJSONLayer.clearLayers();
+                return;
+            }
 
             const features = regions.map(r => {
                 const geo = typeof r.geojson === 'string' ? JSON.parse(r.geojson) : r.geojson;
                 let fillColor = '#c8ad7f';
                 if (r.owner_type === 'npc') fillColor = '#8d6e63';
                 else if (r.owner_type === 'player') fillColor = '#4caf50';
-                return { ...geo, properties: { id: r.id, name: r.name, owner_type: r.owner_type, owner_id: r.owner_id, fillColor } };
+                return {
+                    ...geo,
+                    properties: {
+                        id: r.id,
+                        name: r.name,
+                        owner_type: r.owner_type,
+                        owner_id: r.owner_id,
+                        fillColor,
+                        start_year: r.start_year,
+                        end_year: r.end_year
+                    }
+                };
             });
             geoJSONLayer.clearLayers();
             geoJSONLayer.addData({ type: 'FeatureCollection', features });
@@ -327,7 +375,7 @@
         function openSidebar(props) {
             currentRegionId = props.id;
             document.getElementById('sidebar').style.display = 'block';
-            document.getElementById('region-name').textContent = props.name;
+            document.getElementById('region-name').textContent = props.name + ` (${formatYear(props.start_year)}–${formatYear(props.end_year)})`;
             const owner = props.owner_type === 'player' ? (props.owner_id === player.id ? 'You' : 'Another Player') :
                           props.owner_type === 'npc' ? 'NPC Civilization' : 'Unclaimed';
             document.getElementById('region-owner').textContent = `Controlled by: ${owner}`;
@@ -344,12 +392,10 @@
             document.getElementById('events-list').classList.add('hidden');
         }
 
-        // (Close button is already handled inline via onclick)
-
         // ----- Dice Battle -----
         const diceFaces = ['⚀','⚁','⚂','⚃','⚄','⚅'];
         document.getElementById('btn-conquer').addEventListener('click', async () => {
-            if (!currentRegionId || !currentEraId) return;
+            if (!currentRegionId) return;
             const overlay = document.getElementById('battle-overlay');
             const attDice = document.getElementById('attacker-dice');
             const defDice = document.getElementById('defender-dice');
@@ -361,7 +407,10 @@
                 defDice.textContent = diceFaces[Math.floor(Math.random()*6)];
             }, 100);
 
-            const { data, error } = await sb.rpc('conquer_region', { p_region_id: currentRegionId, p_era_id: currentEraId });
+            const { data, error } = await sb.rpc('conquer_region', {
+                p_region_id: currentRegionId,
+                p_target_year: currentTargetYear
+            });
             clearInterval(rollInterval);
             if (error) {
                 msg.textContent = 'Error: ' + error.message;
@@ -372,13 +421,16 @@
                 msg.textContent = 'Defeat! ' + (data.error || '');
                 attDice.textContent = '⚀'; defDice.textContent = '⚅';
             }
-            setTimeout(() => { overlay.style.display = 'none'; loadRegions(currentEraId); }, 2000);
+            setTimeout(() => { overlay.style.display = 'none'; loadYear(currentTargetYear); }, 2000);
         });
 
         document.getElementById('btn-build').addEventListener('click', async () => {
             const building = prompt('What to build? (outpost/fortress/market)');
             if (!building) return;
-            const { data, error } = await sb.rpc('build_structure', { p_region_id: currentRegionId, p_building_type: building });
+            const { data, error } = await sb.rpc('build_structure', {
+                p_region_id: currentRegionId,
+                p_building_type: building
+            });
             showFeedback(error ? error.message : data.message || data.error);
         });
 
@@ -452,6 +504,7 @@
                 eventsDiv.classList.add('hidden');
                 return;
             }
+            if (!currentEraId) return;
             const { data: events } = await sb.from('historical_events')
                 .select('*')
                 .eq('era_id', currentEraId)
@@ -477,8 +530,13 @@
         // ----- Realtime -----
         function setupRealtime() {
             sb.channel('historical-regions')
-                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'historical_regions', filter: `era_id=eq.${currentEraId}` },
-                    () => { if (currentEraId) loadRegions(currentEraId); })
+                .on('postgres_changes', {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'historical_regions',
+                }, () => {
+                    if (currentTargetYear) loadYear(currentTargetYear);
+                })
                 .subscribe();
         }
 
