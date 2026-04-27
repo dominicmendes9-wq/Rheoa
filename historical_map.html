@@ -34,7 +34,6 @@
             height: 100%;
         }
 
-        /* Timeline Slider */
         #timeline-panel {
             background: rgba(255,255,255,0.85);
             border-top: 3px solid var(--border-dark);
@@ -80,11 +79,8 @@
             border-radius: 4px;
             transition: background 0.2s;
         }
-        button:hover {
-            background: #5d4037;
-        }
+        button:hover { background: #5d4037; }
 
-        /* Sidebar */
         #sidebar {
             position: absolute;
             top: 10px;
@@ -100,37 +96,44 @@
             z-index: 1000;
         }
 
-        #sidebar h3 {
-            margin-top: 0;
-        }
+        #sidebar h3 { margin-top: 0; }
+        .action-btn { display: block; width: 100%; margin-top: 10px; }
+        .region-owner { font-size: 0.9rem; margin: 10px 0; }
+        .cooldown-text { font-size: 0.8rem; color: #b71c1c; }
 
-        .action-btn {
-            display: block;
-            width: 100%;
-            margin-top: 10px;
+        /* Battle overlay */
+        #battle-overlay {
+            display: none;
+            position: fixed; top:0; left:0; width:100%; height:100%;
+            background: rgba(0,0,0,0.7); z-index: 2000;
         }
+        #battle-overlay > div {
+            position: absolute; top:50%; left:50%;
+            transform: translate(-50%,-50%);
+            background: white; padding: 30px; border-radius: 15px; text-align: center;
+        }
+        .dice-box { display: flex; justify-content: center; gap: 50px; font-size: 3rem; margin: 20px 0; }
 
-        .region-owner {
-            font-size: 0.9rem;
-            margin: 10px 0;
+        /* Market styles */
+        .market-offer {
+            border: 1px solid #ccc; margin: 5px 0; padding: 5px; font-size: 0.9rem;
         }
-
-        .cooldown-text {
-            font-size: 0.8rem;
-            color: #b71c1c;
-        }
-
-        .event-marker {
-            background: #d4a017;
-            color: white;
-            padding: 2px 6px;
-            border-radius: 12px;
-            font-size: 0.8rem;
-            margin-left: 5px;
-        }
+        hr { margin: 15px 0; border: 0; border-top: 1px solid #8d6e63; }
     </style>
 </head>
 <body>
+    <!-- Battle Overlay -->
+    <div id="battle-overlay">
+        <div>
+            <h2>⚔️ Battle ⚔️</h2>
+            <div class="dice-box">
+                <div id="attacker-dice">⚅</div>
+                <div id="defender-dice">⚅</div>
+            </div>
+            <p id="battle-message">Rolling...</p>
+        </div>
+    </div>
+
     <div id="map-container">
         <div id="map"></div>
         <div id="sidebar">
@@ -142,6 +145,18 @@
             <button class="action-btn" id="btn-trade" style="display:none;">💰 Trade</button>
             <button class="action-btn" id="btn-events" style="display:none;">📜 Events</button>
             <p id="action-feedback" class="cooldown-text"></p>
+
+            <!-- Market Section -->
+            <hr>
+            <h3>📦 Market</h3>
+            <div id="market-actions">
+                <button class="action-btn" id="btn-show-market">Show Offers</button>
+                <button class="action-btn" id="btn-create-offer">Create Offer</button>
+            </div>
+            <div id="market-view" style="display:none;">
+                <div id="trade-list"></div>
+                <button class="action-btn" id="btn-close-market" style="background:#666;">Close Market</button>
+            </div>
         </div>
     </div>
 
@@ -159,123 +174,72 @@
         const SUPABASE_ANON_KEY = 'sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp';
         const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // ----- Configuration -----
-        const BASE_YEAR = -4000;   // BCE are negative, e.g., 0 = 4000 BCE
-        const TOTAL_STEPS = 80;    // 4000 BCE to 4000 CE in 100-year steps = 80 steps
+        const BASE_YEAR = -4000;
         let currentEraId = null;
         let currentRegionId = null;
         let player = null;
-        let playerEmpire = {};
 
-        // Leaflet map and layers
-        const map = L.map('map', {
-            center: [20, 0],
-            zoom: 2,
-            maxZoom: 8,
-            minZoom: 2,
-            worldCopyJump: true
-        });
-
-        // Neutral basemap – using a parchment-like tile layer
+        const map = L.map('map', { center: [20, 0], zoom: 2, maxZoom: 8, minZoom: 2, worldCopyJump: true });
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
             attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-            subdomains: 'abcd',
-            maxZoom: 19
+            subdomains: 'abcd', maxZoom: 19
         }).addTo(map);
 
         let geoJSONLayer = L.geoJSON(null, {
             style: feature => ({
                 fillColor: feature.properties.fillColor || '#c8ad7f',
-                weight: 2,
-                opacity: 1,
-                color: '#3e2723',
-                fillOpacity: 0.6
+                weight: 2, opacity: 1, color: '#3e2723', fillOpacity: 0.6
             }),
-            onEachFeature: (feature, layer) => {
-                layer.on('click', () => openSidebar(feature.properties));
-            }
+            onEachFeature: (feature, layer) => layer.on('click', () => openSidebar(feature.properties))
         }).addTo(map);
 
-        // ----- Supabase Auth & Player -----
+        // ----- Auth & Init -----
         async function init() {
             const { data: { user } } = await sb.auth.getUser();
             if (!user) { window.location.href = 'index.html'; return; }
             const { data: playerData } = await sb.from('players')
-                .select('id, username, cash, energy')
-                .eq('auth_id', user.id)
-                .single();
+                .select('id, username, cash, energy').eq('auth_id', user.id).single();
             if (!playerData) { alert('Player not found'); return; }
             player = playerData;
 
-            // ✅ Step 1.3: Start at year 1000 CE (step 50)
             const startStep = 50;
-            slider.value = startStep;
+            document.getElementById('timeline-slider').value = startStep;
             await loadEraByStep(startStep);
-            eraLabel.textContent = formatYear(BASE_YEAR + startStep * 100);
-
             setupRealtime();
         }
 
         // ----- Timeline -----
-        const slider = document.getElementById('timeline-slider');
-        const eraLabel = document.getElementById('era-label');
-
-        slider.addEventListener('input', async () => {
-            const step = parseInt(slider.value);
-            const year = BASE_YEAR + step * 100;
-            eraLabel.textContent = formatYear(year);
+        document.getElementById('timeline-slider').addEventListener('input', async (e) => {
+            const step = parseInt(e.target.value);
             await loadEraByStep(step);
         });
 
-        function formatYear(y) {
-            return y < 0 ? `${Math.abs(y)} BCE` : `${y} CE`;
-        }
+        function formatYear(y) { return y < 0 ? `${Math.abs(y)} BCE` : `${y} CE`; }
 
         async function loadEraByStep(step) {
             const targetYear = BASE_YEAR + step * 100;
-            // Find era that contains this year
-            const { data: era, error } = await sb
-                .from('historical_eras')
-                .select('*')
-                .lte('year_start', targetYear)
-                .gte('year_end', targetYear)
-                .single();
-            if (error || !era) {
-                console.error('Era not found for year', targetYear);
-                return;
-            }
+            const { data: era } = await sb.from('historical_eras')
+                .select('*').lte('year_start', targetYear).gte('year_end', targetYear).single();
+            if (!era) return;
             currentEraId = era.id;
             document.getElementById('era-label').textContent = `${era.name} (${formatYear(era.year_start)}–${formatYear(era.year_end)})`;
             await loadRegions(era.id);
         }
 
         async function loadRegions(eraId) {
-            const { data: regions, error } = await sb
-                .from('historical_regions')
-                .select('id, name, geojson, owner_type, owner_id')
-                .eq('era_id', eraId);
-            if (error) { console.error(error); return; }
+            const { data: regions } = await sb.from('historical_regions')
+                .select('id, name, geojson, owner_type, owner_id').eq('era_id', eraId);
+            if (!regions) return;
 
             const features = regions.map(r => {
                 const geo = typeof r.geojson === 'string' ? JSON.parse(r.geojson) : r.geojson;
-                let fillColor = '#c8ad7f'; // unclaimed
+                let fillColor = '#c8ad7f';
                 if (r.owner_type === 'npc') fillColor = '#8d6e63';
                 else if (r.owner_type === 'player') fillColor = '#4caf50';
-                return {
-                    ...geo,
-                    properties: {
-                        id: r.id,
-                        name: r.name,
-                        owner_type: r.owner_type,
-                        owner_id: r.owner_id,
-                        fillColor
-                    }
-                };
+                return { ...geo, properties: { id: r.id, name: r.name, owner_type: r.owner_type, owner_id: r.owner_id, fillColor } };
             });
-
             geoJSONLayer.clearLayers();
             geoJSONLayer.addData({ type: 'FeatureCollection', features });
-            document.getElementById('sidebar').style.display = 'none';
         }
 
         // ----- Sidebar -----
@@ -287,43 +251,57 @@
                           props.owner_type === 'npc' ? 'NPC Civilization' : 'Unclaimed';
             document.getElementById('region-owner').textContent = `Controlled by: ${owner}`;
 
-            // Show actions based on ownership
-            document.getElementById('btn-conquer').style.display = (props.owner_type !== 'player' || props.owner_id !== player.id) ? 'block' : 'none';
-            document.getElementById('btn-build').style.display = (props.owner_type === 'player' && props.owner_id === player.id) ? 'block' : 'none';
-            document.getElementById('btn-trade').style.display = (props.owner_type === 'player' && props.owner_id === player.id) ? 'block' : 'none';
-            document.getElementById('btn-events').style.display = 'block'; // Always visible
+            const isMine = (props.owner_type === 'player' && props.owner_id === player.id);
+            document.getElementById('btn-conquer').style.display = isMine ? 'none' : 'block';
+            document.getElementById('btn-build').style.display = isMine ? 'block' : 'none';
+            document.getElementById('btn-trade').style.display = isMine ? 'block' : 'none';
+            document.getElementById('btn-events').style.display = 'block';
             document.getElementById('action-feedback').textContent = '';
+            document.getElementById('market-view').style.display = 'none';
+            document.getElementById('market-actions').style.display = 'block';
         }
 
-        // ----- Actions -----
+        // ----- Dice Battle -----
+        const diceFaces = ['⚀','⚁','⚂','⚃','⚄','⚅'];
         document.getElementById('btn-conquer').addEventListener('click', async () => {
             if (!currentRegionId || !currentEraId) return;
-            const { data, error } = await sb.rpc('conquer_region', {
-                p_region_id: currentRegionId,
-                p_era_id: currentEraId
-            });
-            if (error) { showFeedback(error.message); return; }
-            if (data.success) {
-                showFeedback('Conquest successful!');
-                loadRegions(currentEraId);
+            const overlay = document.getElementById('battle-overlay');
+            const attDice = document.getElementById('attacker-dice');
+            const defDice = document.getElementById('defender-dice');
+            const msg = document.getElementById('battle-message');
+            overlay.style.display = 'block';
+            msg.textContent = 'Rolling...';
+            let rollInterval = setInterval(() => {
+                attDice.textContent = diceFaces[Math.floor(Math.random()*6)];
+                defDice.textContent = diceFaces[Math.floor(Math.random()*6)];
+            }, 100);
+
+            const { data, error } = await sb.rpc('conquer_region', { p_region_id: currentRegionId, p_era_id: currentEraId });
+            clearInterval(rollInterval);
+            if (error) {
+                msg.textContent = 'Error: ' + error.message;
+            } else if (data.success) {
+                msg.textContent = 'Victory! Region conquered!';
+                attDice.textContent = '⚅'; defDice.textContent = '⚁';
             } else {
-                showFeedback(data.error || 'Conquest failed.');
+                msg.textContent = 'Defeat! ' + (data.error || '');
+                attDice.textContent = '⚀'; defDice.textContent = '⚅';
             }
+            setTimeout(() => { overlay.style.display = 'none'; loadRegions(currentEraId); }, 2000);
         });
 
         document.getElementById('btn-build').addEventListener('click', async () => {
             const building = prompt('What to build? (outpost/fortress/market)');
             if (!building) return;
-            const { data, error } = await sb.rpc('build_structure', {
-                p_region_id: currentRegionId,
-                p_building_type: building
-            });
+            const { data, error } = await sb.rpc('build_structure', { p_region_id: currentRegionId, p_building_type: building });
             if (error) { showFeedback(error.message); return; }
             showFeedback(data.message || data.error);
         });
 
+        // ----- Trade: Create Offer -----
         document.getElementById('btn-trade').addEventListener('click', async () => {
             const resource = prompt('Resource type (food, wood, metal):');
+            if (!resource) return;
             const quantity = parseInt(prompt('Quantity:'));
             const price = parseInt(prompt('Price per unit:'));
             if (!resource || !quantity || !price) return;
@@ -335,33 +313,74 @@
             });
             if (error) { showFeedback(error.message); return; }
             showFeedback('Trade offer listed!');
+            // If market is visible, refresh it
+            if (document.getElementById('market-view').style.display === 'block') loadMarket();
         });
+
+        // ----- Market Panel -----
+        document.getElementById('btn-show-market').addEventListener('click', async () => {
+            document.getElementById('market-view').style.display = 'block';
+            document.getElementById('market-actions').style.display = 'none';
+            await loadMarket();
+        });
+
+        document.getElementById('btn-close-market').addEventListener('click', () => {
+            document.getElementById('market-view').style.display = 'none';
+            document.getElementById('market-actions').style.display = 'block';
+        });
+
+        document.getElementById('btn-create-offer').addEventListener('click', () => {
+            // Reuse the same create-offer prompt (like trade button)
+            document.getElementById('btn-trade').click();
+        });
+
+        async function loadMarket() {
+            const { data: offers } = await sb.from('era_trade_offers')
+                .select('*, listing_player:players(username)')
+                .eq('active', true)
+                .order('created_at', { ascending: false })
+                .limit(50);
+            const list = document.getElementById('trade-list');
+            if (!offers || offers.length === 0) {
+                list.innerHTML = '<p>No offers yet.</p>';
+                return;
+            }
+            list.innerHTML = offers.map(o => `
+                <div class="market-offer">
+                    <strong>${o.resource}</strong> x${o.quantity} @ $${o.price_per_unit}<br>
+                    Seller: ${o.listing_player?.username || 'Unknown'}<br>
+                    <button onclick="buyOffer('${o.id}')">Buy 1</button>
+                </div>
+            `).join('');
+        }
+
+        window.buyOffer = async function(offerId) {
+            const { data, error } = await sb.rpc('buy_trade_offer', { p_offer_id: offerId });
+            if (error) { alert(error.message); return; }
+            if (data.success) {
+                alert('Purchased!');
+                loadMarket();
+            } else {
+                alert(data.error || 'Purchase failed');
+            }
+        };
 
         function showFeedback(msg) {
             document.getElementById('action-feedback').textContent = msg;
             setTimeout(() => document.getElementById('action-feedback').textContent = '', 4000);
         }
 
-        // ----- Real-time subscriptions -----
+        // ----- Realtime -----
         function setupRealtime() {
             sb.channel('historical-regions')
-                .on('postgres_changes', {
-                    event: 'UPDATE',
-                    schema: 'public',
-                    table: 'historical_regions',
-                    filter: `era_id=eq.${currentEraId}`
-                }, payload => {
-                    if (currentEraId) loadRegions(currentEraId);
-                })
+                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'historical_regions', filter: `era_id=eq.${currentEraId}` },
+                    () => { if (currentEraId) loadRegions(currentEraId); })
                 .subscribe();
         }
 
-        // ----- Empire Stats (placeholder) -----
         document.getElementById('btn-empire-stats').addEventListener('click', async () => {
-            const { data, error } = await sb.rpc('get_empire_stats', { p_player_id: player.id });
-            if (error) { alert(error.message); return; }
-            let msg = `Total Regions: ${data.total_regions}\nArmy: ${data.army}\nGold: ${data.gold}`;
-            alert(msg);
+            const { data } = await sb.rpc('get_empire_stats', { p_player_id: player.id });
+            alert(`Total Regions: ${data.total_regions}\nArmy: ${data.army}\nGold: ${data.gold}`);
         });
 
         init();
