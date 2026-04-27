@@ -34,7 +34,7 @@
         #battle-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.7); z-index: 2000; }
         #battle-overlay > div { position: absolute; top:50%; left:50%; transform: translate(-50%,-50%); background: white; padding: 30px; border-radius: 15px; text-align: center; }
         .dice-box { display: flex; justify-content: center; gap: 50px; font-size: 3rem; margin: 20px 0; }
-        .market-offer, .event-item, .route-item, .tech-item { border: 1px solid #ccc; margin: 5px 0; padding: 5px; font-size: 0.9rem; }
+        .market-offer, .event-item, .route-item, .tech-item, .building-item { border: 1px solid #ccc; margin: 5px 0; padding: 5px; font-size: 0.9rem; }
         hr { margin: 15px 0; border: 0; border-top: 1px solid #8d6e63; }
         .hidden { display: none; }
         .trade-route-line { stroke-dasharray: 10 6; animation: dash 1s linear infinite; }
@@ -63,6 +63,7 @@
             <p id="region-owner"></p>
             <div id="region-stats"></div>
             <div id="region-army"></div>
+            <div id="region-buildings"></div>
             <button class="action-btn" id="btn-recruit" style="display:none;">🛡️ Recruit Army</button>
             <button class="action-btn" id="btn-move" style="display:none;">🚚 Move Army</button>
             <button class="action-btn" id="btn-set-base" style="display:none;">🎯 Set as Attack Base</button>
@@ -127,8 +128,13 @@
         }).addTo(map);
 
         const tradeRouteLayer = L.layerGroup().addTo(map);
+        const buildingMarkersLayer = L.layerGroup().addTo(map);
 
-        function getCentroid(geojson) { const geo = L.geoJSON(geojson); return geo.getBounds().getCenter(); }
+        function getCentroid(geojson) {
+            const geo = L.geoJSON(geojson);
+            const bounds = geo.getBounds();
+            return bounds.getCenter();
+        }
 
         async function init() {
             const { data: { user } } = await sb.auth.getUser();
@@ -186,6 +192,7 @@
             } else document.getElementById('era-label').textContent = formatYear(targetYear);
             await loadRegions(targetYear);
             await loadTradeRoutes();
+            await loadBuildings();   // Feature 8
         }
 
         async function loadRegions(targetYear) {
@@ -218,11 +225,45 @@
             }
         }
 
+        async function loadBuildings() {
+            buildingMarkersLayer.clearLayers();
+            if (!currentTargetYear) return;
+            // Fetch all buildings for regions active in this year
+            const { data: buildings } = await sb
+                .from('era_buildings')
+                .select('*, region:region_id(*)')
+                .filter('region.start_year', 'lte', currentTargetYear)
+                .filter('region.end_year', 'gte', currentTargetYear);
+            if (!buildings) return;
+
+            const buildingIcons = {
+                outpost: { emoji: '🛡️', color: '#2196F3' },
+                fortress: { emoji: '🏰', color: '#f44336' },
+                market: { emoji: '📦', color: '#4CAF50' }
+            };
+
+            for (const b of buildings) {
+                if (!b.region || !b.region.geojson) continue;
+                const centroid = getCentroid(b.region.geojson);
+                if (!centroid) continue;
+                const iconDef = buildingIcons[b.building_type] || { emoji: '🏗️', color: '#888' };
+                const icon = L.divIcon({
+                    className: 'building-icon',
+                    html: `<div style="background:${iconDef.color}; color:white; border-radius:50%; width:24px; height:24px; display:flex; align-items:center; justify-content:center; font-size:14px;">${iconDef.emoji}</div>`,
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+                L.marker(centroid, { icon }).addTo(buildingMarkersLayer)
+                    .bindTooltip(`${b.building_type} (Lvl ${b.level})`, { permanent: false });
+            }
+        }
+
         function openSidebar(props) {
             currentRegionId = props.id;
             document.getElementById('sidebar').style.display = 'block';
             document.getElementById('region-name').textContent = props.name + ` (${formatYear(props.start_year)}–${formatYear(props.end_year)})`;
-            const owner = props.owner_type === 'player' ? (props.owner_id === player.id ? 'You' : 'Another Player') : props.owner_type === 'npc' ? 'NPC Civilization' : 'Unclaimed';
+            const owner = props.owner_type === 'player' ? (props.owner_id === player.id ? 'You' : 'Another Player') :
+                          props.owner_type === 'npc' ? 'NPC Civilization' : 'Unclaimed';
             document.getElementById('region-owner').textContent = `Controlled by: ${owner}`;
 
             const pop = props.population ? props.population.toLocaleString() : '0';
@@ -247,26 +288,35 @@
             document.getElementById('market-view').style.display = 'none'; document.getElementById('market-actions').style.display = 'block';
             document.getElementById('route-management').style.display = 'none';
             document.getElementById('tech-tree').style.display = 'none';
+
+            // Load region buildings into sidebar
+            loadRegionBuildings(props.id);
         }
 
-        // ---- NPC AI Turn Button ----
+        async function loadRegionBuildings(regionId) {
+            const { data: buildings } = await sb
+                .from('era_buildings')
+                .select('*')
+                .eq('region_id', regionId);
+            const div = document.getElementById('region-buildings');
+            if (!buildings || buildings.length === 0) {
+                div.innerHTML = '<p>No buildings constructed.</p>';
+            } else {
+                div.innerHTML = '<strong>🏗️ Buildings:</strong><br>' + buildings.map(b =>
+                    `<div class="building-item">${b.building_type} (Lvl ${b.level})</div>`
+                ).join('');
+            }
+        }
+
+        // ---- NPC AI Turn ----
         document.getElementById('btn-npc-turn').addEventListener('click', async () => {
             const btn = document.getElementById('btn-npc-turn');
-            btn.disabled = true;
-            btn.textContent = '⏳ Processing...';
+            btn.disabled = true; btn.textContent = '⏳ Processing...';
             const { data, error } = await sb.rpc('npc_ai_tick', { p_target_year: currentTargetYear });
-            btn.disabled = false;
-            btn.textContent = '⚙️ Run NPC Turn';
-            if (error) {
-                alert('AI Error: ' + error.message);
-                return;
-            }
-            if (data.success) {
-                showFeedback(data.message);
-                loadYear(currentTargetYear); // refresh map
-            } else {
-                alert(data.error);
-            }
+            btn.disabled = false; btn.textContent = '⚙️ Run NPC Turn';
+            if (error) { alert('AI Error: ' + error.message); return; }
+            if (data.success) { showFeedback(data.message); loadYear(currentTargetYear); }
+            else alert(data.error);
         });
 
         // ---- Tech Tree ----
@@ -278,10 +328,7 @@
             const { data: techs } = await sb.from('technologies').select('*').eq('era_id', currentEraId);
             const { data: researched } = await sb.from('player_technologies').select('technology_id').eq('player_id', player.id);
             const researchedIds = researched ? researched.map(r => r.technology_id) : [];
-            if (!techs || techs.length === 0) {
-                techDiv.innerHTML = '<p>No technologies available in this era.</p>';
-                return;
-            }
+            if (!techs || techs.length === 0) { techDiv.innerHTML = '<p>No technologies available.</p>'; return; }
             techDiv.innerHTML = techs.map(t => {
                 const researched = researchedIds.includes(t.id);
                 let costStr = [];
@@ -289,15 +336,7 @@
                 if (t.cost_wood > 0) costStr.push(`${t.cost_wood} wood`);
                 if (t.cost_metal > 0) costStr.push(`${t.cost_metal} metal`);
                 if (t.cost_gold > 0) costStr.push(`${t.cost_gold} gold`);
-                return `
-                    <div class="tech-item">
-                        <strong>${t.name}</strong> ${researched ? '(✓ Researched)' : ''}<br>
-                        ${t.description}<br>
-                        Bonus: ${t.bonus_type} +${t.bonus_value}x<br>
-                        Cost: ${costStr.join(', ') || 'None'}<br>
-                        ${!researched ? `<button onclick="researchTech('${t.id}')">Research</button>` : ''}
-                    </div>
-                `;
+                return `<div class="tech-item"><strong>${t.name}</strong> ${researched ? '(✓ Researched)' : ''}<br>${t.description}<br>Bonus: ${t.bonus_type} +${t.bonus_value}x<br>Cost: ${costStr.join(', ') || 'None'}<br>${!researched ? `<button onclick="researchTech('${t.id}')">Research</button>` : ''}</div>`;
             }).join('');
         });
 
@@ -309,7 +348,7 @@
             loadYear(currentTargetYear);
         };
 
-        // ---- Army actions (same) ----
+        // ---- Army ----
         document.getElementById('btn-recruit').addEventListener('click', async () => {
             const qty = prompt('How many troops to recruit? (10 food + 5 gold each)');
             if (!qty) return;
@@ -318,7 +357,6 @@
             showFeedback(data.message || data.error);
             loadYear(currentTargetYear);
         });
-
         document.getElementById('btn-move').addEventListener('click', async () => {
             const targetYear = currentTargetYear;
             const { data: owned } = await sb.from('historical_regions').select('id, name, army').eq('owner_type', 'player').eq('owner_id', player.id).lte('start_year', targetYear).gte('end_year', targetYear).neq('id', currentRegionId);
@@ -333,13 +371,12 @@
             showFeedback(data.message || data.error);
             loadYear(currentTargetYear);
         });
-
         document.getElementById('btn-set-base').addEventListener('click', () => {
             attackBaseRegionId = currentRegionId;
             document.getElementById('action-feedback').textContent = `Base set to: ${document.getElementById('region-name').textContent}`;
         });
 
-        // ---- Conquer (with event trigger) ----
+        // ---- Conquer ----
         document.getElementById('btn-conquer').addEventListener('click', async () => {
             if (!attackBaseRegionId) { alert('Set an attack base first.'); return; }
             const overlay = document.getElementById('battle-overlay');
@@ -374,11 +411,15 @@
             setTimeout(() => { overlay.style.display = 'none'; loadYear(currentTargetYear); }, 3000);
         });
 
+        // ---- Build ----
         document.getElementById('btn-build').addEventListener('click', async () => {
             const building = prompt('What to build? (outpost/fortress/market)');
             if (!building) return;
             const { data, error } = await sb.rpc('build_structure', { p_region_id: currentRegionId, p_building_type: building });
-            showFeedback(error ? error.message : data.message || data.error);
+            if (error) { showFeedback(error.message); return; }
+            showFeedback(data.message || data.error);
+            loadYear(currentTargetYear);  // refresh buildings on map
+            loadRegionBuildings(currentRegionId);
         });
 
         // ---- Trade Offers ----
@@ -392,7 +433,6 @@
             showFeedback('Trade offer listed!');
             if (document.getElementById('market-view').style.display === 'block') loadMarket();
         });
-
         document.getElementById('btn-show-market').addEventListener('click', async () => {
             document.getElementById('market-view').style.display = 'block'; document.getElementById('market-actions').style.display = 'none';
             await loadMarket();
@@ -401,14 +441,12 @@
             document.getElementById('market-view').style.display = 'none'; document.getElementById('market-actions').style.display = 'block';
         });
         document.getElementById('btn-create-offer').addEventListener('click', () => document.getElementById('btn-trade').click());
-
         async function loadMarket() {
             const { data: offers } = await sb.from('era_trade_offers').select('*, listing_player:players(username)').eq('active', true).order('created_at', { ascending: false }).limit(50);
             const list = document.getElementById('trade-list');
             if (!offers || offers.length === 0) { list.innerHTML = '<p>No offers yet.</p>'; return; }
             list.innerHTML = offers.map(o => `<div class="market-offer"><strong>${o.resource}</strong> x${o.quantity} @ $${o.price_per_unit}<br>Seller: ${o.listing_player?.username || 'Unknown'}<br><button onclick="buyOffer('${o.id}')">Buy 1</button></div>`).join('');
         }
-
         window.buyOffer = async (offerId) => {
             const { data, error } = await sb.rpc('buy_trade_offer', { p_offer_id: offerId });
             if (error) { alert(error.message); return; }
@@ -423,14 +461,12 @@
             mgmt.style.display = 'block';
             await loadRoutesForRegion();
         });
-
         async function loadRoutesForRegion() {
             const { data: routes } = await sb.from('trade_routes').select('*, from_region:from_region_id(name), to_region:to_region_id(name)').or(`from_region_id.eq.${currentRegionId},to_region_id.eq.${currentRegionId}`).eq('active', true);
             const listDiv = document.getElementById('existing-routes');
             if (!routes || routes.length === 0) { listDiv.innerHTML = '<p>No active routes.</p>'; return; }
             listDiv.innerHTML = routes.map(r => `<div class="route-item">${r.from_region.name} ↔ ${r.to_region.name} (${r.resource}) <button onclick="deleteRoute('${r.id}')">Remove</button></div>`).join('');
         }
-
         window.deleteRoute = async (routeId) => {
             if (!confirm('Remove route?')) return;
             await sb.rpc('remove_trade_route', { p_route_id: routeId });
@@ -438,7 +474,6 @@
             await loadRoutesForRegion();
             await loadTradeRoutes();
         };
-
         document.getElementById('btn-create-route').addEventListener('click', async () => {
             const targetYear = currentTargetYear;
             const { data: owned } = await sb.from('historical_regions').select('id, name').eq('owner_type', 'player').eq('owner_id', player.id).lte('start_year', targetYear).gte('end_year', targetYear).neq('id', currentRegionId);
