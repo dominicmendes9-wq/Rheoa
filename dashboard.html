@@ -4,6 +4,7 @@
   <title>Rheoa RPG - Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
+    /* (Keep all your existing CSS – unchanged) */
     * {
       box-sizing: border-box;
       margin: 0;
@@ -123,7 +124,6 @@
     #xpBar { background: #9c27b0; }
     #energyBar { background: #4CAF50; }
     
-    /* Stat warning indicators */
     .stat-warning {
       font-size: 0.7rem;
       color: #ff9800;
@@ -135,7 +135,6 @@
       color: #f44336;
     }
     
-    /* Energy regeneration indicator */
     .regen-timer {
       font-size: 0.8rem;
       color: #666;
@@ -161,7 +160,6 @@
       font-style: italic;
     }
     
-    /* Achievement notification badge */
     .achievement-badge {
       position: relative;
       display: inline-block;
@@ -218,7 +216,6 @@
       background: #7b1fa2;
     }
     
-    /* Toast Notification Styles */
     .toast-container {
       position: fixed;
       top: 20px;
@@ -258,7 +255,6 @@
       animation: slideOut 0.3s ease-out forwards;
     }
     
-    /* Confetti Canvas */
     #confetti-canvas {
       position: fixed;
       top: 0;
@@ -269,7 +265,6 @@
       z-index: 9998;
     }
     
-    /* Realtime status */
     .realtime-status {
       position: fixed;
       bottom: 10px;
@@ -301,64 +296,17 @@
     
     @media (max-width: 600px) {
       body { padding: 10px; }
-      
-      .stats-grid {
-        grid-template-columns: 1fr;
-        gap: 8px;
-      }
-      
-      .stat-card {
-        padding: 12px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-      
-      .stat-card b {
-        margin-bottom: 0;
-        font-size: 1rem;
-      }
-      
-      .button-container {
-        flex-direction: column;
-        align-items: stretch;
-      }
-      
-      button {
-        width: 100%;
-        padding: 15px;
-        font-size: 1.1rem;
-      }
-      
-      .progress-container {
-        padding: 0 5px;
-      }
-      
-      .toast {
-        min-width: 200px;
-        max-width: 280px;
-        padding: 12px 20px;
-        font-size: 0.9rem;
-      }
-      
-      .realtime-status {
-        bottom: 5px;
-        right: 5px;
-        font-size: 0.7rem;
-      }
-      
-      .regen-timer {
-        font-size: 0.7rem;
-      }
-      
-      .stat-warning-badge {
-        font-size: 1rem;
-      }
-      
-      .notification-dot {
-        width: 8px;
-        height: 8px;
-      }
+      .stats-grid { grid-template-columns: 1fr; gap: 8px; }
+      .stat-card { padding: 12px; display: flex; justify-content: space-between; align-items: center; }
+      .stat-card b { margin-bottom: 0; font-size: 1rem; }
+      .button-container { flex-direction: column; align-items: stretch; }
+      button { width: 100%; padding: 15px; font-size: 1.1rem; }
+      .progress-container { padding: 0 5px; }
+      .toast { min-width: 200px; max-width: 280px; padding: 12px 20px; font-size: 0.9rem; }
+      .realtime-status { bottom: 5px; right: 5px; font-size: 0.7rem; }
+      .regen-timer { font-size: 0.7rem; }
+      .stat-warning-badge { font-size: 1rem; }
+      .notification-dot { width: 8px; height: 8px; }
     }
   </style>
 </head>
@@ -366,8 +314,6 @@
 
 <canvas id="confetti-canvas"></canvas>
 <div class="toast-container" id="toast-container"></div>
-
-<!-- Realtime Status Indicator -->
 <div class="realtime-status" id="realtimeStatus">
   <span class="status-dot"></span>
   <span>Live Updates Active</span>
@@ -401,14 +347,13 @@
   <div class="regen-timer" id="regenTimer"></div>
 </div>
 
-<!-- Stat Decay Info -->
 <div class="decay-info" id="decayInfo">
   ⏰ Stats decay 5 points per hour while you're away
 </div>
 
 <div class="button-container">
   <button onclick="goTo('profile.html')" style="background:#9c27b0; color:white;">👤 My Profile</button>
-   <button onclick="goTo('historical_map.html')">💬 Historical Map</button>
+  <button onclick="goTo('historical_map.html')">💬 Historical Map</button>
   <button onclick="goTo('forum.html')">💬 Forum</button>
   <button onclick="goTo('chat.html')">💬 Chat</button>
   <button onclick="goTo('jobs.html')">💼 Jobs</button>
@@ -434,7 +379,6 @@
   <button onclick="goTo('guide.html')" style="background:#4CAF50; color:white; border-color:#388E3C;">📚 Guide</button>
   <button onclick="goTo('donate.html')" style="background:#4CAF50; color:white; border-color:#388E3C;">₿ Donate</button>
   
-  <!-- Freelance Marketplace Buttons -->
   <button onclick="goTo('marketplace.html')" style="background:#2196F3; color:white; border-color:#1976D2;">💼 Freelance Marketplace</button>
   <button onclick="goTo('register-freelancer.html')" style="background:#4CAF50; color:white; border-color:#388E3C;">📝 Freelancer Registration</button>
   <button onclick="goTo('freelancer-dashboard.html')" style="background:#ff9800; color:white; border-color:#f57c00;">👤 Freelancer Dashboard</button>
@@ -450,7 +394,7 @@ const sb = window.supabase.createClient(
   "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
 );
 
-// ========== HEARTBEAT – updates last_activity & current_page ==========
+// ========== HEARTBEAT ==========
 async function sendHeartbeat() {
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return;
@@ -459,16 +403,11 @@ async function sendHeartbeat() {
 }
 sendHeartbeat();
 setInterval(sendHeartbeat, 15000);
-// ======================================================================
+// ===============================
 
 function escapeHtml(str) {
     if (!str) return '';
-    return str
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
+    return str.replace(/[&<>]/g, m => ({ '&':'&amp;','<':'&lt;','>':'&gt;' }[m]));
 }
 
 let player = null;
@@ -495,10 +434,7 @@ function showToast(message, type = 'info', duration = 3000) {
 function startConfetti() {
   const canvas = document.getElementById('confetti-canvas');
   const ctx = canvas.getContext('2d');
-  function resizeCanvas() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-  }
+  function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
   resizeCanvas();
   window.addEventListener('resize', resizeCanvas);
   const particles = [];
@@ -536,7 +472,6 @@ function startConfetti() {
   }
   animate();
 }
-
 function stopConfetti() {
   if (confettiAnimation) cancelAnimationFrame(confettiAnimation);
   const canvas = document.getElementById('confetti-canvas');
@@ -547,25 +482,15 @@ function stopConfetti() {
 async function checkAchievementNotifications() {
   if (!player) return;
   try {
-    const { data: unviewed, error } = await sb.rpc('get_unviewed_achievements', {
-      p_player_id: player.id
-    });
+    const { data: unviewed, error } = await sb.rpc('get_unviewed_achievements', { p_player_id: player.id });
     if (error) throw error;
     const notificationDot = document.getElementById('achievementNotification');
     if (unviewed && unviewed.length > 0) {
       notificationDot.style.display = 'block';
       showToast(`🏆 New Achievement: ${unviewed[0].name}!`, 'achievement', 5000);
-      if (unviewed.length > 1) {
-        setTimeout(() => {
-          showToast(`...and ${unviewed.length - 1} more achievement(s) unlocked!`, 'info', 3000);
-        }, 1000);
-      }
-    } else {
-      notificationDot.style.display = 'none';
-    }
-  } catch (error) {
-    console.error('Error checking achievements:', error);
-  }
+      if (unviewed.length > 1) setTimeout(() => showToast(`...and ${unviewed.length - 1} more`, 'info', 3000), 1000);
+    } else notificationDot.style.display = 'none';
+  } catch (error) { console.error('Error checking achievements:', error); }
 }
 
 async function applyStatDecay() {
@@ -576,10 +501,10 @@ async function applyStatDecay() {
     if (data.success && data.decay_applied) {
       player.hunger = data.new_hunger;
       player.happiness = data.new_happiness;
-      if (data.new_hunger < 30 && data.new_hunger > 10) showToast('⚠️ You are getting hungry! Time to eat something!', 'warning');
-      else if (data.new_hunger <= 10) showToast('🔴 CRITICAL: You are starving! Eat immediately!', 'error');
-      if (data.new_happiness < 30 && data.new_happiness > 10) showToast('😔 Your happiness is low! Have some fun!', 'warning');
-      else if (data.new_happiness <= 10) showToast('🔴 CRITICAL: You are depressed! Cheer up!', 'error');
+      if (data.new_hunger < 30 && data.new_hunger > 10) showToast('⚠️ You are getting hungry!', 'warning');
+      else if (data.new_hunger <= 10) showToast('🔴 CRITICAL: You are starving!', 'error');
+      if (data.new_happiness < 30 && data.new_happiness > 10) showToast('😔 Your happiness is low!', 'warning');
+      else if (data.new_happiness <= 10) showToast('🔴 CRITICAL: You are depressed!', 'error');
       renderStats();
     }
   } catch (error) { console.error('Error applying stat decay:', error); }
@@ -618,7 +543,6 @@ function getStatWarningClass(value, type) {
   if (type === 'health') { if (value <= 20) return 'danger'; if (value <= 50) return 'warning'; }
   return '';
 }
-
 function getWarningEmoji(value, type) {
   if (type === 'hunger') { if (value <= 10) return '🔴'; if (value <= 30) return '⚠️'; }
   if (type === 'happiness') { if (value <= 10) return '😢'; if (value <= 30) return '😐'; }
@@ -630,12 +554,7 @@ function setupRealtimeSubscription() {
   if (!player) return;
   if (playerChannel) playerChannel.unsubscribe();
   playerChannel = sb.channel('player-changes')
-    .on('postgres_changes', {
-      event: 'UPDATE',
-      schema: 'public',
-      table: 'players',
-      filter: `id=eq.${player.id}`
-    }, (payload) => {
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'players', filter: `id=eq.${player.id}` }, (payload) => {
       const oldLevel = player.level;
       player = payload.new;
       renderStats();
@@ -649,12 +568,53 @@ function setupRealtimeSubscription() {
     .subscribe((status) => { if (status === 'SUBSCRIBED') document.getElementById('realtimeStatus').style.opacity = '1'; });
 }
 
+async function ensurePlayerExists(user) {
+  // Check if player exists for this auth user
+  const { data: existing, error } = await sb.from('players').select('id').eq('id', user.id).single();
+  if (existing) return existing;
+  
+  // Create new player
+  const username = user.email.split('@')[0] || 'Player_' + user.id.slice(0,6);
+  const { data: newPlayer, error: insertError } = await sb.from('players').insert({
+    id: user.id,
+    username: username,
+    email: user.email,
+    level: 1,
+    xp: 0,
+    cash: 1000,
+    energy: 100,
+    health: 100,
+    hunger: 100,
+    happiness: 100,
+    success_boost: 0,
+    is_admin: false,
+    created_at: new Date()
+  }).select().single();
+  
+  if (insertError) {
+    console.error('Failed to create player:', insertError);
+    throw insertError;
+  }
+  return newPlayer;
+}
+
 async function loadPlayer() {
-  const { data: { user } } = await sb.auth.getUser();
-  if (!user) return window.location.href="index.html";
-  const { data: playerData } = await sb.from('players').select('*').eq('id', user.id).single();
-  if (!playerData) { document.getElementById("stats").innerHTML = '<div class="stat-card">Player not found</div>'; return; }
-  player = playerData;
+  const { data: { user }, error: userError } = await sb.auth.getUser();
+  if (userError || !user) {
+    window.location.href = "index.html";
+    return;
+  }
+  
+  try {
+    // Ensure player record exists (auto-create if missing)
+    const playerData = await ensurePlayerExists(user);
+    player = playerData;
+  } catch (err) {
+    console.error('Player load/create error:', err);
+    document.getElementById("stats").innerHTML = '<div class="stat-card">Error loading player data. Please refresh.</div>';
+    return;
+  }
+  
   // Ban check
   if (player.banned_until && new Date(player.banned_until) > new Date()) {
     const banUntil = new Date(player.banned_until).toLocaleString();
@@ -663,6 +623,7 @@ async function loadPlayer() {
     setTimeout(async () => { await sb.auth.signOut(); window.location.href = "index.html"; }, 4000);
     return;
   }
+  
   await applyStatDecay();
   await regenerateEnergy();
   await checkAchievementNotifications();
@@ -671,6 +632,7 @@ async function loadPlayer() {
 }
 
 function renderStats() {
+  if (!player) return;
   const statsDiv = document.getElementById("stats");
   const nextLevelXP = Math.pow(player.level, 2) * 100;
   const prevLevelXP = Math.pow(player.level - 1, 2) * 100;
@@ -684,12 +646,14 @@ function renderStats() {
   if (player.energy < 20) energyBar.style.background = '#f44336';
   else if (player.energy < 50) energyBar.style.background = '#ff9800';
   else energyBar.style.background = '#4CAF50';
+  
   const hungerWarning = getStatWarningClass(player.hunger || 100, 'hunger');
   const happinessWarning = getStatWarningClass(player.happiness || 100, 'happiness');
   const healthWarning = getStatWarningClass(player.health || 100, 'health');
   const hungerEmoji = getWarningEmoji(player.hunger || 100, 'hunger');
   const happinessEmoji = getWarningEmoji(player.happiness || 100, 'happiness');
   const healthEmoji = getWarningEmoji(player.health || 100, 'health');
+  
   statsDiv.innerHTML = `
     <div class="stat-card"><b>👤 Username</b><div class="value">${escapeHtml(player.username)}</div></div>
     <div class="stat-card"><b>💰 Cash</b><div class="value">₹${player.cash.toLocaleString()}</div></div>
@@ -700,6 +664,7 @@ function renderStats() {
     <div class="stat-card ${happinessWarning}"><b>😊 Happiness</b><div class="value">${player.happiness || 100}</div>${happinessEmoji ? `<span class="stat-warning-badge">${happinessEmoji}</span>` : ''}${happinessWarning ? `<div class="stat-${happinessWarning}">${happinessWarning === 'danger' ? 'Depressed!' : 'Unhappy!'}</div>` : ''}</div>
     <div class="stat-card boost"><b>⚡ Success Boost</b><div class="value">${player.success_boost || 0}%</div></div>
   `;
+  
   const lastDecay = player.last_decay ? new Date(player.last_decay) : new Date();
   const hoursSinceDecay = Math.floor((new Date() - lastDecay) / (1000 * 60 * 60));
   if (hoursSinceDecay > 0) document.getElementById('decayInfo').innerHTML = `⏰ Last login: ${hoursSinceDecay} hour${hoursSinceDecay > 1 ? 's' : ''} ago - Stats have decayed`;
@@ -721,9 +686,7 @@ window.addEventListener('beforeunload', () => {
   if (achievementCheckInterval) clearInterval(achievementCheckInterval);
 });
 
-function startRegenTimer() {
-  regenInterval = setInterval(async () => { if (player && player.energy < 100) await regenerateEnergy(); updateRegenInfo(); }, 10000);
-}
+function startRegenTimer() { regenInterval = setInterval(async () => { if (player && player.energy < 100) await regenerateEnergy(); updateRegenInfo(); }, 10000); }
 function startDecayChecker() { decayCheckInterval = setInterval(async () => { if (player) await applyStatDecay(); }, 300000); }
 function startAchievementChecker() { achievementCheckInterval = setInterval(async () => { if (player) await checkAchievementNotifications(); }, 30000); }
 
