@@ -5,393 +5,73 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chat - Rheoa RPG</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Courier New', monospace;
-            background: #f8f8f0;
-            color: #222;
-            padding: 20px;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .chat-container {
-            display: flex;
-            flex: 1;
-            gap: 20px;
-            min-height: 0;
-        }
-
-        .rooms-sidebar {
-            width: 260px;
-            background: white;
-            border: 2px solid #2196F3;
-            border-radius: 10px;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        .rooms-header {
-            background: #2196F3;
-            color: white;
-            padding: 10px;
-            font-weight: bold;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .create-room-btn {
-            background: #ff9800;
-            border: none;
-            color: white;
-            padding: 4px 8px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 0.8rem;
-        }
-
-        .rooms-list {
-            flex: 1;
-            overflow-y: auto;
-            padding: 10px;
-        }
-
-        .room-item {
-            padding: 8px;
-            margin: 5px 0;
-            cursor: pointer;
-            border-radius: 5px;
-            background: #f5f5f5;
-            transition: background 0.2s;
-        }
-
-        .room-item:hover {
-            background: #e3f2fd;
-        }
-
-        .room-item.active {
-            background: #2196F3;
-            color: white;
-        }
-
-        .chat-main {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            background: white;
-            border: 2px solid #2196F3;
-            border-radius: 10px;
-            overflow: hidden;
-        }
-
-        .chat-header {
-            background: #2196F3;
-            color: white;
-            padding: 10px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .room-info {
-            font-weight: bold;
-        }
-
-        .online-count {
-            font-size: 0.8rem;
-            background: rgba(255,255,255,0.2);
-            padding: 2px 8px;
-            border-radius: 10px;
-        }
-
-        .messages-area {
-            flex: 1;
-            overflow-y: auto;
-            padding: 15px;
-            background: #fafafa;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .message {
-            display: flex;
-            flex-direction: column;
-            max-width: 80%;
-        }
-
-        .message.own {
-            align-self: flex-end;
-        }
-
-        .message-header {
-            font-size: 0.8rem;
-            color: #666;
-            display: flex;
-            gap: 10px;
-            align-items: baseline;
-        }
-
-        .message-username {
-            font-weight: bold;
-            color: #2196F3;
-        }
-
-        .message-time {
-            font-size: 0.7rem;
-        }
-
-        .message-text {
-            background: #e9ecef;
-            padding: 8px 12px;
-            border-radius: 12px;
-            margin-top: 4px;
-            word-wrap: break-word;
-        }
-
-        .message.own .message-text {
-            background: #2196F3;
-            color: white;
-        }
-
-        .message-input-area {
-            padding: 15px;
-            border-top: 1px solid #ddd;
-            display: flex;
-            gap: 10px;
-        }
-
-        #messageInput {
-            flex: 1;
-            padding: 10px;
-            font-family: inherit;
-            border: 2px solid #ddd;
-            border-radius: 5px;
-            resize: none;
-        }
-
-        #sendBtn {
-            padding: 10px 20px;
-            background: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-
-        .members-sidebar {
-            width: 260px;
-            background: white;
-            border: 2px solid #2196F3;
-            border-radius: 10px;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        .members-header {
-            background: #2196F3;
-            color: white;
-            padding: 10px;
-            font-weight: bold;
-        }
-
-        .members-list {
-            flex: 1;
-            overflow-y: auto;
-            padding: 10px;
-        }
-
-        .member-item {
-            padding: 8px;
-            margin: 5px 0;
-            border-radius: 5px;
-            background: #f5f5f5;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .member-avatar {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            background: #2196F3;
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-        }
-
-        .member-name {
-            font-weight: bold;
-            flex: 1;
-        }
-
-        .member-status {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: #4CAF50;
-        }
-
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            z-index: 1000;
-        }
-        .modal-content {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            width: 300px;
-        }
-        .modal input, .modal textarea {
-            width: 100%;
-            margin: 10px 0;
-            padding: 8px;
-        }
-        .modal button {
-            margin-top: 10px;
-            padding: 8px;
-            width: 100%;
-        }
-
-        .back-button {
-            display: block;
-            width: 200px;
-            margin: 30px auto;
-            padding: 12px 24px;
-            font-family: 'Courier New', monospace;
-            font-weight: bold;
-            border: 2px solid black;
-            border-radius: 8px;
-            background: #666;
-            color: white;
-            cursor: pointer;
-            transition: all 0.2s;
-            text-align: center;
-        }
-        .back-button:hover {
-            background: #555;
-            transform: scale(1.02);
-        }
-
-        .toast-container {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 9999;
-        }
-        .toast {
-            padding: 15px 25px;
-            margin-bottom: 10px;
-            border-radius: 8px;
-            color: white;
-            font-weight: bold;
-            animation: slideIn 0.3s ease-out;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            min-width: 250px;
-            max-width: 350px;
-        }
+        /* Your existing CSS – unchanged */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Courier New', monospace; background: #f8f8f0; color: #222; padding: 20px; height: 100vh; display: flex; flex-direction: column; }
+        .chat-container { display: flex; flex: 1; gap: 20px; min-height: 0; }
+        .rooms-sidebar { width: 260px; background: white; border: 2px solid #2196F3; border-radius: 10px; display: flex; flex-direction: column; overflow: hidden; }
+        .rooms-header { background: #2196F3; color: white; padding: 10px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
+        .create-room-btn { background: #ff9800; border: none; color: white; padding: 4px 8px; border-radius: 5px; cursor: pointer; font-size: 0.8rem; }
+        .rooms-list { flex: 1; overflow-y: auto; padding: 10px; }
+        .room-item { padding: 8px; margin: 5px 0; cursor: pointer; border-radius: 5px; background: #f5f5f5; transition: background 0.2s; }
+        .room-item:hover { background: #e3f2fd; }
+        .room-item.active { background: #2196F3; color: white; }
+        .chat-main { flex: 1; display: flex; flex-direction: column; background: white; border: 2px solid #2196F3; border-radius: 10px; overflow: hidden; }
+        .chat-header { background: #2196F3; color: white; padding: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .room-info { font-weight: bold; }
+        .online-count { font-size: 0.8rem; background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 10px; }
+        .messages-area { flex: 1; overflow-y: auto; padding: 15px; background: #fafafa; display: flex; flex-direction: column; gap: 10px; }
+        .message { display: flex; flex-direction: column; max-width: 80%; }
+        .message.own { align-self: flex-end; }
+        .message-header { font-size: 0.8rem; color: #666; display: flex; gap: 10px; align-items: baseline; }
+        .message-username { font-weight: bold; color: #2196F3; }
+        .message-time { font-size: 0.7rem; }
+        .message-text { background: #e9ecef; padding: 8px 12px; border-radius: 12px; margin-top: 4px; word-wrap: break-word; }
+        .message.own .message-text { background: #2196F3; color: white; }
+        .message-input-area { padding: 15px; border-top: 1px solid #ddd; display: flex; gap: 10px; }
+        #messageInput { flex: 1; padding: 10px; font-family: inherit; border: 2px solid #ddd; border-radius: 5px; resize: none; }
+        #sendBtn { padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .members-sidebar { width: 260px; background: white; border: 2px solid #2196F3; border-radius: 10px; display: flex; flex-direction: column; overflow: hidden; }
+        .members-header { background: #2196F3; color: white; padding: 10px; font-weight: bold; }
+        .members-list { flex: 1; overflow-y: auto; padding: 10px; }
+        .member-item { padding: 8px; margin: 5px 0; border-radius: 5px; background: #f5f5f5; display: flex; align-items: center; gap: 10px; }
+        .member-avatar { width: 32px; height: 32px; border-radius: 50%; background: #2196F3; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+        .member-name { font-weight: bold; flex: 1; }
+        .member-status { width: 8px; height: 8px; border-radius: 50%; background: #4CAF50; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; }
+        .modal-content { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 10px; width: 300px; }
+        .modal input, .modal textarea { width: 100%; margin: 10px 0; padding: 8px; }
+        .modal button { margin-top: 10px; padding: 8px; width: 100%; }
+        .back-button { display: block; width: 200px; margin: 30px auto; padding: 12px 24px; font-family: 'Courier New', monospace; font-weight: bold; border: 2px solid black; border-radius: 8px; background: #666; color: white; cursor: pointer; transition: all 0.2s; text-align: center; }
+        .back-button:hover { background: #555; transform: scale(1.02); }
+        .toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; }
+        .toast { padding: 15px 25px; margin-bottom: 10px; border-radius: 8px; color: white; font-weight: bold; animation: slideIn 0.3s ease-out; box-shadow: 0 4px 12px rgba(0,0,0,0.15); min-width: 250px; max-width: 350px; }
         .toast.success { background: #4CAF50; }
         .toast.error { background: #f44336; }
         .toast.info { background: #2196F3; }
-        @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
     </style>
-    <script>
-  // Activity tracking – call every 15 seconds
-  async function sendHeartbeat() {
-    const sb = window.supabase?.createClient?.(
-      "https://mtiwodvsrwvrujbhmmrn.supabase.co",
-      "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
-    );
-    if (!sb) return;
-    const pageName = window.location.pathname.split('/').pop() || 'dashboard';
-    try {
-      await sb.rpc('update_player_activity', {
-        p_current_page: pageName,
-        p_ip: null,
-        p_user_agent: navigator.userAgent
-      });
-    } catch(e) { console.warn("Heartbeat failed", e); }
-  }
-  sendHeartbeat();
-  setInterval(sendHeartbeat, 15000);
-</script>
 </head>
 <body>
     <div class="toast-container" id="toast-container"></div>
 
     <div class="chat-container">
-        <!-- Rooms Sidebar -->
         <div class="rooms-sidebar">
-            <div class="rooms-header">
-                <span>📁 Rooms</span>
-                <button class="create-room-btn" onclick="showCreateRoomModal()">+ New</button>
-            </div>
-            <div class="rooms-list" id="roomsList">
-                <div class="loading">Loading rooms...</div>
-            </div>
+            <div class="rooms-header"><span>📁 Rooms</span><button class="create-room-btn" onclick="showCreateRoomModal()">+ New</button></div>
+            <div class="rooms-list" id="roomsList"><div class="loading">Loading rooms...</div></div>
         </div>
-
-        <!-- Main Chat Area -->
         <div class="chat-main">
-            <div class="chat-header">
-                <div class="room-info" id="currentRoomName">Select a room</div>
-                <div class="online-count" id="onlineCount">0 online</div>
-            </div>
-            <div class="messages-area" id="messagesArea">
-                <div class="loading">Select a room to start chatting</div>
-            </div>
-            <div class="message-input-area">
-                <textarea id="messageInput" placeholder="Type your message..." rows="2" disabled></textarea>
-                <button id="sendBtn" onclick="sendMessage()" disabled>Send</button>
-            </div>
+            <div class="chat-header"><div class="room-info" id="currentRoomName">Select a room</div><div class="online-count" id="onlineCount">0 online</div></div>
+            <div class="messages-area" id="messagesArea"><div class="loading">Select a room to start chatting</div></div>
+            <div class="message-input-area"><textarea id="messageInput" placeholder="Type your message..." rows="2" disabled></textarea><button id="sendBtn" onclick="sendMessage()" disabled>Send</button></div>
         </div>
-
-        <!-- Members Sidebar -->
-        <div class="members-sidebar">
-            <div class="members-header">👥 Online</div>
-            <div class="members-list" id="membersList">
-                <div class="loading">Select a room</div>
-            </div>
-        </div>
+        <div class="members-sidebar"><div class="members-header">👥 Online</div><div class="members-list" id="membersList"><div class="loading">Select a room</div></div></div>
     </div>
 
     <button class="back-button" onclick="goBack()">← Back to Dashboard</button>
 
-    <!-- Create Room Modal -->
     <div id="createRoomModal" class="modal">
-        <div class="modal-content">
-            <h3>Create New Channel</h3>
-            <input type="text" id="roomName" placeholder="Channel Name">
-            <textarea id="roomDescription" placeholder="Description (optional)" rows="3"></textarea>
-            <button onclick="createRoom()">Create</button>
-            <button onclick="closeModal('createRoomModal')">Cancel</button>
-        </div>
+        <div class="modal-content"><h3>Create New Channel</h3><input type="text" id="roomName" placeholder="Channel Name"><textarea id="roomDescription" placeholder="Description (optional)" rows="3"></textarea><button onclick="createRoom()">Create</button><button onclick="closeModal('createRoomModal')">Cancel</button></div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
@@ -401,14 +81,25 @@
             "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
         );
 
+        // ========== HEARTBEAT (moved here, after Supabase is loaded) ==========
+        async function sendHeartbeat() {
+            if (!sb) return;
+            const pageName = window.location.pathname.split('/').pop() || 'dashboard';
+            try {
+                await sb.rpc('update_player_activity', {
+                    p_current_page: pageName,
+                    p_ip: null,
+                    p_user_agent: navigator.userAgent
+                });
+            } catch(e) { console.warn("Heartbeat failed", e); }
+        }
+        sendHeartbeat();
+        setInterval(sendHeartbeat, 15000);
+        // =====================================================================
+
         function escapeHtml(str) {
             if (!str) return '';
-            return str
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#39;');
+            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
         }
 
         function showToast(message, type = 'info', duration = 3000) {
@@ -417,12 +108,7 @@
             toast.className = `toast ${type}`;
             toast.textContent = message;
             container.appendChild(toast);
-            setTimeout(() => {
-                toast.classList.add('fade-out');
-                setTimeout(() => {
-                    if (toast.parentNode) container.removeChild(toast);
-                }, 300);
-            }, duration);
+            setTimeout(() => { toast.classList.add('fade-out'); setTimeout(() => { if (toast.parentNode) container.removeChild(toast); }, 300); }, duration);
         }
 
         let currentPlayer = null;
@@ -438,15 +124,12 @@
             const { data: player } = await sb.from('players').select('id, username, banned_until, ban_reason').eq('auth_id', user.id).single();
             if (player) {
                 currentPlayer = player;
-                // BAN CHECK (Step 4)
+                // Ban check
                 if (currentPlayer.banned_until && new Date(currentPlayer.banned_until) > new Date()) {
                     const banUntil = new Date(currentPlayer.banned_until).toLocaleString();
                     const reason = currentPlayer.ban_reason || 'Violation of rules';
                     showToast(`⚠️ You are banned until ${banUntil}. Reason: ${reason}`, 'error');
-                    setTimeout(async () => {
-                        await sb.auth.signOut();
-                        window.location.href = 'index.html';
-                    }, 4000);
+                    setTimeout(async () => { await sb.auth.signOut(); window.location.href = 'index.html'; }, 4000);
                     return null;
                 }
             }
@@ -456,54 +139,26 @@
         async function loadRooms() {
             const player = await getPlayer();
             if (!player) return;
-
             const { data: allRooms, error } = await sb.from('chat_rooms').select('*').order('created_at');
-            if (error) {
-                console.error('Error loading rooms:', error);
-                return;
-            }
-
+            if (error) { console.error('Error loading rooms:', error); return; }
             const { data: memberships } = await sb.from('chat_members').select('room_id').eq('user_id', player.id);
             const memberRoomIds = memberships?.map(m => m.room_id) || [];
-
-            rooms = allRooms.filter(room => {
-                if (room.type === 'global') return true;
-                return memberRoomIds.includes(room.id);
-            });
-
+            rooms = allRooms.filter(room => { if (room.type === 'global') return true; return memberRoomIds.includes(room.id); });
             renderRooms();
-
-            if (!currentRoom && rooms.length) {
-                const globalRoom = rooms.find(r => r.type === 'global');
-                if (globalRoom) selectRoom(globalRoom.id);
-            }
+            if (!currentRoom && rooms.length) { const globalRoom = rooms.find(r => r.type === 'global'); if (globalRoom) selectRoom(globalRoom.id); }
         }
 
         function renderRooms() {
             const container = document.getElementById('roomsList');
-            if (!rooms.length) {
-                container.innerHTML = '<div class="empty">No rooms available. Create one!</div>';
-                return;
-            }
-            container.innerHTML = rooms.map(room => `
-                <div class="room-item ${currentRoom?.id === room.id ? 'active' : ''}" 
-                     onclick="selectRoom('${room.id}')">
-                    <strong>${escapeHtml(room.name)}</strong>
-                    <div style="font-size:0.7rem; color:gray;">${room.type === 'global' ? 'Global' : 'Channel'}</div>
-                </div>
-            `).join('');
+            if (!rooms.length) { container.innerHTML = '<div class="empty">No rooms available. Create one!</div>'; return; }
+            container.innerHTML = rooms.map(room => `<div class="room-item ${currentRoom?.id === room.id ? 'active' : ''}" onclick="selectRoom('${room.id}')"><strong>${escapeHtml(room.name)}</strong><div style="font-size:0.7rem; color:gray;">${room.type === 'global' ? 'Global' : 'Channel'}</div></div>`).join('');
         }
 
         async function selectRoom(roomId) {
             if (currentRoom?.id === roomId) return;
-            if (roomChannel) {
-                roomChannel.unsubscribe();
-                roomChannel = null;
-            }
-
+            if (roomChannel) { roomChannel.unsubscribe(); roomChannel = null; }
             currentRoom = rooms.find(r => r.id === roomId);
             if (!currentRoom) return;
-
             renderRooms();
             document.getElementById('currentRoomName').innerHTML = currentRoom.name;
             document.getElementById('messagesArea').innerHTML = '<div class="loading">Loading messages...</div>';
@@ -511,87 +166,43 @@
             document.getElementById('membersList').innerHTML = '<div class="loading">Loading...</div>';
             document.getElementById('messageInput').disabled = false;
             document.getElementById('sendBtn').disabled = false;
-
             await loadMessages();
             setupRoomChannel();
         }
 
         async function loadMessages() {
             if (!currentRoom) return;
-            const { data, error } = await sb
-                .from('chat_messages')
-                .select(`
-                    id,
-                    content,
-                    created_at,
-                    user_id,
-                    players:user_id (username)
-                `)
-                .eq('room_id', currentRoom.id)
-                .order('created_at', { ascending: true });
-
-            if (error) {
-                console.error('Error loading messages:', error);
-                return;
-            }
-            currentMessages = (data || []).map(msg => ({
-                ...msg,
-                players: msg.players[0]
-            }));
+            const { data, error } = await sb.from('chat_messages').select(`id, content, created_at, user_id, players:user_id (username)`).eq('room_id', currentRoom.id).order('created_at', { ascending: true });
+            if (error) { console.error('Error loading messages:', error); return; }
+            currentMessages = (data || []).map(msg => ({ ...msg, players: msg.players[0] }));
             renderMessages();
         }
 
         function renderMessages() {
             const container = document.getElementById('messagesArea');
-            if (!currentMessages.length) {
-                container.innerHTML = '<div class="empty">No messages yet. Be the first!</div>';
-                return;
-            }
+            if (!currentMessages.length) { container.innerHTML = '<div class="empty">No messages yet. Be the first!</div>'; return; }
             const playerId = currentPlayer.id;
-            container.innerHTML = currentMessages.map(msg => `
-                <div class="message ${msg.user_id === playerId ? 'own' : ''}">
-                    <div class="message-header">
-                        <span class="message-username">${escapeHtml(msg.players.username)}</span>
-                        <span class="message-time">${new Date(msg.created_at).toLocaleTimeString()}</span>
-                    </div>
-                    <div class="message-text">${escapeHtml(msg.content)}</div>
-                </div>
-            `).join('');
+            container.innerHTML = currentMessages.map(msg => `<div class="message ${msg.user_id === playerId ? 'own' : ''}"><div class="message-header"><span class="message-username">${escapeHtml(msg.players.username)}</span><span class="message-time">${new Date(msg.created_at).toLocaleTimeString()}</span></div><div class="message-text">${escapeHtml(msg.content)}</div></div>`).join('');
             container.scrollTop = container.scrollHeight;
         }
 
         function setupRoomChannel() {
             if (!currentRoom || !currentPlayer) return;
-
             roomChannel = sb.channel(`room:${currentRoom.id}`);
-
             roomChannel.on('presence', { event: 'sync' }, () => {
                 const state = roomChannel.presenceState();
                 const userList = [];
-                Object.keys(state).forEach(key => {
-                    userList.push(...state[key]);
-                });
+                Object.keys(state).forEach(key => { userList.push(...state[key]); });
                 onlineUsers = userList;
                 document.getElementById('onlineCount').textContent = `${onlineUsers.length} online`;
                 renderMembers();
             });
-
             roomChannel.on('broadcast', { event: 'message' }, (payload) => {
                 const newMsg = payload.payload;
-                if (!currentMessages.some(m => m.id === newMsg.id)) {
-                    currentMessages.push(newMsg);
-                    renderMessages();
-                }
+                if (!currentMessages.some(m => m.id === newMsg.id)) { currentMessages.push(newMsg); renderMessages(); }
             });
-
             roomChannel.subscribe(async (status) => {
-                if (status === 'SUBSCRIBED') {
-                    await roomChannel.track({
-                        user_id: currentPlayer.id,
-                        username: currentPlayer.username,
-                        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentPlayer.id}`
-                    });
-                }
+                if (status === 'SUBSCRIBED') { await roomChannel.track({ user_id: currentPlayer.id, username: currentPlayer.username, avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentPlayer.id}` }); }
             });
         }
 
@@ -599,101 +210,33 @@
             const input = document.getElementById('messageInput');
             const text = input.value.trim();
             if (!text || !currentRoom) return;
-
             const tempId = `temp-${Date.now()}`;
-            const newMsg = {
-                id: tempId,
-                content: text,
-                created_at: new Date().toISOString(),
-                user_id: currentPlayer.id,
-                players: { username: currentPlayer.username }
-            };
-
-            currentMessages.push(newMsg);
-            renderMessages();
-            input.value = '';
-
-            if (roomChannel) {
-                await roomChannel.send({
-                    type: 'broadcast',
-                    event: 'message',
-                    payload: newMsg
-                });
-            }
-
-            const { error } = await sb
-                .from('chat_messages')
-                .insert({
-                    room_id: currentRoom.id,
-                    user_id: currentPlayer.id,
-                    content: text
-                });
-
-            if (error) {
-                console.error('Failed to persist message:', error);
-            }
+            const newMsg = { id: tempId, content: text, created_at: new Date().toISOString(), user_id: currentPlayer.id, players: { username: currentPlayer.username } };
+            currentMessages.push(newMsg); renderMessages(); input.value = '';
+            if (roomChannel) { await roomChannel.send({ type: 'broadcast', event: 'message', payload: newMsg }); }
+            const { error } = await sb.from('chat_messages').insert({ room_id: currentRoom.id, user_id: currentPlayer.id, content: text });
+            if (error) console.error('Failed to persist message:', error);
         }
 
         function renderMembers() {
             const container = document.getElementById('membersList');
-            if (!onlineUsers.length) {
-                container.innerHTML = '<div class="empty">No one else is online in this room.</div>';
-                return;
-            }
-            container.innerHTML = onlineUsers.map(user => `
-                <div class="member-item">
-                    <div class="member-avatar">${user.username.charAt(0).toUpperCase()}</div>
-                    <div class="member-name">${escapeHtml(user.username)}</div>
-                    <div class="member-status"></div>
-                </div>
-            `).join('');
+            if (!onlineUsers.length) { container.innerHTML = '<div class="empty">No one else is online in this room.</div>'; return; }
+            container.innerHTML = onlineUsers.map(user => `<div class="member-item"><div class="member-avatar">${user.username.charAt(0).toUpperCase()}</div><div class="member-name">${escapeHtml(user.username)}</div><div class="member-status"></div></div>`).join('');
         }
 
-        function showCreateRoomModal() {
-            document.getElementById('createRoomModal').style.display = 'block';
-        }
-
+        function showCreateRoomModal() { document.getElementById('createRoomModal').style.display = 'block'; }
         async function createRoom() {
             const name = document.getElementById('roomName').value.trim();
-            if (!name) {
-                showToast('Room name required', 'error');
-                return;
-            }
-            const { data, error } = await sb
-                .from('chat_rooms')
-                .insert({
-                    name: name,
-                    type: 'channel',
-                    created_by: currentPlayer.id,
-                    description: document.getElementById('roomDescription').value.trim() || null
-                })
-                .select('id')
-                .single();
-
-            if (error) {
-                showToast(error.message, 'error');
-            } else {
-                showToast('Room created!', 'success');
-                closeModal('createRoomModal');
-                await loadRooms();
-                selectRoom(data.id);
-            }
+            if (!name) { showToast('Room name required', 'error'); return; }
+            const { data, error } = await sb.from('chat_rooms').insert({ name: name, type: 'channel', created_by: currentPlayer.id, description: document.getElementById('roomDescription').value.trim() || null }).select('id').single();
+            if (error) { showToast(error.message, 'error'); } else { showToast('Room created!', 'success'); closeModal('createRoomModal'); await loadRooms(); selectRoom(data.id); }
         }
-
-        function closeModal(modalId) {
-            document.getElementById(modalId).style.display = 'none';
-        }
-
-        function goBack() {
-            window.location.href = "dashboard.html";
-        }
+        function closeModal(modalId) { document.getElementById(modalId).style.display = 'none'; }
+        function goBack() { window.location.href = "dashboard.html"; }
 
         (async function init() {
             const player = await getPlayer();
-            if (!player) {
-                window.location.href = 'index.html';
-                return;
-            }
+            if (!player) { window.location.href = 'index.html'; return; }
             await loadRooms();
         })();
     </script>
