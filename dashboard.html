@@ -450,15 +450,12 @@ const sb = window.supabase.createClient(
   "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
 );
 
-// Heartbeat – update last_activity and current_page directly
+// ========== HEARTBEAT ==========
 async function sendHeartbeat() {
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return;
   const pageName = window.location.pathname.split('/').pop() || 'dashboard';
-  await sb.from('players').update({
-    last_activity: new Date().toISOString(),
-    current_page: pageName
-  }).eq('auth_id', user.id).catch(e => console.warn("Heartbeat failed", e));
+  await sb.rpc('update_heartbeat', { p_current_page: pageName }).catch(e => console.warn("Heartbeat failed", e));
 }
 sendHeartbeat();
 setInterval(sendHeartbeat, 15000);
