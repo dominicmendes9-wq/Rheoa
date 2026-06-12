@@ -276,7 +276,6 @@
             width: 100%;
         }
 
-        /* Back button styling (same as jobs.html) */
         .back-button {
             display: block;
             width: 200px;
@@ -331,7 +330,6 @@
     );
     if (!sb) return;
     const pageName = window.location.pathname.split('/').pop() || 'dashboard';
-    // Optional: get IP / user-agent (can be omitted)
     try {
       await sb.rpc('update_player_activity', {
         p_current_page: pageName,
@@ -340,7 +338,6 @@
       });
     } catch(e) { console.warn("Heartbeat failed", e); }
   }
-  // Send immediately and then every 15 seconds
   sendHeartbeat();
   setInterval(sendHeartbeat, 15000);
 </script>
@@ -403,16 +400,17 @@
             "https://mtiwodvsrwvrujbhmmrn.supabase.co",
             "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
         );
-// XSS protection – turns dangerous characters into safe text
-function escapeHtml(str) {
-    if (!str) return '';
-    return str
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-}
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
         function showToast(message, type = 'info', duration = 3000) {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
@@ -437,8 +435,21 @@ function escapeHtml(str) {
         async function getPlayer() {
             const { data: { user } } = await sb.auth.getUser();
             if (!user) return null;
-            const { data: player } = await sb.from('players').select('id, username').eq('auth_id', user.id).single();
-            if (player) currentPlayer = player;
+            const { data: player } = await sb.from('players').select('id, username, banned_until, ban_reason').eq('auth_id', user.id).single();
+            if (player) {
+                currentPlayer = player;
+                // BAN CHECK (Step 4)
+                if (currentPlayer.banned_until && new Date(currentPlayer.banned_until) > new Date()) {
+                    const banUntil = new Date(currentPlayer.banned_until).toLocaleString();
+                    const reason = currentPlayer.ban_reason || 'Violation of rules';
+                    showToast(`⚠️ You are banned until ${banUntil}. Reason: ${reason}`, 'error');
+                    setTimeout(async () => {
+                        await sb.auth.signOut();
+                        window.location.href = 'index.html';
+                    }, 4000);
+                    return null;
+                }
+            }
             return player;
         }
 
@@ -671,12 +682,6 @@ function escapeHtml(str) {
 
         function closeModal(modalId) {
             document.getElementById(modalId).style.display = 'none';
-        }
-
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
         }
 
         function goBack() {
