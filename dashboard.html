@@ -450,7 +450,7 @@ const sb = window.supabase.createClient(
   "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
 );
 
-// ========== HEARTBEAT ==========
+// ========== HEARTBEAT – updates last_activity & current_page ==========
 async function sendHeartbeat() {
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return;
@@ -459,6 +459,7 @@ async function sendHeartbeat() {
 }
 sendHeartbeat();
 setInterval(sendHeartbeat, 15000);
+// ======================================================================
 
 function escapeHtml(str) {
     if (!str) return '';
@@ -494,14 +495,12 @@ function showToast(message, type = 'info', duration = 3000) {
 function startConfetti() {
   const canvas = document.getElementById('confetti-canvas');
   const ctx = canvas.getContext('2d');
-  
   function resizeCanvas() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
   }
   resizeCanvas();
   window.addEventListener('resize', resizeCanvas);
-  
   const particles = [];
   const colors = ['#f44336', '#4CAF50', '#2196F3', '#FFC107', '#9C27B0', '#FF9800'];
   for (let i = 0; i < 100; i++) {
@@ -515,7 +514,6 @@ function startConfetti() {
       rotation: Math.random() * 360
     });
   }
-  
   function animate() {
     if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -620,6 +618,7 @@ function getStatWarningClass(value, type) {
   if (type === 'health') { if (value <= 20) return 'danger'; if (value <= 50) return 'warning'; }
   return '';
 }
+
 function getWarningEmoji(value, type) {
   if (type === 'hunger') { if (value <= 10) return '🔴'; if (value <= 30) return '⚠️'; }
   if (type === 'happiness') { if (value <= 10) return '😢'; if (value <= 30) return '😐'; }
@@ -653,7 +652,7 @@ function setupRealtimeSubscription() {
 async function loadPlayer() {
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return window.location.href="index.html";
-  const { data: playerData } = await sb.from('players').select('*').eq('auth_id', user.id).single();
+  const { data: playerData } = await sb.from('players').select('*').eq('id', user.id).single();
   if (!playerData) { document.getElementById("stats").innerHTML = '<div class="stat-card">Player not found</div>'; return; }
   player = playerData;
   // Ban check
