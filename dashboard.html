@@ -449,7 +449,7 @@ const sb = window.supabase.createClient(
   "https://mtiwodvsrwvrujbhmmrn.supabase.co",
   "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
 );
-// XSS protection – turns dangerous characters into safe text
+
 function escapeHtml(str) {
     if (!str) return '';
     return str
@@ -459,6 +459,7 @@ function escapeHtml(str) {
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
 }
+
 let player = null;
 let confettiAnimation = null;
 let playerChannel = null;
@@ -567,13 +568,8 @@ async function checkAchievementNotifications() {
     const notificationDot = document.getElementById('achievementNotification');
     
     if (unviewed && unviewed.length > 0) {
-      // Show notification dot
       notificationDot.style.display = 'block';
-      
-      // Show toast for first achievement
       showToast(`🏆 New Achievement: ${unviewed[0].name}!`, 'achievement', 5000);
-      
-      // If multiple, show count
       if (unviewed.length > 1) {
         setTimeout(() => {
           showToast(`...and ${unviewed.length - 1} more achievement(s) unlocked!`, 'info', 3000);
@@ -593,15 +589,12 @@ async function applyStatDecay() {
   
   try {
     const { data, error } = await sb.rpc('decay_player_stats');
-    
     if (error) throw error;
     
     if (data.success && data.decay_applied) {
-      // Update local player data
       player.hunger = data.new_hunger;
       player.happiness = data.new_happiness;
       
-      // Show warnings based on stat levels
       if (data.new_hunger < 30 && data.new_hunger > 10) {
         showToast('⚠️ You are getting hungry! Time to eat something!', 'warning');
       } else if (data.new_hunger <= 10) {
@@ -614,10 +607,7 @@ async function applyStatDecay() {
         showToast('🔴 CRITICAL: You are depressed! Cheer up!', 'error');
       }
       
-      // Update the display
       renderStats();
-      
-      console.log(`Stat decay applied: ${data.hours_passed.toFixed(1)} hours passed`);
     }
   } catch (error) {
     console.error('Error applying stat decay:', error);
@@ -630,11 +620,9 @@ async function regenerateEnergy() {
   
   try {
     const { data, error } = await sb.rpc('regenerate_energy');
-    
     if (error) throw error;
     
     if (data.success && data.energy_added > 0) {
-      // Update local player data
       player.energy = data.new_energy;
       renderStats();
       showToast(`⚡ +${data.energy_added} energy regenerated!`, 'info', 2000);
@@ -644,13 +632,11 @@ async function regenerateEnergy() {
   }
 }
 
-// Get energy regen info
 async function updateRegenInfo() {
   if (!player) return;
   
   try {
     const { data, error } = await sb.rpc('get_energy_regen_info');
-    
     if (error) throw error;
     
     if (data.success) {
@@ -668,7 +654,6 @@ async function updateRegenInfo() {
   }
 }
 
-// Get stat warning class
 function getStatWarningClass(value, type) {
   if (type === 'hunger') {
     if (value <= 10) return 'danger';
@@ -685,7 +670,6 @@ function getStatWarningClass(value, type) {
   return '';
 }
 
-// Get warning emoji
 function getWarningEmoji(value, type) {
   if (type === 'hunger') {
     if (value <= 10) return '🔴';
@@ -702,16 +686,11 @@ function getWarningEmoji(value, type) {
   return '';
 }
 
-// Set up realtime subscription
 function setupRealtimeSubscription() {
   if (!player) return;
   
-  // Unsubscribe from old channel if exists
-  if (playerChannel) {
-    playerChannel.unsubscribe();
-  }
+  if (playerChannel) playerChannel.unsubscribe();
   
-  // Subscribe to player changes
   playerChannel = sb
     .channel('player-changes')
     .on(
@@ -727,14 +706,12 @@ function setupRealtimeSubscription() {
         player = payload.new;
         renderStats();
         
-        // Check for level up
         if (player.level > oldLevel) {
           showToast(`🎉 LEVEL UP! You are now level ${player.level}!`, 'success', 4000);
           startConfetti();
           setTimeout(stopConfetti, 3000);
         }
         
-        // Check achievements after any update
         checkAchievementNotifications();
       }
     )
@@ -755,17 +732,24 @@ async function loadPlayer() {
     return; 
   }
   player = playerData;
+
+  // ========== BAN CHECK (Step 4) ==========
+  if (player.banned_until && new Date(player.banned_until) > new Date()) {
+    const banUntil = new Date(player.banned_until).toLocaleString();
+    const reason = player.ban_reason || 'Violation of rules';
+    showToast(`⚠️ You are banned until ${banUntil}. Reason: ${reason}`, 'error');
+    setTimeout(async () => {
+      await sb.auth.signOut();
+      window.location.href = "index.html";
+    }, 4000);
+    return;
+  }
+  // ========================================
   
-  // Apply stat decay on load (this will reduce hunger/happiness based on time away)
   await applyStatDecay();
-  
-  // Regenerate energy on load
   await regenerateEnergy();
-  
-  // Check for new achievements
   await checkAchievementNotifications();
   
-  // Setup realtime after player is loaded
   setupRealtimeSubscription();
   renderStats();
 }
@@ -773,25 +757,21 @@ async function loadPlayer() {
 function renderStats() {
   const statsDiv = document.getElementById("stats");
   
-  // Update XP Bar
   const nextLevelXP = Math.pow(player.level, 2) * 100;
   const prevLevelXP = Math.pow(player.level - 1, 2) * 100;
   const xpProgress = ((player.xp - prevLevelXP) / (nextLevelXP - prevLevelXP)) * 100;
   document.getElementById("xpBar").style.width = Math.min(100, Math.max(0, xpProgress)) + '%';
   document.getElementById("levelDisplay").textContent = `Level ${player.level}`;
   
-  // Update Energy Bar
   const energyPercent = (player.energy / 100) * 100;
   const energyBar = document.getElementById("energyBar");
   energyBar.style.width = Math.min(100, Math.max(0, energyPercent)) + '%';
   document.getElementById("energyDisplay").textContent = `${player.energy}/100`;
   
-  // Color energy bar based on level
   if (player.energy < 20) energyBar.style.background = '#f44336';
   else if (player.energy < 50) energyBar.style.background = '#ff9800';
   else energyBar.style.background = '#4CAF50';
 
-  // Get warning classes and emojis for stats
   const hungerWarning = getStatWarningClass(player.hunger || 100, 'hunger');
   const happinessWarning = getStatWarningClass(player.happiness || 100, 'happiness');
   const healthWarning = getStatWarningClass(player.health || 100, 'health');
@@ -841,23 +821,17 @@ function renderStats() {
     </div>
   `;
   
-  // Update decay info with time
   const lastDecay = player.last_decay ? new Date(player.last_decay) : new Date();
   const hoursSinceDecay = Math.floor((new Date() - lastDecay) / (1000 * 60 * 60));
   if (hoursSinceDecay > 0) {
     document.getElementById('decayInfo').innerHTML = `⏰ Last login: ${hoursSinceDecay} hour${hoursSinceDecay > 1 ? 's' : ''} ago - Stats have decayed`;
   }
   
-  // Update regen info
   updateRegenInfo();
 }
 
 async function logout() {
-  // Clean up realtime subscription
-  if (playerChannel) {
-    playerChannel.unsubscribe();
-  }
-  
+  if (playerChannel) playerChannel.unsubscribe();
   await sb.auth.signOut();
   showToast('Logged out successfully', 'info');
   setTimeout(() => {
@@ -869,48 +843,32 @@ function goTo(page) {
   window.location.href = page; 
 }
 
-// Clean up on page unload
 window.addEventListener('beforeunload', () => {
-  if (playerChannel) {
-    playerChannel.unsubscribe();
-  }
-  if (regenInterval) {
-    clearInterval(regenInterval);
-  }
-  if (decayCheckInterval) {
-    clearInterval(decayCheckInterval);
-  }
-  if (achievementCheckInterval) {
-    clearInterval(achievementCheckInterval);
-  }
+  if (playerChannel) playerChannel.unsubscribe();
+  if (regenInterval) clearInterval(regenInterval);
+  if (decayCheckInterval) clearInterval(decayCheckInterval);
+  if (achievementCheckInterval) clearInterval(achievementCheckInterval);
 });
 
-// Start energy regeneration timer (check every 10 seconds)
 function startRegenTimer() {
   regenInterval = setInterval(async () => {
     if (player && player.energy < 100) {
       await regenerateEnergy();
     }
     updateRegenInfo();
-  }, 10000); // Check every 10 seconds
+  }, 10000);
 }
 
-// Check for stat decay every 5 minutes (while player is active)
 function startDecayChecker() {
   decayCheckInterval = setInterval(async () => {
-    if (player) {
-      await applyStatDecay();
-    }
-  }, 300000); // Check every 5 minutes
+    if (player) await applyStatDecay();
+  }, 300000);
 }
 
-// Check for new achievements every 30 seconds
 function startAchievementChecker() {
   achievementCheckInterval = setInterval(async () => {
-    if (player) {
-      await checkAchievementNotifications();
-    }
-  }, 30000); // Check every 30 seconds
+    if (player) await checkAchievementNotifications();
+  }, 30000);
 }
 
 loadPlayer();
@@ -918,13 +876,11 @@ startRegenTimer();
 startDecayChecker();
 startAchievementChecker();
 
-// Welcome toast
 setTimeout(() => {
   if (player) {
     showToast(`Welcome back, ${player.username}! Stats decay over time - keep them balanced! ⚖️`, 'info', 5000);
   }
 }, 1000);
 </script>
-
 </body>
 </html>
