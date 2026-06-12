@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chat - Rheoa RPG</title>
     <style>
-        /* Your existing CSS – unchanged */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Courier New', monospace; background: #f8f8f0; color: #222; padding: 20px; height: 100vh; display: flex; flex-direction: column; }
         .chat-container { display: flex; flex: 1; gap: 20px; min-height: 0; }
@@ -81,21 +80,18 @@
             "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
         );
 
-        // ========== HEARTBEAT (moved here, after Supabase is loaded) ==========
+        // Heartbeat – update last_activity and current_page directly
         async function sendHeartbeat() {
-            if (!sb) return;
+            const { data: { user } } = await sb.auth.getUser();
+            if (!user) return;
             const pageName = window.location.pathname.split('/').pop() || 'dashboard';
-            try {
-                await sb.rpc('update_player_activity', {
-                    p_current_page: pageName,
-                    p_ip: null,
-                    p_user_agent: navigator.userAgent
-                });
-            } catch(e) { console.warn("Heartbeat failed", e); }
+            await sb.from('players').update({
+                last_activity: new Date().toISOString(),
+                current_page: pageName
+            }).eq('auth_id', user.id).catch(e => console.warn("Heartbeat failed", e));
         }
         sendHeartbeat();
         setInterval(sendHeartbeat, 15000);
-        // =====================================================================
 
         function escapeHtml(str) {
             if (!str) return '';
