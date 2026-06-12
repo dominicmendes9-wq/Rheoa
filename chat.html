@@ -322,6 +322,28 @@
             to { transform: translateX(0); opacity: 1; }
         }
     </style>
+    <script>
+  // Activity tracking – call every 15 seconds
+  async function sendHeartbeat() {
+    const sb = window.supabase?.createClient?.(
+      "https://mtiwodvsrwvrujbhmmrn.supabase.co",
+      "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
+    );
+    if (!sb) return;
+    const pageName = window.location.pathname.split('/').pop() || 'dashboard';
+    // Optional: get IP / user-agent (can be omitted)
+    try {
+      await sb.rpc('update_player_activity', {
+        p_current_page: pageName,
+        p_ip: null,
+        p_user_agent: navigator.userAgent
+      });
+    } catch(e) { console.warn("Heartbeat failed", e); }
+  }
+  // Send immediately and then every 15 seconds
+  sendHeartbeat();
+  setInterval(sendHeartbeat, 15000);
+</script>
 </head>
 <body>
     <div class="toast-container" id="toast-container"></div>
