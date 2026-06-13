@@ -382,26 +382,6 @@
             border-radius: 24px;
         }
     </style>
-    <script>
-  // Activity tracking – call every 15 seconds
-  async function sendHeartbeat() {
-    const sb = window.supabase?.createClient?.(
-      "https://mtiwodvsrwvrujbhmmrn.supabase.co",
-      "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
-    );
-    if (!sb) return;
-    const pageName = window.location.pathname.split('/').pop() || 'dashboard';
-    try {
-      await sb.rpc('update_player_activity', {
-        p_current_page: pageName,
-        p_ip: null,
-        p_user_agent: navigator.userAgent
-      });
-    } catch(e) { console.warn("Heartbeat failed", e); }
-  }
-  sendHeartbeat();
-  setInterval(sendHeartbeat, 15000);
-</script>
 </head>
 <body>
 <div class="container">
@@ -421,6 +401,18 @@
     const supabaseUrl = 'https://mtiwodvsrwvrujbhmmrn.supabase.co';
     const supabaseKey = 'sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp';
     const sb = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+    // ========== HEARTBEAT (Step 4 – track page & last activity) ==========
+    async function sendHeartbeat() {
+        const { data: { user } } = await sb.auth.getUser();
+        if (!user) return;
+        const pageName = window.location.pathname.split('/').pop() || 'profile';
+        await sb.rpc('update_player_activity', { p_current_page: pageName, p_ip: null, p_user_agent: navigator.userAgent })
+            .catch(e => console.warn("Heartbeat failed", e));
+    }
+    sendHeartbeat();
+    setInterval(sendHeartbeat, 15000);
+    // ====================================================================
 
     let currentPlayer = null;
     let profileOwner = null;
@@ -506,7 +498,7 @@
             }
             currentPlayer = player;
 
-            // ========== BAN CHECK ==========
+            // ========== BAN CHECK (Step 4) ==========
             if (currentPlayer.banned_until && new Date(currentPlayer.banned_until) > new Date()) {
                 const banUntil = new Date(currentPlayer.banned_until).toLocaleString();
                 const reason = currentPlayer.ban_reason || 'Violation of rules';
@@ -517,6 +509,7 @@
                 }, 4000);
                 return;
             }
+            // ========================================
 
             const urlParams = new URLSearchParams(window.location.search);
             const targetId = urlParams.get('id');
