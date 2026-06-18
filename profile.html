@@ -402,18 +402,6 @@
     const supabaseKey = 'sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp';
     const sb = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-    // ========== HEARTBEAT (Step 4 – track page & last activity) ==========
-    async function sendHeartbeat() {
-        const { data: { user } } = await sb.auth.getUser();
-        if (!user) return;
-        const pageName = window.location.pathname.split('/').pop() || 'profile';
-        await sb.rpc('update_player_activity', { p_current_page: pageName, p_ip: null, p_user_agent: navigator.userAgent })
-            .catch(e => console.warn("Heartbeat failed", e));
-    }
-    sendHeartbeat();
-    setInterval(sendHeartbeat, 15000);
-    // ====================================================================
-
     let currentPlayer = null;
     let profileOwner = null;
     let friendships = [];
@@ -449,11 +437,10 @@
         });
     }
 
-    function showToast(msg, isError = false) {
+    function showToast(msg) {
         const toast = document.createElement('div');
         toast.className = 'toast';
         toast.innerText = msg;
-        if (isError) toast.style.background = '#e74c3c';
         document.body.appendChild(toast);
         setTimeout(() => toast.remove(), 3000);
     }
@@ -497,20 +484,6 @@
                 }
             }
             currentPlayer = player;
-
-            // ========== BAN CHECK (Step 4) ==========
-            if (currentPlayer.banned_until && new Date(currentPlayer.banned_until) > new Date()) {
-                const banUntil = new Date(currentPlayer.banned_until).toLocaleString();
-                const reason = currentPlayer.ban_reason || 'Violation of rules';
-                showToast(`⚠️ You are banned until ${banUntil}. Reason: ${reason}`, true);
-                setTimeout(async () => {
-                    await sb.auth.signOut();
-                    window.location.href = 'index.html';
-                }, 4000);
-                return;
-            }
-            // ========================================
-
             const urlParams = new URLSearchParams(window.location.search);
             const targetId = urlParams.get('id');
             if (targetId && targetId !== currentPlayer.id) await loadProfile(targetId);
@@ -739,7 +712,7 @@
         `).join('');
     }
 
-    // === API actions ===
+    // === API actions (unchanged but needed) ===
     async function sendFriendRequest(targetId) { const { error } = await sb.from('friendships').insert({ requester_id: currentPlayer.id, addressee_id: targetId, status: 'pending' }); error ? showToast(error.message) : (showToast('Request sent!'), await loadProfile(profileOwner.id)); }
     async function acceptFriendRequest() { const { error } = await sb.from('friendships').update({ status: 'accepted', updated_at: new Date() }).eq('requester_id', profileOwner.id).eq('addressee_id', currentPlayer.id); error ? showToast(error.message) : (showToast('Friend added!'), await loadProfile(profileOwner.id)); }
     async function declineFriendRequest() { const { error } = await sb.from('friendships').delete().eq('requester_id', profileOwner.id).eq('addressee_id', currentPlayer.id); error ? showToast(error.message) : (showToast('Declined'), await loadProfile(profileOwner.id)); }
