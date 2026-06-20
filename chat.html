@@ -3,511 +3,342 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Global Chat - Rheoa RPG</title>
+    <title>Global Chat</title>
     <style>
-        /* ─── Reset & Base ─── */
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
         body {
-            font-family: 'Courier New', monospace;
-            background: #f8f8f0;
-            color: #222;
-            padding: 20px;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: #1e1e2f;
+            color: #eee;
             height: 100vh;
             display: flex;
-            flex-direction: column;
+            justify-content: center;
+            align-items: center;
         }
-
-        /* ─── Chat Container ─── */
         .chat-container {
-            display: flex;
-            flex: 1;
-            gap: 20px;
-            min-height: 0;
-        }
-
-        /* ─── Main Chat ─── */
-        .chat-main {
-            flex: 1;
+            width: 100%;
+            max-width: 900px;
+            height: 90vh;
+            background: #2d2d44;
+            border-radius: 16px;
             display: flex;
             flex-direction: column;
-            background: white;
-            border: 2px solid #2196F3;
-            border-radius: 10px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
             overflow: hidden;
-            min-width: 0;
         }
-        .chat-header {
-            background: #2196F3;
-            color: white;
-            padding: 10px 16px;
+        .header {
+            background: #3b3b5a;
+            padding: 16px 24px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            flex-shrink: 0;
+            border-bottom: 1px solid #4a4a6a;
         }
-        .room-info {
-            font-weight: bold;
-            font-size: 1.1rem;
+        .header h1 {
+            font-size: 1.2rem;
+            font-weight: 600;
         }
-        .online-count {
-            font-size: 0.8rem;
-            background: rgba(255, 255, 255, 0.2);
-            padding: 2px 12px;
+        .online-badge {
+            background: #2ecc71;
+            color: #fff;
+            padding: 4px 12px;
             border-radius: 20px;
+            font-size: 0.8rem;
         }
-
-        /* ─── Messages ─── */
-        .messages-area {
+        .messages {
             flex: 1;
+            padding: 20px 24px;
             overflow-y: auto;
-            padding: 16px;
-            background: #fafafa;
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 12px;
         }
         .message {
+            max-width: 75%;
             display: flex;
             flex-direction: column;
-            max-width: 80%;
-            animation: fadeIn 0.2s ease;
         }
-        .message.own {
+        .message.self {
             align-self: flex-end;
         }
-        .message-header {
+        .message .sender {
             font-size: 0.75rem;
-            color: #666;
-            display: flex;
-            gap: 10px;
-            align-items: baseline;
+            font-weight: 600;
+            color: #a0aec0;
+            margin-bottom: 2px;
         }
-        .message-username {
-            font-weight: bold;
-            color: #2196F3;
+        .message.self .sender {
+            color: #63b3ed;
         }
-        .message.own .message-username {
-            color: #ff9800;
-        }
-        .message-time {
-            font-size: 0.65rem;
-            color: #999;
-        }
-        .message-text {
-            background: #e9ecef;
+        .message .bubble {
+            background: #3d3d5c;
             padding: 8px 14px;
-            border-radius: 14px;
-            margin-top: 2px;
+            border-radius: 18px;
             word-wrap: break-word;
-            line-height: 1.4;
         }
-        .message.own .message-text {
-            background: #2196F3;
-            color: white;
+        .message.self .bubble {
+            background: #4a6fa5;
         }
-
-        /* ─── Input ─── */
-        .message-input-area {
-            padding: 12px 16px;
-            border-top: 1px solid #ddd;
+        .message .time {
+            font-size: 0.65rem;
+            color: #718096;
+            margin-top: 2px;
+        }
+        .input-area {
+            padding: 16px 24px;
+            background: #25253b;
+            border-top: 1px solid #3b3b5a;
             display: flex;
-            gap: 10px;
-            flex-shrink: 0;
-            background: white;
+            gap: 12px;
         }
         #messageInput {
             flex: 1;
-            padding: 10px 14px;
-            font-family: inherit;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            resize: none;
+            padding: 10px 16px;
+            border: none;
+            border-radius: 24px;
+            background: #3d3d5c;
+            color: #eee;
             font-size: 0.95rem;
-            transition: border-color 0.2s;
-            min-height: 44px;
-        }
-        #messageInput:focus {
             outline: none;
-            border-color: #2196F3;
+        }
+        #messageInput::placeholder {
+            color: #8888aa;
         }
         #sendBtn {
             padding: 10px 24px;
-            background: #4CAF50;
-            color: white;
+            background: #4a6fa5;
+            color: #fff;
             border: none;
-            border-radius: 8px;
+            border-radius: 24px;
+            font-weight: 600;
             cursor: pointer;
-            font-weight: bold;
-            font-family: inherit;
-            font-size: 0.95rem;
-            transition: background 0.2s;
-            flex-shrink: 0;
+            transition: 0.15s;
         }
         #sendBtn:hover {
-            background: #388E3C;
+            background: #5a7fb5;
         }
-
-        /* ─── Members Sidebar ─── */
-        .members-sidebar {
-            width: 260px;
-            background: white;
-            border: 2px solid #2196F3;
-            border-radius: 10px;
+        #sendBtn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .online-users {
+            padding: 8px 24px;
+            background: #22223a;
+            border-bottom: 1px solid #3b3b5a;
             display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            flex-shrink: 0;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-items: center;
+            min-height: 44px;
         }
-        .members-header {
-            background: #2196F3;
-            color: white;
-            padding: 10px;
-            font-weight: bold;
-        }
-        .members-list {
-            flex: 1;
-            overflow-y: auto;
-            padding: 10px;
-        }
-        .member-item {
-            padding: 8px 10px;
-            margin: 4px 0;
-            border-radius: 5px;
-            background: #f5f5f5;
+        .online-user {
+            background: #3b3b5a;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 0.8rem;
             display: flex;
             align-items: center;
-            gap: 10px;
-            animation: fadeIn 0.2s ease;
+            gap: 4px;
         }
-        .member-avatar {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            background: #2196F3;
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 0.9rem;
-            flex-shrink: 0;
-        }
-        .member-name {
-            font-weight: bold;
-            flex: 1;
-            font-size: 0.9rem;
-        }
-        .member-status {
+        .online-user .dot {
             width: 8px;
             height: 8px;
+            background: #2ecc71;
             border-radius: 50%;
-            background: #4CAF50;
-            flex-shrink: 0;
         }
-
-        /* ─── Loading / Empty ─── */
-        .loading,
-        .empty {
-            color: #999;
-            font-style: italic;
-            padding: 20px 0;
-            text-align: center;
-        }
-
-        /* ─── Back Button ─── */
-        .back-button {
-            display: block;
-            width: 200px;
-            margin: 20px auto 0;
-            padding: 12px 24px;
-            font-family: 'Courier New', monospace;
-            font-weight: bold;
-            border: 2px solid black;
-            border-radius: 8px;
-            background: #666;
-            color: white;
-            cursor: pointer;
-            transition: all 0.2s;
-            text-align: center;
-            flex-shrink: 0;
-        }
-        .back-button:hover {
-            background: #555;
-            transform: scale(1.02);
-        }
-
-        /* ─── Toast ─── */
-        .toast-container {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 9999;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-        .toast {
-            padding: 14px 22px;
-            border-radius: 8px;
-            color: white;
-            font-weight: bold;
-            animation: slideIn 0.3s ease-out;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-            min-width: 200px;
-            max-width: 360px;
-            font-size: 0.95rem;
-        }
-        .toast.success {
-            background: #4CAF50;
-        }
-        .toast.error {
-            background: #f44336;
-        }
-        .toast.info {
-            background: #2196F3;
-        }
-        .toast.fade-out {
-            opacity: 0;
-            transform: translateX(30px);
-            transition: opacity 0.3s, transform 0.3s;
-        }
-
-        @keyframes slideIn {
-            from {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(6px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        /* ─── Scrollbar ─── */
-        .messages-area::-webkit-scrollbar,
-        .members-list::-webkit-scrollbar {
-            width: 5px;
-        }
-        .messages-area::-webkit-scrollbar-track,
-        .members-list::-webkit-scrollbar-track {
-            background: #f0f0f0;
-        }
-        .messages-area::-webkit-scrollbar-thumb,
-        .members-list::-webkit-scrollbar-thumb {
-            background: #bbb;
-            border-radius: 8px;
-        }
-        .messages-area::-webkit-scrollbar-thumb:hover,
-        .members-list::-webkit-scrollbar-thumb:hover {
-            background: #999;
-        }
-
-        /* ─── Responsive ─── */
-        @media (max-width: 640px) {
-            .chat-container {
-                flex-direction: column;
-                gap: 10px;
-            }
-            .members-sidebar {
-                width: 100%;
-                max-height: 140px;
-                flex-direction: row;
-                flex-wrap: wrap;
-            }
-            .members-sidebar .members-header {
-                width: 100%;
-            }
-            .members-list {
-                display: flex;
-                flex-wrap: wrap;
-                gap: 4px;
-                padding: 6px 10px;
-                max-height: 100px;
-                overflow-y: auto;
-                width: 100%;
-            }
-            .member-item {
-                flex: 0 0 auto;
-                margin: 2px;
-                padding: 4px 10px;
-                font-size: 0.8rem;
-            }
-            .member-avatar {
-                width: 24px;
-                height: 24px;
-                font-size: 0.7rem;
-            }
-            .member-status {
-                display: none;
-            }
-            .chat-main {
-                flex: 1;
-                min-height: 300px;
-            }
-            .message {
-                max-width: 92%;
-            }
-            .back-button {
-                width: 100%;
-                margin-top: 10px;
-            }
+        .empty-online {
+            color: #718096;
+            font-size: 0.8rem;
         }
     </style>
 </head>
 <body>
 
-    <div class="toast-container" id="toast-container"></div>
-
     <div class="chat-container">
-        <!-- Main Chat -->
-        <div class="chat-main">
-            <div class="chat-header">
-                <div class="room-info" id="currentRoomName">🌍 Global Chat</div>
-                <div class="online-count" id="onlineCount">0 online</div>
-            </div>
-            <div class="messages-area" id="messagesArea">
-                <div class="loading">Loading messages…</div>
-            </div>
-            <div class="message-input-area">
-                <textarea id="messageInput" placeholder="Type your message…" rows="2"></textarea>
-                <button id="sendBtn" onclick="sendMessage()">Send</button>
-            </div>
+        <div class="header">
+            <h1>🌍 Global Chat</h1>
+            <span class="online-badge" id="onlineCount">0 online</span>
         </div>
 
-        <!-- Members Sidebar -->
-        <div class="members-sidebar">
-            <div class="members-header">👥 Online</div>
-            <div class="members-list" id="membersList">
-                <div class="loading">Loading…</div>
-            </div>
+        <div class="online-users" id="onlineUsersList">
+            <span class="empty-online">Loading online users...</span>
+        </div>
+
+        <div class="messages" id="messagesArea">
+            <div style="text-align:center; color:#718096;">Loading messages...</div>
+        </div>
+
+        <div class="input-area">
+            <input type="text" id="messageInput" placeholder="Type a message..." />
+            <button id="sendBtn">Send</button>
         </div>
     </div>
 
-    <button class="back-button" onclick="goBack()">← Back to Dashboard</button>
-
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js">
-    </script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
     <script>
-        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        //  SUPABASE CLIENT
-        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // ─── Supabase client ──────────────────────────────────
         const sb = window.supabase.createClient(
             "https://mtiwodvsrwvrujbhmmrn.supabase.co",
             "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
         );
 
-        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        //  STATE
-        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        let currentPlayer = null; // { id, username }
-        let currentRoom = null;   // global room object
-        let currentMessages = [];
-        let messageChannel = null;
-        let presenceChannel = null;
+        // ─── State ────────────────────────────────────────────
+        let currentPlayer = null;   // { id, username }
+        let currentRoom = null;     // { id, name }
+        let messages = [];
         let onlineUsers = [];
+        let presenceChannel = null;
+        let messageChannel = null;
 
-        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        //  HELPERS
-        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        function escapeHtml(str) {
-            if (!str) return '';
-            return str
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#39;');
+        // ─── DOM refs ─────────────────────────────────────────
+        const messagesArea = document.getElementById('messagesArea');
+        const onlineUsersList = document.getElementById('onlineUsersList');
+        const onlineCount = document.getElementById('onlineCount');
+        const messageInput = document.getElementById('messageInput');
+        const sendBtn = document.getElementById('sendBtn');
+
+        // ─── Helpers ──────────────────────────────────────────
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
 
-        function showToast(message, type = 'info', duration = 3000) {
-            const container = document.getElementById('toast-container');
-            const toast = document.createElement('div');
-            toast.className = `toast ${type}`;
-            toast.textContent = message;
-            container.appendChild(toast);
-            setTimeout(() => {
-                toast.classList.add('fade-out');
-                setTimeout(() => {
-                    if (toast.parentNode) container.removeChild(toast);
-                }, 300);
-            }, duration);
+        function formatTime(iso) {
+            return new Date(iso).toLocaleTimeString();
         }
 
-        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        //  AUTH
-        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        async function getPlayer() {
+        // ─── Auth & player ────────────────────────────────────
+        async function getOrCreatePlayer() {
             const { data: { user } } = await sb.auth.getUser();
-            if (!user) return null;
-            const { data: player } = await sb
-                .from('players')
-                .select('id, username')
-                .eq('auth_id', user.id)
-                .single();
-            if (player) currentPlayer = player;
-            return player;
-        }
+            if (!user) {
+                // Not signed in – redirect to sign-in page (or auto-sign-in)
+                // For demo, we'll auto sign in anonymously (if you have it enabled)
+                // Otherwise you need a login flow.
+                // We'll try to sign in anonymously for simplicity.
+                const { data, error } = await sb.auth.signInAnonymously();
+                if (error) {
+                    alert('Please sign in first.');
+                    window.location.href = 'index.html';
+                    return null;
+                }
+                // After sign-in, reload to get user
+                window.location.reload();
+                return null;
+            }
 
-        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        //  GLOBAL ROOM (ensure it exists)
-        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        async function getOrCreateGlobalRoom() {
-            // Try to find a room with type 'global'
-            let { data, error } = await sb
-                .from('chat_rooms')
+            // Check if player exists
+            let { data: player, error } = await sb
+                .from('players')
                 .select('*')
-                .eq('type', 'global')
+                .eq('auth_id', user.id)
                 .maybeSingle();
 
             if (error) {
-                console.error('Error fetching global room:', error);
+                console.error('Error fetching player:', error);
                 return null;
             }
 
-            if (data) {
-                return data;
+            if (!player) {
+                // Create player with a random username
+                const adjectives = ['Happy', 'Clever', 'Brave', 'Kind', 'Swift'];
+                const nouns = ['Panda', 'Tiger', 'Eagle', 'Fox', 'Wolf'];
+                const username = `${adjectives[Math.floor(Math.random() * adjectives.length)]}${
+                    nouns[Math.floor(Math.random() * nouns.length)]
+                }${Math.floor(Math.random() * 1000)}`;
+                const { data: newPlayer, error: insertError } = await sb
+                    .from('players')
+                    .insert({ auth_id: user.id, username })
+                    .select('*')
+                    .single();
+                if (insertError) {
+                    console.error('Error creating player:', insertError);
+                    return null;
+                }
+                player = newPlayer;
             }
-
-            // Create one
-            const { data: newRoom, error: createError } = await sb
-                .from('chat_rooms')
-                .insert({
-                    name: 'Global Chat',
-                    type: 'global',
-                    description: 'The main global chat room',
-                    created_by: currentPlayer?.id || null,
-                })
-                .select('*')
-                .single();
-
-            if (createError) {
-                console.error('Error creating global room:', createError);
-                showToast('Failed to create global room', 'error');
-                return null;
-            }
-            return newRoom;
+            return player;
         }
 
-        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        //  PRESENCE CHANNEL (global)
-        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        const PRESENCE_CHANNEL = 'chat-presence-global';
+        // ─── Load global room ─────────────────────────────────
+        async function getGlobalRoom() {
+            const { data, error } = await sb
+                .from('chat_rooms')
+                .select('*')
+                .eq('name', 'Global Chat')
+                .maybeSingle();
 
-        function setupPresenceChannel() {
+            if (error) {
+                console.error('Error fetching room:', error);
+                return null;
+            }
+            if (!data) {
+                // Room not found – create it (but should already exist from SQL setup)
+                const { data: newRoom, error: createError } = await sb
+                    .from('chat_rooms')
+                    .insert({ name: 'Global Chat' })
+                    .select('*')
+                    .single();
+                if (createError) {
+                    console.error('Error creating room:', createError);
+                    return null;
+                }
+                return newRoom;
+            }
+            return data;
+        }
+
+        // ─── Load messages ────────────────────────────────────
+        async function loadMessages() {
+            if (!currentRoom) return;
+            const { data, error } = await sb
+                .from('chat_messages')
+                .select(`
+                    id, content, created_at,
+                    user_id,
+                    players:user_id (username)
+                `)
+                .eq('room_id', currentRoom.id)
+                .order('created_at', { ascending: true });
+
+            if (error) {
+                console.error('Error loading messages:', error);
+                return;
+            }
+            messages = (data || []).map(msg => ({
+                ...msg,
+                username: msg.players?.[0]?.username || 'Unknown'
+            }));
+            renderMessages();
+        }
+
+        function renderMessages() {
+            if (!messages.length) {
+                messagesArea.innerHTML = '<div style="text-align:center; color:#718096;">No messages yet. Be the first!</div>';
+                return;
+            }
+            const pid = currentPlayer?.id;
+            messagesArea.innerHTML = messages.map(msg => {
+                const isSelf = msg.user_id === pid;
+                return `
+                    <div class="message ${isSelf ? 'self' : ''}">
+                        <div class="sender">${escapeHtml(msg.username)}</div>
+                        <div class="bubble">${escapeHtml(msg.content)}</div>
+                        <div class="time">${formatTime(msg.created_at)}</div>
+                    </div>
+                `;
+            }).join('');
+            messagesArea.scrollTop = messagesArea.scrollHeight;
+        }
+
+        // ─── Presence ─────────────────────────────────────────
+        const PRESENCE_CHANNEL = 'global-presence';
+
+        function setupPresence() {
             if (presenceChannel) return;
 
             presenceChannel = sb.channel(PRESENCE_CHANNEL);
@@ -519,7 +350,8 @@
                     list.push(...state[key]);
                 });
                 onlineUsers = list;
-                updateOnlineDisplay();
+                renderOnlineUsers();
+                onlineCount.textContent = onlineUsers.length + ' online';
             });
 
             presenceChannel.subscribe(async (status) => {
@@ -527,57 +359,32 @@
                     await updatePresence();
                 }
             });
-
-            window.addEventListener('beforeunload', () => {
-                if (presenceChannel) {
-                    presenceChannel.untrack().catch(() => {});
-                }
-            });
         }
 
         async function updatePresence() {
             if (!presenceChannel || !currentPlayer || !currentRoom) return;
-            try {
-                await presenceChannel.track({
-                    user_id: currentPlayer.id,
-                    username: currentPlayer.username,
-                    avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentPlayer.id}`,
-                    room_id: currentRoom.id,
-                });
-            } catch (err) {
-                console.error('Presence track error:', err);
-            }
+            await presenceChannel.track({
+                user_id: currentPlayer.id,
+                username: currentPlayer.username,
+                room_id: currentRoom.id,
+            });
         }
 
-        function updateOnlineDisplay() {
-            const roomId = currentRoom ? currentRoom.id : null;
-            const filtered = onlineUsers.filter(u => u.room_id === roomId);
-            document.getElementById('onlineCount').textContent = `${filtered.length} online`;
-            renderMembers(filtered);
-        }
-
-        function renderMembers(users) {
-            const container = document.getElementById('membersList');
-            if (!users || !users.length) {
-                container.innerHTML = '<div class="empty">No one else is online.</div>';
+        function renderOnlineUsers() {
+            if (!onlineUsers.length) {
+                onlineUsersList.innerHTML = '<span class="empty-online">No one else is online.</span>';
                 return;
             }
-            container.innerHTML = users.map(user => {
-                const initial = (user.username || '?').charAt(0).toUpperCase();
-                return `
-                        <div class="member-item">
-                            <div class="member-avatar">${escapeHtml(initial)}</div>
-                            <div class="member-name">${escapeHtml(user.username || 'Unknown')}</div>
-                            <div class="member-status"></div>
-                        </div>
-                    `;
-            }).join('');
+            onlineUsersList.innerHTML = onlineUsers.map(user => `
+                <span class="online-user">
+                    <span class="dot"></span>
+                    ${escapeHtml(user.username)}
+                </span>
+            `).join('');
         }
 
-        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        //  MESSAGE BROADCAST CHANNEL (per room)
-        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        function setupMessageChannel() {
+        // ─── Message broadcast ───────────────────────────────
+        function setupMessageBroadcast() {
             if (!currentRoom) return;
             if (messageChannel) {
                 messageChannel.unsubscribe();
@@ -585,179 +392,105 @@
             }
 
             const roomId = currentRoom.id;
-            messageChannel = sb.channel(`room-messages:${roomId}`);
+            messageChannel = sb.channel(`room-${roomId}`);
 
             messageChannel.on('broadcast', { event: 'message' }, (payload) => {
                 const newMsg = payload.payload;
-                if (!currentMessages.some(m => m.id === newMsg.id)) {
-                    currentMessages.push(newMsg);
+                // Avoid duplicate if already in list (optimistic)
+                if (!messages.some(m => m.id === newMsg.id)) {
+                    messages.push(newMsg);
                     renderMessages();
                 }
             });
 
             messageChannel.subscribe((status) => {
                 if (status === 'SUBSCRIBED') {
-                    console.log(`Subscribed to message channel for room ${roomId}`);
+                    console.log('Subscribed to message channel');
                 }
             });
         }
 
-        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        //  MESSAGES (DB + render)
-        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        async function loadMessages() {
-            if (!currentRoom) return;
-            const { data, error } = await sb
-                .from('chat_messages')
-                .select(`
-                        id,
-                        content,
-                        created_at,
-                        user_id,
-                        players:user_id (username)
-                    `)
-                .eq('room_id', currentRoom.id)
-                .order('created_at', { ascending: true });
-
-            if (error) {
-                console.error('loadMessages error:', error);
-                return;
-            }
-            currentMessages = (data || []).map(msg => ({
-                ...msg,
-                players: msg.players?.[0] || { username: 'Unknown' }
-            }));
-            renderMessages();
-        }
-
-        function renderMessages() {
-            const container = document.getElementById('messagesArea');
-            if (!currentMessages.length) {
-                container.innerHTML = '<div class="empty">No messages yet. Be the first!</div>';
-                return;
-            }
-            const pid = currentPlayer?.id;
-            container.innerHTML = currentMessages.map(msg => {
-                const isOwn = msg.user_id === pid;
-                const uname = msg.players?.username || 'Unknown';
-                return `
-                        <div class="message ${isOwn ? 'own' : ''}">
-                            <div class="message-header">
-                                <span class="message-username">${escapeHtml(uname)}</span>
-                                <span class="message-time">${new Date(msg.created_at).toLocaleTimeString()}</span>
-                            </div>
-                            <div class="message-text">${escapeHtml(msg.content)}</div>
-                        </div>
-                    `;
-            }).join('');
-            container.scrollTop = container.scrollHeight;
-        }
-
-        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        //  SEND MESSAGE
-        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // ─── Send message ─────────────────────────────────────
         async function sendMessage() {
-            const input = document.getElementById('messageInput');
-            const text = input.value.trim();
+            const text = messageInput.value.trim();
             if (!text || !currentRoom || !currentPlayer) return;
 
-            const tempId = `temp-${Date.now()}`;
+            // Optimistic update
+            const tempId = 'temp-' + Date.now();
             const newMsg = {
                 id: tempId,
                 content: text,
                 created_at: new Date().toISOString(),
                 user_id: currentPlayer.id,
-                players: { username: currentPlayer.username }
+                username: currentPlayer.username,
             };
-            currentMessages.push(newMsg);
+            messages.push(newMsg);
             renderMessages();
-            input.value = '';
-            input.style.height = 'auto';
+            messageInput.value = '';
 
             // Broadcast
             if (messageChannel) {
-                try {
-                    await messageChannel.send({
-                        type: 'broadcast',
-                        event: 'message',
-                        payload: newMsg
-                    });
-                } catch (err) {
-                    console.error('broadcast error:', err);
-                }
+                await messageChannel.send({
+                    type: 'broadcast',
+                    event: 'message',
+                    payload: newMsg,
+                });
             }
 
-            // Persist
+            // Persist to DB
             const { error } = await sb
                 .from('chat_messages')
                 .insert({
                     room_id: currentRoom.id,
                     user_id: currentPlayer.id,
-                    content: text
+                    content: text,
                 });
 
             if (error) {
-                console.error('persist error:', error);
-                showToast('Failed to save message', 'error');
+                console.error('Failed to persist message:', error);
+                // Optionally revert optimistic message
             }
         }
 
-        // ── Enter to send ──
-        document.addEventListener('DOMContentLoaded', () => {
-            const input = document.getElementById('messageInput');
-            input.addEventListener('keydown', (e) => {
+        // ─── Init ─────────────────────────────────────────────
+        (async function init() {
+            // 1. Get or create player
+            const player = await getOrCreatePlayer();
+            if (!player) return;
+            currentPlayer = player;
+
+            // 2. Get global room
+            const room = await getGlobalRoom();
+            if (!room) {
+                alert('Could not find or create global room.');
+                return;
+            }
+            currentRoom = room;
+
+            // 3. Load messages
+            await loadMessages();
+
+            // 4. Setup presence
+            setupPresence();
+
+            // 5. Setup message broadcast
+            setupMessageBroadcast();
+
+            // 6. Update presence after everything is ready
+            await updatePresence();
+
+            // 7. Enable UI
+            messageInput.disabled = false;
+            sendBtn.disabled = false;
+
+            // 8. Event listeners
+            sendBtn.addEventListener('click', sendMessage);
+            messageInput.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
                     sendMessage();
                 }
             });
-            input.addEventListener('input', () => {
-                input.style.height = 'auto';
-                input.style.height = Math.min(input.scrollHeight, 120) + 'px';
-            });
-        });
-
-        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        //  NAVIGATION
-        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        function goBack() {
-            window.location.href = 'dashboard.html';
-        }
-
-        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        //  INIT
-        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        (async function init() {
-            const player = await getPlayer();
-            if (!player) {
-                window.location.href = 'index.html';
-                return;
-            }
-
-            // Get or create global room
-            const room = await getOrCreateGlobalRoom();
-            if (!room) {
-                showToast('Failed to initialize global room', 'error');
-                return;
-            }
-            currentRoom = room;
-            document.getElementById('currentRoomName').textContent = '🌍 ' + room.name;
-
-            // Setup presence
-            setupPresenceChannel();
-
-            // Load messages
-            await loadMessages();
-
-            // Setup message broadcast
-            setupMessageChannel();
-
-            // Update presence after room is set
-            await updatePresence();
-
-            // Enable input
-            document.getElementById('messageInput').disabled = false;
-            document.getElementById('sendBtn').disabled = false;
         })();
     </script>
 </body>
