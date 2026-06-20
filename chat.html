@@ -11,7 +11,6 @@
             padding: 0;
             box-sizing: border-box;
         }
-
         body {
             font-family: 'Courier New', monospace;
             background: #f8f8f0;
@@ -41,7 +40,6 @@
             overflow: hidden;
             flex-shrink: 0;
         }
-
         .rooms-header {
             background: #2196F3;
             color: white;
@@ -51,7 +49,6 @@
             justify-content: space-between;
             align-items: center;
         }
-
         .create-room-btn {
             background: #ff9800;
             border: none;
@@ -66,13 +63,11 @@
         .create-room-btn:hover {
             background: #e68900;
         }
-
         .rooms-list {
             flex: 1;
             overflow-y: auto;
             padding: 10px;
         }
-
         .room-item {
             padding: 8px 10px;
             margin: 4px 0;
@@ -82,11 +77,9 @@
             transition: background 0.15s;
             border-left: 3px solid transparent;
         }
-
         .room-item:hover {
             background: #e3f2fd;
         }
-
         .room-item.active {
             background: #2196F3;
             color: white;
@@ -95,7 +88,6 @@
         .room-item.active .room-type {
             color: rgba(255, 255, 255, 0.7);
         }
-
         .room-name {
             font-weight: bold;
         }
@@ -116,7 +108,6 @@
             overflow: hidden;
             min-width: 0;
         }
-
         .chat-header {
             background: #2196F3;
             color: white;
@@ -126,12 +117,10 @@
             align-items: center;
             flex-shrink: 0;
         }
-
         .room-info {
             font-weight: bold;
             font-size: 1.1rem;
         }
-
         .online-count {
             font-size: 0.8rem;
             background: rgba(255, 255, 255, 0.2);
@@ -149,18 +138,15 @@
             flex-direction: column;
             gap: 10px;
         }
-
         .message {
             display: flex;
             flex-direction: column;
             max-width: 80%;
             animation: fadeIn 0.2s ease;
         }
-
         .message.own {
             align-self: flex-end;
         }
-
         .message-header {
             font-size: 0.75rem;
             color: #666;
@@ -168,7 +154,6 @@
             gap: 10px;
             align-items: baseline;
         }
-
         .message-username {
             font-weight: bold;
             color: #2196F3;
@@ -176,12 +161,10 @@
         .message.own .message-username {
             color: #ff9800;
         }
-
         .message-time {
             font-size: 0.65rem;
             color: #999;
         }
-
         .message-text {
             background: #e9ecef;
             padding: 8px 14px;
@@ -190,7 +173,6 @@
             word-wrap: break-word;
             line-height: 1.4;
         }
-
         .message.own .message-text {
             background: #2196F3;
             color: white;
@@ -205,7 +187,6 @@
             flex-shrink: 0;
             background: white;
         }
-
         #messageInput {
             flex: 1;
             padding: 10px 14px;
@@ -225,7 +206,6 @@
             background: #f0f0f0;
             cursor: not-allowed;
         }
-
         #sendBtn {
             padding: 10px 24px;
             background: #4CAF50;
@@ -258,20 +238,17 @@
             overflow: hidden;
             flex-shrink: 0;
         }
-
         .members-header {
             background: #2196F3;
             color: white;
             padding: 10px;
             font-weight: bold;
         }
-
         .members-list {
             flex: 1;
             overflow-y: auto;
             padding: 10px;
         }
-
         .member-item {
             padding: 8px 10px;
             margin: 4px 0;
@@ -282,7 +259,6 @@
             gap: 10px;
             animation: fadeIn 0.2s ease;
         }
-
         .member-avatar {
             width: 32px;
             height: 32px;
@@ -296,13 +272,11 @@
             font-size: 0.9rem;
             flex-shrink: 0;
         }
-
         .member-name {
             font-weight: bold;
             flex: 1;
             font-size: 0.9rem;
         }
-
         .member-status {
             width: 8px;
             height: 8px;
@@ -336,7 +310,6 @@
         .modal.show {
             display: flex;
         }
-
         .modal-content {
             background: white;
             padding: 24px;
@@ -632,8 +605,9 @@
         let currentRoom = null; // { id, name, type }
         let rooms = [];
         let currentMessages = [];
-        let roomChannel = null;
-        let onlineUsers = []; // array of { user_id, username, avatar }
+        let roomChannel = null; // broadcast channel for messages
+        let presenceChannel = null; // global presence channel
+        let onlineUsers = []; // full list from presence
 
         // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         //  HELPERS
@@ -692,7 +666,6 @@
             const player = await getPlayer();
             if (!player) return;
 
-            // All rooms
             const { data: allRooms, error } = await sb
                 .from('chat_rooms')
                 .select('*')
@@ -702,7 +675,6 @@
                 return;
             }
 
-            // User's memberships
             const { data: memberships } = await sb
                 .from('chat_members')
                 .select('room_id')
@@ -716,7 +688,6 @@
 
             renderRooms();
 
-            // Auto-select global or first room
             if (!currentRoom && rooms.length) {
                 const global = rooms.find(r => r.type === 'global');
                 if (global) {
@@ -743,12 +714,90 @@
         }
 
         // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        //  SELECT ROOM
+        //  PRESENCE CHANNEL (GLOBAL)
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        const PRESENCE_CHANNEL = 'chat-presence-global';
+
+        function setupPresenceChannel() {
+            if (presenceChannel) return; // already set up
+
+            presenceChannel = sb.channel(PRESENCE_CHANNEL);
+
+            // Listen for presence sync
+            presenceChannel.on('presence', { event: 'sync' }, () => {
+                const state = presenceChannel.presenceState();
+                const list = [];
+                Object.keys(state).forEach(key => {
+                    list.push(...state[key]);
+                });
+                onlineUsers = list;
+                updateOnlineDisplay();
+            });
+
+            // Subscribe
+            presenceChannel.subscribe(async (status) => {
+                if (status === 'SUBSCRIBED') {
+                    // Track this user with current room (if any)
+                    await updatePresence();
+                }
+            });
+
+            // Handle page unload to untrack (optional)
+            window.addEventListener('beforeunload', () => {
+                if (presenceChannel) {
+                    presenceChannel.untrack().catch(() => {});
+                }
+            });
+        }
+
+        async function updatePresence() {
+            if (!presenceChannel || !currentPlayer) return;
+            const roomId = currentRoom ? currentRoom.id : null;
+            try {
+                await presenceChannel.track({
+                    user_id: currentPlayer.id,
+                    username: currentPlayer.username,
+                    avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentPlayer.id}`,
+                    room_id: roomId,
+                });
+            } catch (err) {
+                console.error('Presence track error:', err);
+            }
+        }
+
+        function updateOnlineDisplay() {
+            // Filter online users by current room
+            const roomId = currentRoom ? currentRoom.id : null;
+            const filtered = onlineUsers.filter(u => u.room_id === roomId);
+            document.getElementById('onlineCount').textContent = `${filtered.length} online`;
+            renderMembers(filtered);
+        }
+
+        function renderMembers(users) {
+            const container = document.getElementById('membersList');
+            if (!users || !users.length) {
+                container.innerHTML = '<div class="empty">No one else is online in this room.</div>';
+                return;
+            }
+            container.innerHTML = users.map(user => {
+                const initial = (user.username || '?').charAt(0).toUpperCase();
+                return `
+                        <div class="member-item">
+                            <div class="member-avatar">${escapeHtml(initial)}</div>
+                            <div class="member-name">${escapeHtml(user.username || 'Unknown')}</div>
+                            <div class="member-status"></div>
+                        </div>
+                    `;
+            }).join('');
+        }
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        //  SELECT ROOM (messages + presence update)
         // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         async function selectRoom(roomId) {
             if (currentRoom?.id === roomId) return;
 
-            // Clean up old channel
+            // Clean up old message broadcast channel
             if (roomChannel) {
                 try {
                     await roomChannel.unsubscribe();
@@ -764,20 +813,45 @@
             renderRooms();
             document.getElementById('currentRoomName').textContent = room.name;
             document.getElementById('messagesArea').innerHTML = '<div class="loading">Loading messages…</div>';
-            document.getElementById('onlineCount').textContent = '0 online';
-            document.getElementById('membersList').innerHTML = '<div class="loading">Loading…</div>';
             document.getElementById('messageInput').disabled = false;
             document.getElementById('sendBtn').disabled = false;
+
+            // Update presence with new room
+            await updatePresence();
 
             // Load messages
             await loadMessages();
 
-            // Set up realtime channel
-            setupRoomChannel();
+            // Set up broadcast channel for this room
+            setupMessageChannel();
         }
 
         // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        //  MESSAGES
+        //  MESSAGE BROADCAST CHANNEL (per room)
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        function setupMessageChannel() {
+            if (!currentRoom) return;
+            const roomId = currentRoom.id;
+
+            roomChannel = sb.channel(`room-messages:${roomId}`);
+
+            roomChannel.on('broadcast', { event: 'message' }, (payload) => {
+                const newMsg = payload.payload;
+                if (!currentMessages.some(m => m.id === newMsg.id)) {
+                    currentMessages.push(newMsg);
+                    renderMessages();
+                }
+            });
+
+            roomChannel.subscribe((status) => {
+                if (status === 'SUBSCRIBED') {
+                    console.log(`Subscribed to message channel for room ${roomId}`);
+                }
+            });
+        }
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        //  MESSAGES (DB + render)
         // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         async function loadMessages() {
             if (!currentRoom) return;
@@ -828,85 +902,6 @@
         }
 
         // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        //  REALTIME CHANNEL (presence + broadcast)
-        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        function setupRoomChannel() {
-            if (!currentRoom || !currentPlayer) return;
-
-            const roomId = currentRoom.id;
-            roomChannel = sb.channel(`room:${roomId}`);
-
-            // ── Presence sync ──
-            roomChannel.on('presence', { event: 'sync' }, () => {
-                const state = roomChannel.presenceState();
-                const list = [];
-                Object.keys(state).forEach(key => {
-                    list.push(...state[key]);
-                });
-                onlineUsers = list;
-                document.getElementById('onlineCount').textContent = `${onlineUsers.length} online`;
-                renderMembers();
-            });
-
-            // ── Broadcast: new message ──
-            roomChannel.on('broadcast', { event: 'message' }, (payload) => {
-                const newMsg = payload.payload;
-                // Avoid duplicates
-                if (!currentMessages.some(m => m.id === newMsg.id)) {
-                    currentMessages.push(newMsg);
-                    renderMessages();
-                }
-            });
-
-            // ── Subscribe ──
-            roomChannel.subscribe(async (status) => {
-                if (status === 'SUBSCRIBED') {
-                    // 1) Track this user's presence
-                    try {
-                        await roomChannel.track({
-                            user_id: currentPlayer.id,
-                            username: currentPlayer.username,
-                            avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentPlayer.id}`
-                        });
-                    } catch (err) {
-                        console.error('track() error:', err);
-                    }
-
-                    // 2) Fetch initial presence state immediately
-                    const state = roomChannel.presenceState();
-                    const list = [];
-                    Object.keys(state).forEach(key => {
-                        list.push(...state[key]);
-                    });
-                    onlineUsers = list;
-                    document.getElementById('onlineCount').textContent = `${onlineUsers.length} online`;
-                    renderMembers();
-                }
-            });
-        }
-
-        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        //  RENDER MEMBERS
-        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        function renderMembers() {
-            const container = document.getElementById('membersList');
-            if (!onlineUsers.length) {
-                container.innerHTML = '<div class="empty">No one else is online in this room.</div>';
-                return;
-            }
-            container.innerHTML = onlineUsers.map(user => {
-                const initial = (user.username || '?').charAt(0).toUpperCase();
-                return `
-                        <div class="member-item">
-                            <div class="member-avatar">${escapeHtml(initial)}</div>
-                            <div class="member-name">${escapeHtml(user.username || 'Unknown')}</div>
-                            <div class="member-status"></div>
-                        </div>
-                    `;
-            }).join('');
-        }
-
-        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         //  SEND MESSAGE
         // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         async function sendMessage() {
@@ -914,7 +909,6 @@
             const text = input.value.trim();
             if (!text || !currentRoom || !currentPlayer) return;
 
-            // Optimistic UI
             const tempId = `temp-${Date.now()}`;
             const newMsg = {
                 id: tempId,
@@ -928,7 +922,7 @@
             input.value = '';
             input.style.height = 'auto';
 
-            // Broadcast to channel
+            // Broadcast
             if (roomChannel) {
                 try {
                     await roomChannel.send({
@@ -941,7 +935,7 @@
                 }
             }
 
-            // Persist to DB
+            // Persist
             const { error } = await sb
                 .from('chat_messages')
                 .insert({
@@ -965,7 +959,6 @@
                     sendMessage();
                 }
             });
-            // Auto-resize textarea
             input.addEventListener('input', () => {
                 input.style.height = 'auto';
                 input.style.height = Math.min(input.scrollHeight, 120) + 'px';
@@ -1026,6 +1019,9 @@
                 window.location.href = 'index.html';
                 return;
             }
+            // Set up global presence channel once
+            setupPresenceChannel();
+            // Load rooms and select first
             await loadRooms();
         })();
 
