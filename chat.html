@@ -25,7 +25,6 @@
       overflow: hidden;
       box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     }
-    /* Sidebar */
     .sidebar {
       width: 280px;
       background: #f0f0f0;
@@ -94,7 +93,6 @@
       margin-left: 5px;
     }
 
-    /* Chat area */
     .chat-area {
       flex: 1;
       display: flex;
@@ -268,6 +266,18 @@ const supabaseUrl = 'https://mtiwodvsrwvrujbhmmrn.supabase.co';
 const supabaseKey = 'sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp';
 const sb = window.supabase.createClient(supabaseUrl, supabaseKey);
 
+// ========== HEARTBEAT (updates last_activity) ==========
+async function sendHeartbeat() {
+  const { data: { user } } = await sb.auth.getUser();
+  if (!user) return;
+  const pageName = window.location.pathname.split('/').pop() || 'chat';
+  await sb.rpc('update_player_activity', { p_current_page: pageName, p_ip: null, p_user_agent: navigator.userAgent })
+    .catch(e => console.warn('Heartbeat failed', e));
+}
+sendHeartbeat();
+setInterval(sendHeartbeat, 15000);
+// =====================================================
+
 let currentUser = null;
 let currentPlayer = null;
 let contacts = [];
@@ -296,6 +306,7 @@ function insertEmoji(emoji) {
   input.selectionStart = input.selectionEnd = start + emoji.length;
 }
 
+// ---------- INIT ----------
 async function init() {
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return window.location.href = 'index.html';
@@ -303,14 +314,23 @@ async function init() {
   if (!player) { showToast('Player not found', 'error'); return; }
   currentPlayer = player;
   currentUser = user;
+
   await loadAllPlayers();
   await loadRooms();
-  // auto-select first conversation if any
+
+  // Auto-select first conversation if any
   if (rooms.length > 0) {
     selectRoom(rooms[0].room_id);
   }
+
+  // Periodic refresh of contact list (every 10s)
+  setInterval(() => {
+    loadAllPlayers();
+    loadRooms();
+  }, 10000);
 }
 
+// ---------- LOAD PLAYERS (with online status via last_activity) ----------
 async function loadAllPlayers() {
   const { data } = await sb.from('players').select('id, username, last_activity, current_page').order('username');
   allPlayers = data || [];
@@ -353,10 +373,11 @@ function renderContacts() {
 }
 
 function getUnreadCountFor(otherUserId) {
-  // We'll rely on the unread RPC later; for now return 0
+  // Placeholder – can be extended with a query later
   return 0;
 }
 
+// ---------- ROOMS ----------
 async function loadRooms() {
   const { data: participantRows } = await sb
     .from('chat_participants')
@@ -388,6 +409,7 @@ async function loadRooms() {
   rooms = roomData;
 }
 
+// ---------- START / SELECT CHAT ----------
 async function startDirectChat(otherUserId) {
   const { data: roomId, error } = await sb.rpc('get_or_create_direct_room', { p_other_user_id: otherUserId });
   if (error) { showToast('Error creating room', 'error'); return; }
@@ -488,7 +510,6 @@ async function selectRoom(roomId) {
     const newMsg = payload.payload;
     if (newMsg.room_id === roomId) {
       const container = document.getElementById('messagesContainer');
-      // Avoid duplicates
       const lastMsg = container.querySelector('.message:last-child');
       if (lastMsg && lastMsg.dataset.msgId === newMsg.id) return;
       const div = document.createElement('div');
@@ -510,7 +531,6 @@ async function selectRoom(roomId) {
       div.dataset.msgId = newMsg.id;
       container.appendChild(div);
       container.scrollTop = container.scrollHeight;
-      // Mark as read if not own
       if (newMsg.user_id !== currentPlayer.id) {
         sb.from('chat_messages').update({ is_read: true }).eq('id', newMsg.id);
       }
@@ -542,7 +562,7 @@ async function selectRoom(roomId) {
 
   // Set up typing events on input
   const input = document.getElementById('messageInput');
-  input.removeEventListener('input', handleTyping); // prevent duplicates
+  input.removeEventListener('input', handleTyping);
   input.addEventListener('input', handleTyping);
 }
 
@@ -579,18 +599,15 @@ async function sendMessage() {
     players: { username: currentPlayer.username }
   };
 
-  // Insert into DB
   const { data, error } = await sb.from('chat_messages').insert(newMsg).select().single();
   if (error) { showToast('Error sending message', 'error'); return; }
 
-  // Broadcast
   if (messageChannel) {
     messageChannel.send({ type: 'broadcast', event: 'message', payload: data });
   }
 
   input.value = '';
   input.style.height = 'auto';
-  // The broadcast will append locally
 }
 
 function escapeHtml(text) {
@@ -599,6 +616,7 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
+// Start everything
 init();
 </script>
 </body>
