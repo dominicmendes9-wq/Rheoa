@@ -42,7 +42,6 @@
       justify-content: space-between;
       align-items: center;
     }
-    .sidebar-header span { font-size: 1.2rem; }
     .search-box {
       padding: 8px 12px;
       border: none;
@@ -243,6 +242,7 @@
         <div class="partner-name" id="chatPartnerName">Select a contact</div>
         <div class="partner-status" id="chatPartnerStatus">Click a name to start chatting</div>
       </div>
+      <div style="margin-left:auto; font-size:0.8rem; background:#e0e0e0; padding:2px 10px; border-radius:10px;" id="onlineCount">0 online</div>
     </div>
     <div class="messages-container" id="messagesContainer">
       <div style="padding:40px; text-align:center; color:#999;">Select a conversation</div>
@@ -305,9 +305,8 @@ async function init() {
   currentUser = user;
   await loadAllPlayers();
   await loadRooms();
-  setupRealtime();
+  // auto-select first conversation if any
   if (rooms.length > 0) {
-    // auto-select first conversation
     selectRoom(rooms[0].room_id);
   }
 }
@@ -354,10 +353,7 @@ function renderContacts() {
 }
 
 function getUnreadCountFor(otherUserId) {
-  const room = rooms.find(r => r.type === 'direct' && r.participantIds && r.participantIds.includes(otherUserId));
-  if (!room) return 0;
-  // We'll compute in selectRoom and store in a map; for simplicity, we return 0 now.
-  // The frontend can also query unread count via the RPC get_unread_count().
+  // We'll rely on the unread RPC later; for now return 0
   return 0;
 }
 
@@ -401,8 +397,6 @@ async function startDirectChat(otherUserId) {
   if (otherUser) {
     document.getElementById('chatAvatar').textContent = otherUser.username.charAt(0).toUpperCase();
     document.getElementById('chatPartnerName').textContent = otherUser.username;
-    const isOnline = otherUser.last_activity && (new Date() - new Date(otherUser.last_activity)) < 30000;
-    document.getElementById('chatPartnerStatus').textContent = isOnline ? '🟢 Online' : '⚪ Offline';
   }
   document.getElementById('messageInput').focus();
 }
@@ -423,11 +417,10 @@ async function selectRoom(roomId) {
     if (otherUser) {
       document.getElementById('chatAvatar').textContent = otherUser.username.charAt(0).toUpperCase();
       document.getElementById('chatPartnerName').textContent = otherUser.username;
-      const isOnline = otherUser.last_activity && (new Date() - new Date(otherUser.last_activity)) < 30000;
-      document.getElementById('chatPartnerStatus').textContent = isOnline ? '🟢 Online' : '⚪ Offline';
     }
   }
 
+  // Load messages
   const { data: messages } = await sb
     .from('chat_messages')
     .select('*, players:user_id(username)')
@@ -461,64 +454,116 @@ async function selectRoom(roomId) {
     .eq('room_id', roomId)
     .eq('user_id', currentPlayer.id);
 
-  // Subscribe to new messages
-  messageChannel = sb.channel(`room:${roomId}`)
-    .on('broadcast', { event: 'message' }, (payload) => {
-      const newMsg = payload.payload;
-      if (newMsg.room_id === roomId) {
-        // Check if already in DOM (avoid duplicates)
-        const container = document.getElementById('messagesContainer');
-        // simple check: if last message has same id, ignore
-        const lastMsg = container.querySelector('.message:last-child');
-        if (lastMsg && lastMsg.dataset.msgId === newMsg.id) return;
-        const div = document.createElement('div');
-        div.className = `message ${newMsg.user_id === currentPlayer.id ? 'own' : ''}`;
-        if (newMsg.user_id !== currentPlayer.id) {
-          const senderDiv = document.createElement('div');
-          senderDiv.className = 'sender';
-          senderDiv.textContent = newMsg.players.username;
-          div.appendChild(senderDiv);
-        }
-        const textSpan = document.createElement('span');
-        textSpan.textContent = newMsg.content;
-        div.appendChild(textSpan);
-        const timeSpan = document.createElement('span');
-        timeSpan.className = 'time';
-        timeSpan.textContent = new Date(newMsg.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-        div.appendChild(timeSpan);
-        div.dataset.msgId = newMsg.id;
-        container.appendChild(div);
-        container.scrollTop = container.scrollHeight;
-        // Mark as read if the message is not from self
-        if (newMsg.user_id !== currentPlayer.id) {
-          sb.from('chat_messages').update({ is_read: true }).eq('id', newMsg.id);
-        }
-      }
-    })
-    .subscribe();
-
-  // Typing indicator (broadcast)
-  const input = document.getElementById('messageInput');
-  input.addEventListener('input', () => {
-    if (roomChannel) {
-      roomChannel.send({ type: 'broadcast', event: 'typing', payload: { user_id: currentPlayer.id, typing: true } });
-      clearTimeout(typingTimeout);
-      typingTimeout = setTimeout(() => {
-        roomChannel.send({ type: 'broadcast', event: 'typing', payload: { user_id: currentPlayer.id, typing: false } });
-      }, 2000);
+  // ---- SETUP REALTIME CHANNEL WITH PRESENCE ----
+  messageChannel = sb.channel(`room:${roomId}`, {
+    config: {
+      broadcast: { ack: true },
+      presence: { key: currentPlayer.id }
     }
   });
 
-  // Listen for typing events
+  // Presence: sync online users
+  messageChannel.on('presence', { event: 'sync' }, () => {
+    const state = messageChannel.presenceState();
+    const users = [];
+    Object.keys(state).forEach(key => {
+      state[key].forEach(p => {
+        if (p.user_id !== currentPlayer.id) {
+          users.push(p);
+        }
+      });
+    });
+    document.getElementById('onlineCount').textContent = `${users.length} online`;
+    const onlineNames = users.map(u => u.username).join(', ');
+    const statusEl = document.getElementById('chatPartnerStatus');
+    if (users.length > 0) {
+      statusEl.textContent = `🟢 Online: ${onlineNames}`;
+    } else {
+      statusEl.textContent = '⚪ Offline';
+    }
+  });
+
+  // Broadcast: new messages
+  messageChannel.on('broadcast', { event: 'message' }, (payload) => {
+    const newMsg = payload.payload;
+    if (newMsg.room_id === roomId) {
+      const container = document.getElementById('messagesContainer');
+      // Avoid duplicates
+      const lastMsg = container.querySelector('.message:last-child');
+      if (lastMsg && lastMsg.dataset.msgId === newMsg.id) return;
+      const div = document.createElement('div');
+      div.className = `message ${newMsg.user_id === currentPlayer.id ? 'own' : ''}`;
+      if (newMsg.user_id !== currentPlayer.id) {
+        const senderDiv = document.createElement('div');
+        senderDiv.className = 'sender';
+        const user = allPlayers.find(p => p.id === newMsg.user_id);
+        senderDiv.textContent = user ? user.username : 'Unknown';
+        div.appendChild(senderDiv);
+      }
+      const textSpan = document.createElement('span');
+      textSpan.textContent = newMsg.content;
+      div.appendChild(textSpan);
+      const timeSpan = document.createElement('span');
+      timeSpan.className = 'time';
+      timeSpan.textContent = new Date(newMsg.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+      div.appendChild(timeSpan);
+      div.dataset.msgId = newMsg.id;
+      container.appendChild(div);
+      container.scrollTop = container.scrollHeight;
+      // Mark as read if not own
+      if (newMsg.user_id !== currentPlayer.id) {
+        sb.from('chat_messages').update({ is_read: true }).eq('id', newMsg.id);
+      }
+    }
+  });
+
+  // Broadcast: typing indicator
   messageChannel.on('broadcast', { event: 'typing' }, (payload) => {
     const indicator = document.getElementById('typingIndicator');
     if (payload.payload.user_id !== currentPlayer.id && payload.payload.typing) {
+      const user = allPlayers.find(p => p.id === payload.payload.user_id);
       indicator.style.display = 'block';
-      indicator.textContent = `${allPlayers.find(p => p.id === payload.payload.user_id)?.username || 'Someone'} is typing...`;
+      indicator.textContent = `${user ? user.username : 'Someone'} is typing...`;
     } else {
       indicator.style.display = 'none';
     }
   });
+
+  // Subscribe and track presence
+  await messageChannel.subscribe(async (status) => {
+    if (status === 'SUBSCRIBED') {
+      await messageChannel.track({
+        user_id: currentPlayer.id,
+        username: currentPlayer.username,
+        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentPlayer.id}`
+      });
+    }
+  });
+
+  // Set up typing events on input
+  const input = document.getElementById('messageInput');
+  input.removeEventListener('input', handleTyping); // prevent duplicates
+  input.addEventListener('input', handleTyping);
+}
+
+let typingTimeoutId = null;
+function handleTyping() {
+  if (!messageChannel) return;
+  messageChannel.send({
+    type: 'broadcast',
+    event: 'typing',
+    payload: { user_id: currentPlayer.id, typing: true }
+  });
+  clearTimeout(typingTimeoutId);
+  typingTimeoutId = setTimeout(() => {
+    if (messageChannel) {
+      messageChannel.send({
+        type: 'broadcast',
+        event: 'typing',
+        payload: { user_id: currentPlayer.id, typing: false }
+      });
+    }
+  }, 2000);
 }
 
 async function sendMessage() {
@@ -534,18 +579,18 @@ async function sendMessage() {
     players: { username: currentPlayer.username }
   };
 
-  // Insert into database
+  // Insert into DB
   const { data, error } = await sb.from('chat_messages').insert(newMsg).select().single();
   if (error) { showToast('Error sending message', 'error'); return; }
 
-  // Broadcast via channel
+  // Broadcast
   if (messageChannel) {
     messageChannel.send({ type: 'broadcast', event: 'message', payload: data });
   }
 
   input.value = '';
   input.style.height = 'auto';
-  // Append message locally (already handled by broadcast)
+  // The broadcast will append locally
 }
 
 function escapeHtml(text) {
