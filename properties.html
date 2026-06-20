@@ -4,6 +4,7 @@
   <title>Rheoa RPG - Properties</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
+    /* Keep all existing styles – unchanged */
     * {
       box-sizing: border-box;
       margin: 0;
@@ -32,7 +33,6 @@
       font-style: italic;
     }
     
-    /* Player Stats Bar */
     .player-stats {
       display: flex;
       justify-content: space-between;
@@ -66,7 +66,6 @@
       font-weight: bold;
     }
     
-    /* Property Tabs */
     .property-tabs {
       display: flex;
       justify-content: center;
@@ -97,7 +96,6 @@
       border-color: #8B4513;
     }
     
-    /* Property Overview */
     .property-overview {
       background: white;
       border: 3px solid #8B4513;
@@ -169,7 +167,6 @@
       transition: width 0.3s;
     }
     
-    /* Cash Storage Section */
     .cash-storage {
       display: flex;
       gap: 20px;
@@ -221,7 +218,6 @@
       background: rgba(255,255,255,0.3);
     }
     
-    /* Upgrades Grid */
     .upgrades-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -305,7 +301,6 @@
       cursor: not-allowed;
     }
     
-    /* Features Grid */
     .features-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -386,7 +381,6 @@
       background: #7b1fa2;
     }
     
-    /* Robbery Logs */
     .logs-section {
       background: white;
       border: 3px solid #8B4513;
@@ -405,7 +399,6 @@
     .log-success { color: #4CAF50; }
     .log-failed { color: #f44336; }
     
-    /* Market Listings */
     .market-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -427,7 +420,6 @@
       margin: 10px 0;
     }
     
-    /* Shop Grid */
     .shop-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -470,7 +462,6 @@
       cursor: not-allowed;
     }
     
-    /* Back Button */
     .back-button {
       display: block;
       width: 200px;
@@ -492,7 +483,6 @@
       transform: scale(1.02);
     }
     
-    /* Toast Notifications */
     .toast-container {
       position: fixed;
       top: 20px;
@@ -545,20 +535,16 @@
         flex-direction: column;
         text-align: center;
       }
-      
       .property-tabs {
         flex-direction: column;
       }
-      
       .tab-btn {
         width: 100%;
       }
-      
       .property-header {
         flex-direction: column;
         text-align: center;
       }
-      
       .cash-storage {
         flex-direction: column;
       }
@@ -658,16 +644,13 @@ const sb = window.supabase.createClient(
   "https://mtiwodvsrwvrujbhmmrn.supabase.co",
   "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
 );
-// XSS protection – turns dangerous characters into safe text
+
+// XSS protection
 function escapeHtml(str) {
-    if (!str) return '';
-    return str
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
+  if (!str) return '';
+  return str.replace(/[&<>]/g, m => ({ '&':'&amp;','<':'&lt;','>':'&gt;' }[m]));
 }
+
 let currentPlayer = null;
 let playerProperty = null;
 let propertyTypes = [];
@@ -675,28 +658,22 @@ let propertyUpgrades = [];
 let propertyFeatures = [];
 let ownedFeatures = [];
 let robberyLogs = [];
-let propertyListings = [];
 
-// Toast notification
 function showToast(message, type = 'info', duration = 3000) {
   const container = document.getElementById('toast-container');
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
   toast.textContent = message;
-  
   container.appendChild(toast);
-  
   setTimeout(() => {
     toast.classList.add('fade-out');
     setTimeout(() => {
-      if (toast.parentNode) {
-        container.removeChild(toast);
-      }
+      if (toast.parentNode) container.removeChild(toast);
     }, 300);
   }, duration);
 }
 
-// Load player data
+// ---------- LOAD PLAYER ----------
 async function loadPlayerData() {
   try {
     const { data: { user } } = await sb.auth.getUser();
@@ -704,27 +681,18 @@ async function loadPlayerData() {
       window.location.href = "index.html";
       return;
     }
-    
-    const { data: player, error } = await sb
-      .from('players')
-      .select('*')
-      .eq('auth_id', user.id)
-      .single();
-    
+    const { data: player, error } = await sb.from('players').select('*').eq('auth_id', user.id).single();
     if (error) throw error;
-    
-    if (player) {
-      currentPlayer = player;
-      updatePlayerStats();
-      await loadPlayerProperty();
-      await loadPropertyTypes();
-      await loadPropertyFeatures();
-      
-      if (playerProperty) {
-        await loadPropertyUpgrades();
-        await loadOwnedFeatures();
-        await loadRobberyLogs();
-      }
+    currentPlayer = player;
+    updatePlayerStats();
+    // Load property data
+    await reloadProperty();
+    await loadPropertyTypes();
+    await loadPropertyFeatures();
+    if (playerProperty) {
+      await loadPropertyUpgrades();
+      await loadOwnedFeatures();
+      await loadRobberyLogs();
     }
   } catch (error) {
     console.error('Error loading player:', error);
@@ -732,62 +700,47 @@ async function loadPlayerData() {
   }
 }
 
-// Update player stats
+// ---------- RELOAD ONLY PROPERTY ----------
+async function reloadProperty() {
+  try {
+    const { data: propertyData, error: propertyError } = await sb
+      .from('player_properties')
+      .select('*')
+      .eq('player_id', currentPlayer.id)
+      .single();
+    if (propertyError && propertyError.code !== 'PGRST116') throw propertyError;
+    if (propertyData) {
+      const { data: typeData, error: typeError } = await sb
+        .from('property_types')
+        .select('*')
+        .eq('id', propertyData.property_type_id)
+        .single();
+      if (typeError) throw typeError;
+      playerProperty = { ...propertyData, property_types: typeData };
+    } else {
+      playerProperty = null;
+    }
+    renderPropertyOverview();
+  } catch (error) {
+    console.error('Error reloading property:', error);
+    showToast('Error loading property data', 'error');
+  }
+}
+
+// ---------- UPDATE PLAYER STATS ----------
 function updatePlayerStats() {
+  if (!currentPlayer) return;
   document.getElementById('playerStats').style.display = 'flex';
   document.getElementById('playerCash').textContent = `₹${currentPlayer.cash.toLocaleString()}`;
   document.getElementById('playerLevel').textContent = currentPlayer.level;
   document.getElementById('playerEnergy').textContent = currentPlayer.energy;
 }
 
-// Load player property
-async function loadPlayerProperty() {
-  try {
-    // First get the player property without nested join
-    const { data: propertyData, error: propertyError } = await sb
-      .from('player_properties')
-      .select('*')
-      .eq('player_id', currentPlayer.id)
-      .single();
-    
-    if (propertyError && propertyError.code !== 'PGRST116') throw propertyError;
-    
-    if (propertyData) {
-      // Now fetch the property type separately
-      const { data: typeData, error: typeError } = await sb
-        .from('property_types')
-        .select('*')
-        .eq('id', propertyData.property_type_id)
-        .single();
-      
-      if (typeError) throw typeError;
-      
-      // Combine into a single object
-      playerProperty = {
-        ...propertyData,
-        property_types: typeData
-      };
-    } else {
-      playerProperty = null;
-    }
-    
-    renderPropertyOverview();
-  } catch (error) {
-    console.error('Error loading property:', error.message || error);
-    showToast('Error loading property data', 'error');
-  }
-}
-
-// Load property types
+// ---------- LOAD PROPERTY TYPES (for shop) ----------
 async function loadPropertyTypes() {
   try {
-    const { data, error } = await sb
-      .from('property_types')
-      .select('*')
-      .order('base_price');
-    
+    const { data, error } = await sb.from('property_types').select('*').order('base_price');
     if (error) throw error;
-    
     propertyTypes = data || [];
     renderShop();
   } catch (error) {
@@ -795,19 +748,16 @@ async function loadPropertyTypes() {
   }
 }
 
-// Load property upgrades
+// ---------- LOAD UPGRADES ----------
 async function loadPropertyUpgrades() {
   if (!playerProperty) return;
-  
   try {
     const { data, error } = await sb
       .from('property_upgrades')
       .select('*')
       .eq('property_type_id', playerProperty.property_type_id)
       .order('upgrade_level');
-    
     if (error) throw error;
-    
     propertyUpgrades = data || [];
     renderUpgrades();
   } catch (error) {
@@ -815,34 +765,25 @@ async function loadPropertyUpgrades() {
   }
 }
 
-// Load property features
+// ---------- LOAD FEATURES ----------
 async function loadPropertyFeatures() {
   try {
-    const { data, error } = await sb
-      .from('property_features')
-      .select('*')
-      .order('cost');
-    
+    const { data, error } = await sb.from('property_features').select('*').order('cost');
     if (error) throw error;
-    
     propertyFeatures = data || [];
   } catch (error) {
     console.error('Error loading features:', error);
   }
 }
 
-// Load owned features
 async function loadOwnedFeatures() {
   if (!playerProperty) return;
-  
   try {
     const { data, error } = await sb
       .from('player_property_features')
       .select('feature_id')
       .eq('property_id', playerProperty.id);
-    
     if (error) throw error;
-    
     ownedFeatures = data.map(f => f.feature_id) || [];
     renderFeatures();
   } catch (error) {
@@ -850,23 +791,16 @@ async function loadOwnedFeatures() {
   }
 }
 
-// Load robbery logs
 async function loadRobberyLogs() {
   if (!playerProperty) return;
-  
   try {
     const { data, error } = await sb
       .from('property_robberies')
-      .select(`
-        *,
-        robber:players!property_robberies_robber_id_fkey (username)
-      `)
+      .select(`*, robber:players!property_robberies_robber_id_fkey (username)`)
       .eq('target_player_id', currentPlayer.id)
       .order('created_at', { ascending: false })
       .limit(20);
-    
     if (error) throw error;
-    
     robberyLogs = data || [];
     renderSecurity();
   } catch (error) {
@@ -874,10 +808,9 @@ async function loadRobberyLogs() {
   }
 }
 
-// Render property overview
+// ---------- RENDER FUNCTIONS ----------
 function renderPropertyOverview() {
   const container = document.getElementById('propertyOverview');
-  
   if (!playerProperty) {
     container.innerHTML = `
       <div class="empty-message">
@@ -887,31 +820,20 @@ function renderPropertyOverview() {
     `;
     return;
   }
-  
   const type = playerProperty.property_types;
-  
   if (!type) {
-    console.error('Property type missing for property:', playerProperty);
-    container.innerHTML = `
-      <div class="empty-message">
-        <p>Property data is corrupted. Please contact support.</p>
-        <p>Property ID: ${playerProperty.id}</p>
-      </div>
-    `;
+    container.innerHTML = '<div class="empty-message">Error: Property data corrupted.</div>';
     return;
   }
-  
   const securityPercent = (playerProperty.security_level / 10) * 100;
   const storagePercent = (playerProperty.storage_capacity / 500) * 100;
-  
   container.innerHTML = `
     <div class="property-header">
       <div>
         <span class="property-name">${escapeHtml(playerProperty.property_name || type.name)}</span>
       </div>
-      <span class="property-type">${type.property_class}</span>
+      <span class="property-type">${escapeHtml(type.property_class)}</span>
     </div>
-    
     <div class="property-stats-grid">
       <div class="property-stat-card">
         <div class="property-stat-label">Level</div>
@@ -932,7 +854,6 @@ function renderPropertyOverview() {
         <div class="property-stat-value">${playerProperty.rooms}</div>
       </div>
     </div>
-    
     <div class="cash-storage">
       <div class="storage-card">
         <div>💵 Cash in Property</div>
@@ -946,7 +867,6 @@ function renderPropertyOverview() {
           <button class="storage-btn" onclick="withdrawCash()">Withdraw</button>
         </div>
       </div>
-      
       <div class="storage-card" style="background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);">
         <div>⚡ Robbery Info</div>
         <div style="margin: 10px 0;">
@@ -959,38 +879,30 @@ function renderPropertyOverview() {
   `;
 }
 
-// Render upgrades
 function renderUpgrades() {
   const container = document.getElementById('upgradesGrid');
-  
   if (!playerProperty || !propertyUpgrades.length) {
     container.innerHTML = '<div class="empty-message">No upgrades available</div>';
     return;
   }
-  
   const type = playerProperty.property_types;
-  
-  if (!type) {
-    container.innerHTML = '<div class="empty-message">Property type data missing</div>';
-    return;
-  }
-  
+  if (!type) return;
+
   const currentSecurity = playerProperty.security_level;
   const currentStorage = playerProperty.storage_capacity;
   const currentRooms = playerProperty.rooms;
-  
+
   const securityUpgrades = propertyUpgrades.filter(u => u.upgrade_type === 'security');
   const storageUpgrades = propertyUpgrades.filter(u => u.upgrade_type === 'storage');
   const roomsUpgrades = propertyUpgrades.filter(u => u.upgrade_type === 'rooms');
-  
+
   container.innerHTML = '';
-  
-  // Security upgrades
+
+  // Security
   if (securityUpgrades.length) {
-    const nextLevel = currentSecurity - type.base_security + 1;
+    const nextLevel = playerProperty.security_upgrade_level + 1;
     const currentUpgrade = securityUpgrades.find(u => u.upgrade_level === nextLevel);
     const isMaxed = nextLevel > type.max_level;
-    
     container.innerHTML += `
       <div class="upgrade-card ${isMaxed ? 'maxed' : ''}">
         <div class="upgrade-title">🔒 Security System</div>
@@ -1009,13 +921,12 @@ function renderUpgrades() {
       </div>
     `;
   }
-  
-  // Storage upgrades
+
+  // Storage
   if (storageUpgrades.length) {
-    const nextLevel = (currentStorage - type.base_capacity) / 50 + 1;
+    const nextLevel = playerProperty.storage_upgrade_level + 1;
     const currentUpgrade = storageUpgrades.find(u => u.upgrade_level === nextLevel);
     const isMaxed = nextLevel > type.max_level;
-    
     container.innerHTML += `
       <div class="upgrade-card ${isMaxed ? 'maxed' : ''}">
         <div class="upgrade-title">📦 Storage Expansion</div>
@@ -1034,13 +945,12 @@ function renderUpgrades() {
       </div>
     `;
   }
-  
-  // Rooms upgrades
+
+  // Rooms
   if (roomsUpgrades.length) {
-    const nextLevel = currentRooms - type.base_rooms + 1;
+    const nextLevel = playerProperty.rooms_upgrade_level + 1;
     const currentUpgrade = roomsUpgrades.find(u => u.upgrade_level === nextLevel);
     const isMaxed = nextLevel > type.max_level;
-    
     container.innerHTML += `
       <div class="upgrade-card ${isMaxed ? 'maxed' : ''}">
         <div class="upgrade-title">🏠 Extra Rooms</div>
@@ -1061,20 +971,16 @@ function renderUpgrades() {
   }
 }
 
-// Render features
 function renderFeatures() {
   const container = document.getElementById('featuresGrid');
-  
   if (!propertyFeatures.length) {
     container.innerHTML = '<div class="empty-message">No features available</div>';
     return;
   }
-  
   container.innerHTML = propertyFeatures.map(feature => {
     const isOwned = ownedFeatures.includes(feature.id);
     const canAfford = currentPlayer.cash >= feature.cost;
     const meetsLevel = currentPlayer.level >= feature.required_level;
-    
     return `
       <div class="feature-card ${isOwned ? 'owned' : ''}">
         <div class="feature-icon">${feature.icon || '✨'}</div>
@@ -1093,31 +999,27 @@ function renderFeatures() {
   }).join('');
 }
 
-// Render security
 function renderSecurity() {
   const container = document.getElementById('securityContent');
-  
   if (!robberyLogs.length) {
     container.innerHTML = '<div class="empty-message">No robbery attempts recorded</div>';
     return;
   }
-  
   container.innerHTML = `
     <h3 style="margin-bottom: 15px;">Recent Robbery Attempts</h3>
     ${robberyLogs.map(log => `
       <div class="log-item">
         <span>${new Date(log.created_at).toLocaleString()}</span>
         <span class="log-${log.outcome}">${log.outcome.toUpperCase()}</span>
-<span>by ${escapeHtml(log.robber?.username || 'Unknown')}</span>        <span>${log.outcome === 'success' ? `Lost ₹${log.loot_amount}` : 'Failed'}</span>
+        <span>by ${escapeHtml(log.robber?.username || 'Unknown')}</span>
+        <span>${log.outcome === 'success' ? `Lost ₹${log.loot_amount}` : 'Failed'}</span>
       </div>
     `).join('')}
   `;
 }
 
-// Render shop
 function renderShop() {
   const container = document.getElementById('shopGrid');
-  
   if (playerProperty) {
     container.innerHTML = `
       <div class="empty-message">
@@ -1127,16 +1029,13 @@ function renderShop() {
     `;
     return;
   }
-  
   if (!propertyTypes.length) {
     container.innerHTML = '<div class="empty-message">No properties available</div>';
     return;
   }
-  
   container.innerHTML = propertyTypes.map(type => {
     const canAfford = currentPlayer.cash >= type.base_price;
     const meetsLevel = currentPlayer.level >= type.min_level;
-    
     return `
       <div class="shop-card">
         <div class="feature-icon">${type.icon || '🏠'}</div>
@@ -1160,21 +1059,19 @@ function renderShop() {
   }).join('');
 }
 
-// Buy property
+// ---------- ACTION FUNCTIONS ----------
 async function buyProperty(propertyTypeId) {
   const propertyName = prompt('Give your property a name (optional):', '');
-  
   try {
     const { data, error } = await sb.rpc('buy_property', {
       p_property_type_id: propertyTypeId,
       p_property_name: propertyName || null
     });
-    
     if (error) throw error;
-    
     if (data.success) {
       showToast(data.message, 'success');
-      await loadPlayerData();
+      // Reload only property data, not full player (avoids state reset)
+      await loadPlayerData(); // re-fetch player (updates cash) and property
       switchTab('overview');
     } else {
       showToast(data.error, 'error');
@@ -1185,20 +1082,14 @@ async function buyProperty(propertyTypeId) {
   }
 }
 
-// Upgrade property
 async function upgradeProperty(upgradeType) {
   try {
-    const { data, error } = await sb.rpc('upgrade_property', {
-      p_upgrade_type: upgradeType
-    });
-    
+    const { data, error } = await sb.rpc('upgrade_property', { p_upgrade_type: upgradeType });
     if (error) throw error;
-    
     if (data.success) {
       showToast(data.message, 'success');
       await loadPlayerData();
-      await loadPlayerProperty();
-      await loadPropertyUpgrades();
+      // re-render upgrades (will be called inside loadPlayerData)
     } else {
       showToast(data.error, 'error');
     }
@@ -1208,19 +1099,13 @@ async function upgradeProperty(upgradeType) {
   }
 }
 
-// Purchase feature
 async function purchaseFeature(featureId) {
   try {
-    const { data, error } = await sb.rpc('purchase_property_feature', {
-      p_feature_id: featureId
-    });
-    
+    const { data, error } = await sb.rpc('purchase_property_feature', { p_feature_id: featureId });
     if (error) throw error;
-    
     if (data.success) {
       showToast(data.message, 'success');
       await loadPlayerData();
-      await loadOwnedFeatures();
     } else {
       showToast(data.error, 'error');
     }
@@ -1230,26 +1115,18 @@ async function purchaseFeature(featureId) {
   }
 }
 
-// Deposit cash
 async function depositCash() {
   const amount = parseInt(document.getElementById('depositAmount').value);
-  
   if (amount < 1) {
     showToast('Enter a valid amount', 'error');
     return;
   }
-  
   try {
-    const { data, error } = await sb.rpc('store_cash_in_property', {
-      p_amount: amount
-    });
-    
+    const { data, error } = await sb.rpc('store_cash_in_property', { p_amount: amount });
     if (error) throw error;
-    
     if (data.success) {
       showToast(data.message, 'success');
       await loadPlayerData();
-      await loadPlayerProperty();
     } else {
       showToast(data.error, 'error');
     }
@@ -1259,26 +1136,18 @@ async function depositCash() {
   }
 }
 
-// Withdraw cash
 async function withdrawCash() {
   const amount = parseInt(document.getElementById('withdrawAmount').value);
-  
   if (amount < 1) {
     showToast('Enter a valid amount', 'error');
     return;
   }
-  
   try {
-    const { data, error } = await sb.rpc('withdraw_cash_from_property', {
-      p_amount: amount
-    });
-    
+    const { data, error } = await sb.rpc('withdraw_cash_from_property', { p_amount: amount });
     if (error) throw error;
-    
     if (data.success) {
       showToast(data.message, 'success');
       await loadPlayerData();
-      await loadPlayerProperty();
     } else {
       showToast(data.error, 'error');
     }
@@ -1288,28 +1157,26 @@ async function withdrawCash() {
   }
 }
 
-// Switch tabs
 function switchTab(tabName) {
-  document.querySelectorAll('.tab-content').forEach(tab => {
-    tab.style.display = 'none';
-  });
-  
-  document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.classList.remove('active');
-  });
-  
+  document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
+  document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
   document.getElementById(tabName).style.display = 'block';
-  event.target.classList.add('active');
+  // Find the button that corresponds to this tab
+  const buttons = document.querySelectorAll('.tab-btn');
+  for (let btn of buttons) {
+    if (btn.textContent.toLowerCase().includes(tabName)) {
+      btn.classList.add('active');
+      break;
+    }
+  }
 }
 
-// Navigation
 function goToDashboard() {
   window.location.href = "dashboard.html";
 }
 
-// Initialize
+// ---------- INIT ----------
 loadPlayerData();
 </script>
-
 </body>
 </html>
