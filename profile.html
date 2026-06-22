@@ -7,57 +7,57 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* ─── Same styles as before ─── */
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        :root { --bg-body: #f0f4fa; --card-bg: #ffffff; --card-border: rgba(148,163,184,0.2); --card-shadow: 0 12px 30px rgba(0,0,0,0.05); --header-bg: linear-gradient(135deg,#1e2f5e 0%,#1a4b7a 100%); --header-text: #ffffff; --accent: #2c6e9e; --accent-hover: #1f5480; --btn-primary: #2c6e9e; --btn-primary-hover: #1f5480; --btn-secondary: #475569; --btn-ghost: #e2e8f0; --text-main: #0f172a; --text-muted: #334155; --border-light: #e2e8f0; --card-header-bg: #f8fafc; --avatar-bg: #e0f2fe; --font-family: 'Inter', system-ui, sans-serif; --border-radius-card: 24px; --transition: all 0.2s ease; }
-        body.theme-dusk { --bg-body: #0f1722; --card-bg: #1e293b; --card-border: rgba(51,65,85,0.6); --card-shadow: 0 15px 35px rgba(0,0,0,0.3); --header-bg: linear-gradient(135deg,#0f172a 0%,#1e293b 100%); --header-text: #e2e8f0; --accent: #60a5fa; --accent-hover: #3b82f6; --btn-primary: #3b82f6; --btn-primary-hover: #2563eb; --btn-secondary: #334155; --btn-ghost: #334155; --text-main: #f1f5f9; --text-muted: #cbd5e1; --border-light: #334155; --card-header-bg: #0f172a; --avatar-bg: #334155; }
-        body.theme-meadow { --bg-body: #eef4e6; --card-bg: #ffffffea; --card-border: #cbd5b0; --card-shadow: 0 12px 24px rgba(60,70,40,0.08); --header-bg: linear-gradient(135deg,#2b5e3b 0%,#4a7c59 100%); --header-text: #fef9e6; --accent: #4b6b3e; --accent-hover: #3a5530; --btn-primary: #4b6b3e; --btn-primary-hover: #3a5530; --btn-secondary: #7f6b4a; --btn-ghost: #e9e1c7; --text-main: #2c2b26; --text-muted: #5b5a4c; --border-light: #d9d2b0; --card-header-bg: #fef6e0; --avatar-bg: #e2e9cf; }
-        body { background: var(--bg-body); font-family: var(--font-family); padding: 28px 20px; transition: background 0.25s, color 0.2s; color: var(--text-main); }
-        .container { max-width: 1400px; margin: 0 auto; }
-        .top-bar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 28px; padding: 0 8px; }
-        .back-link { background: var(--card-bg); padding: 8px 18px; border-radius: 60px; text-decoration: none; font-weight: 500; color: var(--accent); border: 1px solid var(--border-light); transition: var(--transition); font-size: 0.9rem; display: inline-flex; align-items: center; gap: 6px; backdrop-filter: blur(2px); }
-        .back-link:hover { background: var(--accent); color: white; border-color: var(--accent); }
-        .theme-switcher { display: flex; gap: 12px; background: var(--card-bg); padding: 6px 12px; border-radius: 60px; border: 1px solid var(--border-light); backdrop-filter: blur(4px); }
-        .theme-btn { background: transparent; border: none; padding: 8px 18px; border-radius: 40px; font-weight: 500; font-size: 0.8rem; cursor: pointer; transition: 0.2s; color: var(--text-muted); font-family: var(--font-family); }
-        .theme-btn.active { background: var(--accent); color: white; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-        .theme-btn:hover:not(.active) { background: var(--btn-ghost); color: var(--text-main); }
-        .profile-grid { display: grid; grid-template-columns: 1fr 1.6fr; gap: 28px; margin-bottom: 28px; }
-        @media (max-width:900px) { .profile-grid { grid-template-columns: 1fr; gap: 24px; } body { padding: 16px; } }
-        .card-modern { background: var(--card-bg); border-radius: var(--border-radius-card); border: 1px solid var(--card-border); box-shadow: var(--card-shadow); overflow: hidden; transition: transform 0.2s, box-shadow 0.2s; }
-        .card-modern:hover { transform: translateY(-2px); box-shadow: 0 20px 35px rgba(0,0,0,0.08); }
-        .card-header-modern { padding: 18px 24px; background: var(--card-header-bg); border-bottom: 1px solid var(--border-light); font-weight: 700; font-size: 1.2rem; letter-spacing: -0.2px; color: var(--text-main); display: flex; align-items: center; gap: 8px; }
-        .card-content-modern { padding: 20px 24px; }
-        .profile-hero { background: var(--header-bg); border-radius: var(--border-radius-card); padding: 28px 32px; margin-bottom: 32px; display: flex; flex-wrap: wrap; gap: 28px; align-items: center; color: var(--header-text); box-shadow: var(--card-shadow); position: relative; }
-        .hero-avatar { font-size: 5.2rem; background: rgba(255,255,255,0.15); width: 120px; height: 120px; border-radius: 50%; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); border: 2px solid rgba(255,255,255,0.3); }
-        .hero-info h1 { font-size: 2.2rem; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
-        .tier-badge { font-size: 0.7rem; font-weight: 600; padding: 4px 14px; border-radius: 30px; color: white; background: #888888; display: inline-flex; align-items: center; gap: 6px; letter-spacing: 0.3px; text-transform: uppercase; border: 1px solid rgba(255,255,255,0.2); backdrop-filter: blur(2px); }
-        .tier-badge .icon { font-size: 0.9rem; }
-        .stats-badge { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 14px; }
-        .stat-pill { background: rgba(255,255,255,0.18); padding: 6px 16px; border-radius: 40px; font-size: 0.8rem; font-weight: 500; backdrop-filter: blur(2px); }
-        .upgrade-prompt { background: rgba(255,215,0,0.12); border: 1px solid rgba(255,215,0,0.3); border-radius: 16px; padding: 16px 20px; margin-top: 16px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; color: var(--text-main); backdrop-filter: blur(2px); }
-        .upgrade-prompt button { background: #FFD700; color: #1a1a1a; border: none; padding: 8px 20px; border-radius: 30px; font-weight: 600; cursor: pointer; transition: 0.2s; font-family: inherit; font-size: 0.85rem; }
-        .upgrade-prompt button:hover { transform: scale(1.03); background: #f0c000; }
-        .friends-grid, .results-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 16px; margin-top: 4px; }
-        .friend-card, .result-card { background: var(--card-bg); border: 1px solid var(--border-light); border-radius: 20px; padding: 14px; display: flex; align-items: center; gap: 14px; transition: all 0.2s; }
-        .friend-avatar, .result-avatar { font-size: 2.2rem; background: var(--avatar-bg); width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
-        button, .btn-custom { background: var(--btn-primary); color: white; border: none; padding: 8px 16px; border-radius: 60px; font-weight: 500; font-size: 0.75rem; cursor: pointer; transition: 0.2s; font-family: var(--font-family); }
-        button.decline, .btn-outline { background: transparent; border: 1px solid var(--border-light); color: var(--text-muted); }
-        button.decline:hover { background: #c2410c; color: white; border-color: #c2410c; }
-        button:hover { background: var(--btn-primary-hover); transform: scale(0.98); }
-        .testimonial-card { background: var(--card-bg); border-left: 4px solid var(--accent); padding: 16px; border-radius: 20px; margin-bottom: 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-        input, textarea, select { width: 100%; padding: 12px 14px; margin: 8px 0 16px; border: 1px solid var(--border-light); border-radius: 20px; background: var(--card-bg); color: var(--text-main); font-family: var(--font-family); transition: 0.2s; }
-        input:focus, textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(44,110,158,0.2); }
-        .search-filters { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; align-items: flex-end; }
-        .filter-group { flex: 1; min-width: 120px; }
-        .filter-group label { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
-        hr { margin: 20px 0; border-color: var(--border-light); }
-        .toast { position: fixed; bottom: 28px; right: 28px; background: var(--accent); color: white; padding: 12px 24px; border-radius: 60px; font-weight: 500; z-index: 2000; box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
-        .online-status { display: inline-block; width: 8px; height: 8px; background: #4ade80; border-radius: 50%; margin-left: 6px; }
-        .flex-between { display: flex; justify-content: space-between; align-items: center; }
-        .empty-state { padding: 24px; text-align: center; color: var(--text-muted); background: var(--card-header-bg); border-radius: 24px; }
-        .locked-feature { opacity: 0.6; filter: grayscale(0.5); pointer-events: none; position: relative; }
-        .locked-feature::after { content: '🔒'; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 2rem; opacity: 0.5; }
-        .upgrade-tag { font-size: 0.65rem; background: #FFD700; color: #1a1a1a; padding: 2px 10px; border-radius: 20px; font-weight: 600; margin-left: 8px; }
+        /* ─── styles unchanged ─── */
+        * { margin:0; padding:0; box-sizing:border-box; }
+        :root { --bg-body:#f0f4fa; --card-bg:#fff; --card-border:rgba(148,163,184,0.2); --card-shadow:0 12px 30px rgba(0,0,0,0.05); --header-bg:linear-gradient(135deg,#1e2f5e 0%,#1a4b7a 100%); --header-text:#fff; --accent:#2c6e9e; --accent-hover:#1f5480; --btn-primary:#2c6e9e; --btn-primary-hover:#1f5480; --btn-secondary:#475569; --btn-ghost:#e2e8f0; --text-main:#0f172a; --text-muted:#334155; --border-light:#e2e8f0; --card-header-bg:#f8fafc; --avatar-bg:#e0f2fe; --font-family:'Inter',system-ui,sans-serif; --border-radius-card:24px; --transition:all 0.2s ease; }
+        body.theme-dusk { --bg-body:#0f1722; --card-bg:#1e293b; --card-border:rgba(51,65,85,0.6); --card-shadow:0 15px 35px rgba(0,0,0,0.3); --header-bg:linear-gradient(135deg,#0f172a 0%,#1e293b 100%); --header-text:#e2e8f0; --accent:#60a5fa; --accent-hover:#3b82f6; --btn-primary:#3b82f6; --btn-primary-hover:#2563eb; --btn-secondary:#334155; --btn-ghost:#334155; --text-main:#f1f5f9; --text-muted:#cbd5e1; --border-light:#334155; --card-header-bg:#0f172a; --avatar-bg:#334155; }
+        body.theme-meadow { --bg-body:#eef4e6; --card-bg:#ffffffea; --card-border:#cbd5b0; --card-shadow:0 12px 24px rgba(60,70,40,0.08); --header-bg:linear-gradient(135deg,#2b5e3b 0%,#4a7c59 100%); --header-text:#fef9e6; --accent:#4b6b3e; --accent-hover:#3a5530; --btn-primary:#4b6b3e; --btn-primary-hover:#3a5530; --btn-secondary:#7f6b4a; --btn-ghost:#e9e1c7; --text-main:#2c2b26; --text-muted:#5b5a4c; --border-light:#d9d2b0; --card-header-bg:#fef6e0; --avatar-bg:#e2e9cf; }
+        body { background:var(--bg-body); font-family:var(--font-family); padding:28px 20px; transition:background .25s,color .2s; color:var(--text-main); }
+        .container { max-width:1400px; margin:0 auto; }
+        .top-bar { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; margin-bottom:28px; padding:0 8px; }
+        .back-link { background:var(--card-bg); padding:8px 18px; border-radius:60px; text-decoration:none; font-weight:500; color:var(--accent); border:1px solid var(--border-light); transition:var(--transition); font-size:.9rem; display:inline-flex; align-items:center; gap:6px; backdrop-filter:blur(2px); }
+        .back-link:hover { background:var(--accent); color:#fff; border-color:var(--accent); }
+        .theme-switcher { display:flex; gap:12px; background:var(--card-bg); padding:6px 12px; border-radius:60px; border:1px solid var(--border-light); backdrop-filter:blur(4px); }
+        .theme-btn { background:transparent; border:none; padding:8px 18px; border-radius:40px; font-weight:500; font-size:.8rem; cursor:pointer; transition:.2s; color:var(--text-muted); font-family:var(--font-family); }
+        .theme-btn.active { background:var(--accent); color:#fff; box-shadow:0 2px 8px rgba(0,0,0,0.1); }
+        .theme-btn:hover:not(.active) { background:var(--btn-ghost); color:var(--text-main); }
+        .profile-grid { display:grid; grid-template-columns:1fr 1.6fr; gap:28px; margin-bottom:28px; }
+        @media (max-width:900px) { .profile-grid { grid-template-columns:1fr; gap:24px; } body { padding:16px; } }
+        .card-modern { background:var(--card-bg); border-radius:var(--border-radius-card); border:1px solid var(--card-border); box-shadow:var(--card-shadow); overflow:hidden; transition:transform .2s,box-shadow .2s; }
+        .card-modern:hover { transform:translateY(-2px); box-shadow:0 20px 35px rgba(0,0,0,0.08); }
+        .card-header-modern { padding:18px 24px; background:var(--card-header-bg); border-bottom:1px solid var(--border-light); font-weight:700; font-size:1.2rem; letter-spacing:-.2px; color:var(--text-main); display:flex; align-items:center; gap:8px; }
+        .card-content-modern { padding:20px 24px; }
+        .profile-hero { background:var(--header-bg); border-radius:var(--border-radius-card); padding:28px 32px; margin-bottom:32px; display:flex; flex-wrap:wrap; gap:28px; align-items:center; color:var(--header-text); box-shadow:var(--card-shadow); position:relative; }
+        .hero-avatar { font-size:5.2rem; background:rgba(255,255,255,0.15); width:120px; height:120px; border-radius:50%; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(4px); border:2px solid rgba(255,255,255,0.3); }
+        .hero-info h1 { font-size:2.2rem; font-weight:700; margin-bottom:8px; display:flex; align-items:center; flex-wrap:wrap; gap:12px; }
+        .tier-badge { font-size:.7rem; font-weight:600; padding:4px 14px; border-radius:30px; color:#fff; background:#888; display:inline-flex; align-items:center; gap:6px; letter-spacing:.3px; text-transform:uppercase; border:1px solid rgba(255,255,255,0.2); backdrop-filter:blur(2px); }
+        .tier-badge .icon { font-size:.9rem; }
+        .stats-badge { display:flex; flex-wrap:wrap; gap:14px; margin-top:14px; }
+        .stat-pill { background:rgba(255,255,255,0.18); padding:6px 16px; border-radius:40px; font-size:.8rem; font-weight:500; backdrop-filter:blur(2px); }
+        .upgrade-prompt { background:rgba(255,215,0,0.12); border:1px solid rgba(255,215,0,0.3); border-radius:16px; padding:16px 20px; margin-top:16px; display:flex; align-items:center; gap:16px; flex-wrap:wrap; color:var(--text-main); backdrop-filter:blur(2px); }
+        .upgrade-prompt button { background:#FFD700; color:#1a1a1a; border:none; padding:8px 20px; border-radius:30px; font-weight:600; cursor:pointer; transition:.2s; font-family:inherit; font-size:.85rem; }
+        .upgrade-prompt button:hover { transform:scale(1.03); background:#f0c000; }
+        .friends-grid, .results-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:16px; margin-top:4px; }
+        .friend-card, .result-card { background:var(--card-bg); border:1px solid var(--border-light); border-radius:20px; padding:14px; display:flex; align-items:center; gap:14px; transition:all .2s; }
+        .friend-avatar, .result-avatar { font-size:2.2rem; background:var(--avatar-bg); width:52px; height:52px; border-radius:50%; display:flex; align-items:center; justify-content:center; }
+        button, .btn-custom { background:var(--btn-primary); color:#fff; border:none; padding:8px 16px; border-radius:60px; font-weight:500; font-size:.75rem; cursor:pointer; transition:.2s; font-family:var(--font-family); }
+        button.decline, .btn-outline { background:transparent; border:1px solid var(--border-light); color:var(--text-muted); }
+        button.decline:hover { background:#c2410c; color:#fff; border-color:#c2410c; }
+        button:hover { background:var(--btn-primary-hover); transform:scale(.98); }
+        .testimonial-card { background:var(--card-bg); border-left:4px solid var(--accent); padding:16px; border-radius:20px; margin-bottom:16px; box-shadow:0 1px 2px rgba(0,0,0,0.05); }
+        input, textarea, select { width:100%; padding:12px 14px; margin:8px 0 16px; border:1px solid var(--border-light); border-radius:20px; background:var(--card-bg); color:var(--text-main); font-family:var(--font-family); transition:.2s; }
+        input:focus, textarea:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(44,110,158,0.2); }
+        .search-filters { display:flex; flex-wrap:wrap; gap:12px; margin-bottom:20px; align-items:flex-end; }
+        .filter-group { flex:1; min-width:120px; }
+        .filter-group label { font-size:.7rem; font-weight:600; text-transform:uppercase; letter-spacing:.5px; }
+        hr { margin:20px 0; border-color:var(--border-light); }
+        .toast { position:fixed; bottom:28px; right:28px; background:var(--accent); color:#fff; padding:12px 24px; border-radius:60px; font-weight:500; z-index:2000; box-shadow:0 10px 20px rgba(0,0,0,0.2); }
+        .online-status { display:inline-block; width:8px; height:8px; background:#4ade80; border-radius:50%; margin-left:6px; }
+        .flex-between { display:flex; justify-content:space-between; align-items:center; }
+        .empty-state { padding:24px; text-align:center; color:var(--text-muted); background:var(--card-header-bg); border-radius:24px; }
+        .locked-feature { opacity:.6; filter:grayscale(.5); pointer-events:none; position:relative; }
+        .locked-feature::after { content:'🔒'; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:2rem; opacity:.5; }
+        .upgrade-tag { font-size:.65rem; background:#FFD700; color:#1a1a1a; padding:2px 10px; border-radius:20px; font-weight:600; margin-left:8px; }
     </style>
 </head>
 <body>
@@ -81,18 +81,18 @@
 
     let currentPlayer = null;
     let profileOwner = null;
-    let friendships = [];
+    let friendships = [];          // friends of the profile owner (accepted)
+    let viewerFriendships = [];    // accepted friends of the current viewer (for mutual check)
     let testimonials = [];
     let pendingRequests = [];
     let profileViews = [];
     let searchResults = [];
-    let profileViewCount = 0;          // total views of the profile owner
+    let profileViewCount = 0;
 
-    // ── Subscription cache for the current user (editing features) ──
+    // ── Subscription cache for the current user ──
     let tierBenefits = {};
     let tierInfo = {};
 
-    // ── Helper to fetch tier info for any tier ──
     async function fetchTierInfo(tier) {
         const { data, error } = await sb
             .from('subscription_benefits')
@@ -190,6 +190,9 @@
             tierInfo = tierData;
             tierBenefits = tierData.features || {};
 
+            // Load viewer's own friendships (for mutual check)
+            await loadViewerFriendships();
+
             const urlParams = new URLSearchParams(window.location.search);
             const targetId = urlParams.get('id');
             if (targetId && targetId !== currentPlayer.id) await loadProfile(targetId);
@@ -197,6 +200,22 @@
         } catch (err) {
             document.getElementById('profileView').innerHTML = `<div class="card-modern"><div class="card-header-modern">⚠️ Error</div><div class="card-content-modern">${err.message}</div></div>`;
         }
+    }
+
+    async function loadViewerFriendships() {
+        if (!currentPlayer) return;
+        const { data } = await sb.from('friendships')
+            .select('requester_id, addressee_id')
+            .or(`requester_id.eq.${currentPlayer.id},addressee_id.eq.${currentPlayer.id}`)
+            .eq('status', 'accepted');
+        viewerFriendships = data || [];
+    }
+
+    function isViewerFriend(playerId) {
+        return viewerFriendships.some(f =>
+            (f.requester_id === currentPlayer.id && f.addressee_id === playerId) ||
+            (f.addressee_id === currentPlayer.id && f.requester_id === playerId)
+        );
     }
 
     async function loadProfile(playerId) {
@@ -207,7 +226,7 @@
         }
         profileOwner = player;
 
-        // ── Record a view if the viewer is not the owner ──
+        // Record a view if the viewer is not the owner
         if (currentPlayer && profileOwner.id !== currentPlayer.id) {
             await sb.from('profile_views').upsert({
                 profile_id: profileOwner.id,
@@ -217,19 +236,19 @@
             }, { onConflict: 'profile_id,viewer_id,view_date' });
         }
 
-        // ── Fetch friendships, testimonials, requests ──
+        // Fetch profile owner's friendships
         await loadFriendships();
         await loadTestimonials();
         await loadPendingRequests();
 
-        // ── Fetch view count for this profile (for the stat-pill) ──
+        // Get total view count for this profile
         const { count, error: countError } = await sb
             .from('profile_views')
             .select('*', { count: 'exact', head: true })
             .eq('profile_id', profileOwner.id);
         if (!countError) profileViewCount = count || 0;
 
-        // ── For the owner only, load the detailed visitors list ──
+        // Owner-only detailed visitors list
         if (profileOwner.id === currentPlayer?.id) {
             await loadProfileViews();
         } else {
@@ -277,9 +296,29 @@
     async function renderProfileLayout() {
         const isOwner = currentPlayer && profileOwner.id === currentPlayer.id;
         const totalFriends = friendships.length;
-        const viewCount = profileViewCount;   // total views of the profile owner
 
-        // ── Fetch tier info for the profile owner (for the badge) ──
+        // ── Determine which friends to display ──
+        let displayFriends = [];
+        if (isOwner) {
+            // Owner sees all friends
+            displayFriends = friendships;
+        } else {
+            // Viewer sees all if Gold+; otherwise only mutual friends
+            const viewerTier = currentPlayer?.subscription_tier || 'basic';
+            const viewerIsPremium = ['gold', 'black', 'founder'].includes(viewerTier);
+            if (viewerIsPremium) {
+                displayFriends = friendships;
+            } else {
+                // Filter to mutual friends
+                displayFriends = friendships.filter(f => {
+                    const friendId = f.requester_id === profileOwner.id ? f.addressee_id : f.requester_id;
+                    return isViewerFriend(friendId);
+                });
+            }
+        }
+        const displayFriendCount = displayFriends.length;
+
+        // ── Fetch tier info for the profile owner (badge) ──
         const ownerTier = profileOwner.subscription_tier || 'basic';
         const ownerTierInfo = await fetchTierInfo(ownerTier);
         const hasExclusiveBadge = ownerTierInfo.features?.exclusive_badge === true;
@@ -304,8 +343,8 @@
                     <div>📍 ${escapeHtml(profileOwner.location || 'Unknown realm')} ${profileOwner.country ? ', ' + escapeHtml(profileOwner.country) : ''}</div>
                     <div class="stats-badge">
                         <span class="stat-pill">⚡ Lv.${profileOwner.level || 1}</span>
-                        <span class="stat-pill">👥 ${totalFriends} friends</span>
-                        <span class="stat-pill">👁️ ${viewCount} visits</span>
+                        <span class="stat-pill">👥 ${displayFriendCount} friends</span>
+                        <span class="stat-pill">👁️ ${profileViewCount} visits</span>
                         <span class="stat-pill">📅 joined ${new Date(profileOwner.join_date).toLocaleDateString()}</span>
                         ${hasExclusiveBadge ? '<span class="stat-pill" style="background: #FF4500; color: white;">👑 Founder</span>' : ''}
                     </div>
@@ -357,7 +396,7 @@
             leftColumn += `<div class="card-modern" style="margin-top: 20px;"><div class="card-header-modern">🤝 Friendship</div><div class="card-content-modern">${btnHtml}</div></div>`;
         }
 
-        // ── Visitors (owner only, and only if their tier allows) ──
+        // ── Visitors (owner only, tier-gated) ──
         if (isOwner) {
             if (canViewVisitors) {
                 leftColumn += `<div class="card-modern" style="margin-top: 20px;"><div class="card-header-modern">👁️ Recent visitors</div><div class="card-content-modern"><div id="visitorsList"></div></div></div>`;
@@ -375,13 +414,12 @@
                 `;
             }
         }
-        // ── Pending requests (owner only) ──
         if (isOwner) {
             leftColumn += `<div class="card-modern" style="margin-top: 20px;"><div class="card-header-modern">📨 Friend requests</div><div class="card-content-modern"><div id="requestsList"></div></div></div>`;
         }
 
-        // ── Right column ──
-        let rightColumn = `<div class="card-modern"><div class="card-header-modern">👥 Companions (${totalFriends})</div><div class="card-content-modern"><div id="friendsGrid" class="friends-grid"></div></div></div>`;
+        // ── Right column: Companions ──
+        let rightColumn = `<div class="card-modern"><div class="card-header-modern">👥 Companions (${displayFriendCount})</div><div class="card-content-modern"><div id="friendsGrid" class="friends-grid"></div></div></div>`;
 
         // ── Search (owner only) ──
         if (isOwner) {
@@ -415,7 +453,7 @@
         document.getElementById('profileView').innerHTML = finalHtml;
 
         // ── Render dynamic lists ──
-        renderFriends();
+        renderFriends(displayFriends);
         renderTestimonials();
         if (isOwner) {
             if (canViewVisitors) renderVisitors();
@@ -423,11 +461,14 @@
         }
     }
 
-    function renderFriends() {
+    function renderFriends(friendsList) {
         const container = document.getElementById('friendsGrid');
         if (!container) return;
-        if (!friendships.length) { container.innerHTML = '<div class="empty-state">✨ No friends yet. Venture together!</div>'; return; }
-        container.innerHTML = friendships.map(f => {
+        if (!friendsList || friendsList.length === 0) {
+            container.innerHTML = '<div class="empty-state">✨ No friends to show</div>';
+            return;
+        }
+        container.innerHTML = friendsList.map(f => {
             const friend = f.requester_id === profileOwner.id ? f.addressee : f.requester;
             return `
                 <div class="friend-card">
