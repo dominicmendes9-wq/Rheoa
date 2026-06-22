@@ -81,8 +81,7 @@
 
     let currentPlayer = null;
     let profileOwner = null;
-    let friendships = [];          // friends of the profile owner (accepted)
-    let viewerFriendships = [];    // accepted friends of the current viewer (for mutual check)
+    let friendships = [];
     let testimonials = [];
     let pendingRequests = [];
     let profileViews = [];
@@ -190,9 +189,6 @@
             tierInfo = tierData;
             tierBenefits = tierData.features || {};
 
-            // Load viewer's own friendships (for mutual check)
-            await loadViewerFriendships();
-
             const urlParams = new URLSearchParams(window.location.search);
             const targetId = urlParams.get('id');
             if (targetId && targetId !== currentPlayer.id) await loadProfile(targetId);
@@ -200,22 +196,6 @@
         } catch (err) {
             document.getElementById('profileView').innerHTML = `<div class="card-modern"><div class="card-header-modern">⚠️ Error</div><div class="card-content-modern">${err.message}</div></div>`;
         }
-    }
-
-    async function loadViewerFriendships() {
-        if (!currentPlayer) return;
-        const { data } = await sb.from('friendships')
-            .select('requester_id, addressee_id')
-            .or(`requester_id.eq.${currentPlayer.id},addressee_id.eq.${currentPlayer.id}`)
-            .eq('status', 'accepted');
-        viewerFriendships = data || [];
-    }
-
-    function isViewerFriend(playerId) {
-        return viewerFriendships.some(f =>
-            (f.requester_id === currentPlayer.id && f.addressee_id === playerId) ||
-            (f.addressee_id === currentPlayer.id && f.requester_id === playerId)
-        );
     }
 
     async function loadProfile(playerId) {
@@ -295,28 +275,7 @@
     // RENDER
     async function renderProfileLayout() {
         const isOwner = currentPlayer && profileOwner.id === currentPlayer.id;
-        const totalFriends = friendships.length;
-
-        // ── Determine which friends to display ──
-        let displayFriends = [];
-        if (isOwner) {
-            // Owner sees all friends
-            displayFriends = friendships;
-        } else {
-            // Viewer sees all if Gold+; otherwise only mutual friends
-            const viewerTier = currentPlayer?.subscription_tier || 'basic';
-            const viewerIsPremium = ['gold', 'black', 'founder'].includes(viewerTier);
-            if (viewerIsPremium) {
-                displayFriends = friendships;
-            } else {
-                // Filter to mutual friends
-                displayFriends = friendships.filter(f => {
-                    const friendId = f.requester_id === profileOwner.id ? f.addressee_id : f.requester_id;
-                    return isViewerFriend(friendId);
-                });
-            }
-        }
-        const displayFriendCount = displayFriends.length;
+        const totalFriends = friendships.length; // always all friends
 
         // ── Fetch tier info for the profile owner (badge) ──
         const ownerTier = profileOwner.subscription_tier || 'basic';
@@ -343,7 +302,7 @@
                     <div>📍 ${escapeHtml(profileOwner.location || 'Unknown realm')} ${profileOwner.country ? ', ' + escapeHtml(profileOwner.country) : ''}</div>
                     <div class="stats-badge">
                         <span class="stat-pill">⚡ Lv.${profileOwner.level || 1}</span>
-                        <span class="stat-pill">👥 ${displayFriendCount} friends</span>
+                        <span class="stat-pill">👥 ${totalFriends} friends</span>
                         <span class="stat-pill">👁️ ${profileViewCount} visits</span>
                         <span class="stat-pill">📅 joined ${new Date(profileOwner.join_date).toLocaleDateString()}</span>
                         ${hasExclusiveBadge ? '<span class="stat-pill" style="background: #FF4500; color: white;">👑 Founder</span>' : ''}
@@ -418,8 +377,8 @@
             leftColumn += `<div class="card-modern" style="margin-top: 20px;"><div class="card-header-modern">📨 Friend requests</div><div class="card-content-modern"><div id="requestsList"></div></div></div>`;
         }
 
-        // ── Right column: Companions ──
-        let rightColumn = `<div class="card-modern"><div class="card-header-modern">👥 Companions (${displayFriendCount})</div><div class="card-content-modern"><div id="friendsGrid" class="friends-grid"></div></div></div>`;
+        // ── Right column: Companions (all friends) ──
+        let rightColumn = `<div class="card-modern"><div class="card-header-modern">👥 Companions (${totalFriends})</div><div class="card-content-modern"><div id="friendsGrid" class="friends-grid"></div></div></div>`;
 
         // ── Search (owner only) ──
         if (isOwner) {
@@ -453,7 +412,7 @@
         document.getElementById('profileView').innerHTML = finalHtml;
 
         // ── Render dynamic lists ──
-        renderFriends(displayFriends);
+        renderFriends(friendships);
         renderTestimonials();
         if (isOwner) {
             if (canViewVisitors) renderVisitors();
@@ -465,7 +424,7 @@
         const container = document.getElementById('friendsGrid');
         if (!container) return;
         if (!friendsList || friendsList.length === 0) {
-            container.innerHTML = '<div class="empty-state">✨ No friends to show</div>';
+            container.innerHTML = '<div class="empty-state">✨ No friends yet</div>';
             return;
         }
         container.innerHTML = friendsList.map(f => {
@@ -524,7 +483,7 @@
     }
 
     // ──────────────────────────────────────
-    // API actions
+    // API actions (unchanged)
     async function sendFriendRequest(targetId) {
         const { error } = await sb.from('friendships').insert({ requester_id: currentPlayer.id, addressee_id: targetId, status: 'pending' });
         error ? showToast(error.message) : (showToast('Request sent!'), await loadProfile(profileOwner.id));
