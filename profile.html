@@ -7,7 +7,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* ─── same as before ─── */
+        /* ─── all styles unchanged ─── */
         * { margin:0; padding:0; box-sizing:border-box; }
         :root { --bg-body:#f0f4fa; --card-bg:#fff; --card-border:rgba(148,163,184,0.2); --card-shadow:0 12px 30px rgba(0,0,0,0.05); --header-bg:linear-gradient(135deg,#1e2f5e 0%,#1a4b7a 100%); --header-text:#fff; --accent:#2c6e9e; --accent-hover:#1f5480; --btn-primary:#2c6e9e; --btn-primary-hover:#1f5480; --btn-secondary:#475569; --btn-ghost:#e2e8f0; --text-main:#0f172a; --text-muted:#334155; --border-light:#e2e8f0; --card-header-bg:#f8fafc; --avatar-bg:#e0f2fe; --font-family:'Inter',system-ui,sans-serif; --border-radius-card:24px; --transition:all 0.2s ease; }
         body.theme-dusk { --bg-body:#0f1722; --card-bg:#1e293b; --card-border:rgba(51,65,85,0.6); --card-shadow:0 15px 35px rgba(0,0,0,0.3); --header-bg:linear-gradient(135deg,#0f172a 0%,#1e293b 100%); --header-text:#e2e8f0; --accent:#60a5fa; --accent-hover:#3b82f6; --btn-primary:#3b82f6; --btn-primary-hover:#2563eb; --btn-secondary:#334155; --btn-ghost:#334155; --text-main:#f1f5f9; --text-muted:#cbd5e1; --border-light:#334155; --card-header-bg:#0f172a; --avatar-bg:#334155; }
@@ -127,6 +127,9 @@
 
     // ── Comment collapse state ──
     let commentCollapsed = {};
+
+    // ── Event listener management ──
+    let containerClickHandler = null;
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // Helper: fetch tier info
@@ -539,7 +542,7 @@
         }).join('');
     }
 
-    // ── RENDER TESTIMONIALS with edits & deletes ──
+    // ── RENDER TESTIMONIALS (with single listener) ──
     async function renderTestimonialsWithReactionsAndComments() {
         const container = document.getElementById('testimonialsList');
         if (!container) return;
@@ -548,7 +551,6 @@
             return;
         }
 
-        // Compute canComment for all testimonials in parallel
         const canCommentFlags = await Promise.all(testimonials.map(t => canCommentOnTestimonial(t)));
 
         let html = '';
@@ -557,8 +559,11 @@
         });
         container.innerHTML = html;
 
-        // Event delegation for interactive elements
-        container.addEventListener('click', function(e) {
+        // ── Remove old listener and attach new one ──
+        if (containerClickHandler) {
+            container.removeEventListener('click', containerClickHandler);
+        }
+        containerClickHandler = function(e) {
             const target = e.target.closest('[data-action]');
             if (!target) return;
             const action = target.dataset.action;
@@ -585,15 +590,25 @@
             } else if (action === 'delete-scrap') {
                 deleteTestimonial(testimonialId);
             }
-        });
+        };
+        container.addEventListener('click', containerClickHandler);
 
-        // Cancel reply (doesn't need testimonialId)
-        container.addEventListener('click', function(e) {
+        // Cancel reply (separate, but we can also handle in the same)
+        // We'll add a separate listener for cancel-reply since it doesn't need testimonialId
+        // But we can also check inside the handler for data-action="cancel-reply"
+        // Let's keep it simple: we'll add a listener for that too.
+        const cancelHandler = function(e) {
             const target = e.target.closest('[data-action="cancel-reply"]');
             if (!target) return;
             const parentId = target.dataset.parentId;
             if (parentId) hideReplyForm(parentId);
-        });
+        };
+        // We'll attach it once, but to avoid duplicate, we'll remove old if any.
+        if (container._cancelListener) {
+            container.removeEventListener('click', container._cancelListener);
+        }
+        container._cancelListener = cancelHandler;
+        container.addEventListener('click', container._cancelListener);
     }
 
     function buildTestimonialCard(t, canComment) {
@@ -602,7 +617,6 @@
         const commentsHtml = buildCommentsHtml(t.commentTree, t.id);
         const collapseAllText = isCollapsed ? 'Expand' : 'Collapse';
 
-        // Show edit/delete buttons only for author or profile owner
         const isAuthor = currentPlayer && currentPlayer.id === t.author_id;
         const isProfileOwner = currentPlayer && currentPlayer.id === profileOwner.id;
         const showScrapActions = isAuthor || isProfileOwner;
@@ -732,8 +746,8 @@
             await loadTestimonialsWithReactionsAndComments();
             await renderTestimonialsWithReactionsAndComments();
         } catch (error) {
-            console.error(error);
-            showToast('Error updating reaction');
+            console.error('Reaction error:', error);
+            showToast('Error updating reaction: ' + error.message);
         }
     }
 
@@ -818,8 +832,8 @@
             await renderTestimonialsWithReactionsAndComments();
             showToast('Comment posted');
         } catch (error) {
-            console.error(error);
-            showToast('Error posting comment');
+            console.error('Comment error:', error);
+            showToast('Error posting comment: ' + error.message);
         }
     }
 
@@ -839,7 +853,7 @@
             await loadTestimonialsWithReactionsAndComments();
             await renderTestimonialsWithReactionsAndComments();
         } catch (error) {
-            console.error(error);
+            console.error('Edit error:', error);
             showToast('Error updating scrap');
         }
     }
@@ -857,7 +871,7 @@
             await loadTestimonialsWithReactionsAndComments();
             await renderTestimonialsWithReactionsAndComments();
         } catch (error) {
-            console.error(error);
+            console.error('Delete error:', error);
             showToast('Error deleting scrap');
         }
     }
