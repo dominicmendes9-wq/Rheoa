@@ -7,7 +7,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* ─── existing styles ─── */
+        /* ─── all styles unchanged ─── */
         * { margin:0; padding:0; box-sizing:border-box; }
         :root { --bg-body:#f0f4fa; --card-bg:#fff; --card-border:rgba(148,163,184,0.2); --card-shadow:0 12px 30px rgba(0,0,0,0.05); --header-bg:linear-gradient(135deg,#1e2f5e 0%,#1a4b7a 100%); --header-text:#fff; --accent:#2c6e9e; --accent-hover:#1f5480; --btn-primary:#2c6e9e; --btn-primary-hover:#1f5480; --btn-secondary:#475569; --btn-ghost:#e2e8f0; --text-main:#0f172a; --text-muted:#334155; --border-light:#e2e8f0; --card-header-bg:#f8fafc; --avatar-bg:#e0f2fe; --font-family:'Inter',system-ui,sans-serif; --border-radius-card:24px; --transition:all 0.2s ease; }
         body.theme-dusk { --bg-body:#0f1722; --card-bg:#1e293b; --card-border:rgba(51,65,85,0.6); --card-shadow:0 15px 35px rgba(0,0,0,0.3); --header-bg:linear-gradient(135deg,#0f172a 0%,#1e293b 100%); --header-text:#e2e8f0; --accent:#60a5fa; --accent-hover:#3b82f6; --btn-primary:#3b82f6; --btn-primary-hover:#2563eb; --btn-secondary:#334155; --btn-ghost:#334155; --text-main:#f1f5f9; --text-muted:#cbd5e1; --border-light:#334155; --card-header-bg:#0f172a; --avatar-bg:#334155; }
@@ -57,177 +57,37 @@
         .empty-state { padding:24px; text-align:center; color:var(--text-muted); background:var(--card-header-bg); border-radius:24px; }
 
         /* ─── new styles for reactions & comments ─── */
-        .reaction-bar {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-            margin: 12px 0 8px;
-        }
-        .reaction-btn {
-            background: transparent;
-            border: 1px solid var(--border-light);
-            border-radius: 30px;
-            padding: 2px 12px;
-            font-size: 1.1rem;
-            cursor: pointer;
-            transition: 0.15s;
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            font-family: var(--font-family);
-            color: var(--text-main);
-        }
-        .reaction-btn:hover {
-            background: var(--btn-ghost);
-        }
-        .reaction-btn.active {
-            background: var(--accent);
-            color: #fff;
-            border-color: var(--accent);
-        }
-        .reaction-btn .count {
-            font-size: 0.7rem;
-            font-weight: 600;
-            opacity: 0.7;
-        }
-        .comment-toggle {
-            font-size: 0.8rem;
-            color: var(--text-muted);
-            cursor: pointer;
-            margin: 8px 0;
-            display: inline-block;
-        }
-        .comment-toggle:hover {
-            text-decoration: underline;
-        }
-        .comments-section {
-            margin-top: 12px;
-            border-top: 1px solid var(--border-light);
-            padding-top: 12px;
-        }
-        .comments-section.collapsed {
-            display: none;
-        }
-        .comment-tree {
-            margin-left: 0;
-        }
-        .comment-item {
-            margin-left: 20px;
-            padding: 8px 0 4px 12px;
-            border-left: 2px solid var(--border-light);
-            margin-bottom: 8px;
-        }
-        .comment-item .comment-header {
-            display: flex;
-            align-items: baseline;
-            gap: 8px;
-            font-size: 0.8rem;
-            flex-wrap: wrap;
-        }
-        .comment-item .comment-author {
-            font-weight: 600;
-            color: var(--accent);
-        }
-        .comment-item .comment-time {
-            color: var(--text-muted);
-            font-size: 0.7rem;
-        }
-        .comment-item .comment-content {
-            margin: 4px 0 2px;
-            word-wrap: break-word;
-        }
-        .comment-item .comment-actions {
-            display: flex;
-            gap: 12px;
-            font-size: 0.7rem;
-            margin-top: 2px;
-        }
-        .comment-item .comment-actions button {
-            background: none;
-            border: none;
-            color: var(--text-muted);
-            cursor: pointer;
-            padding: 0;
-            font-family: var(--font-family);
-            font-size: 0.7rem;
-        }
-        .comment-item .comment-actions button:hover {
-            color: var(--accent);
-            text-decoration: underline;
-        }
-        .comment-item .reply-form {
-            margin-top: 6px;
-            display: none;
-        }
-        .comment-item .reply-form textarea {
-            width: 100%;
-            padding: 6px 10px;
-            border-radius: 12px;
-            border: 1px solid var(--border-light);
-            font-family: var(--font-family);
-            font-size: 0.85rem;
-            resize: vertical;
-            min-height: 40px;
-            background: var(--card-bg);
-            color: var(--text-main);
-        }
-        .comment-item .reply-form .reply-actions {
-            display: flex;
-            gap: 8px;
-            margin-top: 4px;
-        }
-        .comment-item .reply-form .reply-actions button {
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.75rem;
-        }
-        .comment-item .reply-form .reply-actions .cancel-reply {
-            background: transparent;
-            border: 1px solid var(--border-light);
-        }
-        .comment-item .reply-form .reply-actions .cancel-reply:hover {
-            background: var(--btn-ghost);
-        }
-        .deleted-comment {
-            color: var(--text-muted);
-            font-style: italic;
-            font-size: 0.8rem;
-        }
-        .add-comment-form {
-            margin-top: 10px;
-        }
-        .add-comment-form textarea {
-            width: 100%;
-            padding: 8px 12px;
-            border-radius: 16px;
-            border: 1px solid var(--border-light);
-            font-family: var(--font-family);
-            font-size: 0.85rem;
-            resize: vertical;
-            min-height: 50px;
-            background: var(--card-bg);
-            color: var(--text-main);
-        }
-        .add-comment-form .comment-actions {
-            display: flex;
-            gap: 8px;
-            margin-top: 4px;
-            justify-content: flex-end;
-        }
-        .add-comment-form .comment-actions button {
-            padding: 6px 16px;
-            border-radius: 30px;
-            font-size: 0.8rem;
-        }
-        .collapse-all-btn {
-            font-size: 0.8rem;
-            color: var(--text-muted);
-            cursor: pointer;
-            margin-left: 8px;
-        }
-        .collapse-all-btn:hover {
-            text-decoration: underline;
-        }
+        .reaction-bar { display:flex; flex-wrap:wrap; gap:6px; margin:12px 0 8px; }
+        .reaction-btn { background:transparent; border:1px solid var(--border-light); border-radius:30px; padding:2px 12px; font-size:1.1rem; cursor:pointer; transition:0.15s; display:inline-flex; align-items:center; gap:4px; font-family:var(--font-family); color:var(--text-main); }
+        .reaction-btn:hover { background:var(--btn-ghost); }
+        .reaction-btn.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+        .reaction-btn .count { font-size:0.7rem; font-weight:600; opacity:0.7; }
+        .comment-toggle { font-size:0.8rem; color:var(--text-muted); cursor:pointer; margin:8px 0; display:inline-block; }
+        .comment-toggle:hover { text-decoration:underline; }
+        .comments-section { margin-top:12px; border-top:1px solid var(--border-light); padding-top:12px; }
+        .comments-section.collapsed { display:none; }
+        .comment-tree { margin-left:0; }
+        .comment-item { margin-left:20px; padding:8px 0 4px 12px; border-left:2px solid var(--border-light); margin-bottom:8px; }
+        .comment-item .comment-header { display:flex; align-items:baseline; gap:8px; font-size:0.8rem; flex-wrap:wrap; }
+        .comment-item .comment-author { font-weight:600; color:var(--accent); }
+        .comment-item .comment-time { color:var(--text-muted); font-size:0.7rem; }
+        .comment-item .comment-content { margin:4px 0 2px; word-wrap:break-word; }
+        .comment-item .comment-actions { display:flex; gap:12px; font-size:0.7rem; margin-top:2px; }
+        .comment-item .comment-actions button { background:none; border:none; color:var(--text-muted); cursor:pointer; padding:0; font-family:var(--font-family); font-size:0.7rem; }
+        .comment-item .comment-actions button:hover { color:var(--accent); text-decoration:underline; }
+        .comment-item .reply-form { margin-top:6px; display:none; }
+        .comment-item .reply-form textarea { width:100%; padding:6px 10px; border-radius:12px; border:1px solid var(--border-light); font-family:var(--font-family); font-size:0.85rem; resize:vertical; min-height:40px; background:var(--card-bg); color:var(--text-main); }
+        .comment-item .reply-form .reply-actions { display:flex; gap:8px; margin-top:4px; }
+        .comment-item .reply-form .reply-actions button { padding:4px 12px; border-radius:20px; font-size:0.75rem; }
+        .comment-item .reply-form .reply-actions .cancel-reply { background:transparent; border:1px solid var(--border-light); }
+        .comment-item .reply-form .reply-actions .cancel-reply:hover { background:var(--btn-ghost); }
+        .deleted-comment { color:var(--text-muted); font-style:italic; font-size:0.8rem; }
+        .add-comment-form { margin-top:10px; }
+        .add-comment-form textarea { width:100%; padding:8px 12px; border-radius:16px; border:1px solid var(--border-light); font-family:var(--font-family); font-size:0.85rem; resize:vertical; min-height:50px; background:var(--card-bg); color:var(--text-main); }
+        .add-comment-form .comment-actions { display:flex; gap:8px; margin-top:4px; justify-content:flex-end; }
+        .add-comment-form .comment-actions button { padding:6px 16px; border-radius:30px; font-size:0.8rem; }
+        .collapse-all-btn { font-size:0.8rem; color:var(--text-muted); cursor:pointer; margin-left:8px; }
+        .collapse-all-btn:hover { text-decoration:underline; }
     </style>
 </head>
 <body>
@@ -252,7 +112,7 @@
     let currentPlayer = null;
     let profileOwner = null;
     let friendships = [];
-    let testimonials = [];          // full testimonial objects with reactions and comments
+    let testimonials = [];
     let pendingRequests = [];
     let profileViews = [];
     let searchResults = [];
@@ -263,7 +123,7 @@
     let tierInfo = {};
 
     // ── Comment collapse state ──
-    let commentCollapsed = {}; // key: testimonial_id -> boolean (true = collapsed)
+    let commentCollapsed = {};
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // Helper: fetch tier info
@@ -381,7 +241,6 @@
         }
         profileOwner = player;
 
-        // Record a view if the viewer is not the owner
         if (currentPlayer && profileOwner.id !== currentPlayer.id) {
             await sb.from('profile_views').upsert({
                 profile_id: profileOwner.id,
@@ -391,21 +250,16 @@
             }, { onConflict: 'profile_id,viewer_id,view_date' });
         }
 
-        // Load friendships for the profile owner
         await loadFriendships();
-        // Load testimonials with reactions and comments
         await loadTestimonialsWithReactionsAndComments();
-        // Load pending requests (for owner)
         await loadPendingRequests();
 
-        // Get total view count
         const { count, error: countError } = await sb
             .from('profile_views')
             .select('*', { count: 'exact', head: true })
             .eq('profile_id', profileOwner.id);
         if (!countError) profileViewCount = count || 0;
 
-        // Owner-only detailed visitors list
         if (profileOwner.id === currentPlayer?.id) {
             await loadProfileViews();
         } else {
@@ -415,7 +269,6 @@
         renderProfileLayout();
     }
 
-    // ── Load accepted friendships of the profile owner ──
     async function loadFriendships() {
         const { data } = await sb.from('friendships')
             .select('*, requester:requester_id(*), addressee:addressee_id(*)')
@@ -424,9 +277,7 @@
         friendships = data || [];
     }
 
-    // ── Load testimonials with reactions and comments ──
     async function loadTestimonialsWithReactionsAndComments() {
-        // 1. Fetch testimonials (scraps)
         const { data: rawTestimonials, error: tError } = await sb
             .from('testimonials')
             .select('*, author:author_id(*)')
@@ -442,14 +293,12 @@
 
         const testimonialIds = rawTestimonials.map(t => t.id);
 
-        // 2. Fetch reactions for these testimonials
         const { data: reactions, error: rError } = await sb
             .from('testimonial_reactions')
             .select('*')
             .in('testimonial_id', testimonialIds);
         if (rError) console.error(rError);
 
-        // 3. Fetch comments for these testimonials (including user info)
         const { data: comments, error: cError } = await sb
             .from('testimonial_comments')
             .select('*, user:user_id(*)')
@@ -458,17 +307,14 @@
             .order('created_at', { ascending: true });
         if (cError) console.error(cError);
 
-        // 4. Build enriched testimonials
         testimonials = rawTestimonials.map(t => {
             const tReactions = (reactions || []).filter(r => r.testimonial_id === t.id);
             const tComments = (comments || []).filter(c => c.testimonial_id === t.id);
-            // reaction counts per type
             const reactionCounts = {};
             const userReaction = tReactions.find(r => r.user_id === currentPlayer?.id);
             tReactions.forEach(r => {
                 reactionCounts[r.reaction_type] = (reactionCounts[r.reaction_type] || 0) + 1;
             });
-            // Build comment tree from flat list
             const commentMap = {};
             const roots = [];
             tComments.forEach(c => {
@@ -481,7 +327,6 @@
                     roots.push(commentMap[c.id]);
                 }
             });
-            // Sort children by created_at (already sorted)
             return {
                 ...t,
                 reactions: tReactions,
@@ -493,25 +338,9 @@
         });
     }
 
-    // ── Helper: check if current user can comment on a testimonial ──
-    // This is also enforced by RLS, but we use it to show/hide the comment box.
-    async function canCommentOnTestimonial(testimonial) {
-        if (!currentPlayer) return false;
-        // 1. User is author of the testimonial
-        if (testimonial.author_id === currentPlayer.id) return true;
-        // 2. User is friend of the author
-        const isFriendOfAuthor = await areFriends(currentPlayer.id, testimonial.author_id);
-        if (isFriendOfAuthor) return true;
-        // 3. User is friend of the profile owner
-        const isFriendOfOwner = await areFriends(currentPlayer.id, profileOwner.id);
-        if (isFriendOfOwner) return true;
-        return false;
-    }
-
-    // ── Check friendship between two players ──
+    // ── Friendship check ──
     async function areFriends(p1, p2) {
         if (!p1 || !p2) return false;
-        // Check via friendships table
         const { count } = await sb
             .from('friendships')
             .select('*', { count: 'exact', head: true })
@@ -519,7 +348,17 @@
         return count > 0;
     }
 
-    // ── Load pending requests (owner only) ──
+    // ── Check if current user can comment on a testimonial ──
+    async function canCommentOnTestimonial(testimonial) {
+        if (!currentPlayer) return false;
+        if (testimonial.author_id === currentPlayer.id) return true;
+        const isFriendOfAuthor = await areFriends(currentPlayer.id, testimonial.author_id);
+        if (isFriendOfAuthor) return true;
+        const isFriendOfOwner = await areFriends(currentPlayer.id, profileOwner.id);
+        if (isFriendOfOwner) return true;
+        return false;
+    }
+
     async function loadPendingRequests() {
         if (profileOwner.id !== currentPlayer?.id) return;
         const { data } = await sb.from('friendships')
@@ -529,7 +368,6 @@
         pendingRequests = data || [];
     }
 
-    // ── Load profile views (owner only) ──
     async function loadProfileViews() {
         if (profileOwner.id !== currentPlayer?.id) return;
         const { data } = await sb.from('profile_views')
@@ -546,7 +384,6 @@
         const isOwner = currentPlayer && profileOwner.id === currentPlayer.id;
         const totalFriends = friendships.length;
 
-        // Tier info for profile owner
         const ownerTier = profileOwner.subscription_tier || 'basic';
         const ownerTierInfo = await fetchTierInfo(ownerTier);
         const hasExclusiveBadge = ownerTierInfo.features?.exclusive_badge === true;
@@ -555,7 +392,6 @@
         const canCustomAvatar = tierBenefits.custom_avatar === true;
         const canCustomBackground = tierBenefits.custom_background === true;
 
-        // ── Hero ──
         let heroHtml = `
             <div class="profile-hero">
                 <div class="hero-avatar">${profileOwner.avatar_url || '🧙'}</div>
@@ -579,7 +415,6 @@
             </div>
         `;
 
-        // ── Left column ──
         let leftColumn = `<div class="card-modern"><div class="card-header-modern">📖 About ${isOwner ? 'me' : escapeHtml(profileOwner.username)}</div><div class="card-content-modern">`;
         if (isOwner) {
             leftColumn += `
@@ -610,7 +445,6 @@
         }
         leftColumn += `</div></div>`;
 
-        // ── Friendship block (if not owner) ──
         if (!isOwner && currentPlayer) {
             const isFriend = friendships.some(f => (f.requester_id === currentPlayer.id && f.addressee_id === profileOwner.id) || (f.addressee_id === currentPlayer.id && f.requester_id === profileOwner.id));
             const pendingSent = friendships.some(f => f.requester_id === currentPlayer.id && f.addressee_id === profileOwner.id && f.status === 'pending');
@@ -623,7 +457,6 @@
             leftColumn += `<div class="card-modern" style="margin-top: 20px;"><div class="card-header-modern">🤝 Friendship</div><div class="card-content-modern">${btnHtml}</div></div>`;
         }
 
-        // ── Visitors (owner only, tier-gated) ──
         if (isOwner) {
             if (canViewVisitors) {
                 leftColumn += `<div class="card-modern" style="margin-top: 20px;"><div class="card-header-modern">👁️ Recent visitors</div><div class="card-content-modern"><div id="visitorsList"></div></div></div>`;
@@ -645,11 +478,8 @@
             leftColumn += `<div class="card-modern" style="margin-top: 20px;"><div class="card-header-modern">📨 Friend requests</div><div class="card-content-modern"><div id="requestsList"></div></div></div>`;
         }
 
-        // ── Right column ──
-        // Companions
         let rightColumn = `<div class="card-modern"><div class="card-header-modern">👥 Companions (${totalFriends})</div><div class="card-content-modern"><div id="friendsGrid" class="friends-grid"></div></div></div>`;
 
-        // Search (owner only)
         if (isOwner) {
             rightColumn += `
                 <div class="card-modern" style="margin-top: 24px;">
@@ -668,32 +498,26 @@
             `;
         }
 
-        // ── Scrapbook (testimonials) with reactions & comments ──
         rightColumn += `<div class="card-modern" style="margin-top: 24px;"><div class="card-header-modern">📝 Scrapbook · whispers</div><div class="card-content-modern">`;
-        // Add scrap form (if owner or can post)
         if (isOwner) {
             rightColumn += `<div class="scrap-form"><textarea id="scrapContent" rows="2" placeholder="Write something on your wall..."></textarea><button onclick="addTestimonial()">✍️ Post scrap</button></div>`;
         } else if (currentPlayer) {
             rightColumn += `<div class="scrap-form"><textarea id="scrapContent" rows="2" placeholder="Leave a kind note for ${escapeHtml(profileOwner.username)}..."></textarea><button onclick="addTestimonial()">📨 Send scrap</button></div>`;
         }
-
-        // Render testimonials with reactions & comments
         rightColumn += `<div id="testimonialsList" style="margin-top: 20px;"></div>`;
         rightColumn += `</div></div>`;
 
         const finalHtml = heroHtml + `<div class="profile-grid"><div class="left-panel">${leftColumn}</div><div class="right-panel">${rightColumn}</div></div>`;
         document.getElementById('profileView').innerHTML = finalHtml;
 
-        // ── Render dynamic lists ──
         renderFriends(friendships);
-        renderTestimonialsWithReactionsAndComments();
+        await renderTestimonialsWithReactionsAndComments();
         if (isOwner) {
             if (canViewVisitors) renderVisitors();
             renderPendingRequests();
         }
     }
 
-    // ── Render friends ──
     function renderFriends(friendsList) {
         const container = document.getElementById('friendsGrid');
         if (!container) return;
@@ -715,8 +539,8 @@
         }).join('');
     }
 
-    // ── Render testimonials with reactions & comments ──
-    function renderTestimonialsWithReactionsAndComments() {
+    // ── CORRECTED: async render with permissions computed ──
+    async function renderTestimonialsWithReactionsAndComments() {
         const container = document.getElementById('testimonialsList');
         if (!container) return;
         if (!testimonials || testimonials.length === 0) {
@@ -724,86 +548,67 @@
             return;
         }
 
-        // Build HTML for each testimonial
+        // Compute canComment for all testimonials in parallel
+        const canCommentFlags = await Promise.all(testimonials.map(t => canCommentOnTestimonial(t)));
+
         let html = '';
-        testimonials.forEach(async (t) => {
-            const canComment = await canCommentOnTestimonial(t);
-            html += buildTestimonialCard(t, canComment);
+        testimonials.forEach((t, index) => {
+            html += buildTestimonialCard(t, canCommentFlags[index]);
         });
         container.innerHTML = html;
 
-        // Attach event listeners for reactions and comment forms after DOM update
-        // (We'll use delegation or individual listeners in the functions)
-        // For simplicity, we'll re-bind after each render using event delegation.
-        // We'll attach a single click listener on the container.
-        container.querySelectorAll('.reaction-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const testimonialId = btn.dataset.testimonialId;
-                const reaction = btn.dataset.reaction;
+        // ── Event delegation for all interactive elements ──
+        // We'll attach listeners directly to the container using data attributes.
+        // Instead of re-binding each time, we use a single click listener on the container.
+        // But we need to handle each action type.
+        // We'll use a generic approach: attach a click listener to the container and check target.
+        container.addEventListener('click', function(e) {
+            const target = e.target.closest('[data-action]');
+            if (!target) return;
+            const action = target.dataset.action;
+            const testimonialId = target.dataset.testimonialId || target.closest('[data-testimonial-id]')?.dataset.testimonialId;
+            if (!testimonialId) return;
+
+            if (action === 'reaction') {
+                const reaction = target.dataset.reaction;
                 toggleReaction(testimonialId, reaction);
-            });
-        });
-
-        container.querySelectorAll('.comment-toggle').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const testimonialId = btn.dataset.testimonialId;
+            } else if (action === 'toggle-comments') {
                 toggleComments(testimonialId);
-            });
-        });
-
-        container.querySelectorAll('.reply-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const parentId = btn.dataset.parentId;
-                const testimonialId = btn.dataset.testimonialId;
-                showReplyForm(parentId, testimonialId);
-            });
-        });
-
-        container.querySelectorAll('.cancel-reply').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const parentId = btn.dataset.parentId;
-                hideReplyForm(parentId);
-            });
-        });
-
-        container.querySelectorAll('.submit-reply').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const parentId = btn.dataset.parentId;
-                const testimonialId = btn.dataset.testimonialId;
+            } else if (action === 'collapse-all') {
+                toggleAllComments(testimonialId);
+            } else if (action === 'show-reply') {
+                const parentId = target.dataset.parentId;
+                showReplyForm(parentId);
+            } else if (action === 'submit-reply') {
+                const parentId = target.dataset.parentId;
                 submitComment(testimonialId, parentId);
-            });
-        });
-
-        container.querySelectorAll('.submit-comment').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const testimonialId = btn.dataset.testimonialId;
+            } else if (action === 'submit-comment') {
                 submitComment(testimonialId, null);
-            });
+            }
         });
 
-        container.querySelectorAll('.collapse-all-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const testimonialId = btn.dataset.testimonialId;
-                const commentsSection = document.getElementById(`comments-${testimonialId}`);
-                if (commentsSection) {
-                    const isCollapsed = commentsSection.classList.toggle('collapsed');
-                    commentCollapsed[testimonialId] = isCollapsed;
-                    btn.textContent = isCollapsed ? 'Expand' : 'Collapse';
-                }
-            });
+        // Also handle cancel-reply separately (they don't need testimonialId)
+        container.addEventListener('click', function(e) {
+            const target = e.target.closest('[data-action="cancel-reply"]');
+            if (!target) return;
+            const parentId = target.dataset.parentId;
+            if (parentId) hideReplyForm(parentId);
         });
+
+        // For each comment form, we need to handle the submit-reply specifically.
+        // But we already handle it via data-action above.
+        // Also, the reply form submit button uses data-action="submit-reply".
+        // The add-comment form uses data-action="submit-comment".
     }
 
-    // ── Build HTML for a single testimonial card ──
     function buildTestimonialCard(t, canComment) {
         const isCollapsed = commentCollapsed[t.id] || false;
         const reactionsHtml = buildReactionsHtml(t);
         const commentsHtml = buildCommentsHtml(t.commentTree, t.id);
-        const commentToggleText = isCollapsed ? 'Expand comments' : 'Collapse comments';
         const collapseAllText = isCollapsed ? 'Expand' : 'Collapse';
 
         return `
-            <div class="testimonial-card" id="testimonial-${t.id}">
+            <div class="testimonial-card" data-testimonial-id="${t.id}" id="testimonial-${t.id}">
                 <div class="flex-between">
                     <strong>${escapeHtml(t.author.username)}</strong>
                     <span style="font-size:0.7rem;">${new Date(t.created_at).toLocaleString()}</span>
@@ -811,8 +616,8 @@
                 <div style="margin: 10px 0;">${escapeHtml(t.content)}</div>
                 ${reactionsHtml}
                 <div>
-                    <span class="comment-toggle" data-testimonial-id="${t.id}">💬 ${t.commentCount} comments</span>
-                    <span class="collapse-all-btn" data-testimonial-id="${t.id}">${collapseAllText}</span>
+                    <span class="comment-toggle" data-action="toggle-comments" data-testimonial-id="${t.id}">💬 ${t.commentCount} comments</span>
+                    <span class="collapse-all-btn" data-action="collapse-all" data-testimonial-id="${t.id}">${collapseAllText}</span>
                 </div>
                 <div class="comments-section ${isCollapsed ? 'collapsed' : ''}" id="comments-${t.id}">
                     <div class="comment-tree" id="comment-tree-${t.id}">
@@ -822,7 +627,7 @@
                         <div class="add-comment-form">
                             <textarea id="comment-input-${t.id}" placeholder="Write a comment..." rows="2"></textarea>
                             <div class="comment-actions">
-                                <button class="submit-comment" data-testimonial-id="${t.id}">Post comment</button>
+                                <button class="submit-comment" data-action="submit-comment" data-testimonial-id="${t.id}">Post comment</button>
                             </div>
                         </div>
                     ` : `
@@ -835,18 +640,16 @@
         `;
     }
 
-    // ── Build reactions HTML ──
     function buildReactionsHtml(t) {
         const emojis = ['👍', '👎', '🤣', '🤬', '🎉', '💝'];
         const userReaction = t.userReaction ? t.userReaction.reaction_type : null;
         const counts = t.reactionCounts || {};
-
         let html = '<div class="reaction-bar">';
         emojis.forEach(emoji => {
             const count = counts[emoji] || 0;
             const isActive = userReaction === emoji;
             html += `
-                <button class="reaction-btn ${isActive ? 'active' : ''}" data-testimonial-id="${t.id}" data-reaction="${emoji}">
+                <button class="reaction-btn ${isActive ? 'active' : ''}" data-action="reaction" data-testimonial-id="${t.id}" data-reaction="${emoji}">
                     ${emoji} <span class="count">${count}</span>
                 </button>
             `;
@@ -855,7 +658,6 @@
         return html;
     }
 
-    // ── Build comments HTML recursively ──
     function buildCommentsHtml(commentNodes, testimonialId, depth = 0) {
         if (!commentNodes || commentNodes.length === 0) return '';
         let html = '';
@@ -875,13 +677,13 @@
                     <div class="comment-content">${content}</div>
                     ${!isDeleted ? `
                         <div class="comment-actions">
-                            <button class="reply-btn" data-parent-id="${node.id}" data-testimonial-id="${testimonialId}">Reply</button>
+                            <button data-action="show-reply" data-parent-id="${node.id}" data-testimonial-id="${testimonialId}">Reply</button>
                         </div>
                         <div class="reply-form" id="reply-form-${node.id}">
                             <textarea id="reply-input-${node.id}" placeholder="Write a reply..." rows="2"></textarea>
                             <div class="reply-actions">
-                                <button class="submit-reply" data-parent-id="${node.id}" data-testimonial-id="${testimonialId}">Reply</button>
-                                <button class="cancel-reply" data-parent-id="${node.id}">Cancel</button>
+                                <button data-action="submit-reply" data-parent-id="${node.id}" data-testimonial-id="${testimonialId}">Reply</button>
+                                <button data-action="cancel-reply" data-parent-id="${node.id}">Cancel</button>
                             </div>
                         </div>
                     ` : ''}
@@ -892,14 +694,12 @@
         return html;
     }
 
-    // ── Toggle reaction ──
+    // ── Actions ──
     async function toggleReaction(testimonialId, reaction) {
         if (!currentPlayer) return showToast('Please log in to react');
         try {
-            // Check if user already has a reaction
             const existing = testimonials.find(t => t.id === testimonialId)?.userReaction;
             if (existing && existing.reaction_type === reaction) {
-                // Remove reaction
                 const { error } = await sb
                     .from('testimonial_reactions')
                     .delete()
@@ -907,8 +707,6 @@
                     .eq('user_id', currentPlayer.id);
                 if (error) throw error;
             } else {
-                // Remove existing different reaction (if any) and insert new one
-                // We'll handle by upsert: delete existing then insert
                 if (existing) {
                     await sb
                         .from('testimonial_reactions')
@@ -925,34 +723,41 @@
                     });
                 if (error) throw error;
             }
-            // Reload testimonials and re-render
             await loadTestimonialsWithReactionsAndComments();
-            renderTestimonialsWithReactionsAndComments();
+            await renderTestimonialsWithReactionsAndComments();
         } catch (error) {
             console.error(error);
             showToast('Error updating reaction');
         }
     }
 
-    // ── Toggle comment collapse ──
     function toggleComments(testimonialId) {
         const section = document.getElementById(`comments-${testimonialId}`);
         if (!section) return;
         const isCollapsed = section.classList.toggle('collapsed');
         commentCollapsed[testimonialId] = isCollapsed;
-        const toggleBtn = document.querySelector(`.comment-toggle[data-testimonial-id="${testimonialId}"]`);
+        const toggleBtn = document.querySelector(`[data-action="toggle-comments"][data-testimonial-id="${testimonialId}"]`);
         if (toggleBtn) toggleBtn.textContent = isCollapsed ? 'Expand comments' : 'Collapse comments';
-        const collapseBtn = document.querySelector(`.collapse-all-btn[data-testimonial-id="${testimonialId}"]`);
+        const collapseBtn = document.querySelector(`[data-action="collapse-all"][data-testimonial-id="${testimonialId}"]`);
         if (collapseBtn) collapseBtn.textContent = isCollapsed ? 'Expand' : 'Collapse';
     }
 
-    // ── Show reply form ──
-    function showReplyForm(parentId, testimonialId) {
+    function toggleAllComments(testimonialId) {
+        const section = document.getElementById(`comments-${testimonialId}`);
+        if (!section) return;
+        const isCollapsed = section.classList.toggle('collapsed');
+        commentCollapsed[testimonialId] = isCollapsed;
+        const toggleBtn = document.querySelector(`[data-action="toggle-comments"][data-testimonial-id="${testimonialId}"]`);
+        if (toggleBtn) toggleBtn.textContent = isCollapsed ? 'Expand comments' : 'Collapse comments';
+        const collapseBtn = document.querySelector(`[data-action="collapse-all"][data-testimonial-id="${testimonialId}"]`);
+        if (collapseBtn) collapseBtn.textContent = isCollapsed ? 'Expand' : 'Collapse';
+    }
+
+    function showReplyForm(parentId) {
         const form = document.getElementById(`reply-form-${parentId}`);
         if (form) form.style.display = 'block';
     }
 
-    // ── Hide reply form ──
     function hideReplyForm(parentId) {
         const form = document.getElementById(`reply-form-${parentId}`);
         if (form) {
@@ -962,7 +767,6 @@
         }
     }
 
-    // ── Submit comment (top-level or reply) ──
     async function submitComment(testimonialId, parentId) {
         if (!currentPlayer) return showToast('Please log in to comment');
         let content;
@@ -977,10 +781,8 @@
         content = input.value.trim();
         if (!content) return showToast('Comment cannot be empty');
 
-        // Determine depth (for nested comments)
         let depth = 0;
         if (parentId) {
-            // Find parent depth
             const parentComment = await sb
                 .from('testimonial_comments')
                 .select('depth')
@@ -1001,12 +803,10 @@
                 })
                 .select();
             if (error) throw error;
-            // Clear input
             input.value = '';
             if (parentId) hideReplyForm(parentId);
-            // Reload and re-render
             await loadTestimonialsWithReactionsAndComments();
-            renderTestimonialsWithReactionsAndComments();
+            await renderTestimonialsWithReactionsAndComments();
             showToast('Comment posted');
         } catch (error) {
             console.error(error);
@@ -1028,7 +828,6 @@
         `).join('');
     }
 
-    // ── Render visitors ──
     function renderVisitors() {
         const container = document.getElementById('visitorsList');
         if (!container) return;
@@ -1042,7 +841,7 @@
     }
 
     // ──────────────────────────────────────
-    // API actions (friendship, scrap, profile)
+    // API actions
     async function sendFriendRequest(targetId) {
         const { error } = await sb.from('friendships').insert({ requester_id: currentPlayer.id, addressee_id: targetId, status: 'pending' });
         error ? showToast(error.message) : (showToast('Request sent!'), await loadProfile(profileOwner.id));
@@ -1077,7 +876,7 @@
             showToast('Scrap posted!');
             document.getElementById('scrapContent').value = '';
             await loadTestimonialsWithReactionsAndComments();
-            renderTestimonialsWithReactionsAndComments();
+            await renderTestimonialsWithReactionsAndComments();
         }
     }
     async function updateProfile() {
