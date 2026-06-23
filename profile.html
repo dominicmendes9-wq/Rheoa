@@ -7,7 +7,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* ─── all styles unchanged ─── */
+        /* ─── same as before ─── */
         * { margin:0; padding:0; box-sizing:border-box; }
         :root { --bg-body:#f0f4fa; --card-bg:#fff; --card-border:rgba(148,163,184,0.2); --card-shadow:0 12px 30px rgba(0,0,0,0.05); --header-bg:linear-gradient(135deg,#1e2f5e 0%,#1a4b7a 100%); --header-text:#fff; --accent:#2c6e9e; --accent-hover:#1f5480; --btn-primary:#2c6e9e; --btn-primary-hover:#1f5480; --btn-secondary:#475569; --btn-ghost:#e2e8f0; --text-main:#0f172a; --text-muted:#334155; --border-light:#e2e8f0; --card-header-bg:#f8fafc; --avatar-bg:#e0f2fe; --font-family:'Inter',system-ui,sans-serif; --border-radius-card:24px; --transition:all 0.2s ease; }
         body.theme-dusk { --bg-body:#0f1722; --card-bg:#1e293b; --card-border:rgba(51,65,85,0.6); --card-shadow:0 15px 35px rgba(0,0,0,0.3); --header-bg:linear-gradient(135deg,#0f172a 0%,#1e293b 100%); --header-text:#e2e8f0; --accent:#60a5fa; --accent-hover:#3b82f6; --btn-primary:#3b82f6; --btn-primary-hover:#2563eb; --btn-secondary:#334155; --btn-ghost:#334155; --text-main:#f1f5f9; --text-muted:#cbd5e1; --border-light:#334155; --card-header-bg:#0f172a; --avatar-bg:#334155; }
@@ -56,7 +56,7 @@
         .flex-between { display:flex; justify-content:space-between; align-items:center; }
         .empty-state { padding:24px; text-align:center; color:var(--text-muted); background:var(--card-header-bg); border-radius:24px; }
 
-        /* ─── new styles for reactions & comments ─── */
+        /* ─── reactions & comments ─── */
         .reaction-bar { display:flex; flex-wrap:wrap; gap:6px; margin:12px 0 8px; }
         .reaction-btn { background:transparent; border:1px solid var(--border-light); border-radius:30px; padding:2px 12px; font-size:1.1rem; cursor:pointer; transition:0.15s; display:inline-flex; align-items:center; gap:4px; font-family:var(--font-family); color:var(--text-main); }
         .reaction-btn:hover { background:var(--btn-ghost); }
@@ -88,6 +88,9 @@
         .add-comment-form .comment-actions button { padding:6px 16px; border-radius:30px; font-size:0.8rem; }
         .collapse-all-btn { font-size:0.8rem; color:var(--text-muted); cursor:pointer; margin-left:8px; }
         .collapse-all-btn:hover { text-decoration:underline; }
+        .scrap-actions { display:flex; gap:8px; margin-top:8px; }
+        .scrap-actions button { padding:2px 12px; font-size:0.7rem; border-radius:20px; background:transparent; border:1px solid var(--border-light); }
+        .scrap-actions button:hover { background:var(--btn-ghost); }
     </style>
 </head>
 <body>
@@ -118,7 +121,7 @@
     let searchResults = [];
     let profileViewCount = 0;
 
-    // ── Subscription cache for the current user ──
+    // ── Subscription cache ──
     let tierBenefits = {};
     let tierInfo = {};
 
@@ -218,7 +221,6 @@
             }
             currentPlayer = player;
 
-            // Load subscription tier info & benefits for the current user
             const tier = currentPlayer.subscription_tier || 'basic';
             const tierData = await fetchTierInfo(tier);
             tierInfo = tierData;
@@ -285,7 +287,6 @@
             .eq('is_visible', true)
             .order('created_at', { ascending: false });
         if (tError) { console.error(tError); testimonials = []; return; }
-
         if (!rawTestimonials || rawTestimonials.length === 0) {
             testimonials = [];
             return;
@@ -312,9 +313,7 @@
             const tComments = (comments || []).filter(c => c.testimonial_id === t.id);
             const reactionCounts = {};
             const userReaction = tReactions.find(r => r.user_id === currentPlayer?.id);
-            tReactions.forEach(r => {
-                reactionCounts[r.reaction_type] = (reactionCounts[r.reaction_type] || 0) + 1;
-            });
+            tReactions.forEach(r => { reactionCounts[r.reaction_type] = (reactionCounts[r.reaction_type] || 0) + 1; });
             const commentMap = {};
             const roots = [];
             tComments.forEach(c => {
@@ -348,7 +347,7 @@
         return count > 0;
     }
 
-    // ── Check if current user can comment on a testimonial ──
+    // ── Check comment permission ──
     async function canCommentOnTestimonial(testimonial) {
         if (!currentPlayer) return false;
         if (testimonial.author_id === currentPlayer.id) return true;
@@ -498,6 +497,7 @@
             `;
         }
 
+        // ── Scrapbook ──
         rightColumn += `<div class="card-modern" style="margin-top: 24px;"><div class="card-header-modern">📝 Scrapbook · whispers</div><div class="card-content-modern">`;
         if (isOwner) {
             rightColumn += `<div class="scrap-form"><textarea id="scrapContent" rows="2" placeholder="Write something on your wall..."></textarea><button onclick="addTestimonial()">✍️ Post scrap</button></div>`;
@@ -539,7 +539,7 @@
         }).join('');
     }
 
-    // ── CORRECTED: async render with permissions computed ──
+    // ── RENDER TESTIMONIALS with edits & deletes ──
     async function renderTestimonialsWithReactionsAndComments() {
         const container = document.getElementById('testimonialsList');
         if (!container) return;
@@ -557,11 +557,7 @@
         });
         container.innerHTML = html;
 
-        // ── Event delegation for all interactive elements ──
-        // We'll attach listeners directly to the container using data attributes.
-        // Instead of re-binding each time, we use a single click listener on the container.
-        // But we need to handle each action type.
-        // We'll use a generic approach: attach a click listener to the container and check target.
+        // Event delegation for interactive elements
         container.addEventListener('click', function(e) {
             const target = e.target.closest('[data-action]');
             if (!target) return;
@@ -584,21 +580,20 @@
                 submitComment(testimonialId, parentId);
             } else if (action === 'submit-comment') {
                 submitComment(testimonialId, null);
+            } else if (action === 'edit-scrap') {
+                editTestimonial(testimonialId);
+            } else if (action === 'delete-scrap') {
+                deleteTestimonial(testimonialId);
             }
         });
 
-        // Also handle cancel-reply separately (they don't need testimonialId)
+        // Cancel reply (doesn't need testimonialId)
         container.addEventListener('click', function(e) {
             const target = e.target.closest('[data-action="cancel-reply"]');
             if (!target) return;
             const parentId = target.dataset.parentId;
             if (parentId) hideReplyForm(parentId);
         });
-
-        // For each comment form, we need to handle the submit-reply specifically.
-        // But we already handle it via data-action above.
-        // Also, the reply form submit button uses data-action="submit-reply".
-        // The add-comment form uses data-action="submit-comment".
     }
 
     function buildTestimonialCard(t, canComment) {
@@ -606,6 +601,11 @@
         const reactionsHtml = buildReactionsHtml(t);
         const commentsHtml = buildCommentsHtml(t.commentTree, t.id);
         const collapseAllText = isCollapsed ? 'Expand' : 'Collapse';
+
+        // Show edit/delete buttons only for author or profile owner
+        const isAuthor = currentPlayer && currentPlayer.id === t.author_id;
+        const isProfileOwner = currentPlayer && currentPlayer.id === profileOwner.id;
+        const showScrapActions = isAuthor || isProfileOwner;
 
         return `
             <div class="testimonial-card" data-testimonial-id="${t.id}" id="testimonial-${t.id}">
@@ -619,6 +619,12 @@
                     <span class="comment-toggle" data-action="toggle-comments" data-testimonial-id="${t.id}">💬 ${t.commentCount} comments</span>
                     <span class="collapse-all-btn" data-action="collapse-all" data-testimonial-id="${t.id}">${collapseAllText}</span>
                 </div>
+                ${showScrapActions ? `
+                    <div class="scrap-actions">
+                        <button data-action="edit-scrap" data-testimonial-id="${t.id}">✏️ Edit</button>
+                        <button data-action="delete-scrap" data-testimonial-id="${t.id}">🗑️ Delete</button>
+                    </div>
+                ` : ''}
                 <div class="comments-section ${isCollapsed ? 'collapsed' : ''}" id="comments-${t.id}">
                     <div class="comment-tree" id="comment-tree-${t.id}">
                         ${commentsHtml}
@@ -627,7 +633,7 @@
                         <div class="add-comment-form">
                             <textarea id="comment-input-${t.id}" placeholder="Write a comment..." rows="2"></textarea>
                             <div class="comment-actions">
-                                <button class="submit-comment" data-action="submit-comment" data-testimonial-id="${t.id}">Post comment</button>
+                                <button data-action="submit-comment" data-testimonial-id="${t.id}">Post comment</button>
                             </div>
                         </div>
                     ` : `
@@ -694,7 +700,7 @@
         return html;
     }
 
-    // ── Actions ──
+    // ── Reaction toggle ──
     async function toggleReaction(testimonialId, reaction) {
         if (!currentPlayer) return showToast('Please log in to react');
         try {
@@ -731,6 +737,7 @@
         }
     }
 
+    // ── Toggle comments ──
     function toggleComments(testimonialId) {
         const section = document.getElementById(`comments-${testimonialId}`);
         if (!section) return;
@@ -753,6 +760,7 @@
         if (collapseBtn) collapseBtn.textContent = isCollapsed ? 'Expand' : 'Collapse';
     }
 
+    // ── Reply forms ──
     function showReplyForm(parentId) {
         const form = document.getElementById(`reply-form-${parentId}`);
         if (form) form.style.display = 'block';
@@ -767,6 +775,7 @@
         }
     }
 
+    // ── Submit comment ──
     async function submitComment(testimonialId, parentId) {
         if (!currentPlayer) return showToast('Please log in to comment');
         let content;
@@ -811,6 +820,45 @@
         } catch (error) {
             console.error(error);
             showToast('Error posting comment');
+        }
+    }
+
+    // ── Edit testimonial ──
+    async function editTestimonial(testimonialId) {
+        const testimonial = testimonials.find(t => t.id === testimonialId);
+        if (!testimonial) return;
+        const newContent = prompt('Edit your scrap:', testimonial.content);
+        if (newContent === null || newContent === testimonial.content) return;
+        try {
+            const { error } = await sb
+                .from('testimonials')
+                .update({ content: newContent, updated_at: new Date() })
+                .eq('id', testimonialId);
+            if (error) throw error;
+            showToast('Scrap updated');
+            await loadTestimonialsWithReactionsAndComments();
+            await renderTestimonialsWithReactionsAndComments();
+        } catch (error) {
+            console.error(error);
+            showToast('Error updating scrap');
+        }
+    }
+
+    // ── Delete testimonial ──
+    async function deleteTestimonial(testimonialId) {
+        if (!confirm('Delete this scrap?')) return;
+        try {
+            const { error } = await sb
+                .from('testimonials')
+                .delete()
+                .eq('id', testimonialId);
+            if (error) throw error;
+            showToast('Scrap deleted');
+            await loadTestimonialsWithReactionsAndComments();
+            await renderTestimonialsWithReactionsAndComments();
+        } catch (error) {
+            console.error(error);
+            showToast('Error deleting scrap');
         }
     }
 
