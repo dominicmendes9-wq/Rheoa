@@ -7,7 +7,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* ─── all styles unchanged ─── */
+        /* ─── all styles (same as before, plus tomato) ─── */
         * { margin:0; padding:0; box-sizing:border-box; }
         :root { --bg-body:#f0f4fa; --card-bg:#fff; --card-border:rgba(148,163,184,0.2); --card-shadow:0 12px 30px rgba(0,0,0,0.05); --header-bg:linear-gradient(135deg,#1e2f5e 0%,#1a4b7a 100%); --header-text:#fff; --accent:#2c6e9e; --accent-hover:#1f5480; --btn-primary:#2c6e9e; --btn-primary-hover:#1f5480; --btn-secondary:#475569; --btn-ghost:#e2e8f0; --text-main:#0f172a; --text-muted:#334155; --border-light:#e2e8f0; --card-header-bg:#f8fafc; --avatar-bg:#e0f2fe; --font-family:'Inter',system-ui,sans-serif; --border-radius-card:24px; --transition:all 0.2s ease; }
         body.theme-dusk { --bg-body:#0f1722; --card-bg:#1e293b; --card-border:rgba(51,65,85,0.6); --card-shadow:0 15px 35px rgba(0,0,0,0.3); --header-bg:linear-gradient(135deg,#0f172a 0%,#1e293b 100%); --header-text:#e2e8f0; --accent:#60a5fa; --accent-hover:#3b82f6; --btn-primary:#3b82f6; --btn-primary-hover:#2563eb; --btn-secondary:#334155; --btn-ghost:#334155; --text-main:#f1f5f9; --text-muted:#cbd5e1; --border-light:#334155; --card-header-bg:#0f172a; --avatar-bg:#334155; }
@@ -32,11 +32,12 @@
         .hero-info h1 { font-size:2.2rem; font-weight:700; margin-bottom:8px; display:flex; align-items:center; flex-wrap:wrap; gap:12px; }
         .tier-badge { font-size:.7rem; font-weight:600; padding:4px 14px; border-radius:30px; color:#fff; background:#888; display:inline-flex; align-items:center; gap:6px; letter-spacing:.3px; text-transform:uppercase; border:1px solid rgba(255,255,255,0.2); backdrop-filter:blur(2px); }
         .tier-badge .icon { font-size:.9rem; }
-        .stats-badge { display:flex; flex-wrap:wrap; gap:14px; margin-top:14px; }
+        .stats-badge { display:flex; flex-wrap:wrap; gap:14px; margin-top:14px; align-items:center; }
         .stat-pill { background:rgba(255,255,255,0.18); padding:6px 16px; border-radius:40px; font-size:.8rem; font-weight:500; backdrop-filter:blur(2px); }
-        .upgrade-prompt { background:rgba(255,215,0,0.12); border:1px solid rgba(255,215,0,0.3); border-radius:16px; padding:16px 20px; margin-top:16px; display:flex; align-items:center; gap:16px; flex-wrap:wrap; color:var(--text-main); backdrop-filter:blur(2px); }
-        .upgrade-prompt button { background:#FFD700; color:#1a1a1a; border:none; padding:8px 20px; border-radius:30px; font-weight:600; cursor:pointer; transition:.2s; font-family:inherit; font-size:.85rem; }
-        .upgrade-prompt button:hover { transform:scale(1.03); background:#f0c000; }
+        .tomato-btn { background:rgba(255,0,0,0.2); border:1px solid #ff6b6b; border-radius:30px; padding:4px 16px; font-size:0.8rem; font-weight:600; color:#fff; cursor:pointer; animation: breathe 2s infinite; transition:0.2s; font-family:var(--font-family); backdrop-filter:blur(2px); display:inline-flex; align-items:center; gap:6px; }
+        .tomato-btn:hover { background:rgba(255,0,0,0.4); transform:scale(1.05); }
+        .tomato-btn:disabled { opacity:0.5; cursor:not-allowed; animation:none; }
+        @keyframes breathe { 0%{transform:scale(1);} 50%{transform:scale(1.05);} 100%{transform:scale(1);} }
         .friends-grid, .results-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:16px; margin-top:4px; }
         .friend-card, .result-card { background:var(--card-bg); border:1px solid var(--border-light); border-radius:20px; padding:14px; display:flex; align-items:center; gap:14px; transition:all .2s; }
         .friend-avatar, .result-avatar { font-size:2.2rem; background:var(--avatar-bg); width:52px; height:52px; border-radius:50%; display:flex; align-items:center; justify-content:center; }
@@ -91,6 +92,93 @@
         .scrap-actions { display:flex; gap:8px; margin-top:8px; }
         .scrap-actions button { padding:2px 12px; font-size:0.7rem; border-radius:20px; background:transparent; border:1px solid var(--border-light); }
         .scrap-actions button:hover { background:var(--btn-ghost); }
+
+        /* ─── Tomato delivery overlay ─── */
+        #delivery-overlay {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 100px;
+            pointer-events: none;
+            z-index: 9999;
+            overflow: visible;
+        }
+        #delivery-boy {
+            position: absolute;
+            bottom: 0;
+            left: -200px;
+            height: 120px;
+            transition: left 2s ease-in-out;
+            pointer-events: none;
+            image-rendering: pixelated;
+        }
+        #delivery-boy img {
+            height: 100%;
+            width: auto;
+        }
+        #delivery-bubble {
+            position: absolute;
+            bottom: 110px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(4px);
+            padding: 12px 24px;
+            border-radius: 30px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+            font-family: var(--font-family);
+            font-weight: 600;
+            color: #222;
+            pointer-events: auto;
+            cursor: pointer;
+            border: 2px solid #ff6b6b;
+            white-space: nowrap;
+            display: none;
+            animation: popIn 0.3s ease-out;
+        }
+        #delivery-bubble::after {
+            content: '';
+            position: absolute;
+            bottom: -16px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-left: 12px solid transparent;
+            border-right: 12px solid transparent;
+            border-top: 16px solid rgba(255,255,255,0.95);
+        }
+        @keyframes popIn { 0%{transform:translateX(-50%) scale(0.5); opacity:0;} 100%{transform:translateX(-50%) scale(1); opacity:1;} }
+        #tomato-gif {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10000;
+            display: none;
+            width: 150px;
+            height: auto;
+            pointer-events: none;
+        }
+        .delivery-exit {
+            left: 110vw !important;
+            transition: left 2s ease-in-out;
+        }
+        #boy-bubble {
+            position: absolute;
+            bottom: 110px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255,255,255,0.9);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            color: #222;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            pointer-events: none;
+            border: 1px solid #ff6b6b;
+            white-space: nowrap;
+            animation: popIn 0.3s ease-out;
+        }
     </style>
 </head>
 <body>
@@ -106,8 +194,18 @@
     <div id="profileView"></div>
 </div>
 
+<!-- Tomato delivery overlay -->
+<div id="delivery-overlay">
+    <div id="delivery-boy">
+        <img src="https://i.ibb.co/F4L9WcNP/Delivery-Boy.gif" alt="Delivery Boy">
+    </div>
+    <div id="delivery-bubble">Hola, you have a parcel, click to accept</div>
+</div>
+<img id="tomato-gif" src="https://i.ibb.co/VpW57Vwh/Tomato.gif" alt="Tomato">
+
 <script>
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // SUPABASE INIT
     const supabaseUrl = 'https://mtiwodvsrwvrujbhmmrn.supabase.co';
     const supabaseKey = 'sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp';
     const sb = window.supabase.createClient(supabaseUrl, supabaseKey);
@@ -175,12 +273,118 @@
         });
     }
 
-    function showToast(msg) {
+    function showToast(msg, type = 'info') {
         const toast = document.createElement('div');
         toast.className = 'toast';
         toast.innerText = msg;
+        if (type === 'error') toast.style.background = '#f44336';
+        else if (type === 'success') toast.style.background = '#4CAF50';
+        else toast.style.background = 'var(--accent)';
         document.body.appendChild(toast);
         setTimeout(() => toast.remove(), 3000);
+    }
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // TOMATO FUNCTIONS
+    async function refillTomatoes() {
+        try {
+            const { data, error } = await sb.rpc('refill_tomatoes');
+            if (error) throw error;
+            if (data.success && currentPlayer) {
+                currentPlayer.tomatoes = data.new_tomatoes;
+            }
+        } catch (e) { console.warn('Refill error:', e); }
+    }
+
+    async function sendTomato(receiverId) {
+        try {
+            const { data, error } = await sb.rpc('send_tomato', { p_receiver_id: receiverId });
+            if (error) throw error;
+            if (data.success) {
+                const remaining = data.remaining_tomatoes;
+                showToast(`🍅 1 tomato sent! ${remaining} remaining in stock.`, 'success');
+                if (currentPlayer) currentPlayer.tomatoes = remaining;
+                updateTomatoButton();
+            } else {
+                showToast(`❌ ${data.message}`, 'error');
+            }
+        } catch (e) {
+            showToast('Error sending tomato', 'error');
+            console.error(e);
+        }
+    }
+
+    function updateTomatoButton() {
+        const btn = document.getElementById('tomatoBtn');
+        if (btn) {
+            const count = currentPlayer?.tomatoes ?? 0;
+            btn.innerHTML = `🍅 Throw Tomato (${count})`;
+            btn.disabled = count <= 0;
+        }
+    }
+
+    async function checkAndShowDeliveries() {
+        if (!currentPlayer) return;
+        try {
+            const { data, error } = await sb.rpc('get_pending_deliveries', { p_player_id: currentPlayer.id });
+            if (error) throw error;
+            if (data && data.length > 0) {
+                const delivery = data[0];
+                await runDeliveryAnimation(delivery.id);
+                await sb.rpc('accept_tomato_delivery', { p_delivery_id: delivery.id });
+            }
+        } catch (e) { console.warn('Delivery check:', e); }
+    }
+
+    function runDeliveryAnimation(deliveryId) {
+        return new Promise((resolve) => {
+            const overlay = document.getElementById('delivery-overlay');
+            const boy = document.getElementById('delivery-boy');
+            const bubble = document.getElementById('delivery-bubble');
+            const tomatoGif = document.getElementById('tomato-gif');
+
+            boy.style.left = '-200px';
+            boy.classList.remove('delivery-exit');
+            bubble.style.display = 'none';
+            tomatoGif.style.display = 'none';
+            overlay.style.pointerEvents = 'auto';
+
+            const existingBubble = document.getElementById('boy-bubble');
+            if (existingBubble) existingBubble.remove();
+
+            setTimeout(() => {
+                boy.style.left = 'calc(50% - 100px)';
+            }, 100);
+
+            setTimeout(() => {
+                bubble.style.display = 'block';
+            }, 2500);
+
+            const acceptHandler = async () => {
+                bubble.style.display = 'none';
+                tomatoGif.style.display = 'block';
+
+                const boyBubble = document.createElement('div');
+                boyBubble.id = 'boy-bubble';
+                boyBubble.textContent = 'hehehehe';
+                boy.parentNode.appendChild(boyBubble);
+
+                setTimeout(() => {
+                    boy.classList.add('delivery-exit');
+                    if (boyBubble.parentNode) boyBubble.remove();
+                    setTimeout(() => {
+                        tomatoGif.style.display = 'none';
+                        overlay.style.pointerEvents = 'none';
+                        boy.style.left = '-200px';
+                        boy.classList.remove('delivery-exit');
+                        resolve();
+                    }, 2200);
+                }, 3000);
+            };
+
+            bubble.removeEventListener('click', acceptHandler);
+            bubble.addEventListener('click', acceptHandler);
+        });
     }
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -224,6 +428,9 @@
             }
             currentPlayer = player;
 
+            // Refill tomatoes on load
+            await refillTomatoes();
+
             const tier = currentPlayer.subscription_tier || 'basic';
             const tierData = await fetchTierInfo(tier);
             tierInfo = tierData;
@@ -233,6 +440,11 @@
             const targetId = urlParams.get('id');
             if (targetId && targetId !== currentPlayer.id) await loadProfile(targetId);
             else await loadProfile(currentPlayer.id);
+
+            // After profile loads, check for deliveries (only for the owner)
+            if (profileOwner && profileOwner.id === currentPlayer.id) {
+                setTimeout(checkAndShowDeliveries, 2000);
+            }
         } catch (err) {
             document.getElementById('profileView').innerHTML = `<div class="card-modern"><div class="card-header-modern">⚠️ Error</div><div class="card-content-modern">${err.message}</div></div>`;
         }
@@ -340,7 +552,6 @@
         });
     }
 
-    // ── Friendship check ──
     async function areFriends(p1, p2) {
         if (!p1 || !p2) return false;
         const { count } = await sb
@@ -350,7 +561,6 @@
         return count > 0;
     }
 
-    // ── Check comment permission ──
     async function canCommentOnTestimonial(testimonial) {
         if (!currentPlayer) return false;
         if (testimonial.author_id === currentPlayer.id) return true;
@@ -394,6 +604,13 @@
         const canCustomAvatar = tierBenefits.custom_avatar === true;
         const canCustomBackground = tierBenefits.custom_background === true;
 
+        // Check if current user is a friend of the profile owner
+        const isFriend = friendships.some(f =>
+            (f.requester_id === currentPlayer?.id && f.addressee_id === profileOwner.id) ||
+            (f.addressee_id === currentPlayer?.id && f.requester_id === profileOwner.id)
+        );
+
+        // ── Hero ──
         let heroHtml = `
             <div class="profile-hero">
                 <div class="hero-avatar">${profileOwner.avatar_url || '🧙'}</div>
@@ -412,11 +629,22 @@
                         <span class="stat-pill">👁️ ${profileViewCount} visits</span>
                         <span class="stat-pill">📅 joined ${new Date(profileOwner.join_date).toLocaleDateString()}</span>
                         ${hasExclusiveBadge ? '<span class="stat-pill" style="background: #FF4500; color: white;">👑 Founder</span>' : ''}
+                        ${!isOwner && isFriend ? `
+                            <button class="tomato-btn" id="tomatoBtn" onclick="sendTomato('${profileOwner.id}')" disabled>
+                                🍅 Throw Tomato (0)
+                            </button>
+                        ` : ''}
                     </div>
                 </div>
             </div>
         `;
 
+        // Update tomato button after DOM renders
+        if (!isOwner && isFriend) {
+            setTimeout(updateTomatoButton, 100);
+        }
+
+        // ── Left column ──
         let leftColumn = `<div class="card-modern"><div class="card-header-modern">📖 About ${isOwner ? 'me' : escapeHtml(profileOwner.username)}</div><div class="card-content-modern">`;
         if (isOwner) {
             leftColumn += `
@@ -447,8 +675,8 @@
         }
         leftColumn += `</div></div>`;
 
+        // ── Friendship block ──
         if (!isOwner && currentPlayer) {
-            const isFriend = friendships.some(f => (f.requester_id === currentPlayer.id && f.addressee_id === profileOwner.id) || (f.addressee_id === currentPlayer.id && f.requester_id === profileOwner.id));
             const pendingSent = friendships.some(f => f.requester_id === currentPlayer.id && f.addressee_id === profileOwner.id && f.status === 'pending');
             const pendingReceived = friendships.some(f => f.addressee_id === currentPlayer.id && f.requester_id === profileOwner.id && f.status === 'pending');
             let btnHtml = '';
@@ -459,6 +687,7 @@
             leftColumn += `<div class="card-modern" style="margin-top: 20px;"><div class="card-header-modern">🤝 Friendship</div><div class="card-content-modern">${btnHtml}</div></div>`;
         }
 
+        // ── Visitors ──
         if (isOwner) {
             if (canViewVisitors) {
                 leftColumn += `<div class="card-modern" style="margin-top: 20px;"><div class="card-header-modern">👁️ Recent visitors</div><div class="card-content-modern"><div id="visitorsList"></div></div></div>`;
@@ -480,6 +709,7 @@
             leftColumn += `<div class="card-modern" style="margin-top: 20px;"><div class="card-header-modern">📨 Friend requests</div><div class="card-content-modern"><div id="requestsList"></div></div></div>`;
         }
 
+        // ── Right column ──
         let rightColumn = `<div class="card-modern"><div class="card-header-modern">👥 Companions (${totalFriends})</div><div class="card-content-modern"><div id="friendsGrid" class="friends-grid"></div></div></div>`;
 
         if (isOwner) {
@@ -542,7 +772,7 @@
         }).join('');
     }
 
-    // ── RENDER TESTIMONIALS (with single listener) ──
+    // ── RENDER TESTIMONIALS ──
     async function renderTestimonialsWithReactionsAndComments() {
         const container = document.getElementById('testimonialsList');
         if (!container) return;
@@ -559,7 +789,7 @@
         });
         container.innerHTML = html;
 
-        // ── Remove old listener and attach new one ──
+        // ── Event listeners ──
         if (containerClickHandler) {
             container.removeEventListener('click', containerClickHandler);
         }
@@ -593,21 +823,16 @@
         };
         container.addEventListener('click', containerClickHandler);
 
-        // Cancel reply (separate, but we can also handle in the same)
-        // We'll add a separate listener for cancel-reply since it doesn't need testimonialId
-        // But we can also check inside the handler for data-action="cancel-reply"
-        // Let's keep it simple: we'll add a listener for that too.
-        const cancelHandler = function(e) {
+        // Cancel reply
+        if (container._cancelListener) {
+            container.removeEventListener('click', container._cancelListener);
+        }
+        container._cancelListener = function(e) {
             const target = e.target.closest('[data-action="cancel-reply"]');
             if (!target) return;
             const parentId = target.dataset.parentId;
             if (parentId) hideReplyForm(parentId);
         };
-        // We'll attach it once, but to avoid duplicate, we'll remove old if any.
-        if (container._cancelListener) {
-            container.removeEventListener('click', container._cancelListener);
-        }
-        container._cancelListener = cancelHandler;
         container.addEventListener('click', container._cancelListener);
     }
 
@@ -747,7 +972,7 @@
             await renderTestimonialsWithReactionsAndComments();
         } catch (error) {
             console.error('Reaction error:', error);
-            showToast('Error updating reaction: ' + error.message);
+            showToast('Error updating reaction: ' + error.message, 'error');
         }
     }
 
@@ -774,7 +999,6 @@
         if (collapseBtn) collapseBtn.textContent = isCollapsed ? 'Expand' : 'Collapse';
     }
 
-    // ── Reply forms ──
     function showReplyForm(parentId) {
         const form = document.getElementById(`reply-form-${parentId}`);
         if (form) form.style.display = 'block';
@@ -789,7 +1013,6 @@
         }
     }
 
-    // ── Submit comment ──
     async function submitComment(testimonialId, parentId) {
         if (!currentPlayer) return showToast('Please log in to comment');
         let content;
@@ -830,10 +1053,10 @@
             if (parentId) hideReplyForm(parentId);
             await loadTestimonialsWithReactionsAndComments();
             await renderTestimonialsWithReactionsAndComments();
-            showToast('Comment posted');
+            showToast('Comment posted', 'success');
         } catch (error) {
             console.error('Comment error:', error);
-            showToast('Error posting comment: ' + error.message);
+            showToast('Error posting comment: ' + error.message, 'error');
         }
     }
 
@@ -849,12 +1072,12 @@
                 .update({ content: newContent, updated_at: new Date() })
                 .eq('id', testimonialId);
             if (error) throw error;
-            showToast('Scrap updated');
+            showToast('Scrap updated', 'success');
             await loadTestimonialsWithReactionsAndComments();
             await renderTestimonialsWithReactionsAndComments();
         } catch (error) {
             console.error('Edit error:', error);
-            showToast('Error updating scrap');
+            showToast('Error updating scrap', 'error');
         }
     }
 
@@ -867,12 +1090,12 @@
                 .delete()
                 .eq('id', testimonialId);
             if (error) throw error;
-            showToast('Scrap deleted');
+            showToast('Scrap deleted', 'success');
             await loadTestimonialsWithReactionsAndComments();
             await renderTestimonialsWithReactionsAndComments();
         } catch (error) {
             console.error('Delete error:', error);
-            showToast('Error deleting scrap');
+            showToast('Error deleting scrap', 'error');
         }
     }
 
@@ -906,36 +1129,36 @@
     // API actions
     async function sendFriendRequest(targetId) {
         const { error } = await sb.from('friendships').insert({ requester_id: currentPlayer.id, addressee_id: targetId, status: 'pending' });
-        error ? showToast(error.message) : (showToast('Request sent!'), await loadProfile(profileOwner.id));
+        error ? showToast(error.message, 'error') : (showToast('Request sent!', 'success'), await loadProfile(profileOwner.id));
     }
     async function acceptFriendRequest() {
         const { error } = await sb.from('friendships').update({ status: 'accepted', updated_at: new Date() }).eq('requester_id', profileOwner.id).eq('addressee_id', currentPlayer.id);
-        error ? showToast(error.message) : (showToast('Friend added!'), await loadProfile(profileOwner.id));
+        error ? showToast(error.message, 'error') : (showToast('Friend added!', 'success'), await loadProfile(profileOwner.id));
     }
     async function declineFriendRequest() {
         const { error } = await sb.from('friendships').delete().eq('requester_id', profileOwner.id).eq('addressee_id', currentPlayer.id);
-        error ? showToast(error.message) : (showToast('Declined'), await loadProfile(profileOwner.id));
+        error ? showToast(error.message, 'error') : (showToast('Declined', 'info'), await loadProfile(profileOwner.id));
     }
     async function acceptFriendRequestById(requestId) {
         const { error } = await sb.from('friendships').update({ status: 'accepted', updated_at: new Date() }).eq('id', requestId);
-        error ? showToast(error.message) : (showToast('Friend added!'), await loadProfile(profileOwner.id));
+        error ? showToast(error.message, 'error') : (showToast('Friend added!', 'success'), await loadProfile(profileOwner.id));
     }
     async function declineFriendRequestById(requestId) {
         const { error } = await sb.from('friendships').delete().eq('id', requestId);
-        error ? showToast(error.message) : (showToast('Request declined'), await loadProfile(profileOwner.id));
+        error ? showToast(error.message, 'error') : (showToast('Request declined', 'info'), await loadProfile(profileOwner.id));
     }
     async function removeFriend(friendId) {
         if (!confirm('Remove friend?')) return;
         const { error } = await sb.from('friendships').delete().or(`and(requester_id.eq.${currentPlayer.id},addressee_id.eq.${friendId}),and(requester_id.eq.${friendId},addressee_id.eq.${currentPlayer.id})`);
-        error ? showToast(error.message) : (showToast('Friend removed'), await loadProfile(profileOwner.id));
+        error ? showToast(error.message, 'error') : (showToast('Friend removed', 'info'), await loadProfile(profileOwner.id));
     }
     async function addTestimonial() {
         const content = document.getElementById('scrapContent')?.value.trim();
         if (!content) return showToast('Write something...');
         const { error } = await sb.from('testimonials').insert({ profile_id: profileOwner.id, author_id: currentPlayer.id, content, is_visible: true });
-        if (error) showToast(error.message);
+        if (error) showToast(error.message, 'error');
         else {
-            showToast('Scrap posted!');
+            showToast('Scrap posted!', 'success');
             document.getElementById('scrapContent').value = '';
             await loadTestimonialsWithReactionsAndComments();
             await renderTestimonialsWithReactionsAndComments();
@@ -951,7 +1174,7 @@
         const updateData = { bio, location, country, gender, is_public };
         if (tierBenefits.custom_avatar && avatar_url !== undefined) updateData.avatar_url = avatar_url;
         const { error } = await sb.from('players').update(updateData).eq('id', currentPlayer.id);
-        error ? showToast(error.message) : (showToast('Profile updated'), await loadProfile(currentPlayer.id));
+        error ? showToast(error.message, 'error') : (showToast('Profile updated', 'success'), await loadProfile(currentPlayer.id));
     }
     function viewProfile(userId) { window.location.href = `profile.html?id=${userId}`; }
     async function searchUsers() {
@@ -965,7 +1188,7 @@
         if (location) query = query.ilike('location', `%${location}%`);
         if (country) query = query.ilike('country', `%${country}%`);
         const { data, error } = await query.limit(50);
-        if (error) return showToast(error.message);
+        if (error) return showToast(error.message, 'error');
         const friendIds = friendships.map(f => f.requester_id === currentPlayer.id ? f.addressee_id : f.requester_id);
         searchResults = (data||[]).map(u => ({...u, isFriend: friendIds.includes(u.id)}));
         const container = document.getElementById('searchResultsGrid');
