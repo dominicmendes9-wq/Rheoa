@@ -355,24 +355,17 @@ function updateTomatoButton() {
         btn.disabled = count <= 0;
     }
 }
-
-    async function checkAndShowDeliveries() {
-        if (!currentPlayer) return;
-        try {
-            const { data, error } = await sb.rpc('get_pending_deliveries', { p_player_id: currentPlayer.id });
-            if (error) throw error;
-            if (data && data.length > 0) {
-                const delivery = data[0];
-                await runDeliveryAnimation(delivery.id);
-                await sb.rpc('accept_tomato_delivery', { p_delivery_id: delivery.id });
-            }
-        } catch (e) { console.warn('Delivery check:', e); }
-    }
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// TOMATO DELIVERY – with robust logging and fallback
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 async function checkAndShowDeliveries() {
-    if (!currentPlayer) return;
+    if (!currentPlayer) {
+        console.warn('checkAndShowDeliveries: No currentPlayer');
+        return;
+    }
+    console.log('🔍 Checking deliveries for player:', currentPlayer.id);
     try {
-        console.log('🔍 Checking deliveries for player:', currentPlayer.id);
         const { data, error } = await sb.rpc('get_pending_deliveries', { p_player_id: currentPlayer.id });
         if (error) throw error;
         console.log('📦 Pending deliveries:', data);
@@ -381,81 +374,182 @@ async function checkAndShowDeliveries() {
             showToast('📦 You have a tomato delivery!', 'info');
             // Wait a moment, then run animation
             setTimeout(async () => {
-                await runDeliveryAnimation(delivery.id);
-                // Mark as shown (but not yet received) after animation starts
-                await sb.rpc('accept_tomato_delivery', { p_delivery_id: delivery.id });
+                try {
+                    await runDeliveryAnimation(delivery.id);
+                    // Mark as shown (but not yet received) after animation starts
+                    await sb.rpc('accept_tomato_delivery', { p_delivery_id: delivery.id });
+                } catch (animError) {
+                    console.error('Animation error:', animError);
+                    showToast('⚠️ Delivery arrived but animation failed. Check console.', 'error');
+                }
             }, 1000);
         } else {
             console.log('No pending deliveries.');
         }
     } catch (e) {
-        console.warn('Delivery check error:', e);
+        console.error('Delivery check error:', e);
+        showToast('Error checking deliveries: ' + e.message, 'error');
     }
 }
 
 function runDeliveryAnimation(deliveryId) {
-    return new Promise((resolve) => {
-        const overlay = document.getElementById('delivery-overlay');
-        const boy = document.getElementById('delivery-boy');
-        const bubble = document.getElementById('delivery-bubble');
-        const tomatoGif = document.getElementById('tomato-gif');
+    return new Promise((resolve, reject) => {
+        try {
+            const overlay = document.getElementById('delivery-overlay');
+            const boy = document.getElementById('delivery-boy');
+            const bubble = document.getElementById('delivery-bubble');
+            const tomatoGif = document.getElementById('tomato-gif');
 
-        // Reset positions
-        boy.style.left = '-200px';
-        boy.classList.remove('delivery-exit');
-        bubble.style.display = 'none';
-        tomatoGif.style.display = 'none';
-        overlay.style.pointerEvents = 'auto';
+            // Check if elements exist
+            if (!overlay || !boy || !bubble || !tomatoGif) {
+                console.error('Missing delivery elements:', { overlay, boy, bubble, tomatoGif });
+                reject('Missing DOM elements');
+                return;
+            }
 
-        // Remove any old boy-bubble
-        const oldBubble = document.getElementById('boy-bubble');
-        if (oldBubble) oldBubble.remove();
+            console.log('Delivery elements found, starting animation.');
 
-        console.log('🚚 Delivery boy coming in...');
-
-        // Move boy to center
-        setTimeout(() => {
-            boy.style.left = 'calc(50% - 100px)';
-            console.log('🚚 Boy at center');
-        }, 100);
-
-        // Show speech bubble after he stops
-        setTimeout(() => {
-            bubble.style.display = 'block';
-            console.log('💬 Bubble shown');
-        }, 2500);
-
-        // Click on bubble -> accept
-        const acceptHandler = async () => {
+            // Reset positions
+            boy.style.left = '-200px';
+            boy.classList.remove('delivery-exit');
             bubble.style.display = 'none';
-            tomatoGif.style.display = 'block';
-            console.log('🍅 Tomato gif shown');
+            tomatoGif.style.display = 'none';
+            overlay.style.pointerEvents = 'auto';
 
-            // Boy says "hehehehe"
-            const boyBubble = document.createElement('div');
-            boyBubble.id = 'boy-bubble';
-            boyBubble.textContent = 'hehehehe';
-            boy.parentNode.appendChild(boyBubble);
+            // Remove old boy-bubble
+            const oldBubble = document.getElementById('boy-bubble');
+            if (oldBubble) oldBubble.remove();
 
-            // After 3 seconds, boy moves to right
+            // Move boy to center
             setTimeout(() => {
-                boy.classList.add('delivery-exit');
-                if (boyBubble.parentNode) boyBubble.remove();
-                console.log('🚚 Boy exiting right');
-                setTimeout(() => {
-                    tomatoGif.style.display = 'none';
-                    overlay.style.pointerEvents = 'none';
-                    boy.style.left = '-200px';
-                    boy.classList.remove('delivery-exit');
-                    resolve();
-                }, 2200);
-            }, 3000);
-        };
+                boy.style.left = 'calc(50% - 100px)';
+                console.log('🚚 Boy at center');
+            }, 100);
 
-        bubble.removeEventListener('click', acceptHandler);
-        bubble.addEventListener('click', acceptHandler);
+            // Show speech bubble after he stops
+            setTimeout(() => {
+                bubble.style.display = 'block';
+                console.log('💬 Bubble shown');
+            }, 2500);
+
+            // Click handler for bubble
+            const acceptHandler = () => {
+                bubble.style.display = 'none';
+                tomatoGif.style.display = 'block';
+                console.log('🍅 Tomato gif shown');
+
+                // Boy says "hehehehe"
+                const boyBubble = document.createElement('div');
+                boyBubble.id = 'boy-bubble';
+                boyBubble.textContent = 'hehehehe';
+                boy.parentNode.appendChild(boyBubble);
+
+                // After 3 seconds, boy moves to right
+                setTimeout(() => {
+                    boy.classList.add('delivery-exit');
+                    if (boyBubble.parentNode) boyBubble.remove();
+                    console.log('🚚 Boy exiting right');
+                    setTimeout(() => {
+                        tomatoGif.style.display = 'none';
+                        overlay.style.pointerEvents = 'none';
+                        boy.style.left = '-200px';
+                        boy.classList.remove('delivery-exit');
+                        resolve();
+                    }, 2200);
+                }, 3000);
+            };
+
+            bubble.removeEventListener('click', acceptHandler);
+            bubble.addEventListener('click', acceptHandler);
+
+        } catch (err) {
+            console.error('runDeliveryAnimation error:', err);
+            reject(err);
+        }
     });
 }
+
+// ── Ensure refill and send work ──
+async function refillTomatoes() {
+    try {
+        const { data, error } = await sb.rpc('refill_tomatoes');
+        if (error) throw error;
+        if (data && data.length > 0) {
+            const result = data[0];
+            if (result.success) {
+                if (currentPlayer) currentPlayer.tomatoes = result.new_tomatoes;
+                updateTomatoButton();
+            } else {
+                // If no refill, result.new_tomatoes might have current count
+                if (result.new_tomatoes !== undefined && currentPlayer) {
+                    currentPlayer.tomatoes = result.new_tomatoes;
+                    updateTomatoButton();
+                }
+            }
+        }
+        // Fallback: fetch directly
+        const { data: playerData } = await sb
+            .from('players')
+            .select('tomatoes')
+            .eq('id', currentPlayer.id)
+            .single();
+        if (playerData && currentPlayer) {
+            currentPlayer.tomatoes = playerData.tomatoes;
+            updateTomatoButton();
+        }
+    } catch (e) {
+        console.warn('Refill error:', e);
+        // Fallback fetch
+        const { data: playerData } = await sb
+            .from('players')
+            .select('tomatoes')
+            .eq('id', currentPlayer.id)
+            .single();
+        if (playerData && currentPlayer) {
+            currentPlayer.tomatoes = playerData.tomatoes;
+            updateTomatoButton();
+        }
+    }
+}
+
+async function sendTomato(receiverId) {
+    try {
+        const { data, error } = await sb.rpc('send_tomato', { p_receiver_id: receiverId });
+        if (error) throw error;
+        if (data && data.length > 0) {
+            const result = data[0];
+            if (result.success) {
+                const remaining = result.remaining_tomatoes;
+                showToast(`🍅 1 tomato sent! ${remaining} remaining in stock.`, 'success');
+                if (currentPlayer) currentPlayer.tomatoes = remaining;
+                updateTomatoButton();
+            } else {
+                showToast(`❌ ${result.message}`, 'error');
+                if (result.remaining_tomatoes !== undefined && currentPlayer) {
+                    currentPlayer.tomatoes = result.remaining_tomatoes;
+                    updateTomatoButton();
+                }
+            }
+        } else {
+            showToast('Unexpected response from server', 'error');
+        }
+    } catch (e) {
+        console.error('Send tomato error:', e);
+        showToast('Error sending tomato: ' + e.message, 'error');
+        // Refresh count
+        await refillTomatoes();
+    }
+}
+
+function updateTomatoButton() {
+    const btn = document.getElementById('tomatoBtn');
+    if (btn) {
+        const count = currentPlayer?.tomatoes ?? 0;
+        btn.innerHTML = `🍅 Throw Tomato (${count})`;
+        btn.disabled = count <= 0;
+    }
+}
+
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // AUTH & PROFILE LOADING
     async function loadCurrentUser() {
@@ -509,9 +603,9 @@ function runDeliveryAnimation(deliveryId) {
             const targetId = urlParams.get('id');
             if (targetId && targetId !== currentPlayer.id) await loadProfile(targetId);
             else await loadProfile(currentPlayer.id);
-
-            // After profile loads, check for deliveries (only for the owner)
+// After profile loads, check for deliveries (only for the owner)
 if (profileOwner && profileOwner.id === currentPlayer.id) {
+    console.log('📬 Scheduling delivery check for owner');
     setTimeout(checkAndShowDeliveries, 2000);
 }
         } catch (err) {
