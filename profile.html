@@ -105,9 +105,10 @@
             overflow: visible;
         }
         #delivery-boy {
+            display: none;               /* hidden initially */
             position: absolute;
             bottom: 0;
-            left: -200px;
+            left: -500px;
             height: 240px;
             transition: left 4s ease-in-out;
             pointer-events: none;
@@ -359,96 +360,96 @@
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // TOMATO DELIVERY – definitive version
     async function checkAndShowDeliveries() {
-    if (!currentPlayer) {
-        console.warn('checkAndShowDeliveries: No currentPlayer');
-        return;
-    }
-    console.log('🔍 Checking deliveries for player:', currentPlayer.id);
+        if (!currentPlayer) {
+            console.warn('checkAndShowDeliveries: No currentPlayer');
+            return;
+        }
+        console.log('🔍 Checking deliveries for player:', currentPlayer.id);
 
-    let deliveries = [];
+        let deliveries = [];
 
-    // 1. Try RPC
-    try {
-        const { data, error } = await sb.rpc('get_pending_deliveries', { p_player_id: currentPlayer.id });
-        if (error) throw error;
-        if (data && data.length > 0) deliveries = data;
-        console.log('📦 RPC deliveries:', deliveries);
-    } catch (rpcError) {
-        console.warn('RPC failed:', rpcError);
-    }
-
-    // 2. Direct query – fetch deliveries first
-    if (deliveries.length === 0) {
+        // 1. Try RPC
         try {
-            console.log('🔄 Running direct query (step 1: fetch deliveries)...');
-            const { data: deliveryRows, error: deliveryError } = await sb
-                .from('tomato_deliveries')
-                .select(`
-                    id,
-                    sent_at,
-                    sender_id
-                `)
-                .eq('receiver_id', currentPlayer.id)
-                .is('received_at', null)
-                .eq('shown', false);
-            if (deliveryError) {
-                console.error('Delivery fetch error:', deliveryError);
-                throw deliveryError;
-            }
-            console.log('📦 Delivery rows:', deliveryRows);
+            const { data, error } = await sb.rpc('get_pending_deliveries', { p_player_id: currentPlayer.id });
+            if (error) throw error;
+            if (data && data.length > 0) deliveries = data;
+            console.log('📦 RPC deliveries:', deliveries);
+        } catch (rpcError) {
+            console.warn('RPC failed:', rpcError);
+        }
 
-            if (deliveryRows && deliveryRows.length > 0) {
-                // Step 2: fetch sender details
-                const senderIds = deliveryRows.map(d => d.sender_id);
-                console.log('🔍 Fetching sender details for IDs:', senderIds);
-                const { data: senderData, error: senderError } = await sb
-                    .from('players')
-                    .select('id, username, avatar_url')
-                    .in('id', senderIds);
-                if (senderError) {
-                    console.error('Sender fetch error:', senderError);
-                    throw senderError;
+        // 2. Direct query – fetch deliveries first
+        if (deliveries.length === 0) {
+            try {
+                console.log('🔄 Running direct query (step 1: fetch deliveries)...');
+                const { data: deliveryRows, error: deliveryError } = await sb
+                    .from('tomato_deliveries')
+                    .select(`
+                        id,
+                        sent_at,
+                        sender_id
+                    `)
+                    .eq('receiver_id', currentPlayer.id)
+                    .is('received_at', null)
+                    .eq('shown', false);
+                if (deliveryError) {
+                    console.error('Delivery fetch error:', deliveryError);
+                    throw deliveryError;
                 }
-                console.log('📦 Sender details:', senderData);
+                console.log('📦 Delivery rows:', deliveryRows);
 
-                // Build a map for quick lookup
-                const senderMap = {};
-                senderData.forEach(s => { senderMap[s.id] = s; });
+                if (deliveryRows && deliveryRows.length > 0) {
+                    // Step 2: fetch sender details
+                    const senderIds = deliveryRows.map(d => d.sender_id);
+                    console.log('🔍 Fetching sender details for IDs:', senderIds);
+                    const { data: senderData, error: senderError } = await sb
+                        .from('players')
+                        .select('id, username, avatar_url')
+                        .in('id', senderIds);
+                    if (senderError) {
+                        console.error('Sender fetch error:', senderError);
+                        throw senderError;
+                    }
+                    console.log('📦 Sender details:', senderData);
 
-                deliveries = deliveryRows.map(d => ({
-                    id: d.id,
-                    sender_username: senderMap[d.sender_id]?.username || 'Unknown',
-                    sender_avatar: senderMap[d.sender_id]?.avatar_url || null,
-                    sent_at: d.sent_at
-                }));
-                console.log('📦 Final deliveries:', deliveries);
-            } else {
-                console.log('📦 Direct query returned no deliveries.');
+                    // Build a map for quick lookup
+                    const senderMap = {};
+                    senderData.forEach(s => { senderMap[s.id] = s; });
+
+                    deliveries = deliveryRows.map(d => ({
+                        id: d.id,
+                        sender_username: senderMap[d.sender_id]?.username || 'Unknown',
+                        sender_avatar: senderMap[d.sender_id]?.avatar_url || null,
+                        sent_at: d.sent_at
+                    }));
+                    console.log('📦 Final deliveries:', deliveries);
+                } else {
+                    console.log('📦 Direct query returned no deliveries.');
+                }
+            } catch (directError) {
+                console.error('Direct query error:', directError);
             }
-        } catch (directError) {
-            console.error('Direct query error:', directError);
         }
-    }
 
-    // 3. If still empty, log and exit
-    if (deliveries.length === 0) {
-        console.log('No pending deliveries.');
-        return;
-    }
-
-    // Show toast and start animation
-    const delivery = deliveries[0];
-    showToast(`📦 Incoming parcel from ${delivery.sender_username}!`, 'info');
-
-    setTimeout(async () => {
-        try {
-            await runDeliveryAnimation(delivery.id);
-        } catch (animError) {
-            console.error('Animation error:', animError);
-            showToast('⚠️ Delivery arrived but animation failed. Check console.', 'error');
+        // 3. If still empty, log and exit
+        if (deliveries.length === 0) {
+            console.log('No pending deliveries.');
+            return;
         }
-    }, 1000);
-}
+
+        // Show toast and start animation
+        const delivery = deliveries[0];
+        showToast(`📦 Incoming parcel from ${delivery.sender_username}!`, 'info');
+
+        setTimeout(async () => {
+            try {
+                await runDeliveryAnimation(delivery.id);
+            } catch (animError) {
+                console.error('Animation error:', animError);
+                showToast('⚠️ Delivery arrived but animation failed. Check console.', 'error');
+            }
+        }, 1000);
+    }
 
     function runDeliveryAnimation(deliveryId) {
         return new Promise((resolve, reject) => {
@@ -464,8 +465,9 @@
                     return;
                 }
 
-                // Reset positions
-                boy.style.left = '-200px';
+                // ── Show the boy (make visible) ──
+                boy.style.display = 'block';        // make visible
+                boy.style.left = '-500px';          // start far left
                 boy.classList.remove('delivery-exit');
                 bubble.style.display = 'none';
                 tomatoGif.style.display = 'none';
@@ -511,13 +513,17 @@
                         boy.classList.add('delivery-exit');
                         if (boyBubble.parentNode) boyBubble.remove();
                         console.log('🚚 Boy exiting right');
+
+                        // After the exit transition (4s), hide everything and reset
                         setTimeout(() => {
                             tomatoGif.style.display = 'none';
                             overlay.style.pointerEvents = 'none';
-                            boy.style.left = '-200px';
+                            boy.style.display = 'none';        // hide the boy completely
+                            boy.style.left = '-500px';         // reset off‑screen
                             boy.classList.remove('delivery-exit');
+                            console.log('✅ Delivery complete, boy hidden');
                             resolve();
-                        }, 2200);
+                        }, 4000); // match the transition duration (4s)
                     }, 3000);
                 };
 
