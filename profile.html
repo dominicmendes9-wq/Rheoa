@@ -369,57 +369,93 @@ function updateTomatoButton() {
         } catch (e) { console.warn('Delivery check:', e); }
     }
 
-    function runDeliveryAnimation(deliveryId) {
-        return new Promise((resolve) => {
-            const overlay = document.getElementById('delivery-overlay');
-            const boy = document.getElementById('delivery-boy');
-            const bubble = document.getElementById('delivery-bubble');
-            const tomatoGif = document.getElementById('tomato-gif');
-
-            boy.style.left = '-200px';
-            boy.classList.remove('delivery-exit');
-            bubble.style.display = 'none';
-            tomatoGif.style.display = 'none';
-            overlay.style.pointerEvents = 'auto';
-
-            const existingBubble = document.getElementById('boy-bubble');
-            if (existingBubble) existingBubble.remove();
-
-            setTimeout(() => {
-                boy.style.left = 'calc(50% - 100px)';
-            }, 100);
-
-            setTimeout(() => {
-                bubble.style.display = 'block';
-            }, 2500);
-
-            const acceptHandler = async () => {
-                bubble.style.display = 'none';
-                tomatoGif.style.display = 'block';
-
-                const boyBubble = document.createElement('div');
-                boyBubble.id = 'boy-bubble';
-                boyBubble.textContent = 'hehehehe';
-                boy.parentNode.appendChild(boyBubble);
-
-                setTimeout(() => {
-                    boy.classList.add('delivery-exit');
-                    if (boyBubble.parentNode) boyBubble.remove();
-                    setTimeout(() => {
-                        tomatoGif.style.display = 'none';
-                        overlay.style.pointerEvents = 'none';
-                        boy.style.left = '-200px';
-                        boy.classList.remove('delivery-exit');
-                        resolve();
-                    }, 2200);
-                }, 3000);
-            };
-
-            bubble.removeEventListener('click', acceptHandler);
-            bubble.addEventListener('click', acceptHandler);
-        });
+async function checkAndShowDeliveries() {
+    if (!currentPlayer) return;
+    try {
+        console.log('🔍 Checking deliveries for player:', currentPlayer.id);
+        const { data, error } = await sb.rpc('get_pending_deliveries', { p_player_id: currentPlayer.id });
+        if (error) throw error;
+        console.log('📦 Pending deliveries:', data);
+        if (data && data.length > 0) {
+            const delivery = data[0];
+            showToast('📦 You have a tomato delivery!', 'info');
+            // Wait a moment, then run animation
+            setTimeout(async () => {
+                await runDeliveryAnimation(delivery.id);
+                // Mark as shown (but not yet received) after animation starts
+                await sb.rpc('accept_tomato_delivery', { p_delivery_id: delivery.id });
+            }, 1000);
+        } else {
+            console.log('No pending deliveries.');
+        }
+    } catch (e) {
+        console.warn('Delivery check error:', e);
     }
+}
 
+function runDeliveryAnimation(deliveryId) {
+    return new Promise((resolve) => {
+        const overlay = document.getElementById('delivery-overlay');
+        const boy = document.getElementById('delivery-boy');
+        const bubble = document.getElementById('delivery-bubble');
+        const tomatoGif = document.getElementById('tomato-gif');
+
+        // Reset positions
+        boy.style.left = '-200px';
+        boy.classList.remove('delivery-exit');
+        bubble.style.display = 'none';
+        tomatoGif.style.display = 'none';
+        overlay.style.pointerEvents = 'auto';
+
+        // Remove any old boy-bubble
+        const oldBubble = document.getElementById('boy-bubble');
+        if (oldBubble) oldBubble.remove();
+
+        console.log('🚚 Delivery boy coming in...');
+
+        // Move boy to center
+        setTimeout(() => {
+            boy.style.left = 'calc(50% - 100px)';
+            console.log('🚚 Boy at center');
+        }, 100);
+
+        // Show speech bubble after he stops
+        setTimeout(() => {
+            bubble.style.display = 'block';
+            console.log('💬 Bubble shown');
+        }, 2500);
+
+        // Click on bubble -> accept
+        const acceptHandler = async () => {
+            bubble.style.display = 'none';
+            tomatoGif.style.display = 'block';
+            console.log('🍅 Tomato gif shown');
+
+            // Boy says "hehehehe"
+            const boyBubble = document.createElement('div');
+            boyBubble.id = 'boy-bubble';
+            boyBubble.textContent = 'hehehehe';
+            boy.parentNode.appendChild(boyBubble);
+
+            // After 3 seconds, boy moves to right
+            setTimeout(() => {
+                boy.classList.add('delivery-exit');
+                if (boyBubble.parentNode) boyBubble.remove();
+                console.log('🚚 Boy exiting right');
+                setTimeout(() => {
+                    tomatoGif.style.display = 'none';
+                    overlay.style.pointerEvents = 'none';
+                    boy.style.left = '-200px';
+                    boy.classList.remove('delivery-exit');
+                    resolve();
+                }, 2200);
+            }, 3000);
+        };
+
+        bubble.removeEventListener('click', acceptHandler);
+        bubble.addEventListener('click', acceptHandler);
+    });
+}
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // AUTH & PROFILE LOADING
     async function loadCurrentUser() {
@@ -475,9 +511,9 @@ function updateTomatoButton() {
             else await loadProfile(currentPlayer.id);
 
             // After profile loads, check for deliveries (only for the owner)
-            if (profileOwner && profileOwner.id === currentPlayer.id) {
-                setTimeout(checkAndShowDeliveries, 2000);
-            }
+if (profileOwner && profileOwner.id === currentPlayer.id) {
+    setTimeout(checkAndShowDeliveries, 2000);
+}
         } catch (err) {
             document.getElementById('profileView').innerHTML = `<div class="card-modern"><div class="card-header-modern">⚠️ Error</div><div class="card-content-modern">${err.message}</div></div>`;
         }
