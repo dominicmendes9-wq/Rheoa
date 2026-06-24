@@ -286,16 +286,40 @@
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // TOMATO FUNCTIONS
-  async function refillTomatoes() {
+async function refillTomatoes() {
     try {
         const { data, error } = await sb.rpc('refill_tomatoes');
         if (error) throw error;
-        // data is an array of rows
-        if (data && data.length > 0 && data[0].success && currentPlayer) {
-            currentPlayer.tomatoes = data[0].new_tomatoes;
+        if (data && data.length > 0) {
+            const result = data[0];
+            if (result.success && result.new_tomatoes !== null) {
+                if (currentPlayer) currentPlayer.tomatoes = result.new_tomatoes;
+            }
+        }
+        // Always update button
+        updateTomatoButton();
+        // Fallback: fetch directly to ensure we have latest
+        const { data: playerData } = await sb
+            .from('players')
+            .select('tomatoes')
+            .eq('id', currentPlayer.id)
+            .single();
+        if (playerData && currentPlayer) {
+            currentPlayer.tomatoes = playerData.tomatoes;
+            updateTomatoButton();
         }
     } catch (e) {
         console.warn('Refill error:', e);
+        // Fallback fetch
+        const { data: playerData } = await sb
+            .from('players')
+            .select('tomatoes')
+            .eq('id', currentPlayer.id)
+            .single();
+        if (playerData && currentPlayer) {
+            currentPlayer.tomatoes = playerData.tomatoes;
+            updateTomatoButton();
+        }
     }
 }
 
@@ -303,7 +327,6 @@ async function sendTomato(receiverId) {
     try {
         const { data, error } = await sb.rpc('send_tomato', { p_receiver_id: receiverId });
         if (error) throw error;
-        // data is an array of rows
         if (data && data.length > 0) {
             const result = data[0];
             if (result.success) {
@@ -320,6 +343,7 @@ async function sendTomato(receiverId) {
     } catch (e) {
         console.error('Send tomato error:', e);
         showToast('Error sending tomato: ' + e.message, 'error');
+        await refillTomatoes();
     }
 }
 
