@@ -366,21 +366,51 @@ async function checkAndShowDeliveries() {
     }
     console.log('🔍 Checking deliveries for player:', currentPlayer.id);
     try {
-        const { data, error } = await sb.rpc('get_pending_deliveries', { p_player_id: currentPlayer.id });
-        if (error) throw error;
-        console.log('📦 Pending deliveries:', data);
-        if (data && data.length > 0) {
-            const delivery = data[0];
-            showToast('📦 You have a tomato delivery!', 'info');
+        // Method 1: Use RPC
+        let deliveries = [];
+        try {
+            const { data, error } = await sb.rpc('get_pending_deliveries', { p_player_id: currentPlayer.id });
+            if (error) throw error;
+            if (data && data.length > 0) deliveries = data;
+            console.log('📦 RPC deliveries:', deliveries);
+        } catch (rpcError) {
+            console.warn('RPC failed, using direct query:', rpcError);
+        }
+
+        // If RPC returned empty, try direct query
+        if (deliveries.length === 0) {
+            const { data: directData, error: directError } = await sb
+                .from('tomato_deliveries')
+                .select(`
+                    id,
+                    sent_at,
+                    sender:sender_id (username, avatar_url)
+                `)
+                .eq('receiver_id', currentPlayer.id)
+                .is('received_at', null)
+                .eq('shown', false);
+            if (!directError && directData && directData.length > 0) {
+                deliveries = directData.map(d => ({
+                    id: d.id,
+                    sender_username: d.sender?.username || 'Unknown',
+                    sender_avatar: d.sender?.avatar_url || null,
+                    sent_at: d.sent_at
+                }));
+                console.log('📦 Direct query deliveries:', deliveries);
+            }
+        }
+
+        if (deliveries && deliveries.length > 0) {
+            const delivery = deliveries[0];
+            showToast(`📦 Tomato from ${delivery.sender_username}!`, 'info');
             // Wait a moment, then run animation
             setTimeout(async () => {
                 try {
                     await runDeliveryAnimation(delivery.id);
-                    // Mark as shown (but not yet received) after animation starts
-                    await sb.rpc('accept_tomato_delivery', { p_delivery_id: delivery.id });
+                    // Mark as shown after animation (optional)
                 } catch (animError) {
                     console.error('Animation error:', animError);
-                    showToast('⚠️ Delivery arrived but animation failed. Check console.', 'error');
+                    showToast('⚠️ Delivery arrived but animation failed.', 'error');
                 }
             }, 1000);
         } else {
