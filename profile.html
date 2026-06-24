@@ -286,42 +286,51 @@
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // TOMATO FUNCTIONS
-    async function refillTomatoes() {
-        try {
-            const { data, error } = await sb.rpc('refill_tomatoes');
-            if (error) throw error;
-            if (data.success && currentPlayer) {
-                currentPlayer.tomatoes = data.new_tomatoes;
-            }
-        } catch (e) { console.warn('Refill error:', e); }
+  async function refillTomatoes() {
+    try {
+        const { data, error } = await sb.rpc('refill_tomatoes');
+        if (error) throw error;
+        // data is an array of rows
+        if (data && data.length > 0 && data[0].success && currentPlayer) {
+            currentPlayer.tomatoes = data[0].new_tomatoes;
+        }
+    } catch (e) {
+        console.warn('Refill error:', e);
     }
+}
 
-    async function sendTomato(receiverId) {
-        try {
-            const { data, error } = await sb.rpc('send_tomato', { p_receiver_id: receiverId });
-            if (error) throw error;
-            if (data.success) {
-                const remaining = data.remaining_tomatoes;
+async function sendTomato(receiverId) {
+    try {
+        const { data, error } = await sb.rpc('send_tomato', { p_receiver_id: receiverId });
+        if (error) throw error;
+        // data is an array of rows
+        if (data && data.length > 0) {
+            const result = data[0];
+            if (result.success) {
+                const remaining = result.remaining_tomatoes;
                 showToast(`🍅 1 tomato sent! ${remaining} remaining in stock.`, 'success');
                 if (currentPlayer) currentPlayer.tomatoes = remaining;
                 updateTomatoButton();
             } else {
-                showToast(`❌ ${data.message}`, 'error');
+                showToast(`❌ ${result.message}`, 'error');
             }
-        } catch (e) {
-            showToast('Error sending tomato', 'error');
-            console.error(e);
+        } else {
+            showToast('Unexpected response from server', 'error');
         }
+    } catch (e) {
+        console.error('Send tomato error:', e);
+        showToast('Error sending tomato: ' + e.message, 'error');
     }
+}
 
-    function updateTomatoButton() {
-        const btn = document.getElementById('tomatoBtn');
-        if (btn) {
-            const count = currentPlayer?.tomatoes ?? 0;
-            btn.innerHTML = `🍅 Throw Tomato (${count})`;
-            btn.disabled = count <= 0;
-        }
+function updateTomatoButton() {
+    const btn = document.getElementById('tomatoBtn');
+    if (btn) {
+        const count = currentPlayer?.tomatoes ?? 0;
+        btn.innerHTML = `🍅 Throw Tomato (${count})`;
+        btn.disabled = count <= 0;
     }
+}
 
     async function checkAndShowDeliveries() {
         if (!currentPlayer) return;
