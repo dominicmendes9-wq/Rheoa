@@ -359,27 +359,33 @@ function updateTomatoButton() {
 // TOMATO DELIVERY – with robust logging and fallback
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// DEFINITIVE TOMATO DELIVERY CHECK
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 async function checkAndShowDeliveries() {
     if (!currentPlayer) {
         console.warn('checkAndShowDeliveries: No currentPlayer');
         return;
     }
     console.log('🔍 Checking deliveries for player:', currentPlayer.id);
-    try {
-        // Method 1: Use RPC
-        let deliveries = [];
-        try {
-            const { data, error } = await sb.rpc('get_pending_deliveries', { p_player_id: currentPlayer.id });
-            if (error) throw error;
-            if (data && data.length > 0) deliveries = data;
-            console.log('📦 RPC deliveries:', deliveries);
-        } catch (rpcError) {
-            console.warn('RPC failed, using direct query:', rpcError);
-        }
+    
+    let deliveries = [];
 
-        // If RPC returned empty, try direct query
-        if (deliveries.length === 0) {
-            const { data: directData, error: directError } = await sb
+    // 1. Try RPC
+    try {
+        const { data, error } = await sb.rpc('get_pending_deliveries', { p_player_id: currentPlayer.id });
+        if (error) throw error;
+        if (data && data.length > 0) deliveries = data;
+        console.log('📦 RPC deliveries:', deliveries);
+    } catch (rpcError) {
+        console.warn('RPC failed, using direct query:', rpcError);
+    }
+
+    // 2. If RPC empty, try direct query (fallback)
+    if (deliveries.length === 0) {
+        try {
+            const { data, error } = await sb
                 .from('tomato_deliveries')
                 .select(`
                     id,
@@ -389,8 +395,8 @@ async function checkAndShowDeliveries() {
                 .eq('receiver_id', currentPlayer.id)
                 .is('received_at', null)
                 .eq('shown', false);
-            if (!directError && directData && directData.length > 0) {
-                deliveries = directData.map(d => ({
+            if (!error && data && data.length > 0) {
+                deliveries = data.map(d => ({
                     id: d.id,
                     sender_username: d.sender?.username || 'Unknown',
                     sender_avatar: d.sender?.avatar_url || null,
@@ -398,28 +404,30 @@ async function checkAndShowDeliveries() {
                 }));
                 console.log('📦 Direct query deliveries:', deliveries);
             }
+        } catch (directError) {
+            console.warn('Direct query error:', directError);
         }
-
-        if (deliveries && deliveries.length > 0) {
-            const delivery = deliveries[0];
-            showToast(`📦 Tomato from ${delivery.sender_username}!`, 'info');
-            // Wait a moment, then run animation
-            setTimeout(async () => {
-                try {
-                    await runDeliveryAnimation(delivery.id);
-                    // Mark as shown after animation (optional)
-                } catch (animError) {
-                    console.error('Animation error:', animError);
-                    showToast('⚠️ Delivery arrived but animation failed.', 'error');
-                }
-            }, 1000);
-        } else {
-            console.log('No pending deliveries.');
-        }
-    } catch (e) {
-        console.error('Delivery check error:', e);
-        showToast('Error checking deliveries: ' + e.message, 'error');
     }
+
+    // 3. If still empty, show manual check (debug)
+    if (deliveries.length === 0) {
+        console.log('No pending deliveries.');
+        return;
+    }
+
+    // Show toast and start animation
+    const delivery = deliveries[0];
+    showToast(`📦 Tomato from ${delivery.sender_username}!`, 'info');
+    
+    // Wait a moment for toast to show, then run animation
+    setTimeout(async () => {
+        try {
+            await runDeliveryAnimation(delivery.id);
+        } catch (animError) {
+            console.error('Animation error:', animError);
+            showToast('⚠️ Delivery arrived but animation failed. Check console.', 'error');
+        }
+    }, 1000);
 }
 
 function runDeliveryAnimation(deliveryId) {
@@ -430,14 +438,11 @@ function runDeliveryAnimation(deliveryId) {
             const bubble = document.getElementById('delivery-bubble');
             const tomatoGif = document.getElementById('tomato-gif');
 
-            // Check if elements exist
             if (!overlay || !boy || !bubble || !tomatoGif) {
                 console.error('Missing delivery elements:', { overlay, boy, bubble, tomatoGif });
                 reject('Missing DOM elements');
                 return;
             }
-
-            console.log('Delivery elements found, starting animation.');
 
             // Reset positions
             boy.style.left = '-200px';
@@ -463,7 +468,7 @@ function runDeliveryAnimation(deliveryId) {
             }, 2500);
 
             // Click handler for bubble
-            const acceptHandler = () => {
+            const acceptHandler = async () => {
                 bubble.style.display = 'none';
                 tomatoGif.style.display = 'block';
                 console.log('🍅 Tomato gif shown');
@@ -473,6 +478,13 @@ function runDeliveryAnimation(deliveryId) {
                 boyBubble.id = 'boy-bubble';
                 boyBubble.textContent = 'hehehehe';
                 boy.parentNode.appendChild(boyBubble);
+
+                // Mark as received in DB (so it doesn't show again)
+                try {
+                    await sb.rpc('accept_tomato_delivery', { p_delivery_id: deliveryId });
+                } catch (e) {
+                    console.warn('Failed to mark delivery as received:', e);
+                }
 
                 // After 3 seconds, boy moves to right
                 setTimeout(() => {
