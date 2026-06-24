@@ -108,8 +108,8 @@
             position: absolute;
             bottom: 0;
             left: -200px;
-            height: 120px;
-            transition: left 2s ease-in-out;
+            height: 240px;
+            transition: left 4s ease-in-out;
             pointer-events: none;
             image-rendering: pixelated;
         }
@@ -155,13 +155,13 @@
             transform: translate(-50%, -50%);
             z-index: 10000;
             display: none;
-            width: 150px;
+            width: 300px;
             height: auto;
             pointer-events: none;
         }
         .delivery-exit {
             left: 110vw !important;
-            transition: left 2s ease-in-out;
+            transition: left 4s ease-in-out;
         }
         #boy-bubble {
             position: absolute;
@@ -438,7 +438,7 @@
 
     // Show toast and start animation
     const delivery = deliveries[0];
-    showToast(`📦 Tomato from ${delivery.sender_username}!`, 'info');
+    showToast(`📦 Incoming parcel from ${delivery.sender_username}!`, 'info');
 
     setTimeout(async () => {
         try {
