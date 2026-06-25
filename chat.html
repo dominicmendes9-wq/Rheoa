@@ -6,7 +6,7 @@
     <title>Chat - Rheoa RPG</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
     <style>
-        /* ─── CSS Variables & Themes (same as before) ─── */
+        /* ─── CSS Variables & Themes ─── */
         :root {
             --bg-body: #f0f4fa;
             --card-bg: #fff;
@@ -225,19 +225,18 @@
             align-items: center;
             gap: 8px;
         }
-        .online-count select {
-            background: rgba(255,255,255,0.15);
-            border: 1px solid rgba(255,255,255,0.2);
-            border-radius: 20px;
+        .online-count .reports-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
             color: var(--header-text);
-            padding: 2px 8px;
+            border-radius: 20px;
+            padding: 2px 10px;
+            cursor: pointer;
             font-family: var(--font-family);
             font-size: 0.75rem;
-            cursor: pointer;
         }
-        .online-count select option {
-            background: var(--card-bg);
-            color: var(--text-main);
+        .online-count .reports-btn:hover {
+            background: rgba(255,255,255,0.3);
         }
 
         .messages-area {
@@ -431,13 +430,30 @@
             flex-direction: column;
             overflow: hidden;
         }
-        .members-header {
+        .members-tabs {
+            display: flex;
             background: var(--header-bg);
-            color: var(--header-text);
-            padding: 12px 16px;
-            font-weight: 700;
-            font-size: 1rem;
             border-bottom: 1px solid var(--border-light);
+        }
+        .members-tab {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--header-text);
+            padding: 10px 12px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: .2s;
+            font-family: var(--font-family);
+            opacity: 0.7;
+        }
+        .members-tab.active {
+            opacity: 1;
+            background: rgba(255,255,255,0.1);
+        }
+        .members-tab:hover {
+            opacity: 1;
         }
         .members-list {
             flex: 1;
@@ -508,7 +524,7 @@
         .status-invisible { background: #9e9e9e; }
         .status-offline { background: #9e9e9e; }
 
-        /* ─── DM Windows (placeholder, to be expanded in later parts) ─── */
+        /* ─── DM Windows ─── */
         .dm-window-container {
             position: fixed;
             top: 0;
@@ -517,6 +533,264 @@
             height: 100%;
             pointer-events: none;
             z-index: 9998;
+        }
+        .dm-window {
+            position: absolute;
+            pointer-events: all;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: var(--border-radius-card);
+            box-shadow: var(--card-shadow);
+            width: 420px;
+            height: 500px;
+            min-width: 350px;
+            min-height: 300px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: box-shadow 0.2s;
+            resize: both;
+        }
+        .dm-window.glow {
+            box-shadow: 0 0 20px 10px rgba(44,110,158,0.4);
+            border-color: var(--accent);
+        }
+        .dm-window.minimized {
+            height: 48px;
+            min-height: 48px;
+            overflow: hidden;
+            resize: none;
+            bottom: 10px;
+            left: auto;
+            right: 10px;
+            width: 200px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+        }
+        .dm-window.minimized .dm-messages,
+        .dm-window.minimized .dm-input-area {
+            display: none;
+        }
+        .dm-window.minimized .dm-header {
+            border-radius: var(--border-radius-card);
+        }
+        .dm-header {
+            background: var(--header-bg);
+            color: var(--header-text);
+            padding: 8px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+            cursor: grab;
+            user-select: none;
+            gap: 6px;
+        }
+        .dm-header:active {
+            cursor: grabbing;
+        }
+        .dm-title {
+            font-weight: 700;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex: 1;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+        }
+        .dm-title .online-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #4CAF50;
+            display: inline-block;
+            flex-shrink: 0;
+        }
+        .dm-controls {
+            display: flex;
+            gap: 4px;
+            flex-shrink: 0;
+        }
+        .dm-controls button {
+            background: transparent;
+            border: none;
+            color: var(--header-text);
+            font-size: 0.9rem;
+            cursor: pointer;
+            padding: 0 4px;
+            opacity: 0.7;
+            transition: .2s;
+        }
+        .dm-controls button:hover {
+            opacity: 1;
+        }
+        .dm-controls .dm-btn-dropdown {
+            position: relative;
+        }
+        .dm-controls .dm-btn-dropdown .dropdown-menu {
+            display: none;
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: var(--card-bg);
+            border: 1px solid var(--border-light);
+            border-radius: 8px;
+            padding: 4px 0;
+            min-width: 120px;
+            box-shadow: var(--card-shadow);
+            z-index: 100;
+        }
+        .dm-controls .dm-btn-dropdown .dropdown-menu button {
+            display: block;
+            width: 100%;
+            padding: 6px 12px;
+            background: transparent;
+            border: none;
+            color: var(--text-main);
+            font-family: var(--font-family);
+            font-size: 0.8rem;
+            text-align: left;
+            cursor: pointer;
+        }
+        .dm-controls .dm-btn-dropdown .dropdown-menu button:hover {
+            background: var(--btn-ghost);
+        }
+        .dm-controls .dm-btn-dropdown:hover .dropdown-menu {
+            display: block;
+        }
+        .dm-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            background: var(--card-header-bg);
+        }
+        .dm-messages .message {
+            max-width: 80%;
+        }
+        .dm-input-area {
+            padding: 12px 16px;
+            border-top: 1px solid var(--border-light);
+            background: var(--card-bg);
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+        .dm-input-area .toolbar {
+            background: var(--toolbar-bg);
+            padding: 4px 6px;
+            gap: 2px;
+        }
+        .dm-input-area .toolbar button {
+            font-size: 0.8rem;
+            padding: 2px 8px;
+        }
+        .dm-input-area .toolbar input[type="color"] {
+            width: 20px;
+            height: 20px;
+        }
+        .dm-input-row {
+            display: flex;
+            gap: 8px;
+            align-items: flex-end;
+            position: relative;
+        }
+        .dm-input-row textarea {
+            flex: 1;
+            padding: 8px 12px;
+            font-family: var(--font-family);
+            border: 1px solid var(--border-light);
+            border-radius: 12px;
+            background: var(--card-header-bg);
+            color: var(--text-main);
+            resize: none;
+            font-size: 0.95rem;
+            min-height: 40px;
+            transition: border .2s;
+        }
+        .dm-input-row textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(44,110,158,0.15);
+        }
+        .dm-input-row button {
+            padding: 8px 16px;
+            background: var(--btn-primary);
+            color: #fff;
+            border: none;
+            border-radius: 30px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: .2s;
+            font-family: var(--font-family);
+            white-space: nowrap;
+            font-size: 0.9rem;
+        }
+        .dm-input-row button:hover {
+            background: var(--btn-primary-hover);
+        }
+        .dm-input-row .nudge-btn {
+            background: #ff9800;
+            color: #fff;
+            padding: 8px 12px;
+            font-size: 0.8rem;
+        }
+        .dm-input-row .nudge-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        /* ─── Minimized bar ─── */
+        .dm-taskbar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 50px;
+            background: var(--card-bg);
+            border-top: 1px solid var(--border-light);
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            gap: 8px;
+            z-index: 9999;
+            overflow-x: auto;
+            pointer-events: all;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+        }
+        .dm-taskbar-item {
+            background: var(--btn-ghost);
+            border-radius: 20px;
+            padding: 4px 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: .2s;
+            border: 1px solid transparent;
+        }
+        .dm-taskbar-item:hover {
+            background: var(--accent);
+            color: #fff;
+            border-color: var(--accent);
+        }
+        .dm-taskbar-item .close-minimized {
+            background: transparent;
+            border: none;
+            color: inherit;
+            cursor: pointer;
+            font-size: 1rem;
+            padding: 0 2px;
+            opacity: 0.6;
+        }
+        .dm-taskbar-item .close-minimized:hover {
+            opacity: 1;
         }
 
         /* ─── Modal (Entry) ─── */
@@ -597,6 +871,112 @@
             background: var(--btn-primary-hover);
         }
 
+        /* ─── Report Modal ─── */
+        .report-modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            z-index: 10001;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(4px);
+        }
+        .report-modal-content {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: var(--border-radius-card);
+            box-shadow: var(--card-shadow);
+            padding: 25px;
+            max-width: 450px;
+            width: 90%;
+        }
+        .report-modal-content h3 {
+            margin-bottom: 12px;
+        }
+        .report-modal-content textarea {
+            width: 100%;
+            height: 100px;
+            padding: 8px 12px;
+            border: 1px solid var(--border-light);
+            border-radius: 8px;
+            background: var(--card-bg);
+            color: var(--text-main);
+            font-family: var(--font-family);
+            resize: vertical;
+        }
+        .report-modal-content .report-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 12px;
+        }
+        .report-modal-content .report-actions button {
+            flex: 1;
+            padding: 8px;
+            border: none;
+            border-radius: 30px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: var(--font-family);
+        }
+        .report-modal-content .report-actions .btn-submit {
+            background: var(--btn-primary);
+            color: #fff;
+        }
+        .report-modal-content .report-actions .btn-cancel {
+            background: var(--btn-ghost);
+            color: var(--text-main);
+        }
+
+        /* ─── Reports list modal (founder) ─── */
+        .reports-list-modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            z-index: 10002;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(4px);
+        }
+        .reports-list-modal-content {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: var(--border-radius-card);
+            box-shadow: var(--card-shadow);
+            padding: 25px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .reports-list-modal-content h3 {
+            margin-bottom: 12px;
+        }
+        .report-entry {
+            border-bottom: 1px solid var(--border-light);
+            padding: 10px 0;
+        }
+        .report-entry .report-header {
+            display: flex;
+            justify-content: space-between;
+            font-weight: 600;
+        }
+        .report-entry .report-messages {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+            max-height: 100px;
+            overflow-y: auto;
+            background: var(--card-header-bg);
+            padding: 6px 10px;
+            border-radius: 6px;
+        }
+        .report-entry .report-messages .msg {
+            border-bottom: 1px solid var(--border-light);
+            padding: 2px 0;
+        }
+
         /* ─── Toast ─── */
         .toast-container {
             position: fixed;
@@ -647,6 +1027,7 @@
             .chat-header { flex-direction: column; gap: 8px; text-align: center; }
             .message { max-width: 90%; }
             .toolbar button { font-size: 0.75rem; padding: 2px 8px; }
+            .dm-window { width: 90%; height: 80vh; min-width: unset; min-height: unset; }
         }
     </style>
 </head>
@@ -656,15 +1037,11 @@
 <div class="entry-modal" id="entryModal">
     <div class="entry-modal-content">
         <h2>👋 Welcome to Chat</h2>
-        <div class="notice">
-            ⚠️ You must be <strong>18 years or older</strong> to use the chat room.
-        </div>
+        <div class="notice">⚠️ You must be <strong>18 years or older</strong> to use the chat room.</div>
         <label>Display Name</label>
         <input type="text" id="tempUsername" placeholder="Your chat name (default: your username)">
-
         <label>Age <span style="color:red;">*</span></label>
         <input type="number" id="userAge" placeholder="18+" min="18" required>
-
         <label>Gender <span style="color:red;">*</span></label>
         <select id="userGender" required>
             <option value="">Select...</option>
@@ -672,7 +1049,6 @@
             <option value="female">Female</option>
             <option value="other">Other</option>
         </select>
-
         <label>Country</label>
         <select id="userCountry">
             <option value="">Select your country</option>
@@ -687,13 +1063,35 @@
             <option value="Japan">🇯🇵 Japan</option>
             <option value="South Africa">🇿🇦 South Africa</option>
         </select>
-
         <div class="checkbox-row">
             <input type="checkbox" id="invisibleMode">
             <label for="invisibleMode" style="margin:0;">👻 Login as invisible</label>
         </div>
-
         <button class="btn-save" onclick="saveChatProfile()">Enter Chat</button>
+    </div>
+</div>
+
+<!-- REPORT MODAL -->
+<div class="report-modal" id="reportModal">
+    <div class="report-modal-content">
+        <h3>🚨 Report User</h3>
+        <p id="reportTargetName" style="margin-bottom:8px;"></p>
+        <textarea id="reportReason" placeholder="Reason for reporting..."></textarea>
+        <div class="report-actions">
+            <button class="btn-submit" onclick="submitReport()">Submit Report</button>
+            <button class="btn-cancel" onclick="closeReportModal()">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- REPORTS LIST MODAL (founder only) -->
+<div class="reports-list-modal" id="reportsListModal">
+    <div class="reports-list-modal-content">
+        <h3>📋 User Reports</h3>
+        <div id="reportsListContainer">
+            <div class="loading">Loading reports...</div>
+        </div>
+        <button style="margin-top:12px; padding:8px 16px; border:none; border-radius:30px; background:var(--btn-ghost); cursor:pointer; font-family:var(--font-family);" onclick="closeReportsList()">Close</button>
     </div>
 </div>
 
@@ -717,7 +1115,6 @@
 
     <!-- Chat Container -->
     <div class="chat-container">
-        <!-- Main Chat -->
         <div class="chat-main">
             <div class="chat-header">
                 <div class="room-info">
@@ -730,6 +1127,7 @@
                 </div>
                 <div class="online-count">
                     <span id="onlineCount">0 online</span>
+                    <button class="reports-btn" id="reportsBtn" style="display:none;" onclick="openReportsList()">📋 Reports</button>
                 </div>
             </div>
             <div class="messages-area" id="messagesArea">
@@ -737,12 +1135,12 @@
             </div>
             <div class="message-input-area">
                 <div class="toolbar" id="toolbar" style="display:none;">
-                    <button type="button" onclick="formatMessage('bold')"><b>B</b></button>
-                    <button type="button" onclick="formatMessage('italic')"><i>I</i></button>
-                    <button type="button" onclick="formatMessage('h2')">H2</button>
-                    <button type="button" onclick="insertLink()">🔗 Link</button>
+                    <button onclick="formatMessage('bold')"><b>B</b></button>
+                    <button onclick="formatMessage('italic')"><i>I</i></button>
+                    <button onclick="formatMessage('h2')">H2</button>
+                    <button onclick="insertLink()">🔗 Link</button>
                     <span class="separator"></span>
-                    <button type="button" onclick="toggleEmojiPicker()">😊</button>
+                    <button onclick="toggleEmojiPicker()">😊</button>
                 </div>
                 <div class="input-row">
                     <textarea id="messageInput" placeholder="Type your message..." rows="2"></textarea>
@@ -767,7 +1165,10 @@
 
         <!-- Members Sidebar -->
         <div class="members-sidebar">
-            <div class="members-header">👥 Online</div>
+            <div class="members-tabs">
+                <button class="members-tab active" data-tab="online" onclick="switchMemberTab('online')">🟢 Online</button>
+                <button class="members-tab" data-tab="friends" onclick="switchMemberTab('friends')">👥 Friends</button>
+            </div>
             <div class="members-list" id="membersList">
                 <div class="loading">Loading...</div>
             </div>
@@ -775,14 +1176,19 @@
     </div>
 </div>
 
-<!-- DM Container (will be used later) -->
+<!-- DM Container -->
 <div class="dm-window-container" id="dmContainer"></div>
+
+<!-- Taskbar -->
+<div class="dm-taskbar" id="dmTaskbar"></div>
 
 <!-- Toast Container -->
 <div class="toast-container" id="toast-container"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 <script>
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // Supabase init
     const sb = window.supabase.createClient(
         "https://mtiwodvsrwvrujbhmmrn.supabase.co",
         "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
@@ -856,6 +1262,12 @@
     let awayCheckInterval = null;
     let activityInterval = null;
 
+    // DM state
+    let openDMs = [];
+    const MAX_DMS = 5;
+    let currentMemberTab = 'online';
+    let friendsList = [];
+
     // ─── Auth & Player ────────────────────────────────────────
     async function getPlayer() {
         const { data: { user } } = await sb.auth.getUser();
@@ -886,7 +1298,6 @@
             console.error('Error loading chat profile:', error);
             return null;
         }
-
         if (data) {
             chatProfile = data;
             return data;
@@ -932,11 +1343,7 @@
 
         chatProfile = profileData;
         document.getElementById('entryModal').style.display = 'none';
-
-        // Update status dropdown
         document.getElementById('statusSelect').value = chatProfile.status;
-
-        // Now proceed with chat initialization
         await initializeChat();
     }
 
@@ -952,18 +1359,15 @@
             console.error('Error fetching global room:', error);
             return null;
         }
-
         if (data) {
             globalRoom = data;
             return data;
         }
-
         const { data: newRoom, error: createError } = await sb
             .from('chat_rooms')
             .insert({ name: 'Global Chat', type: 'global' })
             .select('*')
             .single();
-
         if (createError) {
             console.error('Error creating global room:', createError);
             return null;
@@ -1041,7 +1445,6 @@
                 list.push(...state[key]);
             });
             onlineUsers = list;
-            // Ensure current user is in the list (fallback)
             if (!onlineUsers.some(u => u.user_id === currentPlayer.id)) {
                 onlineUsers.push({
                     user_id: currentPlayer.id,
@@ -1065,10 +1468,14 @@
         messageChannel.subscribe(async (status) => {
             if (status === 'SUBSCRIBED') {
                 await updatePresence();
-                // Start away detection
                 startAwayDetection();
-                // Start activity tracking
                 startActivityTracking();
+                // Load friends list for later
+                loadFriendsList();
+                // Show reports button for founder
+                if (currentPlayer.subscription_tier?.toLowerCase() === 'founder') {
+                    document.getElementById('reportsBtn').style.display = 'inline-block';
+                }
             }
         });
     }
@@ -1087,19 +1494,33 @@
         });
     }
 
-    // ─── Render Members ──────────────────────────────────────
+    // ─── Render Members (with tab support) ──────────────────
     function renderMembers() {
         const container = document.getElementById('membersList');
-        // Filter out invisible users unless they are the current user or founder?
-        // For now, show all but mark invisible with gray dot
-        const visibleUsers = onlineUsers.filter(u => {
-            if (u.user_id === currentPlayer.id) return true;
-            if (u.invisible_mode && currentPlayer.subscription_tier?.toLowerCase() !== 'founder') return false;
-            return true;
-        });
+        let visibleUsers = [];
+
+        if (currentMemberTab === 'online') {
+            // Online tab: show all visible users (exclude invisible unless founder)
+            visibleUsers = onlineUsers.filter(u => {
+                if (u.user_id === currentPlayer.id) return true;
+                if (u.invisible_mode && currentPlayer.subscription_tier?.toLowerCase() !== 'founder') return false;
+                return true;
+            });
+        } else {
+            // Friends tab: show only friends
+            const friendIds = friendsList.map(f => f.friend_id);
+            visibleUsers = onlineUsers.filter(u => {
+                if (u.user_id === currentPlayer.id) return false; // don't show self in friends list
+                if (!friendIds.includes(u.user_id)) return false;
+                if (u.invisible_mode && currentPlayer.subscription_tier?.toLowerCase() !== 'founder') return false;
+                return true;
+            });
+        }
 
         if (!visibleUsers.length) {
-            container.innerHTML = '<div class="empty">No one else is online.</div>';
+            container.innerHTML = currentMemberTab === 'online' ? 
+                '<div class="empty">No one else is online.</div>' : 
+                '<div class="empty">No friends online.</div>';
             return;
         }
 
@@ -1144,6 +1565,26 @@
         return map[tier] || '🟢';
     }
 
+    function switchMemberTab(tab) {
+        currentMemberTab = tab;
+        document.querySelectorAll('.members-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+        renderMembers();
+    }
+
+    // ─── Friends List ─────────────────────────────────────────
+    async function loadFriendsList() {
+        if (!currentPlayer) return;
+        const { data, error } = await sb
+            .from('chat_friends')
+            .select('friend_id')
+            .eq('user_id', currentPlayer.id);
+        if (error) {
+            console.error('Error loading friends:', error);
+            return;
+        }
+        friendsList = data || [];
+    }
+
     // ─── Send Global Message ─────────────────────────────────
     async function sendMessage() {
         const input = document.getElementById('messageInput');
@@ -1182,12 +1623,11 @@
             showToast('Error sending message', 'error');
         } else {
             loadMessages();
-            // Update activity
             updateActivity();
         }
     }
 
-    // ─── Global Formatting ────────────────────────────────────
+    // ─── Formatting ──────────────────────────────────────────
     function formatMessage(type) {
         const input = document.getElementById('messageInput');
         const start = input.selectionStart;
@@ -1219,7 +1659,7 @@
         input.setSelectionRange(newPos, newPos);
     }
 
-    // ─── Global Emoji Picker ──────────────────────────────────
+    // ─── Emoji Picker ────────────────────────────────────────
     let emojiPickerVisible = false;
     function toggleEmojiPicker() {
         const picker = document.getElementById('emojiPicker');
@@ -1247,7 +1687,6 @@
     // ─── Status Management ────────────────────────────────────
     async function updateStatus(status) {
         if (!currentPlayer || !chatProfile) return;
-        // If status is 'invisible', auto-enable invisible_mode
         if (status === 'invisible') {
             chatProfile.invisible_mode = true;
         } else {
@@ -1255,39 +1694,30 @@
         }
         chatProfile.status = status;
 
-        // Update database
         await sb
             .from('chat_profiles')
             .update({ status: status, invisible_mode: chatProfile.invisible_mode })
             .eq('player_id', currentPlayer.id);
 
-        // Update presence
         await updatePresence();
-
-        // Re-render members
         renderMembers();
     }
 
     // ─── Activity Tracking ────────────────────────────────────
     function startActivityTracking() {
-        // Track clicks and keypresses on the whole document
         document.addEventListener('click', updateActivity);
         document.addEventListener('keydown', updateActivity);
-        // Also track mouse movement (but throttle)
         let mouseTimer;
         document.addEventListener('mousemove', () => {
             if (mouseTimer) clearTimeout(mouseTimer);
             mouseTimer = setTimeout(updateActivity, 1000);
         });
-        // Send heartbeat every 30 seconds
         activityInterval = setInterval(updateActivity, 30000);
     }
 
     function updateActivity() {
         if (!currentPlayer || !chatProfile) return;
-        // Call the RPC to update last_activity
         sb.rpc('update_chat_activity').catch(e => console.warn('Activity update error:', e));
-        // Also update local
         chatProfile.last_activity = new Date().toISOString();
     }
 
@@ -1296,7 +1726,6 @@
         if (awayCheckInterval) clearInterval(awayCheckInterval);
         awayCheckInterval = setInterval(async () => {
             if (!currentPlayer || !chatProfile) return;
-            // Fetch fresh profile to get last_activity
             const { data } = await sb
                 .from('chat_profiles')
                 .select('last_activity, status')
@@ -1308,7 +1737,6 @@
             const now = new Date();
             const diffSeconds = (now - lastActivity) / 1000;
 
-            // If user is available/busy and inactive for > 2 min, set to away
             if (diffSeconds > 120 && (data.status === 'available' || data.status === 'busy')) {
                 if (chatProfile.status !== 'away') {
                     chatProfile.status = 'away';
@@ -1317,15 +1745,10 @@
                         .update({ status: 'away' })
                         .eq('player_id', currentPlayer.id);
                     await updatePresence();
-                    // Update dropdown
                     document.getElementById('statusSelect').value = 'away';
                     renderMembers();
                 }
             }
-            // If user becomes active again (detected via activity), the status will be changed back by updateActivity? Actually we need to auto-revert if they become active.
-            // We'll handle it in updateActivity: if status is away and they are active, set back to available
-            // But updateActivity only updates last_activity; we'll check in the same interval.
-            // If user is active and status is away, revert to available
             if (diffSeconds < 30 && data.status === 'away') {
                 chatProfile.status = 'available';
                 await sb
@@ -1339,42 +1762,696 @@
         }, 30000);
     }
 
-    // ─── DM Functions (placeholder for later parts) ──────────
-    function openDM(userId, username) {
-        showToast(`DM with ${username} - coming in Part 2`, 'info');
+    // ─── DM Functions ─────────────────────────────────────────
+    async function openDM(recipientId, recipientName) {
+        if (recipientId === currentPlayer.id) {
+            showToast("You can't DM yourself", 'error');
+            return;
+        }
+
+        // Check if target is snoozed or blocked for current user
+        const { data: blockCheck, error: blockError } = await sb.rpc('check_snooze_block', { p_target_id: recipientId });
+        if (blockError) {
+            console.error('Error checking snooze/block:', blockError);
+        } else if (blockCheck) {
+            if (blockCheck.blocked) {
+                showToast(`You have blocked ${recipientName}.`, 'error');
+                return;
+            }
+            if (blockCheck.snoozed) {
+                const expires = new Date(blockCheck.expires_at);
+                const now = new Date();
+                if (expires > now) {
+                    const diff = Math.ceil((expires - now) / 1000 / 60);
+                    showToast(`${recipientName} is snoozed for ${diff} more minutes.`, 'error');
+                    return;
+                }
+            }
+        }
+
+        // Check if already open
+        let existing = openDMs.find(d => d.recipientId === recipientId);
+        if (existing) {
+            if (existing.minimized) restoreDM(existing);
+            existing.windowElement.style.zIndex = 10000 + openDMs.length;
+            return;
+        }
+
+        if (openDMs.length >= MAX_DMS) {
+            showToast(`Maximum ${MAX_DMS} DMs open. Close one first.`, 'error');
+            return;
+        }
+
+        createDMWindow(recipientId, recipientName);
     }
 
-    // ─── Initialize Chat ─────────────────────────────────────
-    async function initializeChat() {
-        // Toolbar visibility
-        updateToolbarVisibility();
+    function createDMWindow(recipientId, recipientName) {
+        const winId = 'dm-' + Date.now();
 
+        const win = document.createElement('div');
+        win.className = 'dm-window';
+        win.dataset.winId = winId;
+        win.style.left = (100 + openDMs.length * 40) + 'px';
+        win.style.top = (100 + openDMs.length * 30) + 'px';
+        win.style.zIndex = 10000 + openDMs.length;
+
+        // Header with buttons
+        const header = document.createElement('div');
+        header.className = 'dm-header';
+        header.innerHTML = `
+            <div class="dm-title">
+                <span class="online-dot"></span>
+                ${escapeHtml(recipientName)}
+            </div>
+            <div class="dm-controls">
+                <button onclick="addChatFriend('${winId}')" title="Add Friend">➕</button>
+                <div class="dm-btn-dropdown" title="Snooze">
+                    <button>⏰</button>
+                    <div class="dropdown-menu">
+                        <button onclick="snoozeUser('${winId}', 20)">20 sec</button>
+                        <button onclick="snoozeUser('${winId}', 60)">1 min</button>
+                        <button onclick="snoozeUser('${winId}', 300)">5 min</button>
+                        <button onclick="snoozeUser('${winId}', 1200)">20 min</button>
+                        <button onclick="snoozeUser('${winId}', 3600)">60 min</button>
+                        <button onclick="snoozeUser('${winId}', 86400)">1 day</button>
+                        <button onclick="snoozeUser('${winId}', 604800)">7 days</button>
+                        <button onclick="snoozeUser('${winId}', 2592000)">30 days</button>
+                    </div>
+                </div>
+                <button onclick="blockUser('${winId}')" title="Block">🚫</button>
+                <button onclick="reportUser('${winId}')" title="Report">🚨</button>
+                <button onclick="minimizeDM('${winId}')" title="Minimize">─</button>
+                <button onclick="closeDM('${winId}')" title="Close">✕</button>
+            </div>
+        `;
+        win.appendChild(header);
+
+        const msgsDiv = document.createElement('div');
+        msgsDiv.className = 'dm-messages';
+        msgsDiv.id = `dmMessages-${winId}`;
+        msgsDiv.innerHTML = '<div class="empty">Loading...</div>';
+        win.appendChild(msgsDiv);
+
+        const inputArea = document.createElement('div');
+        inputArea.className = 'dm-input-area';
+
+        const toolbar = document.createElement('div');
+        toolbar.className = 'toolbar';
+        const isBlackOrFounder = ['black', 'founder'].includes(currentPlayer.subscription_tier?.toLowerCase() || 'basic');
+        if (isBlackOrFounder) {
+            toolbar.innerHTML = `
+                <button onclick="dmFormat('${winId}', 'bold')"><b>B</b></button>
+                <button onclick="dmFormat('${winId}', 'italic')"><i>I</i></button>
+                <button onclick="dmFormat('${winId}', 'h2')">H2</button>
+                <button onclick="dmInsertLink('${winId}')">🔗 Link</button>
+                <span class="separator"></span>
+                <input type="color" id="dmColorPicker-${winId}" onchange="dmInsertColor('${winId}')" value="#ff0000" title="Text color">
+                <span class="separator"></span>
+                <button onclick="dmToggleEmojiPicker('${winId}')">😊</button>
+                <span class="separator"></span>
+                <button class="nudge-btn" onclick="sendNudge('${winId}')">👋 Nudge</button>
+            `;
+        } else {
+            toolbar.innerHTML = `<button onclick="dmToggleEmojiPicker('${winId}')">😊</button>`;
+        }
+        inputArea.appendChild(toolbar);
+
+        const emojiPicker = document.createElement('div');
+        emojiPicker.className = 'emoji-picker';
+        emojiPicker.id = `dmEmojiPicker-${winId}`;
+        emojiPicker.innerHTML = `
+            <button onclick="dmInsertEmoji('${winId}', '😊')">😊</button>
+            <button onclick="dmInsertEmoji('${winId}', '😂')">😂</button>
+            <button onclick="dmInsertEmoji('${winId}', '🤔')">🤔</button>
+            <button onclick="dmInsertEmoji('${winId}', '🔥')">🔥</button>
+            <button onclick="dmInsertEmoji('${winId}', '💯')">💯</button>
+            <button onclick="dmInsertEmoji('${winId}', '✨')">✨</button>
+            <button onclick="dmInsertEmoji('${winId}', '🎉')">🎉</button>
+            <button onclick="dmInsertEmoji('${winId}', '👏')">👏</button>
+            <button onclick="dmInsertEmoji('${winId}', '👍')">👍</button>
+            <button onclick="dmInsertEmoji('${winId}', '❤️')">❤️</button>
+            <button onclick="dmInsertEmoji('${winId}', '🙌')">🙌</button>
+            <button onclick="dmInsertEmoji('${winId}', '🤩')">🤩</button>
+        `;
+        inputArea.appendChild(emojiPicker);
+
+        const inputRow = document.createElement('div');
+        inputRow.className = 'dm-input-row';
+        inputRow.innerHTML = `
+            <textarea id="dmInput-${winId}" placeholder="Type a message..." rows="2"></textarea>
+            <button onclick="dmSend('${winId}')">Send</button>
+        `;
+        inputArea.appendChild(inputRow);
+
+        win.appendChild(inputArea);
+
+        document.getElementById('dmContainer').appendChild(win);
+
+        const dmData = {
+            winId: winId,
+            recipientId: recipientId,
+            recipientName: recipientName,
+            windowElement: win,
+            minimized: false,
+            messages: [],
+            channel: null,
+            lastNudge: 0,
+            emojiPickerVisible: false
+        };
+        openDMs.push(dmData);
+
+        makeDraggable(win, header);
+        loadDMMessages(dmData);
+        setupDMChannel(dmData);
+        updateTaskbar();
+    }
+
+    // ─── DM Message Loading ──────────────────────────────────
+    async function loadDMMessages(dmData) {
+        const { recipientId, winId } = dmData;
+        const msgsDiv = document.getElementById(`dmMessages-${winId}`);
+        if (!msgsDiv) return;
+
+        const { data, error } = await sb
+            .from('dm_messages')
+            .select('*')
+            .or(`and(sender_id.eq.${currentPlayer.id},recipient_id.eq.${recipientId}),and(sender_id.eq.${recipientId},recipient_id.eq.${currentPlayer.id})`)
+            .order('created_at', { ascending: true });
+
+        if (error) {
+            console.error('Error loading DM messages:', error);
+            msgsDiv.innerHTML = '<div class="empty">Error loading messages.</div>';
+            return;
+        }
+        dmData.messages = data || [];
+        renderDMMessages(dmData);
+    }
+
+    function renderDMMessages(dmData) {
+        const { winId, messages, recipientName } = dmData;
+        const msgsDiv = document.getElementById(`dmMessages-${winId}`);
+        if (!msgsDiv) return;
+
+        if (!messages || messages.length === 0) {
+            msgsDiv.innerHTML = '<div class="empty">No messages yet. Say hello!</div>';
+            return;
+        }
+        const playerId = currentPlayer.id;
+        msgsDiv.innerHTML = messages.map(msg => {
+            const isOwn = msg.sender_id === playerId;
+            const username = isOwn ? currentPlayer.username : recipientName;
+            return `
+                <div class="message ${isOwn ? 'own' : ''}">
+                    <div class="message-header">
+                        <span class="message-username">${escapeHtml(username)}</span>
+                        <span class="message-time">${new Date(msg.created_at).toLocaleTimeString()}</span>
+                    </div>
+                    <div class="message-text">${renderMessageContent(msg.content)}</div>
+                </div>
+            `;
+        }).join('');
+        msgsDiv.scrollTop = msgsDiv.scrollHeight;
+    }
+
+    // ─── DM Channel ──────────────────────────────────────────
+    function setupDMChannel(dmData) {
+        const { recipientId, winId } = dmData;
+        const pairId = [currentPlayer.id, recipientId].sort().join('-');
+        const channel = sb.channel(`dm:${pairId}`);
+
+        channel.on('broadcast', { event: 'message' }, (payload) => {
+            const msg = payload.payload;
+            if ((msg.sender_id === currentPlayer.id && msg.recipient_id === recipientId) ||
+                (msg.sender_id === recipientId && msg.recipient_id === currentPlayer.id)) {
+                dmData.messages.push(msg);
+                renderDMMessages(dmData);
+                if (msg.sender_id !== currentPlayer.id) {
+                    glowDMWindow(dmData);
+                    playMessageSound();
+                }
+            }
+        });
+
+        channel.on('broadcast', { event: 'nudge' }, (payload) => {
+            if (payload.payload.sender_id === recipientId) {
+                glowDMWindow(dmData);
+                shakeDMWindow(dmData);
+                playNudgeSound();
+                showToast(`📨 ${escapeHtml(dmData.recipientName)} nudged you!`, 'info');
+            }
+        });
+
+        channel.subscribe(async (status) => {
+            if (status === 'SUBSCRIBED') {
+                await channel.track({
+                    user_id: currentPlayer.id,
+                    username: currentPlayer.username
+                });
+            }
+        });
+
+        dmData.channel = channel;
+    }
+
+    // ─── Send DM Message ─────────────────────────────────────
+    async function dmSend(winId) {
+        const dmData = openDMs.find(d => d.winId === winId);
+        if (!dmData) return;
+        const input = document.getElementById(`dmInput-${winId}`);
+        const text = input.value.trim();
+        if (!text) return;
+
+        input.value = '';
+
+        const tempId = 'temp-' + Date.now();
+        const newMsg = {
+            id: tempId,
+            sender_id: currentPlayer.id,
+            recipient_id: dmData.recipientId,
+            content: text,
+            created_at: new Date().toISOString()
+        };
+
+        if (dmData.channel) {
+            await dmData.channel.send({
+                type: 'broadcast',
+                event: 'message',
+                payload: newMsg
+            });
+        }
+
+        const { error } = await sb
+            .from('dm_messages')
+            .insert({
+                sender_id: currentPlayer.id,
+                recipient_id: dmData.recipientId,
+                content: text
+            });
+
+        if (error) {
+            console.error('Failed to send DM:', error);
+            showToast('Error sending message', 'error');
+        } else {
+            dmData.messages.push(newMsg);
+            renderDMMessages(dmData);
+        }
+    }
+
+    // ─── DM Formatting ──────────────────────────────────────
+    function dmFormat(winId, type) {
+        const input = document.getElementById(`dmInput-${winId}`);
+        if (!input) return;
+        const start = input.selectionStart;
+        const end = input.selectionEnd;
+        const selected = input.value.substring(start, end);
+        let replacement = '';
+        switch(type) {
+            case 'bold': replacement = `**${selected}**`; break;
+            case 'italic': replacement = `*${selected}*`; break;
+            case 'h2': replacement = `\n# ${selected || 'Heading'}\n`; break;
+        }
+        input.value = input.value.substring(0, start) + replacement + input.value.substring(end);
+        input.focus();
+        const newPos = start + replacement.length;
+        input.setSelectionRange(newPos, newPos);
+    }
+
+    function dmInsertLink(winId) {
+        const url = prompt('Enter URL:', 'https://');
+        if (!url) return;
+        const input = document.getElementById(`dmInput-${winId}`);
+        if (!input) return;
+        const start = input.selectionStart;
+        const end = input.selectionEnd;
+        const selected = input.value.substring(start, end) || 'link';
+        const replacement = `[${selected}](${url})`;
+        input.value = input.value.substring(0, start) + replacement + input.value.substring(end);
+        input.focus();
+        const newPos = start + replacement.length;
+        input.setSelectionRange(newPos, newPos);
+    }
+
+    function dmInsertColor(winId) {
+        const color = document.getElementById(`dmColorPicker-${winId}`).value;
+        const input = document.getElementById(`dmInput-${winId}`);
+        if (!input) return;
+        const start = input.selectionStart;
+        const end = input.selectionEnd;
+        const selected = input.value.substring(start, end) || 'text';
+        const replacement = `<color=${color}>${selected}</color>`;
+        input.value = input.value.substring(0, start) + replacement + input.value.substring(end);
+        input.focus();
+        const newPos = start + replacement.length;
+        input.setSelectionRange(newPos, newPos);
+    }
+
+    // ─── DM Emoji Picker ────────────────────────────────────
+    function dmToggleEmojiPicker(winId) {
+        const picker = document.getElementById(`dmEmojiPicker-${winId}`);
+        if (!picker) return;
+        const dmData = openDMs.find(d => d.winId === winId);
+        if (!dmData) return;
+        dmData.emojiPickerVisible = !dmData.emojiPickerVisible;
+        picker.style.display = dmData.emojiPickerVisible ? 'grid' : 'none';
+    }
+
+    function dmInsertEmoji(winId, emoji) {
+        const input = document.getElementById(`dmInput-${winId}`);
+        if (!input) return;
+        const start = input.selectionStart;
+        input.value = input.value.substring(0, start) + emoji + input.value.substring(start);
+        input.focus();
+        const newPos = start + emoji.length;
+        input.setSelectionRange(newPos, newPos);
+        const picker = document.getElementById(`dmEmojiPicker-${winId}`);
+        if (picker) picker.style.display = 'none';
+        const dmData = openDMs.find(d => d.winId === winId);
+        if (dmData) dmData.emojiPickerVisible = false;
+    }
+
+    // ─── Nudge ──────────────────────────────────────────────
+    function sendNudge(winId) {
+        const dmData = openDMs.find(d => d.winId === winId);
+        if (!dmData) return;
+        const now = Date.now();
+        if (now - dmData.lastNudge < 30000) {
+            showToast('Nudge cooldown: wait 30 seconds', 'error');
+            return;
+        }
+        dmData.lastNudge = now;
+        const btn = document.querySelector(`#${winId} .nudge-btn`);
+        if (btn) btn.disabled = true;
+        setTimeout(() => { if (btn) btn.disabled = false; }, 30000);
+
+        if (dmData.channel) {
+            dmData.channel.send({
+                type: 'broadcast',
+                event: 'nudge',
+                payload: { sender_id: currentPlayer.id }
+            });
+        }
+        shakeDMWindow(dmData);
+        playNudgeSound();
+        showToast('Nudge sent!', 'success');
+    }
+
+    // ─── Window Effects ─────────────────────────────────────
+    function shakeDMWindow(dmData) {
+        const win = dmData.windowElement;
+        win.classList.remove('shake');
+        void win.offsetWidth;
+        win.classList.add('shake');
+        setTimeout(() => win.classList.remove('shake'), 500);
+    }
+
+    function glowDMWindow(dmData) {
+        const win = dmData.windowElement;
+        win.classList.add('glow');
+        setTimeout(() => win.classList.remove('glow'), 2000);
+    }
+
+    function playNudgeSound() {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(880, ctx.currentTime);
+            osc.frequency.setValueAtTime(660, ctx.currentTime + 0.1);
+            gain.gain.setValueAtTime(0.3, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.2);
+        } catch (e) {}
+    }
+
+    function playMessageSound() {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(600, ctx.currentTime);
+            osc.frequency.setValueAtTime(800, ctx.currentTime + 0.08);
+            gain.gain.setValueAtTime(0.2, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.15);
+        } catch (e) {}
+    }
+
+    // ─── Minimize / Restore / Close ──────────────────────────
+    function minimizeDM(winId) {
+        const dmData = openDMs.find(d => d.winId === winId);
+        if (!dmData) return;
+        dmData.minimized = true;
+        dmData.windowElement.classList.add('minimized');
+        updateTaskbar();
+    }
+
+    function restoreDM(dmData) {
+        dmData.minimized = false;
+        dmData.windowElement.classList.remove('minimized');
+        updateTaskbar();
+        dmData.windowElement.style.zIndex = 10000 + openDMs.length;
+    }
+
+    function closeDM(winId) {
+        const index = openDMs.findIndex(d => d.winId === winId);
+        if (index === -1) return;
+        const dmData = openDMs[index];
+        if (dmData.channel) dmData.channel.unsubscribe();
+        if (dmData.windowElement.parentNode) dmData.windowElement.parentNode.removeChild(dmData.windowElement);
+        openDMs.splice(index, 1);
+        updateTaskbar();
+        openDMs.forEach((d, i) => d.windowElement.style.zIndex = 10000 + i);
+    }
+
+    // ─── Taskbar ──────────────────────────────────────────────
+    function updateTaskbar() {
+        const taskbar = document.getElementById('dmTaskbar');
+        const minimized = openDMs.filter(d => d.minimized);
+        if (minimized.length === 0) {
+            taskbar.innerHTML = '';
+            return;
+        }
+        taskbar.innerHTML = minimized.map(d => `
+            <div class="dm-taskbar-item" onclick="restoreDM(openDMs.find(dm => dm.winId === '${d.winId}'))">
+                💬 ${escapeHtml(d.recipientName)}
+                <button class="close-minimized" onclick="event.stopPropagation(); closeDM('${d.winId}')">✕</button>
+            </div>
+        `).join('');
+    }
+
+    // ─── Dragging ─────────────────────────────────────────────
+    function makeDraggable(element, handle) {
+        let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+        handle.onmousedown = (e) => {
+            e.preventDefault();
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+            document.onmouseup = closeDragElement;
+            document.onmousemove = elementDrag;
+            const dmData = openDMs.find(d => d.windowElement === element);
+            if (dmData) {
+                const maxZ = Math.max(...openDMs.map(d => parseInt(d.windowElement.style.zIndex) || 10000));
+                element.style.zIndex = maxZ + 1;
+            }
+        };
+
+        function elementDrag(e) {
+            e.preventDefault();
+            pos1 = pos3 - e.clientX;
+            pos2 = pos4 - e.clientY;
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+            element.style.top = (element.offsetTop - pos2) + 'px';
+            element.style.left = (element.offsetLeft - pos1) + 'px';
+        }
+
+        function closeDragElement() {
+            document.onmouseup = null;
+            document.onmousemove = null;
+        }
+    }
+
+    // ─── DM Actions (Friend, Snooze, Block, Report) ─────────
+    function getDMDataByWinId(winId) {
+        return openDMs.find(d => d.winId === winId);
+    }
+
+    async function addChatFriend(winId) {
+        const dmData = getDMDataByWinId(winId);
+        if (!dmData) return;
+        const { data, error } = await sb.rpc('add_chat_friend', { p_friend_id: dmData.recipientId });
+        if (error || !data.success) {
+            showToast(error?.message || data?.error || 'Failed to add friend', 'error');
+        } else {
+            showToast(`${dmData.recipientName} added as friend!`, 'success');
+            await loadFriendsList();
+        }
+    }
+
+    async function snoozeUser(winId, seconds) {
+        const dmData = getDMDataByWinId(winId);
+        if (!dmData) return;
+        const { data, error } = await sb.rpc('snooze_user', { p_target_id: dmData.recipientId, p_duration_seconds: seconds });
+        if (error || !data.success) {
+            showToast(error?.message || data?.error || 'Failed to snooze', 'error');
+        } else {
+            showToast(`${dmData.recipientName} snoozed for ${seconds} seconds.`, 'success');
+            // Close the DM window
+            closeDM(winId);
+        }
+    }
+
+    async function blockUser(winId) {
+        const dmData = getDMDataByWinId(winId);
+        if (!dmData) return;
+        if (!confirm(`Block ${dmData.recipientName}? You won't receive DMs from them.`)) return;
+        const { data, error } = await sb.rpc('block_user', { p_target_id: dmData.recipientId });
+        if (error || !data.success) {
+            showToast(error?.message || data?.error || 'Failed to block', 'error');
+        } else {
+            showToast(`${dmData.recipientName} blocked.`, 'success');
+            closeDM(winId);
+        }
+    }
+
+    function reportUser(winId) {
+        const dmData = getDMDataByWinId(winId);
+        if (!dmData) return;
+        document.getElementById('reportTargetName').textContent = `Reporting: ${dmData.recipientName}`;
+        document.getElementById('reportModal').style.display = 'flex';
+        // Store target in a data attribute
+        document.getElementById('reportModal').dataset.targetId = dmData.recipientId;
+    }
+
+    async function submitReport() {
+        const reason = document.getElementById('reportReason').value.trim();
+        if (!reason) {
+            showToast('Please provide a reason.', 'error');
+            return;
+        }
+        const targetId = document.getElementById('reportModal').dataset.targetId;
+        if (!targetId) return;
+        const { data, error } = await sb.rpc('report_user', { p_target_id: targetId, p_reason: reason });
+        if (error || !data.success) {
+            showToast(error?.message || data?.error || 'Failed to submit report', 'error');
+        } else {
+            showToast('Report submitted. Thank you.', 'success');
+            closeReportModal();
+        }
+    }
+
+    function closeReportModal() {
+        document.getElementById('reportModal').style.display = 'none';
+        document.getElementById('reportReason').value = '';
+    }
+
+    // ─── Reports List (founder only) ─────────────────────────
+    async function openReportsList() {
+        document.getElementById('reportsListModal').style.display = 'flex';
+        const container = document.getElementById('reportsListContainer');
+        container.innerHTML = '<div class="loading">Loading reports...</div>';
+        const { data, error } = await sb
+            .from('chat_reports')
+            .select('*, reporter:reporter_id(username), reported:reported_user_id(username)')
+            .order('created_at', { ascending: false });
+        if (error) {
+            console.error('Error loading reports:', error);
+            container.innerHTML = '<div class="empty">Error loading reports.</div>';
+            return;
+        }
+        if (!data || data.length === 0) {
+            container.innerHTML = '<div class="empty">No reports yet.</div>';
+            return;
+        }
+        container.innerHTML = data.map(r => `
+            <div class="report-entry">
+                <div class="report-header">
+                    <span>👤 ${escapeHtml(r.reported?.username)}</span>
+                    <span>📅 ${new Date(r.created_at).toLocaleString()}</span>
+                </div>
+                <div>📝 Reason: ${escapeHtml(r.reason || 'No reason provided')}</div>
+                <div>📨 Reporter: ${escapeHtml(r.reporter?.username)}</div>
+                <div class="report-messages">
+                    ${(r.last_10_messages || []).map(msg => `
+                        <div class="msg">${escapeHtml(msg.content || '')}</div>
+                    `).join('')}
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function closeReportsList() {
+        document.getElementById('reportsListModal').style.display = 'none';
+    }
+
+    // ─── Subscribe to incoming DMs ──────────────────────────
+    function subscribeToDMIncoming() {
+        if (dmSubscription) return;
+        dmSubscription = sb
+            .channel('dm-incoming')
+            .on('postgres_changes', {
+                event: 'INSERT',
+                schema: 'public',
+                table: 'dm_messages',
+                filter: `recipient_id=eq.${currentPlayer.id}`
+            }, async (payload) => {
+                const msg = payload.new;
+                const { data: sender } = await sb
+                    .from('players')
+                    .select('id, username')
+                    .eq('id', msg.sender_id)
+                    .single();
+                if (!sender) return;
+
+                // Check if this sender is blocked/snoozed by current user
+                const { data: blockCheck } = await sb.rpc('check_snooze_block', { p_target_id: sender.id });
+                if (blockCheck && (blockCheck.blocked || blockCheck.snoozed)) {
+                    // Silently ignore
+                    return;
+                }
+
+                let existing = openDMs.find(d => d.recipientId === sender.id);
+                if (!existing) {
+                    if (openDMs.length >= MAX_DMS) {
+                        showToast(`Incoming DM from ${sender.username}, but you have ${MAX_DMS} DMs open.`, 'error');
+                        return;
+                    }
+                    createDMWindow(sender.id, sender.username);
+                    existing = openDMs.find(d => d.recipientId === sender.id);
+                }
+                if (existing) {
+                    existing.messages.push(msg);
+                    renderDMMessages(existing);
+                    glowDMWindow(existing);
+                    playMessageSound();
+                    if (existing.minimized) restoreDM(existing);
+                    existing.windowElement.style.zIndex = Math.max(...openDMs.map(d => parseInt(d.windowElement.style.zIndex) || 10000)) + 1;
+                }
+            })
+            .subscribe();
+    }
+
+    // ─── Init ─────────────────────────────────────────────────
+    async function initializeChat() {
+        updateToolbarVisibility();
         const room = await getGlobalRoom();
         if (!room) {
             showToast('Could not load chat room', 'error');
             return;
         }
-
         await loadMessages();
         setupGlobalChannel();
+        subscribeToDMIncoming();
     }
 
-    // ─── Entry Modal ──────────────────────────────────────────
-    function showEntryModal() {
-        // Pre-fill with existing data if any
-        if (chatProfile) {
-            document.getElementById('tempUsername').value = chatProfile.temp_username || currentPlayer.username;
-            document.getElementById('userAge').value = chatProfile.age || '';
-            document.getElementById('userGender').value = chatProfile.gender || '';
-            document.getElementById('userCountry').value = chatProfile.country || '';
-            document.getElementById('invisibleMode').checked = chatProfile.invisible_mode || false;
-        } else {
-            document.getElementById('tempUsername').value = currentPlayer.username;
-        }
-        document.getElementById('entryModal').style.display = 'flex';
-    }
-
-    // ─── Init ─────────────────────────────────────────────────
     (async function init() {
         initThemeAndFont();
 
@@ -1384,15 +2461,12 @@
             return;
         }
 
-        // Load chat profile
         const profile = await loadChatProfile();
         if (profile) {
             chatProfile = profile;
-            // Update status dropdown
             document.getElementById('statusSelect').value = profile.status;
             await initializeChat();
         } else {
-            // Show entry modal
             showEntryModal();
         }
     })();
