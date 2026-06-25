@@ -6,7 +6,7 @@
   <title>Chat - Rheoa RPG</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
   <style>
-    /* ─── CSS Variables & Themes ─── */
+    /* ─── CSS Variables & Themes (unchanged) ─── */
     :root {
       --bg-body: #f0f4fa;
       --card-bg: #fff;
@@ -535,7 +535,7 @@
     }
     .loading, .empty { text-align:center; color:var(--text-muted); padding:20px; }
 
-    /* ─── DM Windows (CSS from Part 2+3) ─── */
+    /* ─── DM Windows ─── */
     .dm-window-container {
       position: fixed;
       top: 0;
@@ -1062,7 +1062,6 @@
 <!-- ─── Supabase SDK ─── -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 
-<!-- ─── All JavaScript ─── -->
 <script>
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // Supabase init
@@ -1241,7 +1240,6 @@
   }
 
   function showEntryModal() {
-    // Pre-fill with existing data
     if (chatProfile) {
       document.getElementById('tempUsername').value = chatProfile.temp_username || currentPlayer.username;
       document.getElementById('userAge').value = chatProfile.age || '';
@@ -1277,6 +1275,7 @@
   }
 
   // ─── Load Global Messages ────────────────────────────────
+  // *** FIXED: explicit foreign key join ***
   async function loadMessages() {
     if (!globalRoom) return;
     const { data, error } = await sb
@@ -1286,14 +1285,19 @@
         content,
         created_at,
         user_id,
-        players:user_id (username)
+        players!chat_messages_user_id_fkey ( username )
       `)
       .eq('room_id', globalRoom.id)
       .order('created_at', { ascending: true });
-    if (error) { console.error(error); return; }
+
+    if (error) {
+      console.error('Error loading messages:', error);
+      return;
+    }
     renderMessages(data || []);
   }
 
+  // *** FIXED: access username as msg.players.username ***
   function renderMessages(messages) {
     const container = document.getElementById('messagesArea');
     if (!messages || messages.length === 0) {
@@ -1302,7 +1306,7 @@
     }
     const playerId = currentPlayer.id;
     container.innerHTML = messages.map(msg => {
-      const username = msg.players?.[0]?.username || 'Unknown';
+      const username = msg.players?.username || 'Unknown';
       const isOwn = msg.user_id === playerId;
       return `
         <div class="message ${isOwn ? 'own' : ''}">
@@ -1667,16 +1671,22 @@
       .subscribe();
   }
 
-  // ─── Mark messages as read ───────────────────────────────
+  // ─── Mark messages as read (UPDATED – no render) ───────────
   async function markDMMessagesRead(dmData) {
     if (!dmData || !dmData.recipientId) return;
+    // Update DB
     await sb.rpc('mark_dm_read', { p_other_user_id: dmData.recipientId });
-    // Re-render to update read statuses
-    renderDMMessages(dmData);
+    // Update local read statuses so the next render shows them
+    const now = new Date().toISOString();
+    dmData.messages.forEach(msg => {
+      if (msg.sender_id === dmData.recipientId && !msg.read_at) {
+        msg.read_at = now;
+      }
+    });
   }
 
   // ────────────────────────────────────────────────────────────
-  //  DM FUNCTIONS (continued from Block 2)
+  //  DM FUNCTIONS
   // ────────────────────────────────────────────────────────────
 
   function getDMDataByWinId(winId) {
@@ -1688,7 +1698,6 @@
       showToast("You can't DM yourself", 'error');
       return;
     }
-    // Check block/snooze
     (async () => {
       const { data: blockCheck } = await sb.rpc('check_snooze_block', { p_target_id: recipientId });
       if (blockCheck && (blockCheck.blocked || blockCheck.snoozed)) {
@@ -1827,22 +1836,29 @@
     updateTaskbar();
   }
 
-  // ─── DM Message Loading & Rendering ──────────────────────
+  // ─── DM Message Loading & Rendering (UPDATED) ─────────────
   async function loadDMMessages(dmData) {
     const { recipientId, winId } = dmData;
     const msgsDiv = document.getElementById(`dmMessages-${winId}`);
     if (!msgsDiv) return;
+
     const { data, error } = await sb
       .from('dm_messages')
       .select('*')
       .or(`and(sender_id.eq.${currentPlayer.id},recipient_id.eq.${recipientId}),and(sender_id.eq.${recipientId},recipient_id.eq.${currentPlayer.id})`)
       .order('created_at', { ascending: true });
-    if (error) { console.error(error); msgsDiv.innerHTML = '<div class="empty">Error loading messages.</div>'; return; }
+
+    if (error) {
+      console.error(error);
+      msgsDiv.innerHTML = '<div class="empty">Error loading messages.</div>';
+      return;
+    }
     dmData.messages = data || [];
+    // Mark unread messages as read in the DB and update local data
+    await markDMMessagesRead(dmData);
+    // Render once after both operations
     renderDMMessages(dmData);
-    // Mark as read
-    markDMMessagesRead(dmData);
-    // Update unread count
+    // Update unread count on taskbar
     updateTaskbar();
   }
 
@@ -1875,11 +1891,9 @@
       `;
     }).join('');
     msgsDiv.scrollTop = msgsDiv.scrollHeight;
-    // Mark as read when rendered
-    markDMMessagesRead(dmData);
   }
 
-  // ─── DM Channel (realtime) ──────────────────────────────
+  // ─── DM Channel (realtime) (UPDATED broadcast handler) ───
   function setupDMChannel(dmData) {
     const { recipientId, winId } = dmData;
     const pairId = [currentPlayer.id, recipientId].sort().join('-');
@@ -1888,20 +1902,26 @@
       const msg = payload.payload;
       if ((msg.sender_id === currentPlayer.id && msg.recipient_id === recipientId) ||
           (msg.sender_id === recipientId && msg.recipient_id === currentPlayer.id)) {
+        // Add new message
         dmData.messages.push(msg);
-        renderDMMessages(dmData);
+        // If the message is from the other user, mark as read and update UI
         if (msg.sender_id !== currentPlayer.id) {
-          glowDMWindow(dmData);
-          playMessageSound();
-          // Increment unread count if window is minimized
+          // Mark as read in DB and update local read status (no render)
+          markDMMessagesRead(dmData);
+          // Increment unread count if minimized
           if (dmData.minimized) {
             dmData.unreadCount = (dmData.unreadCount || 0) + 1;
             updateTaskbar();
           }
-          markDMMessagesRead(dmData);
+          // Glow and sound
+          glowDMWindow(dmData);
+          playMessageSound();
         }
+        // Single render after all updates
+        renderDMMessages(dmData);
       }
     });
+
     channel.on('broadcast', { event: 'nudge' }, (payload) => {
       if (payload.payload.sender_id === recipientId) {
         glowDMWindow(dmData);
@@ -1910,6 +1930,7 @@
         showToast(`📨 ${escapeHtml(dmData.recipientName)} nudged you!`, 'info');
       }
     });
+
     channel.on('broadcast', { event: 'typing' }, (payload) => {
       if (payload.payload.sender_id === recipientId) {
         const typingDiv = document.getElementById(`typing-${winId}`);
