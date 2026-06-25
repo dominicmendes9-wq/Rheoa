@@ -402,7 +402,7 @@
         });
 
         messageChannel.on('broadcast', { event: 'message' }, (payload) => {
-            loadMessages(); // Reload after receiving a broadcast
+            loadMessages();
         });
 
         messageChannel.subscribe(async (status) => {
@@ -438,7 +438,6 @@
 
         input.value = '';
 
-        // Broadcast immediately
         const tempId = 'temp-' + Date.now();
         const newMsg = {
             id: tempId,
@@ -456,7 +455,6 @@
             });
         }
 
-        // Persist to DB
         const { error } = await sb
             .from('chat_messages')
             .insert({
@@ -468,9 +466,10 @@
         if (error) {
             console.error('Failed to persist message:', error);
             showToast('Error sending message', 'error');
+        } else {
+            // Reload to sync (optional, but broadcast already updated UI)
+            loadMessages();
         }
-        // Reload to sync (optional, but broadcast already updated UI)
-        loadMessages();
     }
 
     function goBack() {
