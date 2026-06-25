@@ -1,497 +1,498 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Global Chat</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat - Rheoa RPG</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
+
         body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            background: #1e1e2f;
-            color: #eee;
+            font-family: 'Courier New', monospace;
+            background: #f8f8f0;
+            color: #222;
+            padding: 20px;
             height: 100vh;
             display: flex;
-            justify-content: center;
-            align-items: center;
+            flex-direction: column;
         }
+
         .chat-container {
-            width: 100%;
-            max-width: 900px;
-            height: 90vh;
-            background: #2d2d44;
-            border-radius: 16px;
+            display: flex;
+            flex: 1;
+            gap: 20px;
+            min-height: 0;
+        }
+
+        .chat-main {
+            flex: 1;
             display: flex;
             flex-direction: column;
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+            background: white;
+            border: 2px solid #2196F3;
+            border-radius: 10px;
             overflow: hidden;
         }
-        .header {
-            background: #3b3b5a;
-            padding: 16px 24px;
+
+        .chat-header {
+            background: #2196F3;
+            color: white;
+            padding: 10px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 1px solid #4a4a6a;
         }
-        .header h1 {
-            font-size: 1.2rem;
-            font-weight: 600;
+
+        .room-info {
+            font-weight: bold;
         }
-        .online-badge {
-            background: #2ecc71;
-            color: #fff;
-            padding: 4px 12px;
-            border-radius: 20px;
+
+        .online-count {
             font-size: 0.8rem;
+            background: rgba(255,255,255,0.2);
+            padding: 2px 8px;
+            border-radius: 10px;
         }
-        .messages {
+
+        .messages-area {
             flex: 1;
-            padding: 20px 24px;
             overflow-y: auto;
+            padding: 15px;
+            background: #fafafa;
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 10px;
         }
+
         .message {
-            max-width: 75%;
             display: flex;
             flex-direction: column;
+            max-width: 80%;
         }
-        .message.self {
+
+        .message.own {
             align-self: flex-end;
         }
-        .message .sender {
-            font-size: 0.75rem;
-            font-weight: 600;
-            color: #a0aec0;
-            margin-bottom: 2px;
+
+        .message-header {
+            font-size: 0.8rem;
+            color: #666;
+            display: flex;
+            gap: 10px;
+            align-items: baseline;
         }
-        .message.self .sender {
-            color: #63b3ed;
+
+        .message-username {
+            font-weight: bold;
+            color: #2196F3;
         }
-        .message .bubble {
-            background: #3d3d5c;
-            padding: 8px 14px;
-            border-radius: 18px;
+
+        .message-time {
+            font-size: 0.7rem;
+        }
+
+        .message-text {
+            background: #e9ecef;
+            padding: 8px 12px;
+            border-radius: 12px;
+            margin-top: 4px;
             word-wrap: break-word;
         }
-        .message.self .bubble {
-            background: #4a6fa5;
+
+        .message.own .message-text {
+            background: #2196F3;
+            color: white;
         }
-        .message .time {
-            font-size: 0.65rem;
-            color: #718096;
-            margin-top: 2px;
-        }
-        .input-area {
-            padding: 16px 24px;
-            background: #25253b;
-            border-top: 1px solid #3b3b5a;
+
+        .message-input-area {
+            padding: 15px;
+            border-top: 1px solid #ddd;
             display: flex;
-            gap: 12px;
+            gap: 10px;
         }
+
         #messageInput {
             flex: 1;
-            padding: 10px 16px;
-            border: none;
-            border-radius: 24px;
-            background: #3d3d5c;
-            color: #eee;
-            font-size: 0.95rem;
-            outline: none;
+            padding: 10px;
+            font-family: inherit;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            resize: none;
         }
-        #messageInput::placeholder {
-            color: #8888aa;
-        }
+
         #sendBtn {
-            padding: 10px 24px;
-            background: #4a6fa5;
-            color: #fff;
+            padding: 10px 20px;
+            background: #4CAF50;
+            color: white;
             border: none;
-            border-radius: 24px;
-            font-weight: 600;
+            border-radius: 5px;
             cursor: pointer;
-            transition: 0.15s;
+            font-weight: bold;
         }
-        #sendBtn:hover {
-            background: #5a7fb5;
-        }
-        #sendBtn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        .online-users {
-            padding: 8px 24px;
-            background: #22223a;
-            border-bottom: 1px solid #3b3b5a;
+
+        .members-sidebar {
+            width: 260px;
+            background: white;
+            border: 2px solid #2196F3;
+            border-radius: 10px;
             display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-            align-items: center;
-            min-height: 44px;
+            flex-direction: column;
+            overflow: hidden;
         }
-        .online-user {
-            background: #3b3b5a;
-            padding: 2px 10px;
-            border-radius: 12px;
-            font-size: 0.8rem;
+
+        .members-header {
+            background: #2196F3;
+            color: white;
+            padding: 10px;
+            font-weight: bold;
+        }
+
+        .members-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .member-item {
+            padding: 8px;
+            margin: 5px 0;
+            border-radius: 5px;
+            background: #f5f5f5;
             display: flex;
             align-items: center;
-            gap: 4px;
+            gap: 10px;
         }
-        .online-user .dot {
+
+        .member-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #2196F3;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .member-name {
+            font-weight: bold;
+            flex: 1;
+        }
+
+        .member-status {
             width: 8px;
             height: 8px;
-            background: #2ecc71;
             border-radius: 50%;
+            background: #4CAF50;
         }
-        .empty-online {
-            color: #718096;
-            font-size: 0.8rem;
+
+        .back-button {
+            display: block;
+            width: 200px;
+            margin: 30px auto;
+            padding: 12px 24px;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            border: 2px solid black;
+            border-radius: 8px;
+            background: #666;
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+        .back-button:hover {
+            background: #555;
+            transform: scale(1.02);
+        }
+
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+        }
+        .toast {
+            padding: 15px 25px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            animation: slideIn 0.3s ease-out;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            min-width: 250px;
+            max-width: 350px;
+        }
+        .toast.success { background: #4CAF50; }
+        .toast.error { background: #f44336; }
+        .toast.info { background: #2196F3; }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        .loading, .empty {
+            text-align: center;
+            color: #999;
+            padding: 20px;
         }
     </style>
 </head>
 <body>
 
-    <div class="chat-container">
-        <div class="header">
-            <h1>🌍 Global Chat</h1>
-            <span class="online-badge" id="onlineCount">0 online</span>
-        </div>
+<div class="toast-container" id="toast-container"></div>
 
-        <div class="online-users" id="onlineUsersList">
-            <span class="empty-online">Loading online users...</span>
+<div class="chat-container">
+    <div class="chat-main">
+        <div class="chat-header">
+            <div class="room-info">🌍 Global Chat</div>
+            <div class="online-count" id="onlineCount">0 online</div>
         </div>
-
-        <div class="messages" id="messagesArea">
-            <div style="text-align:center; color:#718096;">Loading messages...</div>
+        <div class="messages-area" id="messagesArea">
+            <div class="loading">Loading messages...</div>
         </div>
-
-        <div class="input-area">
-            <input type="text" id="messageInput" placeholder="Type a message..." />
-            <button id="sendBtn">Send</button>
+        <div class="message-input-area">
+            <textarea id="messageInput" placeholder="Type your message..." rows="2"></textarea>
+            <button id="sendBtn" onclick="sendMessage()">Send</button>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-    <script>
-        // ─── Supabase client ──────────────────────────────────
-        const sb = window.supabase.createClient(
-            "https://mtiwodvsrwvrujbhmmrn.supabase.co",
-            "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
-        );
+    <div class="members-sidebar">
+        <div class="members-header">👥 Online</div>
+        <div class="members-list" id="membersList">
+            <div class="loading">Loading...</div>
+        </div>
+    </div>
+</div>
 
-        // ─── State ────────────────────────────────────────────
-        let currentPlayer = null;   // { id, username }
-        let currentRoom = null;     // { id, name }
-        let messages = [];
-        let onlineUsers = [];
-        let presenceChannel = null;
-        let messageChannel = null;
+<button class="back-button" onclick="goBack()">← Back to Dashboard</button>
 
-        // ─── DOM refs ─────────────────────────────────────────
-        const messagesArea = document.getElementById('messagesArea');
-        const onlineUsersList = document.getElementById('onlineUsersList');
-        const onlineCount = document.getElementById('onlineCount');
-        const messageInput = document.getElementById('messageInput');
-        const sendBtn = document.getElementById('sendBtn');
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<script>
+    const sb = window.supabase.createClient(
+        "https://mtiwodvsrwvrujbhmmrn.supabase.co",
+        "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
+    );
 
-        // ─── Helpers ──────────────────────────────────────────
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));
+    }
+
+    function showToast(message, type = 'info', duration = 3000) {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.textContent = message;
+        container.appendChild(toast);
+        setTimeout(() => {
+            toast.classList.add('fade-out');
+            setTimeout(() => {
+                if (toast.parentNode) container.removeChild(toast);
+            }, 300);
+        }, duration);
+    }
+
+    let currentPlayer = null;
+    let globalRoom = null;
+    let messageChannel = null;
+    let onlineUsers = [];
+
+    async function getPlayer() {
+        const { data: { user } } = await sb.auth.getUser();
+        if (!user) return null;
+        const { data: player } = await sb.from('players').select('id, username').eq('auth_id', user.id).single();
+        if (player) currentPlayer = player;
+        return player;
+    }
+
+    async function getGlobalRoom() {
+        const { data, error } = await sb
+            .from('chat_rooms')
+            .select('*')
+            .eq('name', 'Global Chat')
+            .maybeSingle();
+
+        if (error) {
+            console.error('Error fetching global room:', error);
+            return null;
         }
 
-        function formatTime(iso) {
-            return new Date(iso).toLocaleTimeString();
-        }
-
-        // ─── Auth & player ────────────────────────────────────
-        async function getOrCreatePlayer() {
-            const { data: { user } } = await sb.auth.getUser();
-            if (!user) {
-                // Not signed in – redirect to sign-in page (or auto-sign-in)
-                // For demo, we'll auto sign in anonymously (if you have it enabled)
-                // Otherwise you need a login flow.
-                // We'll try to sign in anonymously for simplicity.
-                const { data, error } = await sb.auth.signInAnonymously();
-                if (error) {
-                    alert('Please sign in first.');
-                    window.location.href = 'index.html';
-                    return null;
-                }
-                // After sign-in, reload to get user
-                window.location.reload();
-                return null;
-            }
-
-            // Check if player exists
-            let { data: player, error } = await sb
-                .from('players')
-                .select('*')
-                .eq('auth_id', user.id)
-                .maybeSingle();
-
-            if (error) {
-                console.error('Error fetching player:', error);
-                return null;
-            }
-
-            if (!player) {
-                // Create player with a random username
-                const adjectives = ['Happy', 'Clever', 'Brave', 'Kind', 'Swift'];
-                const nouns = ['Panda', 'Tiger', 'Eagle', 'Fox', 'Wolf'];
-                const username = `${adjectives[Math.floor(Math.random() * adjectives.length)]}${
-                    nouns[Math.floor(Math.random() * nouns.length)]
-                }${Math.floor(Math.random() * 1000)}`;
-                const { data: newPlayer, error: insertError } = await sb
-                    .from('players')
-                    .insert({ auth_id: user.id, username })
-                    .select('*')
-                    .single();
-                if (insertError) {
-                    console.error('Error creating player:', insertError);
-                    return null;
-                }
-                player = newPlayer;
-            }
-            return player;
-        }
-
-        // ─── Load global room ─────────────────────────────────
-        async function getGlobalRoom() {
-            const { data, error } = await sb
-                .from('chat_rooms')
-                .select('*')
-                .eq('name', 'Global Chat')
-                .maybeSingle();
-
-            if (error) {
-                console.error('Error fetching room:', error);
-                return null;
-            }
-            if (!data) {
-                // Room not found – create it (but should already exist from SQL setup)
-                const { data: newRoom, error: createError } = await sb
-                    .from('chat_rooms')
-                    .insert({ name: 'Global Chat' })
-                    .select('*')
-                    .single();
-                if (createError) {
-                    console.error('Error creating room:', createError);
-                    return null;
-                }
-                return newRoom;
-            }
+        if (data) {
+            globalRoom = data;
             return data;
         }
 
-        // ─── Load messages ────────────────────────────────────
-        async function loadMessages() {
-            if (!currentRoom) return;
-            const { data, error } = await sb
-                .from('chat_messages')
-                .select(`
-                    id, content, created_at,
-                    user_id,
-                    players:user_id (username)
-                `)
-                .eq('room_id', currentRoom.id)
-                .order('created_at', { ascending: true });
+        // Create if missing
+        const { data: newRoom, error: createError } = await sb
+            .from('chat_rooms')
+            .insert({ name: 'Global Chat', type: 'global' })
+            .select('*')
+            .single();
 
-            if (error) {
-                console.error('Error loading messages:', error);
-                return;
-            }
-            messages = (data || []).map(msg => ({
-                ...msg,
-                username: msg.players?.[0]?.username || 'Unknown'
-            }));
-            renderMessages();
+        if (createError) {
+            console.error('Error creating global room:', createError);
+            return null;
         }
+        globalRoom = newRoom;
+        return newRoom;
+    }
 
-        function renderMessages() {
-            if (!messages.length) {
-                messagesArea.innerHTML = '<div style="text-align:center; color:#718096;">No messages yet. Be the first!</div>';
-                return;
-            }
-            const pid = currentPlayer?.id;
-            messagesArea.innerHTML = messages.map(msg => {
-                const isSelf = msg.user_id === pid;
-                return `
-                    <div class="message ${isSelf ? 'self' : ''}">
-                        <div class="sender">${escapeHtml(msg.username)}</div>
-                        <div class="bubble">${escapeHtml(msg.content)}</div>
-                        <div class="time">${formatTime(msg.created_at)}</div>
+    async function loadMessages() {
+        if (!globalRoom) return;
+        const { data, error } = await sb
+            .from('chat_messages')
+            .select(`
+                id,
+                content,
+                created_at,
+                user_id,
+                players:user_id (username)
+            `)
+            .eq('room_id', globalRoom.id)
+            .order('created_at', { ascending: true });
+
+        if (error) {
+            console.error('Error loading messages:', error);
+            return;
+        }
+        renderMessages(data || []);
+    }
+
+    function renderMessages(messages) {
+        const container = document.getElementById('messagesArea');
+        if (!messages || messages.length === 0) {
+            container.innerHTML = '<div class="empty">No messages yet. Be the first!</div>';
+            return;
+        }
+        const playerId = currentPlayer.id;
+        container.innerHTML = messages.map(msg => {
+            const username = msg.players?.[0]?.username || 'Unknown';
+            return `
+                <div class="message ${msg.user_id === playerId ? 'own' : ''}">
+                    <div class="message-header">
+                        <span class="message-username">${escapeHtml(username)}</span>
+                        <span class="message-time">${new Date(msg.created_at).toLocaleTimeString()}</span>
                     </div>
-                `;
-            }).join('');
-            messagesArea.scrollTop = messagesArea.scrollHeight;
-        }
+                    <div class="message-text">${escapeHtml(msg.content)}</div>
+                </div>
+            `;
+        }).join('');
+        container.scrollTop = container.scrollHeight;
+    }
 
-        // ─── Presence ─────────────────────────────────────────
-        const PRESENCE_CHANNEL = 'global-presence';
+    function setupChannel() {
+        if (!globalRoom || !currentPlayer) return;
 
-        function setupPresence() {
-            if (presenceChannel) return;
+        messageChannel = sb.channel(`room:${globalRoom.id}`);
 
-            presenceChannel = sb.channel(PRESENCE_CHANNEL);
-
-            presenceChannel.on('presence', { event: 'sync' }, () => {
-                const state = presenceChannel.presenceState();
-                const list = [];
-                Object.keys(state).forEach(key => {
-                    list.push(...state[key]);
-                });
-                onlineUsers = list;
-                renderOnlineUsers();
-                onlineCount.textContent = onlineUsers.length + ' online';
+        messageChannel.on('presence', { event: 'sync' }, () => {
+            const state = messageChannel.presenceState();
+            const list = [];
+            Object.keys(state).forEach(key => {
+                list.push(...state[key]);
             });
+            onlineUsers = list;
+            document.getElementById('onlineCount').textContent = `${onlineUsers.length} online`;
+            renderMembers();
+        });
 
-            presenceChannel.subscribe(async (status) => {
-                if (status === 'SUBSCRIBED') {
-                    await updatePresence();
-                }
-            });
-        }
+        messageChannel.on('broadcast', { event: 'message' }, (payload) => {
+            loadMessages(); // Reload after receiving a broadcast
+        });
 
-        async function updatePresence() {
-            if (!presenceChannel || !currentPlayer || !currentRoom) return;
-            await presenceChannel.track({
-                user_id: currentPlayer.id,
-                username: currentPlayer.username,
-                room_id: currentRoom.id,
-            });
-        }
-
-        function renderOnlineUsers() {
-            if (!onlineUsers.length) {
-                onlineUsersList.innerHTML = '<span class="empty-online">No one else is online.</span>';
-                return;
-            }
-            onlineUsersList.innerHTML = onlineUsers.map(user => `
-                <span class="online-user">
-                    <span class="dot"></span>
-                    ${escapeHtml(user.username)}
-                </span>
-            `).join('');
-        }
-
-        // ─── Message broadcast ───────────────────────────────
-        function setupMessageBroadcast() {
-            if (!currentRoom) return;
-            if (messageChannel) {
-                messageChannel.unsubscribe();
-                messageChannel = null;
-            }
-
-            const roomId = currentRoom.id;
-            messageChannel = sb.channel(`room-${roomId}`);
-
-            messageChannel.on('broadcast', { event: 'message' }, (payload) => {
-                const newMsg = payload.payload;
-                // Avoid duplicate if already in list (optimistic)
-                if (!messages.some(m => m.id === newMsg.id)) {
-                    messages.push(newMsg);
-                    renderMessages();
-                }
-            });
-
-            messageChannel.subscribe((status) => {
-                if (status === 'SUBSCRIBED') {
-                    console.log('Subscribed to message channel');
-                }
-            });
-        }
-
-        // ─── Send message ─────────────────────────────────────
-        async function sendMessage() {
-            const text = messageInput.value.trim();
-            if (!text || !currentRoom || !currentPlayer) return;
-
-            // Optimistic update
-            const tempId = 'temp-' + Date.now();
-            const newMsg = {
-                id: tempId,
-                content: text,
-                created_at: new Date().toISOString(),
-                user_id: currentPlayer.id,
-                username: currentPlayer.username,
-            };
-            messages.push(newMsg);
-            renderMessages();
-            messageInput.value = '';
-
-            // Broadcast
-            if (messageChannel) {
-                await messageChannel.send({
-                    type: 'broadcast',
-                    event: 'message',
-                    payload: newMsg,
-                });
-            }
-
-            // Persist to DB
-            const { error } = await sb
-                .from('chat_messages')
-                .insert({
-                    room_id: currentRoom.id,
+        messageChannel.subscribe(async (status) => {
+            if (status === 'SUBSCRIBED') {
+                await messageChannel.track({
                     user_id: currentPlayer.id,
-                    content: text,
+                    username: currentPlayer.username,
+                    avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentPlayer.id}`
                 });
-
-            if (error) {
-                console.error('Failed to persist message:', error);
-                // Optionally revert optimistic message
             }
+        });
+    }
+
+    function renderMembers() {
+        const container = document.getElementById('membersList');
+        if (!onlineUsers.length) {
+            container.innerHTML = '<div class="empty">No one else is online.</div>';
+            return;
+        }
+        container.innerHTML = onlineUsers.map(user => `
+            <div class="member-item">
+                <div class="member-avatar">${user.username.charAt(0).toUpperCase()}</div>
+                <div class="member-name">${escapeHtml(user.username)}</div>
+                <div class="member-status"></div>
+            </div>
+        `).join('');
+    }
+
+    async function sendMessage() {
+        const input = document.getElementById('messageInput');
+        const text = input.value.trim();
+        if (!text || !globalRoom) return;
+
+        input.value = '';
+
+        // Broadcast immediately
+        const tempId = 'temp-' + Date.now();
+        const newMsg = {
+            id: tempId,
+            content: text,
+            created_at: new Date().toISOString(),
+            user_id: currentPlayer.id,
+            players: { username: currentPlayer.username }
+        };
+
+        if (messageChannel) {
+            await messageChannel.send({
+                type: 'broadcast',
+                event: 'message',
+                payload: newMsg
+            });
         }
 
-        // ─── Init ─────────────────────────────────────────────
-        (async function init() {
-            // 1. Get or create player
-            const player = await getOrCreatePlayer();
-            if (!player) return;
-            currentPlayer = player;
-
-            // 2. Get global room
-            const room = await getGlobalRoom();
-            if (!room) {
-                alert('Could not find or create global room.');
-                return;
-            }
-            currentRoom = room;
-
-            // 3. Load messages
-            await loadMessages();
-
-            // 4. Setup presence
-            setupPresence();
-
-            // 5. Setup message broadcast
-            setupMessageBroadcast();
-
-            // 6. Update presence after everything is ready
-            await updatePresence();
-
-            // 7. Enable UI
-            messageInput.disabled = false;
-            sendBtn.disabled = false;
-
-            // 8. Event listeners
-            sendBtn.addEventListener('click', sendMessage);
-            messageInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    sendMessage();
-                }
+        // Persist to DB
+        const { error } = await sb
+            .from('chat_messages')
+            .insert({
+                room_id: globalRoom.id,
+                user_id: currentPlayer.id,
+                content: text
             });
-        })();
-    </script>
+
+        if (error) {
+            console.error('Failed to persist message:', error);
+            showToast('Error sending message', 'error');
+        }
+        // Reload to sync (optional, but broadcast already updated UI)
+        loadMessages();
+    }
+
+    function goBack() {
+        window.location.href = "dashboard.html";
+    }
+
+    (async function init() {
+        const player = await getPlayer();
+        if (!player) {
+            window.location.href = 'index.html';
+            return;
+        }
+
+        const room = await getGlobalRoom();
+        if (!room) {
+            showToast('Could not load chat room', 'error');
+            return;
+        }
+
+        await loadMessages();
+        setupChannel();
+    })();
+</script>
 </body>
 </html>
