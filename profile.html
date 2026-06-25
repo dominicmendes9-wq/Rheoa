@@ -489,50 +489,52 @@
                     console.log('💬 Bubble shown');
                 }, 2500);
 
-                // Click handler for bubble
-            const acceptHandler = async () => {
-    bubble.style.display = 'none';
-    tomatoGif.style.display = 'block';
-    console.log('🍅 Tomato gif shown');
+                // ── Click handler for bubble ──
+                const acceptHandler = async () => {
+                    console.log('🎯 Bubble clicked, accepting delivery:', deliveryId);
+                    bubble.style.display = 'none';
+                    tomatoGif.style.display = 'block';
+                    console.log('🍅 Tomato gif shown');
 
-    // Boy says "hehehehe"
-    const boyBubble = document.createElement('div');
-    boyBubble.id = 'boy-bubble';
-    boyBubble.textContent = 'hehehehe';
-    boy.parentNode.appendChild(boyBubble);
+                    // Boy says "hehehehe"
+                    const boyBubble = document.createElement('div');
+                    boyBubble.id = 'boy-bubble';
+                    boyBubble.textContent = 'hehehehe';
+                    boy.parentNode.appendChild(boyBubble);
 
-    // Mark as received in DB
-    try {
-        console.log('📝 Calling RPC accept_tomato_delivery for ID:', deliveryId);
-        const { data, error } = await sb.rpc('accept_tomato_delivery', { p_delivery_id: deliveryId });
-        if (error) {
-            console.error('❌ RPC error:', error);
-            showToast('Failed to accept delivery: ' + error.message, 'error');
-        } else {
-            console.log('✅ RPC success:', data);
-            showToast('📦 Parcel accepted!', 'success');
-        }
-    } catch (e) {
-        console.error('❌ Exception during RPC:', e);
-        showToast('Error accepting delivery', 'error');
-    }
+                    // Mark as received in DB
+                    try {
+                        console.log('📝 Calling RPC accept_tomato_delivery for ID:', deliveryId);
+                        const { data, error } = await sb.rpc('accept_tomato_delivery', { p_delivery_id: deliveryId });
+                        if (error) {
+                            console.error('❌ RPC error:', error);
+                            showToast('Failed to accept delivery: ' + error.message, 'error');
+                        } else {
+                            console.log('✅ RPC success:', data);
+                            showToast('📦 Parcel accepted!', 'success');
+                        }
+                    } catch (e) {
+                        console.error('❌ Exception during RPC:', e);
+                        showToast('Error accepting delivery', 'error');
+                    }
 
-    // After 3 seconds, boy moves to right
-    setTimeout(() => {
-        boy.classList.add('delivery-exit');
-        if (boyBubble.parentNode) boyBubble.remove();
-        console.log('🚚 Boy exiting right');
-        setTimeout(() => {
-            tomatoGif.style.display = 'none';
-            overlay.style.pointerEvents = 'none';
-            boy.style.display = 'none';
-            boy.style.left = '-500px';
-            boy.classList.remove('delivery-exit');
-            console.log('✅ Delivery complete, boy hidden');
-            resolve();
-        }, 4000);
-    }, 3000);
-};
+                    // After 3 seconds, boy moves to right
+                    setTimeout(() => {
+                        boy.classList.add('delivery-exit');
+                        if (boyBubble.parentNode) boyBubble.remove();
+                        console.log('🚚 Boy exiting right');
+                        // After the exit transition (4s), hide everything and reset
+                        setTimeout(() => {
+                            tomatoGif.style.display = 'none';
+                            overlay.style.pointerEvents = 'none';
+                            boy.style.display = 'none';
+                            boy.style.left = '-500px';
+                            boy.classList.remove('delivery-exit');
+                            console.log('✅ Delivery complete, boy hidden');
+                            resolve();
+                        }, 4000); // match the transition duration (4s)
+                    }, 3000);
+                };
 
                 bubble.removeEventListener('click', acceptHandler);
                 bubble.addEventListener('click', acceptHandler);
