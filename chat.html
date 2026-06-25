@@ -6,7 +6,7 @@
     <title>Chat - Rheoa RPG</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
     <style>
-        /* ─── CSS Variables & Themes ─── */
+        /* ─── CSS Variables & Themes (same as before) ─── */
         :root {
             --bg-body: #f0f4fa;
             --card-bg: #fff;
@@ -355,7 +355,7 @@
             background: var(--btn-primary-hover);
         }
 
-        /* ─── Emoji Picker ─── */
+        /* ─── Emoji Picker (global) ─── */
         .emoji-picker {
             display: none;
             position: absolute;
@@ -453,116 +453,157 @@
             flex-shrink: 0;
         }
 
-        /* ─── DM Modal ─── */
-        .dm-modal {
-            display: none;
+        /* ─── DM Windows (Multiple) ─── */
+        .dm-window-container {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.5);
-            z-index: 9999;
-            justify-content: center;
-            align-items: center;
-            backdrop-filter: blur(4px);
+            pointer-events: none;
+            z-index: 9998;
         }
-        .dm-modal-content {
+        .dm-window {
+            position: absolute;
+            pointer-events: all;
             background: var(--card-bg);
             border: 1px solid var(--card-border);
             border-radius: var(--border-radius-card);
             box-shadow: var(--card-shadow);
-            width: 90%;
-            max-width: 600px;
-            height: 80vh;
-            max-height: 700px;
+            width: 420px;
+            height: 500px;
+            min-width: 350px;
+            min-height: 300px;
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            transition: box-shadow 0.2s;
             resize: both;
-            min-width: 400px;
-            min-height: 400px;
-            transition: transform 0.2s;
-            position: relative;
         }
-        .dm-modal-content.shake {
-            animation: shake 0.5s ease;
+        .dm-window.glow {
+            box-shadow: 0 0 20px 10px rgba(44,110,158,0.4);
+            border-color: var(--accent);
         }
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            10%, 30%, 50%, 70%, 90% { transform: translateX(-10px); }
-            20%, 40%, 60%, 80% { transform: translateX(10px); }
+        .dm-window.minimized {
+            height: 48px;
+            min-height: 48px;
+            overflow: hidden;
+            resize: none;
+            bottom: 10px;
+            left: auto;
+            right: 10px;
+            width: 200px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+        }
+        .dm-window.minimized .dm-messages,
+        .dm-window.minimized .dm-input-area {
+            display: none;
+        }
+        .dm-window.minimized .dm-header {
+            border-radius: var(--border-radius-card);
         }
         .dm-header {
             background: var(--header-bg);
             color: var(--header-text);
-            padding: 16px 24px;
+            padding: 10px 16px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             flex-shrink: 0;
+            cursor: grab;
+            user-select: none;
         }
-        .dm-header .dm-title {
+        .dm-header:active {
+            cursor: grabbing;
+        }
+        .dm-title {
             font-weight: 700;
-            font-size: 1.2rem;
+            font-size: 1rem;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
+            flex: 1;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
         }
-        .dm-header .dm-close {
+        .dm-title .online-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #4CAF50;
+            display: inline-block;
+            flex-shrink: 0;
+        }
+        .dm-controls {
+            display: flex;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+        .dm-controls button {
             background: transparent;
             border: none;
             color: var(--header-text);
-            font-size: 1.5rem;
+            font-size: 1.1rem;
             cursor: pointer;
-            padding: 0 8px;
-            transition: .2s;
+            padding: 0 4px;
             opacity: 0.7;
+            transition: .2s;
         }
-        .dm-header .dm-close:hover {
+        .dm-controls button:hover {
             opacity: 1;
         }
         .dm-messages {
             flex: 1;
             overflow-y: auto;
-            padding: 16px 24px;
+            padding: 12px 16px;
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 10px;
             background: var(--card-header-bg);
         }
         .dm-messages .message {
             max-width: 80%;
         }
         .dm-input-area {
-            padding: 16px 24px;
+            padding: 12px 16px;
             border-top: 1px solid var(--border-light);
             background: var(--card-bg);
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 6px;
             flex-shrink: 0;
         }
         .dm-input-area .toolbar {
             background: var(--toolbar-bg);
+            padding: 4px 6px;
+            gap: 2px;
+        }
+        .dm-input-area .toolbar button {
+            font-size: 0.8rem;
+            padding: 2px 8px;
+        }
+        .dm-input-area .toolbar input[type="color"] {
+            width: 20px;
+            height: 20px;
         }
         .dm-input-row {
             display: flex;
-            gap: 10px;
+            gap: 8px;
             align-items: flex-end;
             position: relative;
         }
         .dm-input-row textarea {
             flex: 1;
-            padding: 10px 14px;
+            padding: 8px 12px;
             font-family: var(--font-family);
             border: 1px solid var(--border-light);
-            border-radius: 16px;
+            border-radius: 12px;
             background: var(--card-header-bg);
             color: var(--text-main);
             resize: none;
-            font-size: 1rem;
-            min-height: 50px;
+            font-size: 0.95rem;
+            min-height: 40px;
             transition: border .2s;
         }
         .dm-input-row textarea:focus {
@@ -571,16 +612,17 @@
             box-shadow: 0 0 0 3px rgba(44,110,158,0.15);
         }
         .dm-input-row button {
-            padding: 10px 20px;
+            padding: 8px 16px;
             background: var(--btn-primary);
             color: #fff;
             border: none;
-            border-radius: 40px;
+            border-radius: 30px;
             font-weight: 600;
             cursor: pointer;
             transition: .2s;
             font-family: var(--font-family);
             white-space: nowrap;
+            font-size: 0.9rem;
         }
         .dm-input-row button:hover {
             background: var(--btn-primary-hover);
@@ -588,10 +630,61 @@
         .dm-input-row .nudge-btn {
             background: #ff9800;
             color: #fff;
+            padding: 8px 12px;
+            font-size: 0.8rem;
         }
         .dm-input-row .nudge-btn:disabled {
             background: #ccc;
             cursor: not-allowed;
+        }
+
+        /* ─── Minimized bar (taskbar) ─── */
+        .dm-taskbar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 50px;
+            background: var(--card-bg);
+            border-top: 1px solid var(--border-light);
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            gap: 8px;
+            z-index: 9999;
+            overflow-x: auto;
+            pointer-events: all;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+        }
+        .dm-taskbar-item {
+            background: var(--btn-ghost);
+            border-radius: 20px;
+            padding: 4px 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: .2s;
+            border: 1px solid transparent;
+        }
+        .dm-taskbar-item:hover {
+            background: var(--accent);
+            color: #fff;
+            border-color: var(--accent);
+        }
+        .dm-taskbar-item .close-minimized {
+            background: transparent;
+            border: none;
+            color: inherit;
+            cursor: pointer;
+            font-size: 1rem;
+            padding: 0 2px;
+            opacity: 0.6;
+        }
+        .dm-taskbar-item .close-minimized:hover {
+            opacity: 1;
         }
 
         /* ─── Toast ─── */
@@ -644,7 +737,7 @@
             .chat-header { flex-direction: column; gap: 8px; text-align: center; }
             .message { max-width: 90%; }
             .toolbar button { font-size: 0.75rem; padding: 2px 8px; }
-            .dm-modal-content { min-width: unset; min-height: unset; height: 90vh; max-height: 90vh; }
+            .dm-window { width: 90%; height: 80vh; min-width: unset; min-height: unset; }
         }
     </style>
 </head>
@@ -680,7 +773,6 @@
                 <div class="loading">Loading messages...</div>
             </div>
             <div class="message-input-area">
-                <!-- Toolbar (hidden for non-Black/Founder) -->
                 <div class="toolbar" id="toolbar" style="display:none;">
                     <button type="button" onclick="formatMessage('bold')"><b>B</b></button>
                     <button type="button" onclick="formatMessage('italic')"><i>I</i></button>
@@ -693,7 +785,6 @@
                     <textarea id="messageInput" placeholder="Type your message..." rows="2"></textarea>
                     <button id="sendBtn" onclick="sendMessage()">Send</button>
                 </div>
-                <!-- Emoji Picker -->
                 <div class="emoji-picker" id="emojiPicker">
                     <button onclick="insertEmoji('😊')">😊</button>
                     <button onclick="insertEmoji('😂')">😂</button>
@@ -721,50 +812,11 @@
     </div>
 </div>
 
-<!-- DM Modal -->
-<div class="dm-modal" id="dmModal">
-    <div class="dm-modal-content" id="dmModalContent">
-        <div class="dm-header">
-            <div class="dm-title" id="dmTitle">💬 Direct Message</div>
-            <button class="dm-close" onclick="closeDM()">✕</button>
-        </div>
-        <div class="dm-messages" id="dmMessages">
-            <div class="empty">No messages yet. Say hello!</div>
-        </div>
-        <div class="dm-input-area">
-            <div class="toolbar" id="dmToolbar" style="display:none;">
-                <button type="button" onclick="dmFormat('bold')"><b>B</b></button>
-                <button type="button" onclick="dmFormat('italic')"><i>I</i></button>
-                <button type="button" onclick="dmFormat('h2')">H2</button>
-                <button type="button" onclick="dmInsertLink()">🔗 Link</button>
-                <span class="separator"></span>
-                <input type="color" id="dmColorPicker" onchange="dmInsertColor()" value="#ff0000" title="Text color">
-                <span class="separator"></span>
-                <button type="button" onclick="dmToggleEmojiPicker()">😊</button>
-                <span class="separator"></span>
-                <button type="button" class="nudge-btn" id="nudgeBtn" onclick="sendNudge()">👋 Nudge</button>
-            </div>
-            <div class="dm-input-row">
-                <textarea id="dmInput" placeholder="Type a message..." rows="2"></textarea>
-                <button onclick="dmSend()">Send</button>
-            </div>
-            <div class="emoji-picker" id="dmEmojiPicker">
-                <button onclick="dmInsertEmoji('😊')">😊</button>
-                <button onclick="dmInsertEmoji('😂')">😂</button>
-                <button onclick="dmInsertEmoji('🤔')">🤔</button>
-                <button onclick="dmInsertEmoji('🔥')">🔥</button>
-                <button onclick="dmInsertEmoji('💯')">💯</button>
-                <button onclick="dmInsertEmoji('✨')">✨</button>
-                <button onclick="dmInsertEmoji('🎉')">🎉</button>
-                <button onclick="dmInsertEmoji('👏')">👏</button>
-                <button onclick="dmInsertEmoji('👍')">👍</button>
-                <button onclick="dmInsertEmoji('❤️')">❤️</button>
-                <button onclick="dmInsertEmoji('🙌')">🙌</button>
-                <button onclick="dmInsertEmoji('🤩')">🤩</button>
-            </div>
-        </div>
-    </div>
-</div>
+<!-- DM Window Container -->
+<div class="dm-window-container" id="dmContainer"></div>
+
+<!-- Taskbar for minimized windows -->
+<div class="dm-taskbar" id="dmTaskbar"></div>
 
 <!-- Toast Container -->
 <div class="toast-container" id="toast-container"></div>
@@ -841,11 +893,10 @@
     let messageChannel = null;
     let onlineUsers = [];
 
-    // DM state
-    let dmRecipient = null;
-    let dmChannel = null;
-    let dmMessages = [];
-    let nudgeCooldowns = {}; // recipient_id -> timestamp
+    // DM state: multiple windows
+    let openDMs = [];          // array of { recipientId, recipientName, windowElement, minimized, channel, messages, lastNudge }
+    const MAX_DMS = 5;
+    let nudgeCooldowns = {};   // recipientId -> timestamp
 
     // ─── Auth & Player ────────────────────────────────────────
     async function getPlayer() {
@@ -948,7 +999,6 @@
         html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
         html = html.replace(/^# (.+)$/gm, '<h2>$1</h2>');
         html = html.replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" target="_blank">$1</a>');
-        // Color: <color=#hex>text</color> -> <span style="color:#hex">text</span>
         html = html.replace(/<color=([^>]+)>(.+?)<\/color>/g, '<span style="color:$1">$2</span>');
         return html;
     }
@@ -1137,7 +1187,7 @@
         const tier = currentPlayer?.subscription_tier?.toLowerCase() || 'basic';
         const isBlackOrFounder = ['black', 'founder'].includes(tier);
         document.getElementById('toolbar').style.display = isBlackOrFounder ? 'flex' : 'none';
-        document.getElementById('dmToolbar').style.display = isBlackOrFounder ? 'flex' : 'none';
+        // Also hide/show per DM toolbar later.
     }
 
     // ─── DM Functions ─────────────────────────────────────────
@@ -1146,49 +1196,186 @@
             showToast("You can't DM yourself", 'error');
             return;
         }
-        dmRecipient = { id: recipientId, name: recipientName };
-        document.getElementById('dmTitle').textContent = `💬 ${escapeHtml(recipientName)}`;
-        document.getElementById('dmModal').style.display = 'flex';
-        loadDMMessages();
-        setupDMChannel();
-    }
-
-    function closeDM() {
-        document.getElementById('dmModal').style.display = 'none';
-        if (dmChannel) {
-            dmChannel.unsubscribe();
-            dmChannel = null;
+        // Check if already open
+        const existing = openDMs.find(d => d.recipientId === recipientId);
+        if (existing) {
+            // Restore if minimized, focus
+            if (existing.minimized) {
+                restoreDM(existing);
+            }
+            // Bring to front (z-index)
+            existing.windowElement.style.zIndex = 10000 + openDMs.length;
+            return;
         }
-        dmRecipient = null;
-        dmMessages = [];
+
+        // Check limit
+        if (openDMs.length >= MAX_DMS) {
+            showToast(`Maximum ${MAX_DMS} DMs open. Close one first.`, 'error');
+            return;
+        }
+
+        // Create new DM window
+        createDMWindow(recipientId, recipientName);
     }
 
-    async function loadDMMessages() {
-        if (!dmRecipient) return;
+    function createDMWindow(recipientId, recipientName) {
+        // Generate a unique ID for this window
+        const winId = 'dm-' + Date.now();
+
+        // Create the window element
+        const win = document.createElement('div');
+        win.className = 'dm-window';
+        win.dataset.winId = winId;
+        win.style.left = (100 + openDMs.length * 40) + 'px';
+        win.style.top = (100 + openDMs.length * 30) + 'px';
+        win.style.zIndex = 10000 + openDMs.length;
+
+        // Header
+        const header = document.createElement('div');
+        header.className = 'dm-header';
+        header.innerHTML = `
+            <div class="dm-title">
+                <span class="online-dot"></span>
+                ${escapeHtml(recipientName)}
+            </div>
+            <div class="dm-controls">
+                <button onclick="minimizeDM('${winId}')" title="Minimize">─</button>
+                <button onclick="closeDM('${winId}')" title="Close">✕</button>
+            </div>
+        `;
+        win.appendChild(header);
+
+        // Messages area
+        const msgsDiv = document.createElement('div');
+        msgsDiv.className = 'dm-messages';
+        msgsDiv.id = `dmMessages-${winId}`;
+        msgsDiv.innerHTML = '<div class="empty">Loading...</div>';
+        win.appendChild(msgsDiv);
+
+        // Input area
+        const inputArea = document.createElement('div');
+        inputArea.className = 'dm-input-area';
+
+        const toolbar = document.createElement('div');
+        toolbar.className = 'toolbar';
+        const isBlackOrFounder = ['black', 'founder'].includes(currentPlayer.subscription_tier?.toLowerCase() || 'basic');
+        if (isBlackOrFounder) {
+            toolbar.innerHTML = `
+                <button type="button" onclick="dmFormat('${winId}', 'bold')"><b>B</b></button>
+                <button type="button" onclick="dmFormat('${winId}', 'italic')"><i>I</i></button>
+                <button type="button" onclick="dmFormat('${winId}', 'h2')">H2</button>
+                <button type="button" onclick="dmInsertLink('${winId}')">🔗 Link</button>
+                <span class="separator"></span>
+                <input type="color" id="dmColorPicker-${winId}" onchange="dmInsertColor('${winId}')" value="#ff0000" title="Text color">
+                <span class="separator"></span>
+                <button type="button" onclick="dmToggleEmojiPicker('${winId}')">😊</button>
+                <span class="separator"></span>
+                <button type="button" class="nudge-btn" onclick="sendNudge('${winId}')">👋 Nudge</button>
+            `;
+        } else {
+            toolbar.innerHTML = `
+                <button type="button" onclick="dmToggleEmojiPicker('${winId}')">😊</button>
+            `;
+        }
+        inputArea.appendChild(toolbar);
+
+        // Emoji picker for this window
+        const emojiPicker = document.createElement('div');
+        emojiPicker.className = 'emoji-picker';
+        emojiPicker.id = `dmEmojiPicker-${winId}`;
+        emojiPicker.innerHTML = `
+            <button onclick="dmInsertEmoji('${winId}', '😊')">😊</button>
+            <button onclick="dmInsertEmoji('${winId}', '😂')">😂</button>
+            <button onclick="dmInsertEmoji('${winId}', '🤔')">🤔</button>
+            <button onclick="dmInsertEmoji('${winId}', '🔥')">🔥</button>
+            <button onclick="dmInsertEmoji('${winId}', '💯')">💯</button>
+            <button onclick="dmInsertEmoji('${winId}', '✨')">✨</button>
+            <button onclick="dmInsertEmoji('${winId}', '🎉')">🎉</button>
+            <button onclick="dmInsertEmoji('${winId}', '👏')">👏</button>
+            <button onclick="dmInsertEmoji('${winId}', '👍')">👍</button>
+            <button onclick="dmInsertEmoji('${winId}', '❤️')">❤️</button>
+            <button onclick="dmInsertEmoji('${winId}', '🙌')">🙌</button>
+            <button onclick="dmInsertEmoji('${winId}', '🤩')">🤩</button>
+        `;
+        inputArea.appendChild(emojiPicker);
+
+        // Input row
+        const inputRow = document.createElement('div');
+        inputRow.className = 'dm-input-row';
+        inputRow.innerHTML = `
+            <textarea id="dmInput-${winId}" placeholder="Type a message..." rows="2"></textarea>
+            <button onclick="dmSend('${winId}')">Send</button>
+        `;
+        inputArea.appendChild(inputRow);
+
+        win.appendChild(inputArea);
+
+        // Append to container
+        document.getElementById('dmContainer').appendChild(win);
+
+        // Store window data
+        const dmData = {
+            winId: winId,
+            recipientId: recipientId,
+            recipientName: recipientName,
+            windowElement: win,
+            minimized: false,
+            messages: [],
+            channel: null,
+            lastNudge: 0,
+            emojiPickerVisible: false
+        };
+        openDMs.push(dmData);
+
+        // Set up drag
+        makeDraggable(win, header);
+
+        // Load messages
+        loadDMMessages(dmData);
+
+        // Set up realtime channel
+        setupDMChannel(dmData);
+
+        // Update taskbar
+        updateTaskbar();
+
+        // Glow effect for new window (if coming from a new message, we handle in broadcast)
+    }
+
+    // ─── DM Message Loading ──────────────────────────────────
+    async function loadDMMessages(dmData) {
+        const { recipientId, winId } = dmData;
+        const msgsDiv = document.getElementById(`dmMessages-${winId}`);
+        if (!msgsDiv) return;
+
         const { data, error } = await sb
             .from('dm_messages')
             .select('*')
-            .or(`and(sender_id.eq.${currentPlayer.id},recipient_id.eq.${dmRecipient.id}),and(sender_id.eq.${dmRecipient.id},recipient_id.eq.${currentPlayer.id})`)
+            .or(`and(sender_id.eq.${currentPlayer.id},recipient_id.eq.${recipientId}),and(sender_id.eq.${recipientId},recipient_id.eq.${currentPlayer.id})`)
             .order('created_at', { ascending: true });
 
         if (error) {
             console.error('Error loading DM messages:', error);
+            msgsDiv.innerHTML = '<div class="empty">Error loading messages.</div>';
             return;
         }
-        dmMessages = data || [];
-        renderDMMessages();
+        dmData.messages = data || [];
+        renderDMMessages(dmData);
     }
 
-    function renderDMMessages() {
-        const container = document.getElementById('dmMessages');
-        if (!dmMessages.length) {
-            container.innerHTML = '<div class="empty">No messages yet. Say hello!</div>';
+    function renderDMMessages(dmData) {
+        const { winId, messages, recipientName } = dmData;
+        const msgsDiv = document.getElementById(`dmMessages-${winId}`);
+        if (!msgsDiv) return;
+
+        if (!messages || messages.length === 0) {
+            msgsDiv.innerHTML = '<div class="empty">No messages yet. Say hello!</div>';
             return;
         }
         const playerId = currentPlayer.id;
-        container.innerHTML = dmMessages.map(msg => {
+        msgsDiv.innerHTML = messages.map(msg => {
             const isOwn = msg.sender_id === playerId;
-            const username = isOwn ? currentPlayer.username : dmRecipient.name;
+            const username = isOwn ? currentPlayer.username : recipientName;
             return `
                 <div class="message ${isOwn ? 'own' : ''}">
                     <div class="message-header">
@@ -1199,49 +1386,60 @@
                 </div>
             `;
         }).join('');
-        container.scrollTop = container.scrollHeight;
+        msgsDiv.scrollTop = msgsDiv.scrollHeight;
     }
 
-    function setupDMChannel() {
-        if (dmChannel) dmChannel.unsubscribe();
-        if (!dmRecipient) return;
+    // ─── DM Channel ──────────────────────────────────────────
+    function setupDMChannel(dmData) {
+        const { recipientId, winId } = dmData;
+        const pairId = [currentPlayer.id, recipientId].sort().join('-');
+        const channel = sb.channel(`dm:${pairId}`);
 
-        // Use a unique channel name for the pair
-        const pairId = [currentPlayer.id, dmRecipient.id].sort().join('-');
-        dmChannel = sb.channel(`dm:${pairId}`);
-
-        dmChannel.on('broadcast', { event: 'message' }, (payload) => {
+        channel.on('broadcast', { event: 'message' }, (payload) => {
             const msg = payload.payload;
-            // Check if message is for this conversation
-            if ((msg.sender_id === currentPlayer.id && msg.recipient_id === dmRecipient.id) ||
-                (msg.sender_id === dmRecipient.id && msg.recipient_id === currentPlayer.id)) {
-                dmMessages.push(msg);
-                renderDMMessages();
+            // Check if this message belongs to this conversation
+            if ((msg.sender_id === currentPlayer.id && msg.recipient_id === recipientId) ||
+                (msg.sender_id === recipientId && msg.recipient_id === currentPlayer.id)) {
+                // Add to messages
+                dmData.messages.push(msg);
+                renderDMMessages(dmData);
+                // Glow effect and sound if not own
+                if (msg.sender_id !== currentPlayer.id) {
+                    glowDMWindow(dmData);
+                    playMessageSound();
+                }
             }
         });
 
-        dmChannel.on('broadcast', { event: 'nudge' }, (payload) => {
-            if (payload.payload.sender_id === dmRecipient.id) {
-                // Shake modal and play sound
-                shakeModal();
+        channel.on('broadcast', { event: 'nudge' }, (payload) => {
+            if (payload.payload.sender_id === recipientId) {
+                // Nudge received
+                glowDMWindow(dmData);
+                shakeDMWindow(dmData);
                 playNudgeSound();
+                showToast(`📨 ${escapeHtml(dmData.recipientName)} nudged you!`, 'info');
             }
         });
 
-        dmChannel.subscribe(async (status) => {
+        channel.subscribe(async (status) => {
             if (status === 'SUBSCRIBED') {
-                await dmChannel.track({
+                await channel.track({
                     user_id: currentPlayer.id,
                     username: currentPlayer.username
                 });
             }
         });
+
+        dmData.channel = channel;
     }
 
-    async function dmSend() {
-        const input = document.getElementById('dmInput');
+    // ─── Send DM Message ─────────────────────────────────────
+    async function dmSend(winId) {
+        const dmData = openDMs.find(d => d.winId === winId);
+        if (!dmData) return;
+        const input = document.getElementById(`dmInput-${winId}`);
         const text = input.value.trim();
-        if (!text || !dmRecipient) return;
+        if (!text) return;
 
         input.value = '';
 
@@ -1249,13 +1447,13 @@
         const newMsg = {
             id: tempId,
             sender_id: currentPlayer.id,
-            recipient_id: dmRecipient.id,
+            recipient_id: dmData.recipientId,
             content: text,
             created_at: new Date().toISOString()
         };
 
-        if (dmChannel) {
-            await dmChannel.send({
+        if (dmData.channel) {
+            await dmData.channel.send({
                 type: 'broadcast',
                 event: 'message',
                 payload: newMsg
@@ -1266,7 +1464,7 @@
             .from('dm_messages')
             .insert({
                 sender_id: currentPlayer.id,
-                recipient_id: dmRecipient.id,
+                recipient_id: dmData.recipientId,
                 content: text
             });
 
@@ -1274,14 +1472,15 @@
             console.error('Failed to send DM:', error);
             showToast('Error sending message', 'error');
         } else {
-            dmMessages.push(newMsg);
-            renderDMMessages();
+            dmData.messages.push(newMsg);
+            renderDMMessages(dmData);
         }
     }
 
-    // ─── DM Formatting ─────────────────────────────────────────
-    function dmFormat(type) {
-        const input = document.getElementById('dmInput');
+    // ─── DM Formatting (per window) ──────────────────────────
+    function dmFormat(winId, type) {
+        const input = document.getElementById(`dmInput-${winId}`);
+        if (!input) return;
         const start = input.selectionStart;
         const end = input.selectionEnd;
         const selected = input.value.substring(start, end);
@@ -1297,10 +1496,11 @@
         input.setSelectionRange(newPos, newPos);
     }
 
-    function dmInsertLink() {
+    function dmInsertLink(winId) {
         const url = prompt('Enter URL:', 'https://');
         if (!url) return;
-        const input = document.getElementById('dmInput');
+        const input = document.getElementById(`dmInput-${winId}`);
+        if (!input) return;
         const start = input.selectionStart;
         const end = input.selectionEnd;
         const selected = input.value.substring(start, end) || 'link';
@@ -1311,9 +1511,10 @@
         input.setSelectionRange(newPos, newPos);
     }
 
-    function dmInsertColor() {
-        const color = document.getElementById('dmColorPicker').value;
-        const input = document.getElementById('dmInput');
+    function dmInsertColor(winId) {
+        const color = document.getElementById(`dmColorPicker-${winId}`).value;
+        const input = document.getElementById(`dmInput-${winId}`);
+        if (!input) return;
         const start = input.selectionStart;
         const end = input.selectionEnd;
         const selected = input.value.substring(start, end) || 'text';
@@ -1324,58 +1525,73 @@
         input.setSelectionRange(newPos, newPos);
     }
 
-    // ─── DM Emoji Picker ──────────────────────────────────────
-    let dmEmojiPickerVisible = false;
-    function dmToggleEmojiPicker() {
-        const picker = document.getElementById('dmEmojiPicker');
-        dmEmojiPickerVisible = !dmEmojiPickerVisible;
-        picker.style.display = dmEmojiPickerVisible ? 'grid' : 'none';
+    // ─── DM Emoji Picker (per window) ────────────────────────
+    function dmToggleEmojiPicker(winId) {
+        const picker = document.getElementById(`dmEmojiPicker-${winId}`);
+        if (!picker) return;
+        const dmData = openDMs.find(d => d.winId === winId);
+        if (!dmData) return;
+        dmData.emojiPickerVisible = !dmData.emojiPickerVisible;
+        picker.style.display = dmData.emojiPickerVisible ? 'grid' : 'none';
     }
-    function dmInsertEmoji(emoji) {
-        const input = document.getElementById('dmInput');
+
+    function dmInsertEmoji(winId, emoji) {
+        const input = document.getElementById(`dmInput-${winId}`);
+        if (!input) return;
         const start = input.selectionStart;
         input.value = input.value.substring(0, start) + emoji + input.value.substring(start);
         input.focus();
         const newPos = start + emoji.length;
         input.setSelectionRange(newPos, newPos);
-        document.getElementById('dmEmojiPicker').style.display = 'none';
-        dmEmojiPickerVisible = false;
+        const picker = document.getElementById(`dmEmojiPicker-${winId}`);
+        if (picker) picker.style.display = 'none';
+        const dmData = openDMs.find(d => d.winId === winId);
+        if (dmData) dmData.emojiPickerVisible = false;
     }
 
     // ─── Nudge ────────────────────────────────────────────────
-    function sendNudge() {
-        if (!dmRecipient) return;
+    function sendNudge(winId) {
+        const dmData = openDMs.find(d => d.winId === winId);
+        if (!dmData) return;
         const now = Date.now();
-        const lastNudge = nudgeCooldowns[dmRecipient.id] || 0;
-        if (now - lastNudge < 30000) {
+        if (now - dmData.lastNudge < 30000) {
             showToast('Nudge cooldown: wait 30 seconds', 'error');
             return;
         }
-        nudgeCooldowns[dmRecipient.id] = now;
-        document.getElementById('nudgeBtn').disabled = true;
+        dmData.lastNudge = now;
+        // Disable button temporarily
+        const btn = document.querySelector(`#dm-window-${winId} .nudge-btn`);
+        if (btn) btn.disabled = true;
         setTimeout(() => {
-            document.getElementById('nudgeBtn').disabled = false;
+            if (btn) btn.disabled = false;
         }, 30000);
 
-        if (dmChannel) {
-            dmChannel.send({
+        if (dmData.channel) {
+            dmData.channel.send({
                 type: 'broadcast',
                 event: 'nudge',
                 payload: { sender_id: currentPlayer.id }
             });
         }
-        // Local nudge effect
-        shakeModal();
+        // Local nudge effect (shake own window)
+        shakeDMWindow(dmData);
         playNudgeSound();
         showToast('Nudge sent!', 'success');
     }
 
-    function shakeModal() {
-        const modal = document.getElementById('dmModalContent');
-        modal.classList.remove('shake');
-        void modal.offsetWidth; // trigger reflow
-        modal.classList.add('shake');
-        setTimeout(() => modal.classList.remove('shake'), 500);
+    // ─── Window Effects ──────────────────────────────────────
+    function shakeDMWindow(dmData) {
+        const win = dmData.windowElement;
+        win.classList.remove('shake');
+        void win.offsetWidth;
+        win.classList.add('shake');
+        setTimeout(() => win.classList.remove('shake'), 500);
+    }
+
+    function glowDMWindow(dmData) {
+        const win = dmData.windowElement;
+        win.classList.add('glow');
+        setTimeout(() => win.classList.remove('glow'), 2000);
     }
 
     function playNudgeSound() {
@@ -1392,8 +1608,109 @@
             gain.connect(ctx.destination);
             osc.start();
             osc.stop(ctx.currentTime + 0.2);
-        } catch (e) {
-            // Audio not supported, fallback to console
+        } catch (e) {}
+    }
+
+    function playMessageSound() {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(600, ctx.currentTime);
+            osc.frequency.setValueAtTime(800, ctx.currentTime + 0.08);
+            gain.gain.setValueAtTime(0.2, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.15);
+        } catch (e) {}
+    }
+
+    // ─── Minimize / Restore / Close ──────────────────────────
+    function minimizeDM(winId) {
+        const dmData = openDMs.find(d => d.winId === winId);
+        if (!dmData) return;
+        dmData.minimized = true;
+        dmData.windowElement.classList.add('minimized');
+        updateTaskbar();
+    }
+
+    function restoreDM(dmData) {
+        dmData.minimized = false;
+        dmData.windowElement.classList.remove('minimized');
+        updateTaskbar();
+        // Bring to front
+        dmData.windowElement.style.zIndex = 10000 + openDMs.length;
+    }
+
+    function closeDM(winId) {
+        const index = openDMs.findIndex(d => d.winId === winId);
+        if (index === -1) return;
+        const dmData = openDMs[index];
+        // Unsubscribe channel
+        if (dmData.channel) {
+            dmData.channel.unsubscribe();
+        }
+        // Remove element
+        if (dmData.windowElement.parentNode) {
+            dmData.windowElement.parentNode.removeChild(dmData.windowElement);
+        }
+        openDMs.splice(index, 1);
+        updateTaskbar();
+        // Re-index z-index
+        openDMs.forEach((d, i) => {
+            d.windowElement.style.zIndex = 10000 + i;
+        });
+    }
+
+    // ─── Taskbar ──────────────────────────────────────────────
+    function updateTaskbar() {
+        const taskbar = document.getElementById('dmTaskbar');
+        const minimized = openDMs.filter(d => d.minimized);
+        if (minimized.length === 0) {
+            taskbar.innerHTML = '';
+            return;
+        }
+        taskbar.innerHTML = minimized.map(d => `
+            <div class="dm-taskbar-item" onclick="restoreDM(openDMs.find(dm => dm.winId === '${d.winId}'))">
+                💬 ${escapeHtml(d.recipientName)}
+                <button class="close-minimized" onclick="event.stopPropagation(); closeDM('${d.winId}')">✕</button>
+            </div>
+        `).join('');
+    }
+
+    // ─── Dragging ─────────────────────────────────────────────
+    function makeDraggable(element, handle) {
+        let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+        handle.onmousedown = (e) => {
+            e.preventDefault();
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+            document.onmouseup = closeDragElement;
+            document.onmousemove = elementDrag;
+            // Bring to front
+            const dmData = openDMs.find(d => d.windowElement === element);
+            if (dmData) {
+                const maxZ = Math.max(...openDMs.map(d => parseInt(d.windowElement.style.zIndex) || 10000));
+                element.style.zIndex = maxZ + 1;
+            }
+        };
+
+        function elementDrag(e) {
+            e.preventDefault();
+            pos1 = pos3 - e.clientX;
+            pos2 = pos4 - e.clientY;
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+            element.style.top = (element.offsetTop - pos2) + 'px';
+            element.style.left = (element.offsetLeft - pos1) + 'px';
+        }
+
+        function closeDragElement() {
+            document.onmouseup = null;
+            document.onmousemove = null;
         }
     }
 
@@ -1417,6 +1734,8 @@
 
         await loadMessages();
         setupGlobalChannel();
+
+        // Re-apply theme to DM windows (they inherit)
     })();
 </script>
 </body>
