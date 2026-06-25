@@ -6,7 +6,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
   <style>
-    /* ─── CSS Variables & Themes (same as before) ─── */
+    /* ─── CSS Variables & Themes ─── */
     :root {
       --bg-body: #f0f4fa;
       --card-bg: #fff;
@@ -283,6 +283,8 @@
     }
 
     .post-form .editor {
+      width: 100%;
+      box-sizing: border-box;
       min-height: 100px;
       padding: 12px 14px;
       background: var(--card-bg);
@@ -294,6 +296,7 @@
       outline: none;
       transition: border .2s;
       word-wrap: break-word;
+      resize: vertical;
     }
     .post-form .editor:focus {
       border-color: var(--accent);
@@ -302,11 +305,7 @@
     .post-form .editor[contenteditable="true"] {
       white-space: pre-wrap;
     }
-    .post-form textarea.editor {
-      resize: vertical;
-      min-height: 100px;
-      font-family: var(--font-family);
-    }
+
     .post-form .post-actions {
       display: flex;
       gap: 12px;
@@ -957,14 +956,12 @@ async function loadCommunityView() {
   `;
 
   if (isMember) {
-    // Build post form
     let postFormHtml = `
       <div class="post-form">
         <input type="text" id="postTitle" placeholder="Post title" maxlength="200" style="width:100%;padding:10px;margin-bottom:10px;border:1px solid var(--border-light);border-radius:12px;background:var(--card-bg);color:var(--text-main);font-family:var(--font-family);">
     `;
 
     if (isBlackOrFounder) {
-      // Rich text toolbar
       postFormHtml += `
         <div class="toolbar">
           <button type="button" onclick="execCmd('bold')"><b>B</b></button>
@@ -981,7 +978,6 @@ async function loadCommunityView() {
         <div id="postEditor" class="editor" contenteditable="true" placeholder="What's on your mind?"></div>
       `;
     } else {
-      // Plain textarea for non-Black/Founder
       postFormHtml += `
         <textarea id="postEditor" class="editor" placeholder="What's on your mind?" rows="5"></textarea>
       `;
@@ -1244,7 +1240,6 @@ async function loadPostReactions(postId) {
 async function toggleReaction(postId, emoji) {
   if (!currentPlayer) return showToast('Please log in', 'error');
 
-  // Check if user already reacted with this emoji
   const existing = await sb
     .from('post_reactions')
     .select('*')
@@ -1253,20 +1248,17 @@ async function toggleReaction(postId, emoji) {
     .maybeSingle();
 
   if (existing.data && existing.data.reaction_type === emoji) {
-    // Remove reaction
     await sb
       .from('post_reactions')
       .delete()
       .eq('id', existing.data.id);
   } else {
-    // If user had a different reaction, remove it first (toggle)
     if (existing.data) {
       await sb
         .from('post_reactions')
         .delete()
         .eq('id', existing.data.id);
     }
-    // Insert new reaction
     await sb
       .from('post_reactions')
       .insert({
@@ -1276,7 +1268,6 @@ async function toggleReaction(postId, emoji) {
       });
   }
 
-  // Reload the post view to reflect changes
   await loadPostView(postId);
 }
 
@@ -1284,7 +1275,6 @@ async function toggleReaction(postId, emoji) {
 // VOTE (only for comments now)
 // ─────────────────────────────────────────────
 async function vote(targetType, targetId, value) {
-  // Only allow voting on comments
   if (targetType !== 'comment') {
     showToast('Voting only available on comments', 'info');
     return;
@@ -1362,15 +1352,12 @@ async function createPost() {
   let content;
 
   if (editor.tagName === 'DIV') {
-    // Rich text editor (contentEditable)
     content = editor.innerHTML.trim();
     if (!content || content === '<br>') return showToast('Content cannot be empty', 'error');
     content = DOMPurify.sanitize(content);
   } else if (editor.tagName === 'TEXTAREA') {
-    // Plain text
     content = editor.value.trim();
     if (!content) return showToast('Content cannot be empty', 'error');
-    // Escape HTML to prevent injection
     content = escapeHtml(content);
   }
 
