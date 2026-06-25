@@ -93,7 +93,6 @@
             width: 100%;
         }
 
-        /* ─── Top Bar ─── */
         .top-bar {
             display: flex;
             justify-content: space-between;
@@ -160,12 +159,8 @@
             background: var(--btn-ghost);
             color: var(--text-main);
         }
-        .font-btn {
-            font-size: .75rem;
-            padding: 4px 12px;
-        }
+        .font-btn { font-size: .75rem; padding: 4px 12px; }
 
-        /* ─── Chat Layout ─── */
         .chat-container {
             display: flex;
             gap: 20px;
@@ -193,10 +188,7 @@
             align-items: center;
             border-bottom: 1px solid var(--border-light);
         }
-        .room-info {
-            font-weight: 700;
-            font-size: 1.2rem;
-        }
+        .room-info { font-weight: 700; font-size: 1.2rem; }
         .online-count {
             font-size: 0.8rem;
             background: rgba(255,255,255,0.15);
@@ -220,9 +212,7 @@
             max-width: 80%;
             animation: fadeIn 0.2s ease;
         }
-        .message.own {
-            align-self: flex-end;
-        }
+        .message.own { align-self: flex-end; }
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(8px); }
             to { opacity: 1; transform: translateY(0); }
@@ -238,9 +228,7 @@
             font-weight: 600;
             color: var(--accent);
         }
-        .message-time {
-            font-size: 0.65rem;
-        }
+        .message-time { font-size: 0.65rem; }
         .message-text {
             background: var(--card-bg);
             padding: 8px 14px;
@@ -254,15 +242,9 @@
             color: #fff;
             border-color: var(--accent);
         }
-        .message-text img, .message-text a {
-            max-width: 100%;
-        }
-        .message-text a {
-            color: var(--accent);
-            text-decoration: underline;
-        }
-        .message-text strong, .message-text b { font-weight: 700; }
-        .message-text em, .message-text i { font-style: italic; }
+        .message-text a { color: var(--accent); text-decoration: underline; }
+        .message-text strong { font-weight: 700; }
+        .message-text em { font-style: italic; }
         .message-text h2 { font-size: 1.4rem; font-weight: 700; margin: 8px 0; }
 
         .message-input-area {
@@ -294,12 +276,8 @@
             transition: .15s;
             font-family: var(--font-family);
         }
-        .toolbar button:hover {
-            background: var(--btn-ghost);
-        }
-        .toolbar button:active {
-            transform: scale(0.95);
-        }
+        .toolbar button:hover { background: var(--btn-ghost); }
+        .toolbar button:active { transform: scale(0.95); }
         .toolbar .separator {
             width: 1px;
             height: 24px;
@@ -342,11 +320,8 @@
             font-family: var(--font-family);
             white-space: nowrap;
         }
-        #sendBtn:hover {
-            background: var(--btn-primary-hover);
-        }
+        #sendBtn:hover { background: var(--btn-primary-hover); }
 
-        /* ─── Emoji Picker ─── */
         .emoji-picker {
             display: none;
             position: absolute;
@@ -371,11 +346,8 @@
             border-radius: 8px;
             transition: background .15s;
         }
-        .emoji-picker button:hover {
-            background: var(--btn-ghost);
-        }
+        .emoji-picker button:hover { background: var(--btn-ghost); }
 
-        /* ─── Members Sidebar ─── */
         .members-sidebar {
             width: 280px;
             background: var(--card-bg);
@@ -411,9 +383,7 @@
             background: var(--card-header-bg);
             transition: background .15s;
         }
-        .member-item:hover {
-            background: var(--btn-ghost);
-        }
+        .member-item:hover { background: var(--btn-ghost); }
         .member-avatar {
             width: 36px;
             height: 36px;
@@ -427,14 +397,8 @@
             font-size: 1rem;
             flex-shrink: 0;
         }
-        .member-name {
-            font-weight: 500;
-            flex: 1;
-        }
-        .member-tier-badge {
-            font-size: 1rem;
-            line-height: 1;
-        }
+        .member-name { font-weight: 500; flex: 1; }
+        .member-tier-badge { font-size: 1rem; line-height: 1; }
         .member-status {
             width: 8px;
             height: 8px;
@@ -443,7 +407,6 @@
             flex-shrink: 0;
         }
 
-        /* ─── Toast ─── */
         .toast-container {
             position: fixed;
             top: 20px;
@@ -471,17 +434,13 @@
             from { transform: translateX(100%); opacity: 0; }
             to { transform: translateX(0); opacity: 1; }
         }
-
         .loading, .empty {
             text-align: center;
             color: var(--text-muted);
             padding: 20px;
         }
 
-        /* ─── Responsive ─── */
-        @media (max-width: 900px) {
-            .members-sidebar { width: 200px; }
-        }
+        @media (max-width: 900px) { .members-sidebar { width: 200px; } }
         @media (max-width: 700px) {
             .members-sidebar { display: none; }
             .chat-container { flex-direction: column; }
@@ -499,7 +458,6 @@
 <body>
 
 <div class="container">
-    <!-- Top Bar -->
     <div class="top-bar">
         <a href="dashboard.html" class="back-link">← Dashboard</a>
         <div class="controls">
@@ -516,9 +474,7 @@
         </div>
     </div>
 
-    <!-- Chat Container -->
     <div class="chat-container">
-        <!-- Main Chat -->
         <div class="chat-main">
             <div class="chat-header">
                 <div class="room-info">🌍 Global Chat</div>
@@ -528,7 +484,6 @@
                 <div class="loading">Loading messages...</div>
             </div>
             <div class="message-input-area">
-                <!-- Toolbar (hidden for non-Black/Founder) -->
                 <div class="toolbar" id="toolbar" style="display:none;">
                     <button type="button" onclick="formatMessage('bold')"><b>B</b></button>
                     <button type="button" onclick="formatMessage('italic')"><i>I</i></button>
@@ -541,7 +496,6 @@
                     <textarea id="messageInput" placeholder="Type your message..." rows="2"></textarea>
                     <button id="sendBtn" onclick="sendMessage()">Send</button>
                 </div>
-                <!-- Emoji Picker -->
                 <div class="emoji-picker" id="emojiPicker">
                     <button onclick="insertEmoji('😊')">😊</button>
                     <button onclick="insertEmoji('😂')">😂</button>
@@ -559,7 +513,6 @@
             </div>
         </div>
 
-        <!-- Members Sidebar -->
         <div class="members-sidebar">
             <div class="members-header">👥 Online</div>
             <div class="members-list" id="membersList">
@@ -569,7 +522,6 @@
     </div>
 </div>
 
-<!-- Toast Container -->
 <div class="toast-container" id="toast-container"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
@@ -724,7 +676,7 @@
         }
         const playerId = currentPlayer.id;
         container.innerHTML = messages.map(msg => {
-            const username = msg.players?.[0]?.username || 'Unknown';
+            const username = msg.players?.username || 'Unknown';
             const isOwn = msg.user_id === playerId;
             return `
                 <div class="message ${isOwn ? 'own' : ''}">
@@ -762,7 +714,6 @@
                 list.push(...state[key]);
             });
             onlineUsers = list;
-            // Ensure current user is in the list (fallback)
             if (!onlineUsers.some(u => u.user_id === currentPlayer.id)) {
                 onlineUsers.push({
                     user_id: currentPlayer.id,
@@ -785,7 +736,6 @@
                     username: currentPlayer.username,
                     subscription_tier: currentPlayer.subscription_tier || 'basic'
                 });
-                // Force a sync update after tracking
                 setTimeout(() => {
                     const state = messageChannel.presenceState();
                     const list = [];
