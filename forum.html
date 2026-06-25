@@ -1090,6 +1090,9 @@ async function viewPost(postId) {
   await loadPostView(postId);
 }
 
+// ─────────────────────────────────────────────
+// LOAD POST VIEW WITH COMMENTS & USER VOTES
+// ─────────────────────────────────────────────
 async function loadPostView(postId) {
   const { data: post, error } = await sb
     .from('posts')
@@ -1153,11 +1156,12 @@ async function loadPostView(postId) {
 }
 
 // ─────────────────────────────────────────────
-// COMMENTS
+// LOAD COMMENTS WITH USER VOTES
 // ─────────────────────────────────────────────
 async function loadComments(postId) {
   try {
-    const { data, error } = await sb
+    // 1. Fetch comments
+    const { data: commentsData, error } = await sb
       .from('comments')
       .select(`
         *,
@@ -1170,10 +1174,28 @@ async function loadComments(postId) {
 
     if (error) throw error;
 
-    return (data || []).map(c => ({
+    if (!commentsData || commentsData.length === 0) return [];
+
+    // 2. Fetch current user's votes on these comments
+    const commentIds = commentsData.map(c => c.id);
+    let userVotes = {};
+    if (currentPlayer) {
+      const { data: voteData } = await sb
+        .from('votes')
+        .select('target_id, vote_value')
+        .eq('player_id', currentPlayer.id)
+        .eq('target_type', 'comment')
+        .in('target_id', commentIds);
+      if (voteData) {
+        voteData.forEach(v => { userVotes[v.target_id] = v.vote_value; });
+      }
+    }
+
+    // 3. Merge
+    return commentsData.map(c => ({
       ...c,
       author_name: c.author?.username || 'Unknown',
-      user_vote: 0
+      user_vote: userVotes[c.id] || 0
     }));
   } catch (err) {
     console.error('Error loading comments:', err);
@@ -1182,6 +1204,9 @@ async function loadComments(postId) {
   }
 }
 
+// ─────────────────────────────────────────────
+// RENDER COMMENTS
+// ─────────────────────────────────────────────
 function renderComments(comments, parentId = null) {
   if (!comments || comments.length === 0) return '';
 
@@ -1191,6 +1216,7 @@ function renderComments(comments, parentId = null) {
   return filtered.map(c => {
     const childrenHtml = renderComments(comments, c.id);
     const score = (c.upvotes || 0) - (c.downvotes || 0);
+    const userVote = c.user_vote || 0;
 
     return `
       <div class="comment" style="margin-left: ${(c.depth || 0) * 20}px;">
@@ -1200,9 +1226,9 @@ function renderComments(comments, parentId = null) {
         </div>
         <div class="comment-content">${escapeHtml(c.content || '').replace(/\n/g, '<br>')}</div>
         <div class="comment-actions">
-          <button class="vote-btn" onclick="vote('comment', '${c.id}', 1)">▲</button>
+          <button class="vote-btn ${userVote === 1 ? 'upvoted' : ''}" onclick="vote('comment', '${c.id}', 1)">▲</button>
           <span>${score}</span>
-          <button class="vote-btn" onclick="vote('comment', '${c.id}', -1)">▼</button>
+          <button class="vote-btn ${userVote === -1 ? 'downvoted' : ''}" onclick="vote('comment', '${c.id}', -1)">▼</button>
           <button class="reply-btn" onclick="showReplyForm('${c.id}')">Reply</button>
           ${c.author_id === currentPlayer?.id ? `
             <button onclick="editComment('${c.id}')">Edit</button>
@@ -1285,8 +1311,12 @@ async function vote(targetType, targetId, value) {
     p_target_id: targetId,
     p_vote_value: value
   });
-  if (error) return showToast(error.message, 'error');
-
+  if (error) {
+    console.error('Vote error:', error);
+    return showToast(error.message, 'error');
+  }
+  
+  // Reload the current view to refresh comment votes
   if (currentPost) await loadPostView(currentPost.id);
   else if (currentCommunity) await loadCommunityView();
   else await loadFeed();
