@@ -1058,6 +1058,623 @@
 <div class="dm-window-container" id="dmContainer"></div>
 <div class="dm-taskbar" id="dmTaskbar"></div>
 <div class="toast-container" id="toast-container"></div>
+
+<!-- ─── Supabase SDK ─── -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+
+<!-- ─── All JavaScript ─── -->
+<script>
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // Supabase init
+  const sb = window.supabase.createClient(
+    "https://mtiwodvsrwvrujbhmmrn.supabase.co",
+    "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
+  );
+
+  // ─── Utilities ──────────────────────────────────────────────
+  function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));
+  }
+
+  function showToast(message, type = 'info', duration = 3000) {
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+    container.appendChild(toast);
+    setTimeout(() => {
+      toast.classList.add('fade-out');
+      setTimeout(() => {
+        if (toast.parentNode) container.removeChild(toast);
+      }, 300);
+    }, duration);
+  }
+
+  // ─── Sound toggle ──────────────────────────────────────────
+  let soundEnabled = true;
+  function toggleSound() {
+    soundEnabled = !soundEnabled;
+    document.getElementById('soundToggle').textContent = soundEnabled ? '🔊' : '🔇';
+    document.getElementById('soundToggle').classList.toggle('muted', !soundEnabled);
+  }
+
+  function playMessageSound() {
+    if (!soundEnabled) return;
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(600, ctx.currentTime);
+      osc.frequency.setValueAtTime(800, ctx.currentTime + 0.08);
+      gain.gain.setValueAtTime(0.2, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.15);
+    } catch (e) {}
+  }
+
+  function playNudgeSound() {
+    if (!soundEnabled) return;
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      osc.frequency.setValueAtTime(660, ctx.currentTime + 0.1);
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.2);
+    } catch (e) {}
+  }
+
+  // ─── Theme & Font ──────────────────────────────────────────
+  function setTheme(themeName) {
+    const body = document.body;
+    body.classList.remove('theme-dusk', 'theme-meadow');
+    if (themeName === 'dusk') body.classList.add('theme-dusk');
+    else if (themeName === 'meadow') body.classList.add('theme-meadow');
+    localStorage.setItem('chat_theme', themeName);
+    document.querySelectorAll('.theme-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.getAttribute('data-theme') === themeName);
+    });
+  }
+
+  function setFont(fontName) {
+    const root = document.documentElement;
+    if (fontName === 'monospace') root.style.setProperty('--font-family', "'Courier New', monospace");
+    else if (fontName === 'sans-serif') root.style.setProperty('--font-family', "'Inter', sans-serif");
+    else if (fontName === 'serif') root.style.setProperty('--font-family', "'Georgia', serif");
+    localStorage.setItem('chat_font', fontName);
+    document.querySelectorAll('.font-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.getAttribute('data-font') === fontName);
+    });
+  }
+
+  function initThemeAndFont() {
+    const savedTheme = localStorage.getItem('chat_theme') || 'default';
+    setTheme(savedTheme);
+    const savedFont = localStorage.getItem('chat_font') || 'monospace';
+    setFont(savedFont);
+    document.getElementById('themeSwitcher').addEventListener('click', (e) => {
+      const btn = e.target.closest('.theme-btn');
+      if (btn) setTheme(btn.getAttribute('data-theme'));
+    });
+    document.getElementById('fontSwitcher').addEventListener('click', (e) => {
+      const btn = e.target.closest('.font-btn');
+      if (btn) setFont(btn.getAttribute('data-font'));
+    });
+  }
+
+  // ─── State ─────────────────────────────────────────────────
+  let currentPlayer = null;
+  let chatProfile = null;
+  let globalRoom = null;
+  let messageChannel = null;
+  let onlineUsers = [];
+  let awayCheckInterval = null;
+  let activityInterval = null;
+  let openDMs = [];
+  const MAX_DMS = 5;
+  let currentMemberTab = 'online';
+  let friendsList = [];
+  let dmSubscription = null;
+  let typingTimeouts = {};
+
+  // ─── Auth & Player ────────────────────────────────────────
+  async function getPlayer() {
+    const { data: { user } } = await sb.auth.getUser();
+    if (!user) return null;
+    const { data: player, error } = await sb
+      .from('players')
+      .select('id, username, subscription_tier')
+      .eq('auth_id', user.id)
+      .single();
+    if (error) { console.error(error); return null; }
+    currentPlayer = player;
+    return player;
+  }
+
+  // ─── Chat Profile ─────────────────────────────────────────
+  async function loadChatProfile() {
+    if (!currentPlayer) return null;
+    const { data, error } = await sb
+      .from('chat_profiles')
+      .select('*')
+      .eq('player_id', currentPlayer.id)
+      .maybeSingle();
+    if (error) { console.error(error); return null; }
+    if (data) { chatProfile = data; return data; }
+    return null;
+  }
+
+  async function saveChatProfile() {
+    const tempUsername = document.getElementById('tempUsername').value.trim() || currentPlayer.username;
+    const age = parseInt(document.getElementById('userAge').value);
+    const gender = document.getElementById('userGender').value;
+    const country = document.getElementById('userCountry').value || 'Earth';
+    const invisible = document.getElementById('invisibleMode').checked;
+    if (!age || age < 18) { showToast('You must be 18 or older.', 'error'); return; }
+    if (!gender) { showToast('Please select gender.', 'error'); return; }
+    const profileData = {
+      player_id: currentPlayer.id,
+      temp_username: tempUsername,
+      age, gender, country,
+      invisible_mode: invisible,
+      status: invisible ? 'invisible' : 'available'
+    };
+    const { error } = await sb
+      .from('chat_profiles')
+      .upsert(profileData, { onConflict: 'player_id' });
+    if (error) { showToast('Error saving profile', 'error'); return; }
+    chatProfile = profileData;
+    document.getElementById('entryModal').style.display = 'none';
+    document.getElementById('statusSelect').value = chatProfile.status;
+    await initializeChat();
+  }
+
+  function showEntryModal() {
+    // Pre-fill with existing data
+    if (chatProfile) {
+      document.getElementById('tempUsername').value = chatProfile.temp_username || currentPlayer.username;
+      document.getElementById('userAge').value = chatProfile.age || '';
+      document.getElementById('userGender').value = chatProfile.gender || '';
+      document.getElementById('userCountry').value = chatProfile.country || '';
+      document.getElementById('invisibleMode').checked = chatProfile.invisible_mode || false;
+    } else {
+      document.getElementById('tempUsername').value = currentPlayer.username;
+      document.getElementById('userAge').value = '';
+      document.getElementById('userGender').value = '';
+      document.getElementById('userCountry').value = '';
+      document.getElementById('invisibleMode').checked = false;
+    }
+    document.getElementById('entryModal').style.display = 'flex';
+  }
+
+  // ─── Get/Create Global Room ──────────────────────────────
+  async function getGlobalRoom() {
+    const { data, error } = await sb
+      .from('chat_rooms')
+      .select('*')
+      .eq('name', 'Global Chat')
+      .maybeSingle();
+    if (error) { console.error(error); return null; }
+    if (data) { globalRoom = data; return data; }
+    const { data: newRoom, error: createError } = await sb
+      .from('chat_rooms')
+      .insert({ name: 'Global Chat', type: 'global' })
+      .select('*')
+      .single();
+    if (createError) { console.error(createError); return null; }
+    globalRoom = newRoom; return newRoom;
+  }
+
+  // ─── Load Global Messages ────────────────────────────────
+  async function loadMessages() {
+    if (!globalRoom) return;
+    const { data, error } = await sb
+      .from('chat_messages')
+      .select(`
+        id,
+        content,
+        created_at,
+        user_id,
+        players:user_id (username)
+      `)
+      .eq('room_id', globalRoom.id)
+      .order('created_at', { ascending: true });
+    if (error) { console.error(error); return; }
+    renderMessages(data || []);
+  }
+
+  function renderMessages(messages) {
+    const container = document.getElementById('messagesArea');
+    if (!messages || messages.length === 0) {
+      container.innerHTML = '<div class="empty">No messages yet. Be the first!</div>';
+      return;
+    }
+    const playerId = currentPlayer.id;
+    container.innerHTML = messages.map(msg => {
+      const username = msg.players?.[0]?.username || 'Unknown';
+      const isOwn = msg.user_id === playerId;
+      return `
+        <div class="message ${isOwn ? 'own' : ''}">
+          <div class="message-header">
+            <span class="message-username">${escapeHtml(username)}</span>
+            <span class="message-time">${new Date(msg.created_at).toLocaleTimeString()}</span>
+          </div>
+          <div class="message-text">
+            ${renderMessageContent(msg.content)}
+            ${isOwn ? `<button class="delete-msg" onclick="deleteGlobalMessage('${msg.id}')" title="Delete">✕</button>` : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
+    container.scrollTop = container.scrollHeight;
+  }
+
+  function renderMessageContent(text) {
+    if (!text) return '';
+    let html = escapeHtml(text);
+    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+    html = html.replace(/^# (.+)$/gm, '<h2>$1</h2>');
+    html = html.replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" target="_blank">$1</a>');
+    html = html.replace(/<color=([^>]+)>(.+?)<\/color>/g, '<span style="color:$1">$2</span>');
+    return html;
+  }
+
+  // ─── Presence & Global Channel ──────────────────────────
+  function setupGlobalChannel() {
+    if (!globalRoom || !currentPlayer || !chatProfile) return;
+    messageChannel = sb.channel(`room:${globalRoom.id}`);
+    messageChannel.on('presence', { event: 'sync' }, () => {
+      const state = messageChannel.presenceState();
+      const list = [];
+      Object.keys(state).forEach(key => { list.push(...state[key]); });
+      onlineUsers = list;
+      if (!onlineUsers.some(u => u.user_id === currentPlayer.id)) {
+        onlineUsers.push({
+          user_id: currentPlayer.id,
+          username: chatProfile.temp_username || currentPlayer.username,
+          subscription_tier: currentPlayer.subscription_tier || 'basic',
+          status: chatProfile.status,
+          age: chatProfile.age,
+          gender: chatProfile.gender,
+          country: chatProfile.country || 'Earth',
+          invisible_mode: chatProfile.invisible_mode
+        });
+      }
+      document.getElementById('onlineCount').textContent = `${onlineUsers.length} online`;
+      renderMembers();
+    });
+    messageChannel.on('broadcast', { event: 'message' }, (payload) => { loadMessages(); });
+    messageChannel.subscribe(async (status) => {
+      if (status === 'SUBSCRIBED') {
+        await updatePresence();
+        startAwayDetection();
+        startActivityTracking();
+        loadFriendsList();
+        if (currentPlayer.subscription_tier?.toLowerCase() === 'founder') {
+          document.getElementById('reportsBtn').style.display = 'inline-block';
+        }
+      }
+    });
+  }
+
+  async function updatePresence() {
+    if (!messageChannel || !currentPlayer || !chatProfile) return;
+    await messageChannel.track({
+      user_id: currentPlayer.id,
+      username: chatProfile.temp_username || currentPlayer.username,
+      subscription_tier: currentPlayer.subscription_tier || 'basic',
+      status: chatProfile.status,
+      age: chatProfile.age,
+      gender: chatProfile.gender,
+      country: chatProfile.country || 'Earth',
+      invisible_mode: chatProfile.invisible_mode
+    });
+  }
+
+  // ─── Render Members ──────────────────────────────────────
+  function renderMembers() {
+    const container = document.getElementById('membersList');
+    let visibleUsers = [];
+    if (currentMemberTab === 'online') {
+      visibleUsers = onlineUsers.filter(u => {
+        if (u.user_id === currentPlayer.id) return true;
+        if (u.invisible_mode && currentPlayer.subscription_tier?.toLowerCase() !== 'founder') return false;
+        return true;
+      });
+    } else {
+      const friendIds = friendsList.map(f => f.friend_id);
+      visibleUsers = onlineUsers.filter(u => {
+        if (u.user_id === currentPlayer.id) return false;
+        if (!friendIds.includes(u.user_id)) return false;
+        if (u.invisible_mode && currentPlayer.subscription_tier?.toLowerCase() !== 'founder') return false;
+        return true;
+      });
+    }
+    if (!visibleUsers.length) {
+      container.innerHTML = currentMemberTab === 'online' ?
+        '<div class="empty">No one else is online.</div>' :
+        '<div class="empty">No friends online.</div>';
+      return;
+    }
+    container.innerHTML = visibleUsers.map(user => {
+      const statusClass = getStatusClass(user.status || 'offline');
+      const tierBadge = getTierBadge(user.subscription_tier || 'basic');
+      const details = `${user.age || '?'}/${user.gender ? user.gender.charAt(0).toUpperCase() : '?'}/${user.country || 'Earth'}`;
+      return `
+        <div class="member-item" onclick="openDM('${user.user_id}', '${escapeHtml(user.username)}')">
+          <div class="member-avatar">${user.username.charAt(0).toUpperCase()}</div>
+          <div class="member-info">
+            <div class="member-name">
+              ${escapeHtml(user.username)}
+              <span class="member-tier-badge">${tierBadge}</span>
+            </div>
+            <div class="member-details">${details}</div>
+          </div>
+          <div class="member-status-dot ${statusClass}"></div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function getStatusClass(status) {
+    switch(status) {
+      case 'available': return 'status-online';
+      case 'busy': return 'status-busy';
+      case 'away': return 'status-away';
+      case 'invisible': return 'status-invisible';
+      default: return 'status-offline';
+    }
+  }
+
+  function getTierBadge(tier) {
+    const map = { 'basic':'🟢', 'silver':'🔵', 'gold':'🟡', 'black':'⚫', 'founder':'👑' };
+    return map[tier] || '🟢';
+  }
+
+  function switchMemberTab(tab) {
+    currentMemberTab = tab;
+    document.querySelectorAll('.members-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+    renderMembers();
+  }
+
+  async function loadFriendsList() {
+    if (!currentPlayer) return;
+    const { data, error } = await sb
+      .from('chat_friends')
+      .select('friend_id')
+      .eq('user_id', currentPlayer.id);
+    if (error) { console.error(error); return; }
+    friendsList = data || [];
+  }
+
+  // ─── Send Global Message ─────────────────────────────────
+  async function sendMessage() {
+    const input = document.getElementById('messageInput');
+    const text = input.value.trim();
+    if (!text || !globalRoom) return;
+    input.value = '';
+    const tempId = 'temp-' + Date.now();
+    const newMsg = {
+      id: tempId,
+      content: text,
+      created_at: new Date().toISOString(),
+      user_id: currentPlayer.id,
+      players: { username: chatProfile.temp_username || currentPlayer.username }
+    };
+    if (messageChannel) {
+      await messageChannel.send({ type: 'broadcast', event: 'message', payload: newMsg });
+    }
+    const { error } = await sb
+      .from('chat_messages')
+      .insert({ room_id: globalRoom.id, user_id: currentPlayer.id, content: text });
+    if (error) { console.error(error); showToast('Error sending message', 'error'); }
+    else { loadMessages(); updateActivity(); }
+  }
+
+  // ─── Global Formatting ──────────────────────────────────
+  function formatMessage(type) {
+    const input = document.getElementById('messageInput');
+    const start = input.selectionStart;
+    const end = input.selectionEnd;
+    const selected = input.value.substring(start, end);
+    let replacement = '';
+    switch(type) {
+      case 'bold': replacement = `**${selected}**`; break;
+      case 'italic': replacement = `*${selected}*`; break;
+      case 'h2': replacement = `\n# ${selected || 'Heading'}\n`; break;
+    }
+    input.value = input.value.substring(0, start) + replacement + input.value.substring(end);
+    input.focus();
+    const newPos = start + replacement.length;
+    input.setSelectionRange(newPos, newPos);
+  }
+
+  function insertLink() {
+    const url = prompt('Enter URL:', 'https://');
+    if (!url) return;
+    const input = document.getElementById('messageInput');
+    const start = input.selectionStart;
+    const end = input.selectionEnd;
+    const selected = input.value.substring(start, end) || 'link';
+    const replacement = `[${selected}](${url})`;
+    input.value = input.value.substring(0, start) + replacement + input.value.substring(end);
+    input.focus();
+    const newPos = start + replacement.length;
+    input.setSelectionRange(newPos, newPos);
+  }
+
+  // ─── Emoji Picker ────────────────────────────────────────
+  let emojiPickerVisible = false;
+  function toggleEmojiPicker() {
+    const picker = document.getElementById('emojiPicker');
+    emojiPickerVisible = !emojiPickerVisible;
+    picker.style.display = emojiPickerVisible ? 'grid' : 'none';
+  }
+  function insertEmoji(emoji) {
+    const input = document.getElementById('messageInput');
+    const start = input.selectionStart;
+    input.value = input.value.substring(0, start) + emoji + input.value.substring(start);
+    input.focus();
+    const newPos = start + emoji.length;
+    input.setSelectionRange(newPos, newPos);
+    document.getElementById('emojiPicker').style.display = 'none';
+    emojiPickerVisible = false;
+  }
+
+  // ─── Toolbar visibility ──────────────────────────────────
+  function updateToolbarVisibility() {
+    const tier = currentPlayer?.subscription_tier?.toLowerCase() || 'basic';
+    const isBlackOrFounder = ['black', 'founder'].includes(tier);
+    document.getElementById('toolbar').style.display = isBlackOrFounder ? 'flex' : 'none';
+  }
+
+  // ─── Status Management ──────────────────────────────────
+  async function updateStatus(status) {
+    if (!currentPlayer || !chatProfile) return;
+    if (status === 'invisible') { chatProfile.invisible_mode = true; }
+    else { chatProfile.invisible_mode = false; }
+    chatProfile.status = status;
+    await sb
+      .from('chat_profiles')
+      .update({ status: status, invisible_mode: chatProfile.invisible_mode })
+      .eq('player_id', currentPlayer.id);
+    await updatePresence();
+    renderMembers();
+  }
+
+  // ─── Activity Tracking ──────────────────────────────────
+  function startActivityTracking() {
+    document.addEventListener('click', updateActivity);
+    document.addEventListener('keydown', updateActivity);
+    let mouseTimer;
+    document.addEventListener('mousemove', () => {
+      if (mouseTimer) clearTimeout(mouseTimer);
+      mouseTimer = setTimeout(updateActivity, 1000);
+    });
+    activityInterval = setInterval(updateActivity, 30000);
+  }
+
+  function updateActivity() {
+    if (!currentPlayer || !chatProfile) return;
+    sb.rpc('update_chat_activity').catch(e => console.warn('Activity update error:', e));
+    chatProfile.last_activity = new Date().toISOString();
+  }
+
+  // ─── Away Detection ──────────────────────────────────────
+  function startAwayDetection() {
+    if (awayCheckInterval) clearInterval(awayCheckInterval);
+    awayCheckInterval = setInterval(async () => {
+      if (!currentPlayer || !chatProfile) return;
+      const { data } = await sb
+        .from('chat_profiles')
+        .select('last_activity, status')
+        .eq('player_id', currentPlayer.id)
+        .single();
+      if (!data) return;
+      const lastActivity = new Date(data.last_activity);
+      const now = new Date();
+      const diffSeconds = (now - lastActivity) / 1000;
+      if (diffSeconds > 120 && (data.status === 'available' || data.status === 'busy')) {
+        if (chatProfile.status !== 'away') {
+          chatProfile.status = 'away';
+          await sb
+            .from('chat_profiles')
+            .update({ status: 'away' })
+            .eq('player_id', currentPlayer.id);
+          await updatePresence();
+          document.getElementById('statusSelect').value = 'away';
+          renderMembers();
+        }
+      }
+      if (diffSeconds < 30 && data.status === 'away') {
+        chatProfile.status = 'available';
+        await sb
+          .from('chat_profiles')
+          .update({ status: 'available' })
+          .eq('player_id', currentPlayer.id);
+        await updatePresence();
+        document.getElementById('statusSelect').value = 'available';
+        renderMembers();
+      }
+    }, 30000);
+  }
+
+  // ─── Delete Global Message ──────────────────────────────
+  async function deleteGlobalMessage(messageId) {
+    if (!confirm('Delete this message?')) return;
+    const { data, error } = await sb.rpc('delete_chat_message', { p_message_id: messageId });
+    if (error || !data.success) {
+      showToast(error?.message || 'Failed to delete', 'error');
+    } else {
+      showToast('Message deleted', 'success');
+      loadMessages();
+    }
+  }
+
+  // ─── Incoming DM subscription ────────────────────────────
+  function subscribeToDMIncoming() {
+    if (dmSubscription) return;
+    dmSubscription = sb
+      .channel('dm-incoming')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'dm_messages',
+        filter: `recipient_id=eq.${currentPlayer.id}`
+      }, async (payload) => {
+        const msg = payload.new;
+        const { data: sender } = await sb
+          .from('players')
+          .select('id, username')
+          .eq('id', msg.sender_id)
+          .single();
+        if (!sender) return;
+        // Check block/snooze
+        const { data: blockCheck } = await sb.rpc('check_snooze_block', { p_target_id: sender.id });
+        if (blockCheck && (blockCheck.blocked || blockCheck.snoozed)) return;
+        let existing = openDMs.find(d => d.recipientId === sender.id);
+        if (!existing) {
+          if (openDMs.length >= MAX_DMS) {
+            showToast(`Incoming DM from ${sender.username}, but you have ${MAX_DMS} DMs open.`, 'error');
+            return;
+          }
+          createDMWindow(sender.id, sender.username);
+          existing = openDMs.find(d => d.recipientId === sender.id);
+        }
+        if (existing) {
+          existing.messages.push(msg);
+          renderDMMessages(existing);
+          glowDMWindow(existing);
+          playMessageSound();
+          if (existing.minimized) restoreDM(existing);
+          existing.windowElement.style.zIndex = Math.max(...openDMs.map(d => parseInt(d.windowElement.style.zIndex) || 10000)) + 1;
+          // Mark as read if window is open
+          markDMMessagesRead(existing);
+        }
+      })
+      .subscribe();
+  }
+
+  // ─── Mark messages as read ───────────────────────────────
+  async function markDMMessagesRead(dmData) {
+    if (!dmData || !dmData.recipientId) return;
+    await sb.rpc('mark_dm_read', { p_other_user_id: dmData.recipientId });
+    // Re-render to update read statuses
+    renderDMMessages(dmData);
+  }
+
   // ────────────────────────────────────────────────────────────
   //  DM FUNCTIONS (continued from Block 2)
   // ────────────────────────────────────────────────────────────
@@ -1352,18 +1969,113 @@
   }
 
   // ─── DM Formatting ──────────────────────────────────────
-  function dmFormat(winId, type) { /* same as before */ }
-  function dmInsertLink(winId) { /* same as before */ }
-  function dmInsertColor(winId) { /* same as before */ }
-  function dmToggleEmojiPicker(winId) { /* same as before */ }
-  function dmInsertEmoji(winId, emoji) { /* same as before */ }
+  function dmFormat(winId, type) {
+    const input = document.getElementById(`dmInput-${winId}`);
+    if (!input) return;
+    const start = input.selectionStart;
+    const end = input.selectionEnd;
+    const selected = input.value.substring(start, end);
+    let replacement = '';
+    switch(type) {
+      case 'bold': replacement = `**${selected}**`; break;
+      case 'italic': replacement = `*${selected}*`; break;
+      case 'h2': replacement = `\n# ${selected || 'Heading'}\n`; break;
+    }
+    input.value = input.value.substring(0, start) + replacement + input.value.substring(end);
+    input.focus();
+    const newPos = start + replacement.length;
+    input.setSelectionRange(newPos, newPos);
+  }
+
+  function dmInsertLink(winId) {
+    const url = prompt('Enter URL:', 'https://');
+    if (!url) return;
+    const input = document.getElementById(`dmInput-${winId}`);
+    if (!input) return;
+    const start = input.selectionStart;
+    const end = input.selectionEnd;
+    const selected = input.value.substring(start, end) || 'link';
+    const replacement = `[${selected}](${url})`;
+    input.value = input.value.substring(0, start) + replacement + input.value.substring(end);
+    input.focus();
+    const newPos = start + replacement.length;
+    input.setSelectionRange(newPos, newPos);
+  }
+
+  function dmInsertColor(winId) {
+    const color = document.getElementById(`dmColorPicker-${winId}`).value;
+    const input = document.getElementById(`dmInput-${winId}`);
+    if (!input) return;
+    const start = input.selectionStart;
+    const end = input.selectionEnd;
+    const selected = input.value.substring(start, end) || 'text';
+    const replacement = `<color=${color}>${selected}</color>`;
+    input.value = input.value.substring(0, start) + replacement + input.value.substring(end);
+    input.focus();
+    const newPos = start + replacement.length;
+    input.setSelectionRange(newPos, newPos);
+  }
+
+  // ─── DM Emoji Picker ────────────────────────────────────
+  function dmToggleEmojiPicker(winId) {
+    const picker = document.getElementById(`dmEmojiPicker-${winId}`);
+    if (!picker) return;
+    const dmData = getDMDataByWinId(winId);
+    if (!dmData) return;
+    dmData.emojiPickerVisible = !dmData.emojiPickerVisible;
+    picker.style.display = dmData.emojiPickerVisible ? 'grid' : 'none';
+  }
+
+  function dmInsertEmoji(winId, emoji) {
+    const input = document.getElementById(`dmInput-${winId}`);
+    if (!input) return;
+    const start = input.selectionStart;
+    input.value = input.value.substring(0, start) + emoji + input.value.substring(start);
+    input.focus();
+    const newPos = start + emoji.length;
+    input.setSelectionRange(newPos, newPos);
+    const picker = document.getElementById(`dmEmojiPicker-${winId}`);
+    if (picker) picker.style.display = 'none';
+    const dmData = getDMDataByWinId(winId);
+    if (dmData) dmData.emojiPickerVisible = false;
+  }
 
   // ─── Nudge ──────────────────────────────────────────────
-  function sendNudge(winId) { /* same as before */ }
+  function sendNudge(winId) {
+    const dmData = getDMDataByWinId(winId);
+    if (!dmData) return;
+    const now = Date.now();
+    if (now - dmData.lastNudge < 30000) {
+      showToast('Nudge cooldown: wait 30 seconds', 'error');
+      return;
+    }
+    dmData.lastNudge = now;
+    const btn = document.querySelector(`#${winId} .nudge-btn`);
+    if (btn) btn.disabled = true;
+    setTimeout(() => { if (btn) btn.disabled = false; }, 30000);
+
+    if (dmData.channel) {
+      dmData.channel.send({ type: 'broadcast', event: 'nudge', payload: { sender_id: currentPlayer.id } });
+    }
+    shakeDMWindow(dmData);
+    playNudgeSound();
+    showToast('Nudge sent!', 'success');
+  }
 
   // ─── Window Effects ──────────────────────────────────────
-  function shakeDMWindow(dmData) { /* same as before */ }
-  function glowDMWindow(dmData) { /* same as before */ }
+  function shakeDMWindow(dmData) {
+    const win = dmData.windowElement;
+    win.classList.remove('shake');
+    void win.offsetWidth;
+    win.classList.add('shake');
+    setTimeout(() => win.classList.remove('shake'), 500);
+  }
+
+  function glowDMWindow(dmData) {
+    const win = dmData.windowElement;
+    win.classList.add('glow');
+    setTimeout(() => win.classList.remove('glow'), 2000);
+  }
 
   // ─── Minimize / Restore / Close ──────────────────────────
   function minimizeDM(winId) {
@@ -1413,7 +2125,36 @@
   }
 
   // ─── Dragging ─────────────────────────────────────────────
-  function makeDraggable(element, handle) { /* same as before */ }
+  function makeDraggable(element, handle) {
+    let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+    handle.onmousedown = (e) => {
+      e.preventDefault();
+      pos3 = e.clientX;
+      pos4 = e.clientY;
+      document.onmouseup = closeDragElement;
+      document.onmousemove = elementDrag;
+      const dmData = openDMs.find(d => d.windowElement === element);
+      if (dmData) {
+        const maxZ = Math.max(...openDMs.map(d => parseInt(d.windowElement.style.zIndex) || 10000));
+        element.style.zIndex = maxZ + 1;
+      }
+    };
+
+    function elementDrag(e) {
+      e.preventDefault();
+      pos1 = pos3 - e.clientX;
+      pos2 = pos4 - e.clientY;
+      pos3 = e.clientX;
+      pos4 = e.clientY;
+      element.style.top = (element.offsetTop - pos2) + 'px';
+      element.style.left = (element.offsetLeft - pos1) + 'px';
+    }
+
+    function closeDragElement() {
+      document.onmouseup = null;
+      document.onmousemove = null;
+    }
+  }
 
   // ─── DM Actions (Friend, Snooze, Block, Report, Clear) ──
   async function addChatFriend(winId) {
@@ -1550,20 +2291,20 @@
   }
 
   // ─── Final init ──────────────────────────────────────────
- (async function init() {
-  initThemeAndFont();
-  const player = await getPlayer();
-  if (!player) { window.location.href = 'index.html'; return; }
+  (async function init() {
+    initThemeAndFont();
+    const player = await getPlayer();
+    if (!player) { window.location.href = 'index.html'; return; }
 
-  // Load existing chat profile if any (to pre‑fill the modal)
-  const profile = await loadChatProfile();
-  if (profile) {
-    chatProfile = profile;
-  }
+    // Load existing chat profile (if any) to pre-fill the modal
+    const profile = await loadChatProfile();
+    if (profile) {
+      chatProfile = profile;
+    }
 
-  // Always show the entry modal
-  showEntryModal();
-})();
+    // Always show the entry modal
+    showEntryModal();
+  })();
 </script>
 </body>
 </html>
