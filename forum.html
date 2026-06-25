@@ -3,10 +3,11 @@
 <head>
   <title>Rheoa RPG - Forum</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <!-- Google Font for Inter -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+  <!-- DOMPurify for sanitizing HTML -->
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
   <style>
-    /* ─── CSS Variables & Themes ─── */
+    /* ─── CSS Variables & Themes (same as before) ─── */
     :root {
       --bg-body: #f0f4fa;
       --card-bg: #fff;
@@ -70,13 +71,7 @@
       --avatar-bg: #e2e9cf;
     }
 
-    /* ─── Global reset ─── */
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
+    * { margin:0; padding:0; box-sizing:border-box; }
     body {
       background: var(--bg-body);
       font-family: var(--font-family);
@@ -85,13 +80,8 @@
       transition: background .25s, color .2s;
       min-height: 100vh;
     }
+    .container { max-width: 1400px; margin: 0 auto; }
 
-    .container {
-      max-width: 1400px;
-      margin: 0 auto;
-    }
-
-    /* ─── Top bar ─── */
     .top-bar {
       display: flex;
       justify-content: space-between;
@@ -101,7 +91,6 @@
       margin-bottom: 28px;
       padding: 0 8px;
     }
-
     .back-link {
       background: var(--card-bg);
       padding: 8px 18px;
@@ -129,7 +118,6 @@
       gap: 12px;
       flex-wrap: wrap;
     }
-
     .theme-switcher, .font-switcher {
       display: flex;
       gap: 6px;
@@ -140,7 +128,6 @@
       backdrop-filter: blur(4px);
       align-items: center;
     }
-
     .theme-btn, .font-btn {
       background: transparent;
       border: none;
@@ -162,27 +149,22 @@
       background: var(--btn-ghost);
       color: var(--text-main);
     }
-
     .font-btn {
       font-size: .75rem;
       padding: 4px 12px;
     }
 
-    /* ─── Forum grid ─── */
     .forum-container {
       display: grid;
       grid-template-columns: 280px 1fr;
       gap: 28px;
       margin-bottom: 28px;
     }
-
     @media (max-width: 900px) {
-      .forum-container {
-        grid-template-columns: 1fr;
-      }
+      .forum-container { grid-template-columns: 1fr; }
     }
 
-    /* ─── Sidebar card ─── */
+    /* ─── Sidebar ─── */
     .sidebar {
       background: var(--card-bg);
       border-radius: var(--border-radius-card);
@@ -191,7 +173,6 @@
       overflow: hidden;
       height: fit-content;
     }
-
     .sidebar-header {
       background: var(--card-header-bg);
       padding: 18px 20px;
@@ -203,12 +184,7 @@
       align-items: center;
       gap: 8px;
     }
-
-    .community-list {
-      list-style: none;
-      padding: 8px 0;
-    }
-
+    .community-list { list-style: none; padding: 8px 0; }
     .community-item {
       padding: 10px 20px;
       cursor: pointer;
@@ -218,27 +194,12 @@
       transition: background 0.15s;
       border-left: 3px solid transparent;
     }
-    .community-item:hover {
-      background: var(--btn-ghost);
-    }
-    .community-item.active {
-      background: var(--accent);
-      color: #fff;
-      border-left-color: var(--accent);
-    }
-    .community-icon {
-      font-size: 1.4rem;
-    }
-    .community-info {
-      flex: 1;
-    }
-    .community-name {
-      font-weight: 600;
-    }
-    .community-stats {
-      font-size: 0.7rem;
-      opacity: 0.7;
-    }
+    .community-item:hover { background: var(--btn-ghost); }
+    .community-item.active { background: var(--accent); color: #fff; border-left-color: var(--accent); }
+    .community-icon { font-size: 1.4rem; }
+    .community-info { flex: 1; }
+    .community-name { font-weight: 600; }
+    .community-stats { font-size: 0.7rem; opacity: 0.7; }
 
     .create-community-btn {
       width: calc(100% - 40px);
@@ -259,7 +220,7 @@
       transform: scale(1.02);
     }
 
-    /* ─── Main content card ─── */
+    /* ─── Main content ─── */
     .main-content {
       background: var(--card-bg);
       border-radius: var(--border-radius-card);
@@ -277,43 +238,77 @@
       padding-bottom: 16px;
       border-bottom: 2px solid var(--border-light);
     }
-    .community-header-icon {
-      font-size: 3rem;
-    }
-    .community-header-info h2 {
-      margin-bottom: 4px;
-      font-size: 1.8rem;
-    }
-    .community-header-desc {
-      color: var(--text-muted);
-    }
+    .community-header-icon { font-size: 3rem; }
+    .community-header-info h2 { margin-bottom: 4px; font-size: 1.8rem; }
+    .community-header-desc { color: var(--text-muted); }
 
-    /* ─── Post form ─── */
+    /* ─── Rich-text toolbar ─── */
     .post-form {
       background: var(--card-header-bg);
       border-radius: 16px;
-      padding: 20px;
+      padding: 16px 20px 20px;
       margin-bottom: 24px;
       border: 1px solid var(--border-light);
     }
-    .post-form input, .post-form textarea {
-      width: 100%;
-      padding: 12px 16px;
-      margin-bottom: 12px;
+    .post-form .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-bottom: 8px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border-light);
+    }
+    .post-form .toolbar button {
+      background: transparent;
+      border: 1px solid var(--border-light);
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      color: var(--text-main);
+      transition: .15s;
       font-family: var(--font-family);
+    }
+    .post-form .toolbar button:hover {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+    .post-form .toolbar button:active {
+      transform: scale(0.95);
+    }
+    .post-form .toolbar .separator {
+      width: 1px;
+      background: var(--border-light);
+      margin: 0 4px;
+    }
+
+    .post-form .editor {
+      min-height: 100px;
+      padding: 12px 14px;
+      background: var(--card-bg);
       border: 1px solid var(--border-light);
       border-radius: 12px;
-      background: var(--card-bg);
       color: var(--text-main);
+      font-family: var(--font-family);
       font-size: 1rem;
-      transition: border .2s;
-    }
-    .post-form input:focus, .post-form textarea:focus {
       outline: none;
+      transition: border .2s;
+      word-wrap: break-word;
+    }
+    .post-form .editor:focus {
       border-color: var(--accent);
       box-shadow: 0 0 0 3px rgba(44,110,158,0.15);
     }
-    .post-form button {
+    .post-form .editor[contenteditable="true"] {
+      white-space: pre-wrap;
+    }
+    .post-form .post-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 12px;
+    }
+    .post-form .post-actions button {
       padding: 10px 24px;
       background: var(--btn-primary);
       color: #fff;
@@ -324,8 +319,16 @@
       transition: .2s;
       font-family: var(--font-family);
     }
-    .post-form button:hover {
+    .post-form .post-actions button:hover {
       background: var(--btn-primary-hover);
+    }
+    .post-form .post-actions .cancel-btn {
+      background: var(--btn-ghost);
+      color: var(--text-main);
+    }
+    .post-form .post-actions .cancel-btn:hover {
+      background: var(--btn-secondary);
+      color: #fff;
     }
 
     .join-btn {
@@ -340,9 +343,7 @@
       transition: .2s;
       margin-bottom: 16px;
     }
-    .join-btn:hover {
-      background: var(--btn-primary-hover);
-    }
+    .join-btn:hover { background: var(--btn-primary-hover); }
 
     /* ─── Post item ─── */
     .post-item {
@@ -377,11 +378,10 @@
       transition: .15s;
       padding: 2px;
     }
-    .vote-btn:hover {
-      color: var(--accent);
-    }
+    .vote-btn:hover { color: var(--accent); }
     .vote-btn.upvoted { color: #ff4500; }
     .vote-btn.downvoted { color: #7193ff; }
+
     .post-content {
       flex: 1;
     }
@@ -400,7 +400,17 @@
       margin-top: 6px;
       font-size: 0.8rem;
       color: var(--text-muted);
+      flex-wrap: wrap;
     }
+    .post-stats .stat-pill {
+      background: var(--btn-ghost);
+      padding: 2px 10px;
+      border-radius: 20px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .post-stats .stat-pill .icon { font-size: 0.8rem; }
 
     /* ─── Post detail ─── */
     .back-link {
@@ -410,9 +420,8 @@
       cursor: pointer;
       font-weight: 500;
     }
-    .back-link:hover {
-      text-decoration: underline;
-    }
+    .back-link:hover { text-decoration: underline; }
+
     .post-detail-card {
       background: var(--card-header-bg);
       border-radius: 16px;
@@ -425,33 +434,78 @@
       font-weight: 700;
       margin-bottom: 8px;
     }
+    .post-detail-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 16px;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+    .post-detail-meta .stat-pill {
+      background: var(--btn-ghost);
+      padding: 2px 12px;
+      border-radius: 20px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
     .post-detail-content {
       margin: 20px 0;
       line-height: 1.7;
+      word-wrap: break-word;
     }
+    .post-detail-content img {
+      max-width: 100%;
+      height: auto;
+    }
+
     .post-actions {
       display: flex;
-      gap: 16px;
+      gap: 8px;
       align-items: center;
-      margin-top: 12px;
-    }
-    .post-actions button {
-      background: none;
-      border: 1px solid var(--border-light);
-      padding: 6px 16px;
-      border-radius: 30px;
-      cursor: pointer;
-      transition: .2s;
-      font-family: var(--font-family);
-      font-size: 0.9rem;
-      color: var(--text-main);
-    }
-    .post-actions button:hover {
-      background: var(--btn-ghost);
+      flex-wrap: wrap;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border-light);
     }
     .post-actions .vote-btn {
       border: none;
       padding: 0 8px;
+    }
+
+    /* ─── Reaction bar (emojis) ─── */
+    .reaction-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: 12px 0 8px;
+    }
+    .reaction-btn {
+      background: transparent;
+      border: 1px solid var(--border-light);
+      border-radius: 30px;
+      padding: 2px 12px;
+      font-size: 1.1rem;
+      cursor: pointer;
+      transition: 0.15s;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-family: var(--font-family);
+      color: var(--text-main);
+    }
+    .reaction-btn:hover { background: var(--btn-ghost); }
+    .reaction-btn.active {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+    .reaction-btn .count {
+      font-size: 0.7rem;
+      font-weight: 600;
+      opacity: 0.7;
     }
 
     /* ─── Comments ─── */
@@ -487,9 +541,7 @@
       transition: .2s;
       font-family: var(--font-family);
     }
-    .comment-form button:hover {
-      background: var(--btn-primary-hover);
-    }
+    .comment-form button:hover { background: var(--btn-primary-hover); }
 
     .comment {
       margin: 12px 0;
@@ -503,18 +555,9 @@
       margin-bottom: 4px;
       flex-wrap: wrap;
     }
-    .comment-author {
-      font-weight: 600;
-      color: var(--accent);
-    }
-    .comment-time {
-      font-size: 0.7rem;
-      color: var(--text-muted);
-    }
-    .comment-content {
-      margin: 6px 0;
-      word-wrap: break-word;
-    }
+    .comment-author { font-weight: 600; color: var(--accent); }
+    .comment-time { font-size: 0.7rem; color: var(--text-muted); }
+    .comment-content { margin: 6px 0; word-wrap: break-word; }
     .comment-actions {
       display: flex;
       gap: 12px;
@@ -595,10 +638,7 @@
       border: 1px solid var(--card-border);
       box-shadow: var(--card-shadow);
     }
-    .modal h3 {
-      margin-bottom: 16px;
-      color: var(--text-main);
-    }
+    .modal h3 { margin-bottom: 16px; color: var(--text-main); }
     .modal input, .modal textarea, .modal select {
       width: 100%;
       margin: 8px 0 16px;
@@ -664,29 +704,18 @@
       to { transform: translateX(0); opacity: 1; }
     }
 
-    /* ─── Responsive ─── */
     @media (max-width: 600px) {
-      .top-bar {
-        flex-direction: column;
-        align-items: stretch;
-      }
-      .controls {
-        justify-content: center;
-      }
-      .forum-container {
-        grid-template-columns: 1fr;
-      }
-      .community-header {
-        flex-direction: column;
-        text-align: center;
-      }
+      .top-bar { flex-direction: column; align-items: stretch; }
+      .controls { justify-content: center; }
+      .forum-container { grid-template-columns: 1fr; }
+      .community-header { flex-direction: column; text-align: center; }
+      .post-form .toolbar button { font-size: 0.8rem; padding: 2px 8px; }
     }
   </style>
 </head>
 <body>
 
 <div class="container">
-  <!-- Top Bar -->
   <div class="top-bar">
     <a href="dashboard.html" class="back-link">← Dashboard</a>
     <div class="controls">
@@ -703,16 +732,13 @@
     </div>
   </div>
 
-  <!-- Forum Content -->
   <div class="forum-container">
     <div class="sidebar">
       <div class="sidebar-header">🌐 Communities</div>
       <ul class="community-list" id="communityList"></ul>
       <button class="create-community-btn" onclick="showCreateCommunityModal()">+ Create Community</button>
     </div>
-    <div class="main-content" id="mainContent">
-      <!-- Dynamic content -->
-    </div>
+    <div class="main-content" id="mainContent"></div>
   </div>
 </div>
 
@@ -769,7 +795,7 @@ function showToast(msg, type='info') {
 }
 
 // ─────────────────────────────────────────────
-// XSS ESCAPE
+// XSS ESCAPE (for plain text)
 // ─────────────────────────────────────────────
 function escapeHtml(s) {
   if (!s) return '';
@@ -910,6 +936,7 @@ async function loadCommunityView() {
   }
 
   const isMember = await checkMembership(currentCommunity.id);
+  const isBlackOrFounder = currentPlayer && ['black', 'founder'].includes(currentPlayer.subscription_tier?.toLowerCase());
 
   let html = `
     <div class="community-header" style="border-bottom-color: ${currentCommunity.banner_color || '#2196F3'};">
@@ -922,11 +949,31 @@ async function loadCommunityView() {
   `;
 
   if (isMember) {
+    // Rich text toolbar only for Black/Founder
+    const toolbarHtml = isBlackOrFounder ? `
+      <div class="toolbar">
+        <button type="button" onclick="execCmd('bold')"><b>B</b></button>
+        <button type="button" onclick="execCmd('italic')"><i>I</i></button>
+        <button type="button" onclick="execCmd('insertUnorderedList')">• Bullet</button>
+        <button type="button" onclick="execCmd('indent')">↗ Indent</button>
+        <button type="button" onclick="execCmd('outdent')">↘ Outdent</button>
+        <button type="button" onclick="execCmd('formatBlock', 'h1')">H1</button>
+        <button type="button" onclick="execCmd('formatBlock', 'h2')">H2</button>
+        <button type="button" onclick="execCmd('formatBlock', 'p')">Text</button>
+        <button type="button" onclick="insertLink()">🔗 Link</button>
+        <button type="button" onclick="openEmojiPicker()">😊 Emoji</button>
+      </div>
+    ` : '';
+
     html += `
       <div class="post-form">
-        <input type="text" id="postTitle" placeholder="Post title" maxlength="200">
-        <textarea id="postContent" placeholder="What's on your mind?" rows="3"></textarea>
-        <button onclick="createPost()">Create Post</button>
+        <input type="text" id="postTitle" placeholder="Post title" maxlength="200" style="width:100%;padding:10px;margin-bottom:10px;border:1px solid var(--border-light);border-radius:12px;background:var(--card-bg);color:var(--text-main);font-family:var(--font-family);">
+        ${toolbarHtml}
+        <div id="postEditor" class="editor" contenteditable="${isBlackOrFounder ? 'true' : 'false'}" placeholder="What's on your mind?"></div>
+        <div class="post-actions">
+          <button onclick="createPost()">Create Post</button>
+          <button class="cancel-btn" onclick="clearPostEditor()">Clear</button>
+        </div>
       </div>
     `;
   } else {
@@ -939,6 +986,7 @@ async function loadCommunityView() {
   } else {
     posts.forEach(post => {
       const score = (post.upvotes || 0) - (post.downvotes || 0);
+      const readTime = estimateReadTime(post.content || '');
       html += `
         <div class="post-item" onclick="viewPost('${post.id}')">
           <div class="post-votes" onclick="event.stopPropagation()">
@@ -950,6 +998,8 @@ async function loadCommunityView() {
             <div class="post-title">${escapeHtml(post.title)}</div>
             <div class="post-meta">Posted by ${escapeHtml(post.author?.username || 'Unknown')} • ${new Date(post.created_at).toLocaleString()}</div>
             <div class="post-stats">
+              <span class="stat-pill"><span class="icon">👁️</span> ${post.view_count || 0}</span>
+              <span class="stat-pill"><span class="icon">📖</span> ${readTime}</span>
               <span>💬 ${post.comment_count || 0} comments</span>
             </div>
           </div>
@@ -992,6 +1042,7 @@ async function loadFeed() {
     html += `<div id="postsList">`;
     posts.forEach(post => {
       const score = (post.upvotes || 0) - (post.downvotes || 0);
+      const readTime = estimateReadTime(post.content || '');
       html += `
         <div class="post-item" onclick="viewPost('${post.id}')">
           <div class="post-votes" onclick="event.stopPropagation()">
@@ -1006,6 +1057,8 @@ async function loadFeed() {
               by ${escapeHtml(post.author?.username || 'Unknown')} • ${new Date(post.created_at).toLocaleString()}
             </div>
             <div class="post-stats">
+              <span class="stat-pill"><span class="icon">👁️</span> ${post.view_count || 0}</span>
+              <span class="stat-pill"><span class="icon">📖</span> ${readTime}</span>
               <span>💬 ${post.comment_count || 0} comments</span>
             </div>
           </div>
@@ -1026,6 +1079,10 @@ async function viewPost(postId) {
   const params = new URLSearchParams(window.location.search);
   params.set('p', postId);
   window.history.pushState({}, '', `?${params.toString()}`);
+
+  // Increment view count
+  await sb.rpc('increment_post_view', { p_post_id: postId });
+
   await loadPostView(postId);
 }
 
@@ -1049,13 +1106,31 @@ async function loadPostView(postId) {
 
   const comments = await loadComments(postId);
   const userVote = await getUserVote('post', postId);
+  const reactions = await loadPostReactions(postId);
+  const userReaction = reactions.find(r => r.user_id === currentPlayer?.id)?.reaction_type || null;
+  const reactionCounts = {};
+  reactions.forEach(r => { reactionCounts[r.reaction_type] = (reactionCounts[r.reaction_type] || 0) + 1; });
+
+  const readTime = estimateReadTime(post.content || '');
+  const sanitizedContent = DOMPurify.sanitize(post.content || '');
 
   let html = `
     <div class="back-link" onclick="selectCommunityById('${post.community.id}')">← Back to ${escapeHtml(post.community.display_name)}</div>
     <div class="post-detail-card">
       <div class="post-detail-title">${escapeHtml(post.title)}</div>
-      <div class="post-meta">Posted by ${escapeHtml(post.author?.username)} • ${new Date(post.created_at).toLocaleString()}</div>
-      <div class="post-detail-content">${escapeHtml(post.content || '').replace(/\n/g, '<br>')}</div>
+      <div class="post-detail-meta">
+        <span>Posted by ${escapeHtml(post.author?.username)} • ${new Date(post.created_at).toLocaleString()}</span>
+        <span class="stat-pill"><span class="icon">👁️</span> ${post.view_count || 0}</span>
+        <span class="stat-pill"><span class="icon">📖</span> ${readTime}</span>
+      </div>
+      <div class="post-detail-content">${sanitizedContent}</div>
+      <div class="reaction-bar" id="reactionBar-${post.id}">
+        ${['👍','👎','🤣','🤬','🎉','💝'].map(emoji => {
+          const count = reactionCounts[emoji] || 0;
+          const active = userReaction === emoji;
+          return `<button class="reaction-btn ${active ? 'active' : ''}" onclick="toggleReaction('${post.id}','${emoji}')">${emoji} <span class="count">${count}</span></button>`;
+        }).join('')}
+      </div>
       <div class="post-actions">
         <button class="vote-btn ${userVote === 1 ? 'upvoted' : ''}" onclick="vote('post', '${post.id}', 1)">▲ ${post.upvotes || 0}</button>
         <button class="vote-btn ${userVote === -1 ? 'downvoted' : ''}" onclick="vote('post', '${post.id}', -1)">▼ ${post.downvotes || 0}</button>
@@ -1147,7 +1222,61 @@ function renderComments(comments, parentId = null) {
 }
 
 // ─────────────────────────────────────────────
-// VOTE
+// REACTIONS (post only)
+// ─────────────────────────────────────────────
+async function loadPostReactions(postId) {
+  const { data, error } = await sb
+    .from('post_reactions')
+    .select('*')
+    .eq('post_id', postId);
+  if (error) {
+    console.error('Error loading reactions:', error);
+    return [];
+  }
+  return data || [];
+}
+
+async function toggleReaction(postId, emoji) {
+  if (!currentPlayer) return showToast('Please log in', 'error');
+
+  // Check if user already reacted with this emoji
+  const existing = await sb
+    .from('post_reactions')
+    .select('*')
+    .eq('post_id', postId)
+    .eq('user_id', currentPlayer.id)
+    .maybeSingle();
+
+  if (existing.data && existing.data.reaction_type === emoji) {
+    // Remove reaction
+    await sb
+      .from('post_reactions')
+      .delete()
+      .eq('id', existing.data.id);
+  } else {
+    // If user had a different reaction, remove it first (toggle)
+    if (existing.data) {
+      await sb
+        .from('post_reactions')
+        .delete()
+        .eq('id', existing.data.id);
+    }
+    // Insert new reaction
+    await sb
+      .from('post_reactions')
+      .insert({
+        post_id: postId,
+        user_id: currentPlayer.id,
+        reaction_type: emoji
+      });
+  }
+
+  // Reload the post view to reflect changes
+  await loadPostView(postId);
+}
+
+// ─────────────────────────────────────────────
+// VOTE (generic for post and comment)
 // ─────────────────────────────────────────────
 async function vote(targetType, targetId, value) {
   const { error } = await sb.rpc('handle_vote', {
@@ -1164,18 +1293,75 @@ async function vote(targetType, targetId, value) {
 }
 
 // ─────────────────────────────────────────────
+// RICH TEXT HELPERS
+// ─────────────────────────────────────────────
+function execCmd(cmd, value = null) {
+  document.execCommand(cmd, false, value);
+  document.getElementById('postEditor').focus();
+}
+
+function insertLink() {
+  const url = prompt('Enter URL:', 'https://');
+  if (url) execCmd('createLink', url);
+}
+
+function openEmojiPicker() {
+  // Simple picker – we'll just insert a few common emojis
+  const emojis = ['😊', '😂', '🤔', '🔥', '💯', '✨', '🎉', '👏', '👍', '❤️'];
+  const picker = document.createElement('div');
+  picker.style.cssText = `
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    background: var(--card-bg); border: 1px solid var(--border-light);
+    border-radius: 16px; padding: 16px; z-index: 9999;
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  `;
+  emojis.forEach(emoji => {
+    const btn = document.createElement('button');
+    btn.textContent = emoji;
+    btn.style.cssText = 'font-size: 2rem; border: none; background: transparent; cursor: pointer; padding: 8px; border-radius: 8px;';
+    btn.onclick = () => {
+      document.execCommand('insertText', false, emoji);
+      document.body.removeChild(picker);
+    };
+    picker.appendChild(btn);
+  });
+  const close = document.createElement('button');
+  close.textContent = 'Close';
+  close.style.cssText = 'grid-column: span 5; padding: 8px; background: var(--btn-ghost); border: none; border-radius: 8px; cursor: pointer;';
+  close.onclick = () => document.body.removeChild(picker);
+  picker.appendChild(close);
+  document.body.appendChild(picker);
+}
+
+function clearPostEditor() {
+  document.getElementById('postEditor').innerHTML = '';
+  document.getElementById('postTitle').value = '';
+}
+
+// ─────────────────────────────────────────────
 // CREATE POST
 // ─────────────────────────────────────────────
 async function createPost() {
   const title = document.getElementById('postTitle').value.trim();
-  const content = document.getElementById('postContent').value.trim();
+  const editor = document.getElementById('postEditor');
+  let content = editor.innerHTML.trim();
+
   if (!title) return showToast('Title required', 'error');
+  if (!content || content === '<br>') return showToast('Content cannot be empty', 'error');
+
+  // Sanitize HTML
+  const sanitized = DOMPurify.sanitize(content);
 
   const { error } = await sb.from('posts').insert({
-    title, content, community_id: currentCommunity.id, author_id: currentPlayer.id
+    title,
+    content: sanitized,
+    community_id: currentCommunity.id,
+    author_id: currentPlayer.id
   });
   if (error) return showToast(error.message, 'error');
   showToast('Post created!', 'success');
+  clearPostEditor();
   loadCommunityView();
 }
 
@@ -1223,9 +1409,10 @@ function hideReplyForm(commentId) {
 // EDIT / DELETE POST
 // ─────────────────────────────────────────────
 async function editPost(postId) {
-  const newContent = prompt('Edit your post:', currentPost.content);
+  const newContent = prompt('Edit your post content (HTML allowed):', currentPost.content);
   if (newContent !== null) {
-    await sb.from('posts').update({ content: newContent }).eq('id', postId);
+    const sanitized = DOMPurify.sanitize(newContent);
+    await sb.from('posts').update({ content: sanitized }).eq('id', postId);
     loadPostView(postId);
   }
 }
@@ -1307,6 +1494,17 @@ function closeModal(id) {
 }
 
 // ─────────────────────────────────────────────
+// UTILITY: Estimate read time
+// ─────────────────────────────────────────────
+function estimateReadTime(html) {
+  if (!html) return '0 min';
+  const text = html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  const words = text.split(' ').length;
+  const minutes = Math.ceil(words / 200);
+  return `${minutes} min read`;
+}
+
+// ─────────────────────────────────────────────
 // REAL-TIME SUBSCRIPTIONS
 // ─────────────────────────────────────────────
 function subscribeToCommunity(communityId) {
@@ -1354,7 +1552,7 @@ function subscribeToPostComments(postId) {
 }
 
 // ─────────────────────────────────────────────
-// EXPOSE GLOBAL FUNCTIONS FOR ONCLICK
+// EXPOSE GLOBAL FUNCTIONS
 // ─────────────────────────────────────────────
 window.selectCommunityById = selectCommunityById;
 window.vote = vote;
@@ -1371,6 +1569,11 @@ window.deletePost = deletePost;
 window.editComment = editComment;
 window.deleteComment = deleteComment;
 window.closeModal = closeModal;
+window.toggleReaction = toggleReaction;
+window.execCmd = execCmd;
+window.insertLink = insertLink;
+window.openEmojiPicker = openEmojiPicker;
+window.clearPostEditor = clearPostEditor;
 
 // ─────────────────────────────────────────────
 // START
