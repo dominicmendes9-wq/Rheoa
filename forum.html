@@ -290,6 +290,7 @@ let currentPlayer = null;
 let currentCommunity = null;
 let currentPost = null;
 let communities = [];
+let forumChannel = null;  // for real-time subscriptions
 
 function showToast(msg, type='info') {
   const container = document.getElementById('toastContainer');
@@ -368,16 +369,24 @@ async function selectCommunity(community) {
   window.history.pushState({}, '', `?c=${community.name}`);
   renderCommunitySidebar();
   await loadCommunityView();
+  subscribeToCommunity(community.id);  // start real-time updates
 }
 
+// ---------- LOAD COMMUNITY VIEW ----------
 async function loadCommunityView() {
   if (!currentCommunity) return;
   
-  const { data: posts } = await sb
+  const { data: posts, error } = await sb
     .from('posts')
-    .select(`*, author:players!posts_author_id_fkey(username)`)
+    .select(`*, author:players(username)`)
     .eq('community_id', currentCommunity.id)
     .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error loading posts:', error);
+    showToast('Error loading posts', 'error');
+    return;
+  }
   
   const isMember = await checkMembership(currentCommunity.id);
   
@@ -432,17 +441,27 @@ async function loadCommunityView() {
   document.getElementById('mainContent').innerHTML = html;
 }
 
+// ---------- LOAD FEED (latest posts) ----------
 async function loadFeed() {
   currentCommunity = null;
   currentPost = null;
   window.history.pushState({}, '', window.location.pathname);
   renderCommunitySidebar();
   
-  const { data: posts } = await sb
+  // Unsubscribe from any previous real-time channel
+  if (forumChannel) forumChannel.unsubscribe();
+  
+  const { data: posts, error } = await sb
     .from('posts')
-    .select(`*, author:players!posts_author_id_fkey(username), community:communities(name, display_name, icon)`)
+    .select(`*, author:players(username), community:communities(name, display_name, icon)`)
     .order('created_at', { ascending: false })
     .limit(50);
+
+  if (error) {
+    console.error('Error loading feed:', error);
+    showToast('Error loading feed', 'error');
+    return;
+  }
   
   let html = `<h2>📰 Latest Posts</h2>`;
   if (!posts || posts.length === 0) {
@@ -477,6 +496,7 @@ async function loadFeed() {
   document.getElementById('mainContent').innerHTML = html;
 }
 
+// ---------- VIEW SINGLE POST ----------
 async function viewPost(postId) {
   currentPost = postId;
   const params = new URLSearchParams(window.location.search);
@@ -486,13 +506,13 @@ async function viewPost(postId) {
 }
 
 async function loadPostView(postId) {
-  const { data: post } = await sb
+  const { data: post, error } = await sb
     .from('posts')
-    .select(`*, author:players!posts_author_id_fkey(username), community:communities(*)`)
+    .select(`*, author:players(username), community:communities(*)`)
     .eq('id', postId)
     .single();
-  
-  if (!post) {
+
+  if (error || !post) {
     document.getElementById('mainContent').innerHTML = '<p>Post not found</p>';
     return;
   }
@@ -500,6 +520,9 @@ async function loadPostView(postId) {
   currentCommunity = post.community;
   currentPost = post;
   renderCommunitySidebar();
+  
+  // Subscribe to new comments on this post
+  subscribeToPostComments(postId);
   
   // Load comments
   const comments = await loadComments(postId);
@@ -531,60 +554,36 @@ async function loadPostView(postId) {
   document.getElementById('mainContent').innerHTML = html;
 }
 
-// FIXED: loadComments with fallback and logging
+// ---------- LOAD COMMENTS (direct query) ----------
 async function loadComments(postId) {
   try {
-    console.log('Loading comments for post:', postId);
-    
-    // First try RPC
-    const { data: rpcData, error: rpcError } = await sb.rpc('get_post_comments', { p_post_id: postId });
-    console.log('RPC response:', { rpcData, rpcError });
-    
-    if (!rpcError && rpcData) {
-      return rpcData;
-    }
-    
-    // Fallback: direct query
-    console.log('RPC failed, using direct query fallback');
-    const { data: directData, error: directError } = await sb
+    const { data, error } = await sb
       .from('comments')
       .select(`
-        id,
-        content,
-        author_id,
-        players!comments_author_id_fkey(username),
-        parent_id,
-        created_at,
-        updated_at,
-        upvotes,
-        downvotes,
-        depth
+        *,
+        author:players(username)
       `)
       .eq('post_id', postId)
       .is('is_deleted', false)
       .order('depth', { ascending: true })
       .order('created_at', { ascending: true });
-    
-    console.log('Direct query response:', { directData, directError });
-    
-    if (directError) {
-      showToast('Error loading comments', 'error');
-      return [];
-    }
-    
-    // Transform to expected format
-    return (directData || []).map(c => ({
+
+    if (error) throw error;
+
+    // Transform to add author_name and user_vote placeholder
+    return (data || []).map(c => ({
       ...c,
-      author_name: c.players?.username || 'Unknown',
-      user_vote: 0 // Direct query doesn't include user_vote
+      author_name: c.author?.username || 'Unknown',
+      user_vote: 0   // We'll ignore vote status for simplicity; you can add later
     }));
-    
   } catch (err) {
-    console.error('Exception in loadComments:', err);
+    console.error('Error loading comments:', err);
+    showToast('Error loading comments', 'error');
     return [];
   }
 }
 
+// ---------- RENDER COMMENTS (nested) ----------
 function renderComments(comments, parentId = null) {
   if (!comments || comments.length === 0) return '';
   
@@ -624,6 +623,7 @@ function renderComments(comments, parentId = null) {
   }).join('');
 }
 
+// ---------- VOTE ----------
 async function vote(targetType, targetId, value) {
   const { error } = await sb.rpc('handle_vote', {
     p_player_id: currentPlayer.id,
@@ -633,11 +633,13 @@ async function vote(targetType, targetId, value) {
   });
   if (error) return showToast(error.message, 'error');
   
+  // Reload the current view
   if (currentPost) await loadPostView(currentPost.id);
   else if (currentCommunity) await loadCommunityView();
   else await loadFeed();
 }
 
+// ---------- CREATE POST ----------
 async function createPost() {
   const title = document.getElementById('postTitle').value.trim();
   const content = document.getElementById('postContent').value.trim();
@@ -648,22 +650,35 @@ async function createPost() {
   });
   if (error) return showToast(error.message, 'error');
   showToast('Post created!', 'success');
+  // Reload community view; real-time subscription will also pick it up
   loadCommunityView();
 }
 
+// ---------- SUBMIT COMMENT ----------
 async function submitComment(parentId) {
   const content = parentId 
     ? document.getElementById(`reply-content-${parentId}`).value.trim()
     : document.getElementById('commentContent').value.trim();
   if (!content) return showToast('Comment cannot be empty', 'error');
   
+  // Calculate depth if replying
+  let depth = 0;
+  if (parentId) {
+    const parentDepth = await getParentDepth(parentId);
+    depth = parentDepth + 1;
+  }
+  
   const { error } = await sb.from('comments').insert({
-    content, post_id: currentPost.id, author_id: currentPlayer.id,
+    content,
+    post_id: currentPost.id,
+    author_id: currentPlayer.id,
     parent_id: parentId || null,
-    depth: parentId ? (await getParentDepth(parentId)) + 1 : 0
+    depth: depth,
+    is_deleted: false
   });
   if (error) return showToast(error.message, 'error');
   showToast('Comment posted', 'success');
+  // Reload post view; real-time subscription will also update
   loadPostView(currentPost.id);
 }
 
@@ -679,6 +694,7 @@ function hideReplyForm(commentId) {
   document.getElementById(`reply-form-${commentId}`).style.display = 'none';
 }
 
+// ---------- EDIT / DELETE POST ----------
 async function editPost(postId) {
   const newContent = prompt('Edit your post:', currentPost.content);
   if (newContent !== null) {
@@ -707,6 +723,7 @@ async function deleteComment(commentId) {
   }
 }
 
+// ---------- COMMUNITY MANAGEMENT ----------
 function showCreateCommunityModal() {
   document.getElementById('createCommunityModal').style.display = 'block';
 }
@@ -758,6 +775,68 @@ async function getUserVote(targetType, targetId) {
 
 function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
+// ---------- REAL-TIME SUBSCRIPTIONS ----------
+function subscribeToCommunity(communityId) {
+  // Unsubscribe from previous channel
+  if (forumChannel) {
+    forumChannel.unsubscribe();
+    forumChannel = null;
+  }
+  
+  forumChannel = sb.channel(`forum-${communityId}`)
+    .on('postgres_changes', {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'posts',
+      filter: `community_id=eq.${communityId}`
+    }, (payload) => {
+      // When a new post is added, reload the community view
+      // (Alternatively, you could append the post without full reload)
+      if (currentCommunity && currentCommunity.id === communityId) {
+        loadCommunityView();
+      }
+    })
+    .subscribe((status) => {
+      if (status === 'SUBSCRIBED') {
+        console.log('Subscribed to community posts');
+      }
+    });
+}
+
+function subscribeToPostComments(postId) {
+  // If we already have a channel, we could reuse, but we'll create a separate one for comments.
+  // For simplicity, we'll just use a generic channel that listens to comments on this post.
+  // However, we need to avoid duplicates: we can use the same forumChannel or a separate one.
+  // Let's use the same forumChannel but add a filter on comments.
+  // Since forumChannel is already used for posts, we can add another listener.
+  if (forumChannel) {
+    // Remove any existing comment listener to avoid duplicates
+    // For simplicity, we'll just add a new listener; but we must ensure we don't have duplicate listeners.
+    // We'll unsubscribe and resubscribe to keep it clean.
+    forumChannel.unsubscribe();
+    forumChannel = null;
+  }
+  
+  forumChannel = sb.channel(`post-${postId}`)
+    .on('postgres_changes', {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'comments',
+      filter: `post_id=eq.${postId}`
+    }, (payload) => {
+      // New comment – reload post view to show it
+      if (currentPost && currentPost.id === postId) {
+        loadPostView(postId);
+      }
+    })
+    .subscribe((status) => {
+      if (status === 'SUBSCRIBED') {
+        console.log('Subscribed to post comments');
+      }
+    });
+}
+
+// ---------- GLOBAL EVENT HANDLERS (exposed) ----------
 window.selectCommunityById = selectCommunityById;
 window.vote = vote;
 window.createPost = createPost;
@@ -773,6 +852,7 @@ window.deletePost = deletePost;
 window.editComment = editComment;
 window.deleteComment = deleteComment;
 
+// Start the app
 init();
 </script>
 </body>
