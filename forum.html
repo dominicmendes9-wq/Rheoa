@@ -4,7 +4,6 @@
   <title>Rheoa RPG - Forum</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
-  <!-- DOMPurify for sanitizing HTML -->
   <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
   <style>
     /* ─── CSS Variables & Themes (same as before) ─── */
@@ -242,7 +241,7 @@
     .community-header-info h2 { margin-bottom: 4px; font-size: 1.8rem; }
     .community-header-desc { color: var(--text-muted); }
 
-    /* ─── Rich-text toolbar ─── */
+    /* ─── Post form ─── */
     .post-form {
       background: var(--card-header-bg);
       border-radius: 16px;
@@ -303,6 +302,11 @@
     .post-form .editor[contenteditable="true"] {
       white-space: pre-wrap;
     }
+    .post-form textarea.editor {
+      resize: vertical;
+      min-height: 100px;
+      font-family: var(--font-family);
+    }
     .post-form .post-actions {
       display: flex;
       gap: 12px;
@@ -362,26 +366,6 @@
       padding-right: 8px;
       border-radius: 12px;
     }
-    .post-votes {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      min-width: 36px;
-      padding-top: 2px;
-    }
-    .vote-btn {
-      background: none;
-      border: none;
-      cursor: pointer;
-      font-size: 1.2rem;
-      color: var(--text-muted);
-      transition: .15s;
-      padding: 2px;
-    }
-    .vote-btn:hover { color: var(--accent); }
-    .vote-btn.upvoted { color: #ff4500; }
-    .vote-btn.downvoted { color: #7193ff; }
-
     .post-content {
       flex: 1;
     }
@@ -463,19 +447,40 @@
 
     .post-actions {
       display: flex;
-      gap: 8px;
+      gap: 12px;
       align-items: center;
       flex-wrap: wrap;
       margin-top: 16px;
       padding-top: 16px;
       border-top: 1px solid var(--border-light);
     }
-    .post-actions .vote-btn {
-      border: none;
-      padding: 0 8px;
+    .post-actions .action-btn {
+      padding: 6px 16px;
+      border-radius: 30px;
+      border: 1px solid var(--border-light);
+      background: transparent;
+      color: var(--text-main);
+      cursor: pointer;
+      transition: .2s;
+      font-family: var(--font-family);
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+    .post-actions .action-btn:hover {
+      background: var(--btn-ghost);
+    }
+    .post-actions .action-btn.edit-btn:hover {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+    .post-actions .action-btn.delete-btn:hover {
+      background: #f44336;
+      color: #fff;
+      border-color: #f44336;
     }
 
-    /* ─── Reaction bar (emojis) ─── */
+    /* ─── Reaction bar ─── */
     .reaction-bar {
       display: flex;
       flex-wrap: wrap;
@@ -576,6 +581,9 @@
     .comment-actions button:hover {
       color: var(--accent);
       text-decoration: underline;
+    }
+    .comment-actions .vote-btn {
+      font-size: 1rem;
     }
     .reply-btn { color: var(--accent); }
 
@@ -949,33 +957,45 @@ async function loadCommunityView() {
   `;
 
   if (isMember) {
-    // Rich text toolbar only for Black/Founder
-    const toolbarHtml = isBlackOrFounder ? `
-      <div class="toolbar">
-        <button type="button" onclick="execCmd('bold')"><b>B</b></button>
-        <button type="button" onclick="execCmd('italic')"><i>I</i></button>
-        <button type="button" onclick="execCmd('insertUnorderedList')">• Bullet</button>
-        <button type="button" onclick="execCmd('indent')">↗ Indent</button>
-        <button type="button" onclick="execCmd('outdent')">↘ Outdent</button>
-        <button type="button" onclick="execCmd('formatBlock', 'h1')">H1</button>
-        <button type="button" onclick="execCmd('formatBlock', 'h2')">H2</button>
-        <button type="button" onclick="execCmd('formatBlock', 'p')">Text</button>
-        <button type="button" onclick="insertLink()">🔗 Link</button>
-        <button type="button" onclick="openEmojiPicker()">😊 Emoji</button>
-      </div>
-    ` : '';
-
-    html += `
+    // Build post form
+    let postFormHtml = `
       <div class="post-form">
         <input type="text" id="postTitle" placeholder="Post title" maxlength="200" style="width:100%;padding:10px;margin-bottom:10px;border:1px solid var(--border-light);border-radius:12px;background:var(--card-bg);color:var(--text-main);font-family:var(--font-family);">
-        ${toolbarHtml}
-        <div id="postEditor" class="editor" contenteditable="${isBlackOrFounder ? 'true' : 'false'}" placeholder="What's on your mind?"></div>
+    `;
+
+    if (isBlackOrFounder) {
+      // Rich text toolbar
+      postFormHtml += `
+        <div class="toolbar">
+          <button type="button" onclick="execCmd('bold')"><b>B</b></button>
+          <button type="button" onclick="execCmd('italic')"><i>I</i></button>
+          <button type="button" onclick="execCmd('insertUnorderedList')">• Bullet</button>
+          <button type="button" onclick="execCmd('indent')">↗ Indent</button>
+          <button type="button" onclick="execCmd('outdent')">↘ Outdent</button>
+          <button type="button" onclick="execCmd('formatBlock', 'h1')">H1</button>
+          <button type="button" onclick="execCmd('formatBlock', 'h2')">H2</button>
+          <button type="button" onclick="execCmd('formatBlock', 'p')">Text</button>
+          <button type="button" onclick="insertLink()">🔗 Link</button>
+          <button type="button" onclick="openEmojiPicker()">😊 Emoji</button>
+        </div>
+        <div id="postEditor" class="editor" contenteditable="true" placeholder="What's on your mind?"></div>
+      `;
+    } else {
+      // Plain textarea for non-Black/Founder
+      postFormHtml += `
+        <textarea id="postEditor" class="editor" placeholder="What's on your mind?" rows="5"></textarea>
+      `;
+    }
+
+    postFormHtml += `
         <div class="post-actions">
           <button onclick="createPost()">Create Post</button>
           <button class="cancel-btn" onclick="clearPostEditor()">Clear</button>
         </div>
       </div>
     `;
+
+    html += postFormHtml;
   } else {
     html += `<button class="join-btn" onclick="joinCommunity('${currentCommunity.id}')">Join Community</button>`;
   }
@@ -985,15 +1005,9 @@ async function loadCommunityView() {
     html += '<p style="padding:20px;text-align:center;color:var(--text-muted);">No posts yet. Be the first!</p>';
   } else {
     posts.forEach(post => {
-      const score = (post.upvotes || 0) - (post.downvotes || 0);
       const readTime = estimateReadTime(post.content || '');
       html += `
         <div class="post-item" onclick="viewPost('${post.id}')">
-          <div class="post-votes" onclick="event.stopPropagation()">
-            <button class="vote-btn" onclick="vote('post', '${post.id}', 1)">▲</button>
-            <span>${score}</span>
-            <button class="vote-btn" onclick="vote('post', '${post.id}', -1)">▼</button>
-          </div>
           <div class="post-content">
             <div class="post-title">${escapeHtml(post.title)}</div>
             <div class="post-meta">Posted by ${escapeHtml(post.author?.username || 'Unknown')} • ${new Date(post.created_at).toLocaleString()}</div>
@@ -1041,15 +1055,9 @@ async function loadFeed() {
   } else {
     html += `<div id="postsList">`;
     posts.forEach(post => {
-      const score = (post.upvotes || 0) - (post.downvotes || 0);
       const readTime = estimateReadTime(post.content || '');
       html += `
         <div class="post-item" onclick="viewPost('${post.id}')">
-          <div class="post-votes" onclick="event.stopPropagation()">
-            <button class="vote-btn" onclick="vote('post', '${post.id}', 1)">▲</button>
-            <span>${score}</span>
-            <button class="vote-btn" onclick="vote('post', '${post.id}', -1)">▼</button>
-          </div>
           <div class="post-content">
             <div class="post-title">${escapeHtml(post.title)}</div>
             <div class="post-meta">
@@ -1105,7 +1113,6 @@ async function loadPostView(postId) {
   subscribeToPostComments(postId);
 
   const comments = await loadComments(postId);
-  const userVote = await getUserVote('post', postId);
   const reactions = await loadPostReactions(postId);
   const userReaction = reactions.find(r => r.user_id === currentPlayer?.id)?.reaction_type || null;
   const reactionCounts = {};
@@ -1132,11 +1139,9 @@ async function loadPostView(postId) {
         }).join('')}
       </div>
       <div class="post-actions">
-        <button class="vote-btn ${userVote === 1 ? 'upvoted' : ''}" onclick="vote('post', '${post.id}', 1)">▲ ${post.upvotes || 0}</button>
-        <button class="vote-btn ${userVote === -1 ? 'downvoted' : ''}" onclick="vote('post', '${post.id}', -1)">▼ ${post.downvotes || 0}</button>
         ${post.author_id === currentPlayer.id ? `
-          <button onclick="editPost('${post.id}')">Edit</button>
-          <button onclick="deletePost('${post.id}')">Delete</button>
+          <button class="action-btn edit-btn" onclick="editPost('${post.id}')">✏️ Edit</button>
+          <button class="action-btn delete-btn" onclick="deletePost('${post.id}')">🗑️ Delete</button>
         ` : ''}
       </div>
     </div>
@@ -1276,9 +1281,14 @@ async function toggleReaction(postId, emoji) {
 }
 
 // ─────────────────────────────────────────────
-// VOTE (generic for post and comment)
+// VOTE (only for comments now)
 // ─────────────────────────────────────────────
 async function vote(targetType, targetId, value) {
+  // Only allow voting on comments
+  if (targetType !== 'comment') {
+    showToast('Voting only available on comments', 'info');
+    return;
+  }
   const { error } = await sb.rpc('handle_vote', {
     p_player_id: currentPlayer.id,
     p_target_type: targetType,
@@ -1306,7 +1316,6 @@ function insertLink() {
 }
 
 function openEmojiPicker() {
-  // Simple picker – we'll just insert a few common emojis
   const emojis = ['😊', '😂', '🤔', '🔥', '💯', '✨', '🎉', '👏', '👍', '❤️'];
   const picker = document.createElement('div');
   picker.style.cssText = `
@@ -1335,7 +1344,12 @@ function openEmojiPicker() {
 }
 
 function clearPostEditor() {
-  document.getElementById('postEditor').innerHTML = '';
+  const editor = document.getElementById('postEditor');
+  if (editor.tagName === 'DIV') {
+    editor.innerHTML = '';
+  } else if (editor.tagName === 'TEXTAREA') {
+    editor.value = '';
+  }
   document.getElementById('postTitle').value = '';
 }
 
@@ -1345,17 +1359,26 @@ function clearPostEditor() {
 async function createPost() {
   const title = document.getElementById('postTitle').value.trim();
   const editor = document.getElementById('postEditor');
-  let content = editor.innerHTML.trim();
+  let content;
+
+  if (editor.tagName === 'DIV') {
+    // Rich text editor (contentEditable)
+    content = editor.innerHTML.trim();
+    if (!content || content === '<br>') return showToast('Content cannot be empty', 'error');
+    content = DOMPurify.sanitize(content);
+  } else if (editor.tagName === 'TEXTAREA') {
+    // Plain text
+    content = editor.value.trim();
+    if (!content) return showToast('Content cannot be empty', 'error');
+    // Escape HTML to prevent injection
+    content = escapeHtml(content);
+  }
 
   if (!title) return showToast('Title required', 'error');
-  if (!content || content === '<br>') return showToast('Content cannot be empty', 'error');
-
-  // Sanitize HTML
-  const sanitized = DOMPurify.sanitize(content);
 
   const { error } = await sb.from('posts').insert({
     title,
-    content: sanitized,
+    content,
     community_id: currentCommunity.id,
     author_id: currentPlayer.id
   });
@@ -1477,16 +1500,6 @@ async function joinCommunity(communityId) {
   if (error) return showToast(error.message, 'error');
   showToast('Joined community!', 'success');
   loadCommunityView();
-}
-
-async function getUserVote(targetType, targetId) {
-  const { data } = await sb.from('votes')
-    .select('vote_value')
-    .eq('player_id', currentPlayer.id)
-    .eq('target_type', targetType)
-    .eq('target_id', targetId)
-    .maybeSingle();
-  return data?.vote_value || 0;
 }
 
 function closeModal(id) {
