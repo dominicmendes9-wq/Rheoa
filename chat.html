@@ -187,21 +187,57 @@
         .chat-header {
             background: var(--header-bg);
             color: var(--header-text);
-            padding: 16px 24px;
+            padding: 12px 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             border-bottom: 1px solid var(--border-light);
+            flex-wrap: wrap;
+            gap: 8px;
         }
         .room-info {
             font-weight: 700;
             font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .room-info select {
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 20px;
+            color: var(--header-text);
+            padding: 2px 10px;
+            font-family: var(--font-family);
+            font-size: 0.8rem;
+            cursor: pointer;
+        }
+        .room-info select option {
+            background: var(--card-bg);
+            color: var(--text-main);
         }
         .online-count {
             font-size: 0.8rem;
             background: rgba(255,255,255,0.15);
             padding: 4px 12px;
             border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .online-count select {
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 20px;
+            color: var(--header-text);
+            padding: 2px 8px;
+            font-family: var(--font-family);
+            font-size: 0.75rem;
+            cursor: pointer;
+        }
+        .online-count select option {
+            background: var(--card-bg);
+            color: var(--text-main);
         }
 
         .messages-area {
@@ -398,9 +434,9 @@
         .members-header {
             background: var(--header-bg);
             color: var(--header-text);
-            padding: 16px 20px;
+            padding: 12px 16px;
             font-weight: 700;
-            font-size: 1.1rem;
+            font-size: 1rem;
             border-bottom: 1px solid var(--border-light);
         }
         .members-list {
@@ -414,9 +450,9 @@
         .member-item {
             display: flex;
             align-items: center;
-            gap: 12px;
-            padding: 8px 12px;
-            border-radius: 12px;
+            gap: 10px;
+            padding: 6px 10px;
+            border-radius: 10px;
             background: var(--card-header-bg);
             transition: background .15s;
             cursor: pointer;
@@ -425,8 +461,8 @@
             background: var(--btn-ghost);
         }
         .member-avatar {
-            width: 36px;
-            height: 36px;
+            width: 32px;
+            height: 32px;
             border-radius: 50%;
             background: var(--avatar-bg);
             color: var(--text-main);
@@ -434,26 +470,45 @@
             align-items: center;
             justify-content: center;
             font-weight: 700;
-            font-size: 1rem;
+            font-size: 0.9rem;
             flex-shrink: 0;
+        }
+        .member-info {
+            flex: 1;
+            min-width: 0;
         }
         .member-name {
             font-weight: 500;
-            flex: 1;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .member-details {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         .member-tier-badge {
-            font-size: 1rem;
+            font-size: 0.9rem;
             line-height: 1;
         }
-        .member-status {
-            width: 8px;
-            height: 8px;
+        .member-status-dot {
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
-            background: #4CAF50;
             flex-shrink: 0;
+            border: 1px solid rgba(0,0,0,0.1);
         }
+        .status-online { background: #4CAF50; }
+        .status-busy { background: #f44336; }
+        .status-away { background: #ff9800; }
+        .status-invisible { background: #9e9e9e; }
+        .status-offline { background: #9e9e9e; }
 
-        /* ─── DM Windows (Multiple) ─── */
+        /* ─── DM Windows (placeholder, to be expanded in later parts) ─── */
         .dm-window-container {
             position: fixed;
             top: 0;
@@ -463,228 +518,83 @@
             pointer-events: none;
             z-index: 9998;
         }
-        .dm-window {
-            position: absolute;
-            pointer-events: all;
+
+        /* ─── Modal (Entry) ─── */
+        .entry-modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            z-index: 10000;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(4px);
+        }
+        .entry-modal-content {
             background: var(--card-bg);
             border: 1px solid var(--card-border);
             border-radius: var(--border-radius-card);
             box-shadow: var(--card-shadow);
-            width: 420px;
-            height: 500px;
-            min-width: 350px;
-            min-height: 300px;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            transition: box-shadow 0.2s;
-            resize: both;
-        }
-        .dm-window.glow {
-            box-shadow: 0 0 20px 10px rgba(44,110,158,0.4);
-            border-color: var(--accent);
-        }
-        .dm-window.minimized {
-            height: 48px;
-            min-height: 48px;
-            overflow: hidden;
-            resize: none;
-            bottom: 10px;
-            left: auto;
-            right: 10px;
-            width: 200px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.15);
-        }
-        .dm-window.minimized .dm-messages,
-        .dm-window.minimized .dm-input-area {
-            display: none;
-        }
-        .dm-window.minimized .dm-header {
-            border-radius: var(--border-radius-card);
-        }
-        .dm-header {
-            background: var(--header-bg);
-            color: var(--header-text);
-            padding: 10px 16px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-shrink: 0;
-            cursor: grab;
-            user-select: none;
-        }
-        .dm-header:active {
-            cursor: grabbing;
-        }
-        .dm-title {
-            font-weight: 700;
-            font-size: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            flex: 1;
-            overflow: hidden;
-            white-space: nowrap;
-            text-overflow: ellipsis;
-        }
-        .dm-title .online-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: #4CAF50;
-            display: inline-block;
-            flex-shrink: 0;
-        }
-        .dm-controls {
-            display: flex;
-            gap: 6px;
-            flex-shrink: 0;
-        }
-        .dm-controls button {
-            background: transparent;
-            border: none;
-            color: var(--header-text);
-            font-size: 1.1rem;
-            cursor: pointer;
-            padding: 0 4px;
-            opacity: 0.7;
-            transition: .2s;
-        }
-        .dm-controls button:hover {
-            opacity: 1;
-        }
-        .dm-messages {
-            flex: 1;
+            padding: 30px;
+            max-width: 450px;
+            width: 90%;
+            max-height: 90vh;
             overflow-y: auto;
-            padding: 12px 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            background: var(--card-header-bg);
         }
-        .dm-messages .message {
-            max-width: 80%;
-        }
-        .dm-input-area {
-            padding: 12px 16px;
-            border-top: 1px solid var(--border-light);
-            background: var(--card-bg);
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            flex-shrink: 0;
-        }
-        .dm-input-area .toolbar {
-            background: var(--toolbar-bg);
-            padding: 4px 6px;
-            gap: 2px;
-        }
-        .dm-input-area .toolbar button {
-            font-size: 0.8rem;
-            padding: 2px 8px;
-        }
-        .dm-input-area .toolbar input[type="color"] {
-            width: 20px;
-            height: 20px;
-        }
-        .dm-input-row {
-            display: flex;
-            gap: 8px;
-            align-items: flex-end;
-            position: relative;
-        }
-        .dm-input-row textarea {
-            flex: 1;
-            padding: 8px 12px;
-            font-family: var(--font-family);
-            border: 1px solid var(--border-light);
-            border-radius: 12px;
-            background: var(--card-header-bg);
+        .entry-modal-content h2 {
+            margin-bottom: 16px;
+            text-align: center;
             color: var(--text-main);
-            resize: none;
-            font-size: 0.95rem;
-            min-height: 40px;
-            transition: border .2s;
         }
-        .dm-input-row textarea:focus {
-            outline: none;
-            border-color: var(--accent);
-            box-shadow: 0 0 0 3px rgba(44,110,158,0.15);
+        .entry-modal-content .notice {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 16px;
+            font-size: 0.9rem;
+            color: #856404;
         }
-        .dm-input-row button {
-            padding: 8px 16px;
+        .entry-modal-content label {
+            display: block;
+            font-weight: 600;
+            margin-top: 12px;
+            margin-bottom: 4px;
+            font-size: 0.9rem;
+        }
+        .entry-modal-content input, .entry-modal-content select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid var(--border-light);
+            border-radius: 8px;
+            background: var(--card-bg);
+            color: var(--text-main);
+            font-family: var(--font-family);
+        }
+        .entry-modal-content .checkbox-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 12px;
+        }
+        .entry-modal-content .checkbox-row input {
+            width: auto;
+        }
+        .entry-modal-content .btn-save {
+            width: 100%;
+            padding: 12px;
+            margin-top: 20px;
             background: var(--btn-primary);
             color: #fff;
             border: none;
-            border-radius: 30px;
+            border-radius: 40px;
             font-weight: 600;
             cursor: pointer;
-            transition: .2s;
             font-family: var(--font-family);
-            white-space: nowrap;
-            font-size: 0.9rem;
-        }
-        .dm-input-row button:hover {
-            background: var(--btn-primary-hover);
-        }
-        .dm-input-row .nudge-btn {
-            background: #ff9800;
-            color: #fff;
-            padding: 8px 12px;
-            font-size: 0.8rem;
-        }
-        .dm-input-row .nudge-btn:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-        }
-
-        /* ─── Minimized bar (taskbar) ─── */
-        .dm-taskbar {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 50px;
-            background: var(--card-bg);
-            border-top: 1px solid var(--border-light);
-            display: flex;
-            align-items: center;
-            padding: 0 16px;
-            gap: 8px;
-            z-index: 9999;
-            overflow-x: auto;
-            pointer-events: all;
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
-        }
-        .dm-taskbar-item {
-            background: var(--btn-ghost);
-            border-radius: 20px;
-            padding: 4px 14px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 0.85rem;
-            cursor: pointer;
-            white-space: nowrap;
             transition: .2s;
-            border: 1px solid transparent;
         }
-        .dm-taskbar-item:hover {
-            background: var(--accent);
-            color: #fff;
-            border-color: var(--accent);
-        }
-        .dm-taskbar-item .close-minimized {
-            background: transparent;
-            border: none;
-            color: inherit;
-            cursor: pointer;
-            font-size: 1rem;
-            padding: 0 2px;
-            opacity: 0.6;
-        }
-        .dm-taskbar-item .close-minimized:hover {
-            opacity: 1;
+        .entry-modal-content .btn-save:hover {
+            background: var(--btn-primary-hover);
         }
 
         /* ─── Toast ─── */
@@ -737,11 +647,55 @@
             .chat-header { flex-direction: column; gap: 8px; text-align: center; }
             .message { max-width: 90%; }
             .toolbar button { font-size: 0.75rem; padding: 2px 8px; }
-            .dm-window { width: 90%; height: 80vh; min-width: unset; min-height: unset; }
         }
     </style>
 </head>
 <body>
+
+<!-- ENTRY MODAL -->
+<div class="entry-modal" id="entryModal">
+    <div class="entry-modal-content">
+        <h2>👋 Welcome to Chat</h2>
+        <div class="notice">
+            ⚠️ You must be <strong>18 years or older</strong> to use the chat room.
+        </div>
+        <label>Display Name</label>
+        <input type="text" id="tempUsername" placeholder="Your chat name (default: your username)">
+
+        <label>Age <span style="color:red;">*</span></label>
+        <input type="number" id="userAge" placeholder="18+" min="18" required>
+
+        <label>Gender <span style="color:red;">*</span></label>
+        <select id="userGender" required>
+            <option value="">Select...</option>
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+            <option value="other">Other</option>
+        </select>
+
+        <label>Country</label>
+        <select id="userCountry">
+            <option value="">Select your country</option>
+            <option value="United States">🇺🇸 United States</option>
+            <option value="India">🇮🇳 India</option>
+            <option value="United Kingdom">🇬🇧 United Kingdom</option>
+            <option value="Germany">🇩🇪 Germany</option>
+            <option value="France">🇫🇷 France</option>
+            <option value="Canada">🇨🇦 Canada</option>
+            <option value="Australia">🇦🇺 Australia</option>
+            <option value="Brazil">🇧🇷 Brazil</option>
+            <option value="Japan">🇯🇵 Japan</option>
+            <option value="South Africa">🇿🇦 South Africa</option>
+        </select>
+
+        <div class="checkbox-row">
+            <input type="checkbox" id="invisibleMode">
+            <label for="invisibleMode" style="margin:0;">👻 Login as invisible</label>
+        </div>
+
+        <button class="btn-save" onclick="saveChatProfile()">Enter Chat</button>
+    </div>
+</div>
 
 <div class="container">
     <!-- Top Bar -->
@@ -766,8 +720,17 @@
         <!-- Main Chat -->
         <div class="chat-main">
             <div class="chat-header">
-                <div class="room-info">🌍 Global Chat</div>
-                <div class="online-count" id="onlineCount">0 online</div>
+                <div class="room-info">
+                    🌍 Global Chat
+                    <select id="statusSelect" onchange="updateStatus(this.value)">
+                        <option value="available">🟢 Available</option>
+                        <option value="busy">🔴 Busy</option>
+                        <option value="invisible">⚫ Invisible</option>
+                    </select>
+                </div>
+                <div class="online-count">
+                    <span id="onlineCount">0 online</span>
+                </div>
             </div>
             <div class="messages-area" id="messagesArea">
                 <div class="loading">Loading messages...</div>
@@ -812,11 +775,8 @@
     </div>
 </div>
 
-<!-- DM Window Container -->
+<!-- DM Container (will be used later) -->
 <div class="dm-window-container" id="dmContainer"></div>
-
-<!-- Taskbar for minimized windows -->
-<div class="dm-taskbar" id="dmTaskbar"></div>
 
 <!-- Toast Container -->
 <div class="toast-container" id="toast-container"></div>
@@ -889,14 +849,12 @@
 
     // ─── State ─────────────────────────────────────────────────
     let currentPlayer = null;
+    let chatProfile = null;
     let globalRoom = null;
     let messageChannel = null;
     let onlineUsers = [];
-
-    // DM state: multiple windows
-    let openDMs = [];          // array of { recipientId, recipientName, windowElement, minimized, channel, messages, lastNudge, emojiPickerVisible }
-    const MAX_DMS = 5;
-    let dmSubscription = null;
+    let awayCheckInterval = null;
+    let activityInterval = null;
 
     // ─── Auth & Player ────────────────────────────────────────
     async function getPlayer() {
@@ -913,6 +871,73 @@
         }
         currentPlayer = player;
         return player;
+    }
+
+    // ─── Chat Profile ─────────────────────────────────────────
+    async function loadChatProfile() {
+        if (!currentPlayer) return null;
+        const { data, error } = await sb
+            .from('chat_profiles')
+            .select('*')
+            .eq('player_id', currentPlayer.id)
+            .maybeSingle();
+
+        if (error) {
+            console.error('Error loading chat profile:', error);
+            return null;
+        }
+
+        if (data) {
+            chatProfile = data;
+            return data;
+        }
+        return null;
+    }
+
+    async function saveChatProfile() {
+        const tempUsername = document.getElementById('tempUsername').value.trim() || currentPlayer.username;
+        const age = parseInt(document.getElementById('userAge').value);
+        const gender = document.getElementById('userGender').value;
+        const country = document.getElementById('userCountry').value || 'Earth';
+        const invisible = document.getElementById('invisibleMode').checked;
+
+        if (!age || age < 18) {
+            showToast('You must be 18 or older to use chat.', 'error');
+            return;
+        }
+        if (!gender) {
+            showToast('Please select your gender.', 'error');
+            return;
+        }
+
+        const profileData = {
+            player_id: currentPlayer.id,
+            temp_username: tempUsername,
+            age: age,
+            gender: gender,
+            country: country,
+            invisible_mode: invisible,
+            status: invisible ? 'invisible' : 'available'
+        };
+
+        const { error } = await sb
+            .from('chat_profiles')
+            .upsert(profileData, { onConflict: 'player_id' });
+
+        if (error) {
+            console.error('Error saving profile:', error);
+            showToast('Error saving profile', 'error');
+            return;
+        }
+
+        chatProfile = profileData;
+        document.getElementById('entryModal').style.display = 'none';
+
+        // Update status dropdown
+        document.getElementById('statusSelect').value = chatProfile.status;
+
+        // Now proceed with chat initialization
+        await initializeChat();
     }
 
     // ─── Get/Create Global Room ──────────────────────────────
@@ -1005,7 +1030,7 @@
 
     // ─── Presence & Global Channel ────────────────────────────
     function setupGlobalChannel() {
-        if (!globalRoom || !currentPlayer) return;
+        if (!globalRoom || !currentPlayer || !chatProfile) return;
 
         messageChannel = sb.channel(`room:${globalRoom.id}`);
 
@@ -1016,11 +1041,17 @@
                 list.push(...state[key]);
             });
             onlineUsers = list;
+            // Ensure current user is in the list (fallback)
             if (!onlineUsers.some(u => u.user_id === currentPlayer.id)) {
                 onlineUsers.push({
                     user_id: currentPlayer.id,
-                    username: currentPlayer.username,
-                    subscription_tier: currentPlayer.subscription_tier || 'basic'
+                    username: chatProfile.temp_username || currentPlayer.username,
+                    subscription_tier: currentPlayer.subscription_tier || 'basic',
+                    status: chatProfile.status,
+                    age: chatProfile.age,
+                    gender: chatProfile.gender,
+                    country: chatProfile.country || 'Earth',
+                    invisible_mode: chatProfile.invisible_mode
                 });
             }
             document.getElementById('onlineCount').textContent = `${onlineUsers.length} online`;
@@ -1033,51 +1064,73 @@
 
         messageChannel.subscribe(async (status) => {
             if (status === 'SUBSCRIBED') {
-                await messageChannel.track({
-                    user_id: currentPlayer.id,
-                    username: currentPlayer.username,
-                    subscription_tier: currentPlayer.subscription_tier || 'basic'
-                });
-                setTimeout(() => {
-                    const state = messageChannel.presenceState();
-                    const list = [];
-                    Object.keys(state).forEach(key => {
-                        list.push(...state[key]);
-                    });
-                    onlineUsers = list;
-                    if (!onlineUsers.some(u => u.user_id === currentPlayer.id)) {
-                        onlineUsers.push({
-                            user_id: currentPlayer.id,
-                            username: currentPlayer.username,
-                            subscription_tier: currentPlayer.subscription_tier || 'basic'
-                        });
-                    }
-                    document.getElementById('onlineCount').textContent = `${onlineUsers.length} online`;
-                    renderMembers();
-                }, 500);
+                await updatePresence();
+                // Start away detection
+                startAwayDetection();
+                // Start activity tracking
+                startActivityTracking();
             }
+        });
+    }
+
+    async function updatePresence() {
+        if (!messageChannel || !currentPlayer || !chatProfile) return;
+        await messageChannel.track({
+            user_id: currentPlayer.id,
+            username: chatProfile.temp_username || currentPlayer.username,
+            subscription_tier: currentPlayer.subscription_tier || 'basic',
+            status: chatProfile.status,
+            age: chatProfile.age,
+            gender: chatProfile.gender,
+            country: chatProfile.country || 'Earth',
+            invisible_mode: chatProfile.invisible_mode
         });
     }
 
     // ─── Render Members ──────────────────────────────────────
     function renderMembers() {
         const container = document.getElementById('membersList');
-        if (!onlineUsers.length) {
+        // Filter out invisible users unless they are the current user or founder?
+        // For now, show all but mark invisible with gray dot
+        const visibleUsers = onlineUsers.filter(u => {
+            if (u.user_id === currentPlayer.id) return true;
+            if (u.invisible_mode && currentPlayer.subscription_tier?.toLowerCase() !== 'founder') return false;
+            return true;
+        });
+
+        if (!visibleUsers.length) {
             container.innerHTML = '<div class="empty">No one else is online.</div>';
             return;
         }
-        container.innerHTML = onlineUsers.map(user => {
-            const tier = user.subscription_tier || 'basic';
-            const badge = getTierBadge(tier);
+
+        container.innerHTML = visibleUsers.map(user => {
+            const statusClass = getStatusClass(user.status || 'offline');
+            const tierBadge = getTierBadge(user.subscription_tier || 'basic');
+            const details = `${user.age || '?'}/${user.gender ? user.gender.charAt(0).toUpperCase() : '?'}/${user.country || 'Earth'}`;
             return `
                 <div class="member-item" onclick="openDM('${user.user_id}', '${escapeHtml(user.username)}')">
                     <div class="member-avatar">${user.username.charAt(0).toUpperCase()}</div>
-                    <div class="member-name">${escapeHtml(user.username)}</div>
-                    <div class="member-tier-badge">${badge}</div>
-                    <div class="member-status"></div>
+                    <div class="member-info">
+                        <div class="member-name">
+                            ${escapeHtml(user.username)}
+                            <span class="member-tier-badge">${tierBadge}</span>
+                        </div>
+                        <div class="member-details">${details}</div>
+                    </div>
+                    <div class="member-status-dot ${statusClass}"></div>
                 </div>
             `;
         }).join('');
+    }
+
+    function getStatusClass(status) {
+        switch(status) {
+            case 'available': return 'status-online';
+            case 'busy': return 'status-busy';
+            case 'away': return 'status-away';
+            case 'invisible': return 'status-invisible';
+            default: return 'status-offline';
+        }
     }
 
     function getTierBadge(tier) {
@@ -1105,7 +1158,7 @@
             content: text,
             created_at: new Date().toISOString(),
             user_id: currentPlayer.id,
-            players: { username: currentPlayer.username }
+            players: { username: chatProfile.temp_username || currentPlayer.username }
         };
 
         if (messageChannel) {
@@ -1129,6 +1182,8 @@
             showToast('Error sending message', 'error');
         } else {
             loadMessages();
+            // Update activity
+            updateActivity();
         }
     }
 
@@ -1189,552 +1244,134 @@
         document.getElementById('toolbar').style.display = isBlackOrFounder ? 'flex' : 'none';
     }
 
-    // ─── DM Functions ─────────────────────────────────────────
-    function openDM(recipientId, recipientName) {
-        if (recipientId === currentPlayer.id) {
-            showToast("You can't DM yourself", 'error');
-            return;
-        }
-        // Check if already open
-        const existing = openDMs.find(d => d.recipientId === recipientId);
-        if (existing) {
-            // Restore if minimized
-            if (existing.minimized) {
-                restoreDM(existing);
-            }
-            // Bring to front
-            existing.windowElement.style.zIndex = 10000 + openDMs.length;
-            return;
-        }
-
-        // Check limit
-        if (openDMs.length >= MAX_DMS) {
-            showToast(`Maximum ${MAX_DMS} DMs open. Close one first.`, 'error');
-            return;
-        }
-
-        // Create new DM window
-        createDMWindow(recipientId, recipientName);
-    }
-
-    function createDMWindow(recipientId, recipientName) {
-        const winId = 'dm-' + Date.now();
-
-        const win = document.createElement('div');
-        win.className = 'dm-window';
-        win.dataset.winId = winId;
-        win.style.left = (100 + openDMs.length * 40) + 'px';
-        win.style.top = (100 + openDMs.length * 30) + 'px';
-        win.style.zIndex = 10000 + openDMs.length;
-
-        const header = document.createElement('div');
-        header.className = 'dm-header';
-        header.innerHTML = `
-            <div class="dm-title">
-                <span class="online-dot"></span>
-                ${escapeHtml(recipientName)}
-            </div>
-            <div class="dm-controls">
-                <button onclick="minimizeDM('${winId}')" title="Minimize">─</button>
-                <button onclick="closeDM('${winId}')" title="Close">✕</button>
-            </div>
-        `;
-        win.appendChild(header);
-
-        const msgsDiv = document.createElement('div');
-        msgsDiv.className = 'dm-messages';
-        msgsDiv.id = `dmMessages-${winId}`;
-        msgsDiv.innerHTML = '<div class="empty">Loading...</div>';
-        win.appendChild(msgsDiv);
-
-        const inputArea = document.createElement('div');
-        inputArea.className = 'dm-input-area';
-
-        const toolbar = document.createElement('div');
-        toolbar.className = 'toolbar';
-        const isBlackOrFounder = ['black', 'founder'].includes(currentPlayer.subscription_tier?.toLowerCase() || 'basic');
-        if (isBlackOrFounder) {
-            toolbar.innerHTML = `
-                <button type="button" onclick="dmFormat('${winId}', 'bold')"><b>B</b></button>
-                <button type="button" onclick="dmFormat('${winId}', 'italic')"><i>I</i></button>
-                <button type="button" onclick="dmFormat('${winId}', 'h2')">H2</button>
-                <button type="button" onclick="dmInsertLink('${winId}')">🔗 Link</button>
-                <span class="separator"></span>
-                <input type="color" id="dmColorPicker-${winId}" onchange="dmInsertColor('${winId}')" value="#ff0000" title="Text color">
-                <span class="separator"></span>
-                <button type="button" onclick="dmToggleEmojiPicker('${winId}')">😊</button>
-                <span class="separator"></span>
-                <button type="button" class="nudge-btn" onclick="sendNudge('${winId}')">👋 Nudge</button>
-            `;
+    // ─── Status Management ────────────────────────────────────
+    async function updateStatus(status) {
+        if (!currentPlayer || !chatProfile) return;
+        // If status is 'invisible', auto-enable invisible_mode
+        if (status === 'invisible') {
+            chatProfile.invisible_mode = true;
         } else {
-            toolbar.innerHTML = `
-                <button type="button" onclick="dmToggleEmojiPicker('${winId}')">😊</button>
-            `;
+            chatProfile.invisible_mode = false;
         }
-        inputArea.appendChild(toolbar);
+        chatProfile.status = status;
 
-        const emojiPicker = document.createElement('div');
-        emojiPicker.className = 'emoji-picker';
-        emojiPicker.id = `dmEmojiPicker-${winId}`;
-        emojiPicker.innerHTML = `
-            <button onclick="dmInsertEmoji('${winId}', '😊')">😊</button>
-            <button onclick="dmInsertEmoji('${winId}', '😂')">😂</button>
-            <button onclick="dmInsertEmoji('${winId}', '🤔')">🤔</button>
-            <button onclick="dmInsertEmoji('${winId}', '🔥')">🔥</button>
-            <button onclick="dmInsertEmoji('${winId}', '💯')">💯</button>
-            <button onclick="dmInsertEmoji('${winId}', '✨')">✨</button>
-            <button onclick="dmInsertEmoji('${winId}', '🎉')">🎉</button>
-            <button onclick="dmInsertEmoji('${winId}', '👏')">👏</button>
-            <button onclick="dmInsertEmoji('${winId}', '👍')">👍</button>
-            <button onclick="dmInsertEmoji('${winId}', '❤️')">❤️</button>
-            <button onclick="dmInsertEmoji('${winId}', '🙌')">🙌</button>
-            <button onclick="dmInsertEmoji('${winId}', '🤩')">🤩</button>
-        `;
-        inputArea.appendChild(emojiPicker);
+        // Update database
+        await sb
+            .from('chat_profiles')
+            .update({ status: status, invisible_mode: chatProfile.invisible_mode })
+            .eq('player_id', currentPlayer.id);
 
-        const inputRow = document.createElement('div');
-        inputRow.className = 'dm-input-row';
-        inputRow.innerHTML = `
-            <textarea id="dmInput-${winId}" placeholder="Type a message..." rows="2"></textarea>
-            <button onclick="dmSend('${winId}')">Send</button>
-        `;
-        inputArea.appendChild(inputRow);
+        // Update presence
+        await updatePresence();
 
-        win.appendChild(inputArea);
-
-        document.getElementById('dmContainer').appendChild(win);
-
-        const dmData = {
-            winId: winId,
-            recipientId: recipientId,
-            recipientName: recipientName,
-            windowElement: win,
-            minimized: false,
-            messages: [],
-            channel: null,
-            lastNudge: 0,
-            emojiPickerVisible: false
-        };
-        openDMs.push(dmData);
-
-        makeDraggable(win, header);
-
-        loadDMMessages(dmData);
-        setupDMChannel(dmData);
-
-        updateTaskbar();
+        // Re-render members
+        renderMembers();
     }
 
-    // ─── DM Message Loading ──────────────────────────────────
-    async function loadDMMessages(dmData) {
-        const { recipientId, winId } = dmData;
-        const msgsDiv = document.getElementById(`dmMessages-${winId}`);
-        if (!msgsDiv) return;
-
-        const { data, error } = await sb
-            .from('dm_messages')
-            .select('*')
-            .or(`and(sender_id.eq.${currentPlayer.id},recipient_id.eq.${recipientId}),and(sender_id.eq.${recipientId},recipient_id.eq.${currentPlayer.id})`)
-            .order('created_at', { ascending: true });
-
-        if (error) {
-            console.error('Error loading DM messages:', error);
-            msgsDiv.innerHTML = '<div class="empty">Error loading messages.</div>';
-            return;
-        }
-        dmData.messages = data || [];
-        renderDMMessages(dmData);
+    // ─── Activity Tracking ────────────────────────────────────
+    function startActivityTracking() {
+        // Track clicks and keypresses on the whole document
+        document.addEventListener('click', updateActivity);
+        document.addEventListener('keydown', updateActivity);
+        // Also track mouse movement (but throttle)
+        let mouseTimer;
+        document.addEventListener('mousemove', () => {
+            if (mouseTimer) clearTimeout(mouseTimer);
+            mouseTimer = setTimeout(updateActivity, 1000);
+        });
+        // Send heartbeat every 30 seconds
+        activityInterval = setInterval(updateActivity, 30000);
     }
 
-    function renderDMMessages(dmData) {
-        const { winId, messages, recipientName } = dmData;
-        const msgsDiv = document.getElementById(`dmMessages-${winId}`);
-        if (!msgsDiv) return;
-
-        if (!messages || messages.length === 0) {
-            msgsDiv.innerHTML = '<div class="empty">No messages yet. Say hello!</div>';
-            return;
-        }
-        const playerId = currentPlayer.id;
-        msgsDiv.innerHTML = messages.map(msg => {
-            const isOwn = msg.sender_id === playerId;
-            const username = isOwn ? currentPlayer.username : recipientName;
-            return `
-                <div class="message ${isOwn ? 'own' : ''}">
-                    <div class="message-header">
-                        <span class="message-username">${escapeHtml(username)}</span>
-                        <span class="message-time">${new Date(msg.created_at).toLocaleTimeString()}</span>
-                    </div>
-                    <div class="message-text">${renderMessageContent(msg.content)}</div>
-                </div>
-            `;
-        }).join('');
-        msgsDiv.scrollTop = msgsDiv.scrollHeight;
+    function updateActivity() {
+        if (!currentPlayer || !chatProfile) return;
+        // Call the RPC to update last_activity
+        sb.rpc('update_chat_activity').catch(e => console.warn('Activity update error:', e));
+        // Also update local
+        chatProfile.last_activity = new Date().toISOString();
     }
 
-    // ─── DM Channel (realtime) ──────────────────────────────
-    function setupDMChannel(dmData) {
-        const { recipientId, winId } = dmData;
-        const pairId = [currentPlayer.id, recipientId].sort().join('-');
-        const channel = sb.channel(`dm:${pairId}`);
+    // ─── Away Detection ──────────────────────────────────────
+    function startAwayDetection() {
+        if (awayCheckInterval) clearInterval(awayCheckInterval);
+        awayCheckInterval = setInterval(async () => {
+            if (!currentPlayer || !chatProfile) return;
+            // Fetch fresh profile to get last_activity
+            const { data } = await sb
+                .from('chat_profiles')
+                .select('last_activity, status')
+                .eq('player_id', currentPlayer.id)
+                .single();
+            if (!data) return;
 
-        channel.on('broadcast', { event: 'message' }, (payload) => {
-            const msg = payload.payload;
-            if ((msg.sender_id === currentPlayer.id && msg.recipient_id === recipientId) ||
-                (msg.sender_id === recipientId && msg.recipient_id === currentPlayer.id)) {
-                dmData.messages.push(msg);
-                renderDMMessages(dmData);
-                if (msg.sender_id !== currentPlayer.id) {
-                    glowDMWindow(dmData);
-                    playMessageSound();
+            const lastActivity = new Date(data.last_activity);
+            const now = new Date();
+            const diffSeconds = (now - lastActivity) / 1000;
+
+            // If user is available/busy and inactive for > 2 min, set to away
+            if (diffSeconds > 120 && (data.status === 'available' || data.status === 'busy')) {
+                if (chatProfile.status !== 'away') {
+                    chatProfile.status = 'away';
+                    await sb
+                        .from('chat_profiles')
+                        .update({ status: 'away' })
+                        .eq('player_id', currentPlayer.id);
+                    await updatePresence();
+                    // Update dropdown
+                    document.getElementById('statusSelect').value = 'away';
+                    renderMembers();
                 }
             }
-        });
-
-        channel.on('broadcast', { event: 'nudge' }, (payload) => {
-            if (payload.payload.sender_id === recipientId) {
-                glowDMWindow(dmData);
-                shakeDMWindow(dmData);
-                playNudgeSound();
-                showToast(`📨 ${escapeHtml(dmData.recipientName)} nudged you!`, 'info');
+            // If user becomes active again (detected via activity), the status will be changed back by updateActivity? Actually we need to auto-revert if they become active.
+            // We'll handle it in updateActivity: if status is away and they are active, set back to available
+            // But updateActivity only updates last_activity; we'll check in the same interval.
+            // If user is active and status is away, revert to available
+            if (diffSeconds < 30 && data.status === 'away') {
+                chatProfile.status = 'available';
+                await sb
+                    .from('chat_profiles')
+                    .update({ status: 'available' })
+                    .eq('player_id', currentPlayer.id);
+                await updatePresence();
+                document.getElementById('statusSelect').value = 'available';
+                renderMembers();
             }
-        });
-
-        channel.subscribe(async (status) => {
-            if (status === 'SUBSCRIBED') {
-                await channel.track({
-                    user_id: currentPlayer.id,
-                    username: currentPlayer.username
-                });
-            }
-        });
-
-        dmData.channel = channel;
-    }
-
-    // ─── Send DM Message ─────────────────────────────────────
-    async function dmSend(winId) {
-        const dmData = openDMs.find(d => d.winId === winId);
-        if (!dmData) return;
-        const input = document.getElementById(`dmInput-${winId}`);
-        const text = input.value.trim();
-        if (!text) return;
-
-        input.value = '';
-
-        const tempId = 'temp-' + Date.now();
-        const newMsg = {
-            id: tempId,
-            sender_id: currentPlayer.id,
-            recipient_id: dmData.recipientId,
-            content: text,
-            created_at: new Date().toISOString()
-        };
-
-        if (dmData.channel) {
-            await dmData.channel.send({
-                type: 'broadcast',
-                event: 'message',
-                payload: newMsg
-            });
-        }
-
-        const { error } = await sb
-            .from('dm_messages')
-            .insert({
-                sender_id: currentPlayer.id,
-                recipient_id: dmData.recipientId,
-                content: text
-            });
-
-        if (error) {
-            console.error('Failed to send DM:', error);
-            showToast('Error sending message', 'error');
-        } else {
-            dmData.messages.push(newMsg);
-            renderDMMessages(dmData);
-        }
-    }
-
-    // ─── DM Formatting (per window) ──────────────────────────
-    function dmFormat(winId, type) {
-        const input = document.getElementById(`dmInput-${winId}`);
-        if (!input) return;
-        const start = input.selectionStart;
-        const end = input.selectionEnd;
-        const selected = input.value.substring(start, end);
-        let replacement = '';
-        switch(type) {
-            case 'bold': replacement = `**${selected}**`; break;
-            case 'italic': replacement = `*${selected}*`; break;
-            case 'h2': replacement = `\n# ${selected || 'Heading'}\n`; break;
-        }
-        input.value = input.value.substring(0, start) + replacement + input.value.substring(end);
-        input.focus();
-        const newPos = start + replacement.length;
-        input.setSelectionRange(newPos, newPos);
-    }
-
-    function dmInsertLink(winId) {
-        const url = prompt('Enter URL:', 'https://');
-        if (!url) return;
-        const input = document.getElementById(`dmInput-${winId}`);
-        if (!input) return;
-        const start = input.selectionStart;
-        const end = input.selectionEnd;
-        const selected = input.value.substring(start, end) || 'link';
-        const replacement = `[${selected}](${url})`;
-        input.value = input.value.substring(0, start) + replacement + input.value.substring(end);
-        input.focus();
-        const newPos = start + replacement.length;
-        input.setSelectionRange(newPos, newPos);
-    }
-
-    function dmInsertColor(winId) {
-        const color = document.getElementById(`dmColorPicker-${winId}`).value;
-        const input = document.getElementById(`dmInput-${winId}`);
-        if (!input) return;
-        const start = input.selectionStart;
-        const end = input.selectionEnd;
-        const selected = input.value.substring(start, end) || 'text';
-        const replacement = `<color=${color}>${selected}</color>`;
-        input.value = input.value.substring(0, start) + replacement + input.value.substring(end);
-        input.focus();
-        const newPos = start + replacement.length;
-        input.setSelectionRange(newPos, newPos);
-    }
-
-    // ─── DM Emoji Picker (per window) ────────────────────────
-    function dmToggleEmojiPicker(winId) {
-        const picker = document.getElementById(`dmEmojiPicker-${winId}`);
-        if (!picker) return;
-        const dmData = openDMs.find(d => d.winId === winId);
-        if (!dmData) return;
-        dmData.emojiPickerVisible = !dmData.emojiPickerVisible;
-        picker.style.display = dmData.emojiPickerVisible ? 'grid' : 'none';
-    }
-
-    function dmInsertEmoji(winId, emoji) {
-        const input = document.getElementById(`dmInput-${winId}`);
-        if (!input) return;
-        const start = input.selectionStart;
-        input.value = input.value.substring(0, start) + emoji + input.value.substring(start);
-        input.focus();
-        const newPos = start + emoji.length;
-        input.setSelectionRange(newPos, newPos);
-        const picker = document.getElementById(`dmEmojiPicker-${winId}`);
-        if (picker) picker.style.display = 'none';
-        const dmData = openDMs.find(d => d.winId === winId);
-        if (dmData) dmData.emojiPickerVisible = false;
-    }
-
-    // ─── Nudge ────────────────────────────────────────────────
-    function sendNudge(winId) {
-        const dmData = openDMs.find(d => d.winId === winId);
-        if (!dmData) return;
-        const now = Date.now();
-        if (now - dmData.lastNudge < 30000) {
-            showToast('Nudge cooldown: wait 30 seconds', 'error');
-            return;
-        }
-        dmData.lastNudge = now;
-        const btn = document.querySelector(`#${winId} .nudge-btn`);
-        if (btn) btn.disabled = true;
-        setTimeout(() => {
-            if (btn) btn.disabled = false;
         }, 30000);
-
-        if (dmData.channel) {
-            dmData.channel.send({
-                type: 'broadcast',
-                event: 'nudge',
-                payload: { sender_id: currentPlayer.id }
-            });
-        }
-        shakeDMWindow(dmData);
-        playNudgeSound();
-        showToast('Nudge sent!', 'success');
     }
 
-    // ─── Window Effects ──────────────────────────────────────
-    function shakeDMWindow(dmData) {
-        const win = dmData.windowElement;
-        win.classList.remove('shake');
-        void win.offsetWidth;
-        win.classList.add('shake');
-        setTimeout(() => win.classList.remove('shake'), 500);
+    // ─── DM Functions (placeholder for later parts) ──────────
+    function openDM(userId, username) {
+        showToast(`DM with ${username} - coming in Part 2`, 'info');
     }
 
-    function glowDMWindow(dmData) {
-        const win = dmData.windowElement;
-        win.classList.add('glow');
-        setTimeout(() => win.classList.remove('glow'), 2000);
-    }
+    // ─── Initialize Chat ─────────────────────────────────────
+    async function initializeChat() {
+        // Toolbar visibility
+        updateToolbarVisibility();
 
-    function playNudgeSound() {
-        try {
-            const ctx = new (window.AudioContext || window.webkitAudioContext)();
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(880, ctx.currentTime);
-            osc.frequency.setValueAtTime(660, ctx.currentTime + 0.1);
-            gain.gain.setValueAtTime(0.3, ctx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            osc.start();
-            osc.stop(ctx.currentTime + 0.2);
-        } catch (e) {}
-    }
-
-    function playMessageSound() {
-        try {
-            const ctx = new (window.AudioContext || window.webkitAudioContext)();
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(600, ctx.currentTime);
-            osc.frequency.setValueAtTime(800, ctx.currentTime + 0.08);
-            gain.gain.setValueAtTime(0.2, ctx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            osc.start();
-            osc.stop(ctx.currentTime + 0.15);
-        } catch (e) {}
-    }
-
-    // ─── Minimize / Restore / Close ──────────────────────────
-    function minimizeDM(winId) {
-        const dmData = openDMs.find(d => d.winId === winId);
-        if (!dmData) return;
-        dmData.minimized = true;
-        dmData.windowElement.classList.add('minimized');
-        updateTaskbar();
-    }
-
-    function restoreDM(dmData) {
-        dmData.minimized = false;
-        dmData.windowElement.classList.remove('minimized');
-        updateTaskbar();
-        dmData.windowElement.style.zIndex = 10000 + openDMs.length;
-    }
-
-    function closeDM(winId) {
-        const index = openDMs.findIndex(d => d.winId === winId);
-        if (index === -1) return;
-        const dmData = openDMs[index];
-        if (dmData.channel) {
-            dmData.channel.unsubscribe();
-        }
-        if (dmData.windowElement.parentNode) {
-            dmData.windowElement.parentNode.removeChild(dmData.windowElement);
-        }
-        openDMs.splice(index, 1);
-        updateTaskbar();
-        openDMs.forEach((d, i) => {
-            d.windowElement.style.zIndex = 10000 + i;
-        });
-    }
-
-    // ─── Taskbar ──────────────────────────────────────────────
-    function updateTaskbar() {
-        const taskbar = document.getElementById('dmTaskbar');
-        const minimized = openDMs.filter(d => d.minimized);
-        if (minimized.length === 0) {
-            taskbar.innerHTML = '';
+        const room = await getGlobalRoom();
+        if (!room) {
+            showToast('Could not load chat room', 'error');
             return;
         }
-        taskbar.innerHTML = minimized.map(d => `
-            <div class="dm-taskbar-item" onclick="restoreDM(openDMs.find(dm => dm.winId === '${d.winId}'))">
-                💬 ${escapeHtml(d.recipientName)}
-                <button class="close-minimized" onclick="event.stopPropagation(); closeDM('${d.winId}')">✕</button>
-            </div>
-        `).join('');
+
+        await loadMessages();
+        setupGlobalChannel();
     }
 
-    // ─── Dragging ─────────────────────────────────────────────
-    function makeDraggable(element, handle) {
-        let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-        handle.onmousedown = (e) => {
-            e.preventDefault();
-            pos3 = e.clientX;
-            pos4 = e.clientY;
-            document.onmouseup = closeDragElement;
-            document.onmousemove = elementDrag;
-            const dmData = openDMs.find(d => d.windowElement === element);
-            if (dmData) {
-                const maxZ = Math.max(...openDMs.map(d => parseInt(d.windowElement.style.zIndex) || 10000));
-                element.style.zIndex = maxZ + 1;
-            }
-        };
-
-        function elementDrag(e) {
-            e.preventDefault();
-            pos1 = pos3 - e.clientX;
-            pos2 = pos4 - e.clientY;
-            pos3 = e.clientX;
-            pos4 = e.clientY;
-            element.style.top = (element.offsetTop - pos2) + 'px';
-            element.style.left = (element.offsetLeft - pos1) + 'px';
+    // ─── Entry Modal ──────────────────────────────────────────
+    function showEntryModal() {
+        // Pre-fill with existing data if any
+        if (chatProfile) {
+            document.getElementById('tempUsername').value = chatProfile.temp_username || currentPlayer.username;
+            document.getElementById('userAge').value = chatProfile.age || '';
+            document.getElementById('userGender').value = chatProfile.gender || '';
+            document.getElementById('userCountry').value = chatProfile.country || '';
+            document.getElementById('invisibleMode').checked = chatProfile.invisible_mode || false;
+        } else {
+            document.getElementById('tempUsername').value = currentPlayer.username;
         }
-
-        function closeDragElement() {
-            document.onmouseup = null;
-            document.onmousemove = null;
-        }
-    }
-
-    // ─── SUBSCRIBE TO INCOMING DMs (Realtime) ──────────────
-    function subscribeToDMIncoming() {
-        if (dmSubscription) return;
-
-        dmSubscription = sb
-            .channel('dm-incoming')
-            .on(
-                'postgres_changes',
-                {
-                    event: 'INSERT',
-                    schema: 'public',
-                    table: 'dm_messages',
-                    filter: `recipient_id=eq.${currentPlayer.id}`
-                },
-                async (payload) => {
-                    const msg = payload.new;
-                    // Fetch sender info
-                    const { data: sender } = await sb
-                        .from('players')
-                        .select('id, username')
-                        .eq('id', msg.sender_id)
-                        .single();
-                    if (!sender) return;
-
-                    // Check if DM already open
-                    let existing = openDMs.find(d => d.recipientId === sender.id);
-                    if (!existing) {
-                        // Check limit before auto-opening
-                        if (openDMs.length >= MAX_DMS) {
-                            showToast(`Incoming DM from ${sender.username}, but you have ${MAX_DMS} DMs open. Close one first.`, 'error');
-                            return;
-                        }
-                        createDMWindow(sender.id, sender.username);
-                        existing = openDMs.find(d => d.recipientId === sender.id);
-                    }
-
-                    if (existing) {
-                        existing.messages.push(msg);
-                        renderDMMessages(existing);
-                        glowDMWindow(existing);
-                        playMessageSound();
-                        if (existing.minimized) {
-                            restoreDM(existing);
-                        }
-                        existing.windowElement.style.zIndex = Math.max(...openDMs.map(d => parseInt(d.windowElement.style.zIndex) || 10000)) + 1;
-                    }
-                }
-            )
-            .subscribe();
+        document.getElementById('entryModal').style.display = 'flex';
     }
 
     // ─── Init ─────────────────────────────────────────────────
@@ -1747,17 +1384,17 @@
             return;
         }
 
-        updateToolbarVisibility();
-
-        const room = await getGlobalRoom();
-        if (!room) {
-            showToast('Could not load chat room', 'error');
-            return;
+        // Load chat profile
+        const profile = await loadChatProfile();
+        if (profile) {
+            chatProfile = profile;
+            // Update status dropdown
+            document.getElementById('statusSelect').value = profile.status;
+            await initializeChat();
+        } else {
+            // Show entry modal
+            showEntryModal();
         }
-
-        await loadMessages();
-        setupGlobalChannel();
-        subscribeToDMIncoming();
     })();
 </script>
 </body>
