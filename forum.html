@@ -3,265 +3,720 @@
 <head>
   <title>Rheoa RPG - Forum</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Google Font for Inter -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { 
-      font-family: 'Courier New', monospace; 
-      background: #f8f8f0; 
-      color: #222; 
-      padding: 20px;
+    /* ─── CSS Variables & Themes ─── */
+    :root {
+      --bg-body: #f0f4fa;
+      --card-bg: #fff;
+      --card-border: rgba(148,163,184,0.2);
+      --card-shadow: 0 12px 30px rgba(0,0,0,0.05);
+      --header-bg: linear-gradient(135deg,#1e2f5e 0%,#1a4b7a 100%);
+      --header-text: #fff;
+      --accent: #2c6e9e;
+      --accent-hover: #1f5480;
+      --btn-primary: #2c6e9e;
+      --btn-primary-hover: #1f5480;
+      --btn-secondary: #475569;
+      --btn-ghost: #e2e8f0;
+      --text-main: #0f172a;
+      --text-muted: #334155;
+      --border-light: #e2e8f0;
+      --card-header-bg: #f8fafc;
+      --avatar-bg: #e0f2fe;
+      --font-family: 'Courier New', monospace;
+      --border-radius-card: 24px;
+      --transition: all 0.2s ease;
+    }
+
+    body.theme-dusk {
+      --bg-body: #0f1722;
+      --card-bg: #1e293b;
+      --card-border: rgba(51,65,85,0.6);
+      --card-shadow: 0 15px 35px rgba(0,0,0,0.3);
+      --header-bg: linear-gradient(135deg,#0f172a 0%,#1e293b 100%);
+      --header-text: #e2e8f0;
+      --accent: #60a5fa;
+      --accent-hover: #3b82f6;
+      --btn-primary: #3b82f6;
+      --btn-primary-hover: #2563eb;
+      --btn-secondary: #334155;
+      --btn-ghost: #334155;
+      --text-main: #f1f5f9;
+      --text-muted: #cbd5e1;
+      --border-light: #334155;
+      --card-header-bg: #0f172a;
+      --avatar-bg: #334155;
+    }
+
+    body.theme-meadow {
+      --bg-body: #eef4e6;
+      --card-bg: #ffffffea;
+      --card-border: #cbd5b0;
+      --card-shadow: 0 12px 24px rgba(60,70,40,0.08);
+      --header-bg: linear-gradient(135deg,#2b5e3b 0%,#4a7c59 100%);
+      --header-text: #fef9e6;
+      --accent: #4b6b3e;
+      --accent-hover: #3a5530;
+      --btn-primary: #4b6b3e;
+      --btn-primary-hover: #3a5530;
+      --btn-secondary: #7f6b4a;
+      --btn-ghost: #e9e1c7;
+      --text-main: #2c2b26;
+      --text-muted: #5b5a4c;
+      --border-light: #d9d2b0;
+      --card-header-bg: #fef6e0;
+      --avatar-bg: #e2e9cf;
+    }
+
+    /* ─── Global reset ─── */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: var(--bg-body);
+      font-family: var(--font-family);
+      color: var(--text-main);
+      padding: 28px 20px;
+      transition: background .25s, color .2s;
       min-height: 100vh;
     }
-    h1 { text-align: center; margin-bottom: 10px; color: #2196F3; }
-    .subtitle { text-align: center; color: #666; margin-bottom: 20px; }
-    
-    .forum-container {
-      display: grid;
-      grid-template-columns: 280px 1fr;
-      gap: 20px;
+
+    .container {
       max-width: 1400px;
       margin: 0 auto;
     }
-    
+
+    /* ─── Top bar ─── */
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 28px;
+      padding: 0 8px;
+    }
+
+    .back-link {
+      background: var(--card-bg);
+      padding: 8px 18px;
+      border-radius: 60px;
+      text-decoration: none;
+      font-weight: 500;
+      color: var(--accent);
+      border: 1px solid var(--border-light);
+      transition: var(--transition);
+      font-size: .9rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      backdrop-filter: blur(2px);
+    }
+    .back-link:hover {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .theme-switcher, .font-switcher {
+      display: flex;
+      gap: 6px;
+      background: var(--card-bg);
+      padding: 4px 8px;
+      border-radius: 60px;
+      border: 1px solid var(--border-light);
+      backdrop-filter: blur(4px);
+      align-items: center;
+    }
+
+    .theme-btn, .font-btn {
+      background: transparent;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 40px;
+      font-weight: 500;
+      font-size: .8rem;
+      cursor: pointer;
+      transition: .2s;
+      color: var(--text-muted);
+      font-family: var(--font-family);
+    }
+    .theme-btn.active, .font-btn.active {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .theme-btn:hover:not(.active), .font-btn:hover:not(.active) {
+      background: var(--btn-ghost);
+      color: var(--text-main);
+    }
+
+    .font-btn {
+      font-size: .75rem;
+      padding: 4px 12px;
+    }
+
+    /* ─── Forum grid ─── */
+    .forum-container {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 28px;
+      margin-bottom: 28px;
+    }
+
+    @media (max-width: 900px) {
+      .forum-container {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* ─── Sidebar card ─── */
     .sidebar {
-      background: white;
-      border: 2px solid black;
-      border-radius: 12px;
-      padding: 15px;
+      background: var(--card-bg);
+      border-radius: var(--border-radius-card);
+      border: 1px solid var(--card-border);
+      box-shadow: var(--card-shadow);
+      overflow: hidden;
       height: fit-content;
     }
+
     .sidebar-header {
-      font-weight: bold;
+      background: var(--card-header-bg);
+      padding: 18px 20px;
+      font-weight: 700;
       font-size: 1.2rem;
-      margin-bottom: 15px;
-      padding-bottom: 10px;
-      border-bottom: 2px solid #eee;
-    }
-    .community-list { list-style: none; }
-    .community-item {
-      padding: 8px 10px;
-      margin: 5px 0;
-      border-radius: 6px;
-      cursor: pointer;
+      border-bottom: 1px solid var(--border-light);
+      color: var(--text-main);
       display: flex;
       align-items: center;
       gap: 8px;
-      transition: background 0.2s;
     }
-    .community-item:hover { background: #f0f0f0; }
-    .community-item.active { background: #2196F3; color: white; }
-    .community-icon { font-size: 1.3rem; }
-    .community-info { flex: 1; }
-    .community-name { font-weight: bold; }
-    .community-stats { font-size: 0.7rem; opacity: 0.8; }
-    .create-community-btn {
-      width: 100%;
-      margin-top: 15px;
-      padding: 10px;
-      background: #4CAF50;
-      color: white;
-      border: none;
-      border-radius: 6px;
+
+    .community-list {
+      list-style: none;
+      padding: 8px 0;
+    }
+
+    .community-item {
+      padding: 10px 20px;
       cursor: pointer;
-      font-weight: bold;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transition: background 0.15s;
+      border-left: 3px solid transparent;
     }
-    
+    .community-item:hover {
+      background: var(--btn-ghost);
+    }
+    .community-item.active {
+      background: var(--accent);
+      color: #fff;
+      border-left-color: var(--accent);
+    }
+    .community-icon {
+      font-size: 1.4rem;
+    }
+    .community-info {
+      flex: 1;
+    }
+    .community-name {
+      font-weight: 600;
+    }
+    .community-stats {
+      font-size: 0.7rem;
+      opacity: 0.7;
+    }
+
+    .create-community-btn {
+      width: calc(100% - 40px);
+      margin: 0 20px 20px;
+      padding: 12px;
+      background: var(--btn-primary);
+      color: #fff;
+      border: none;
+      border-radius: 40px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: .2s;
+      font-family: var(--font-family);
+      font-size: .9rem;
+    }
+    .create-community-btn:hover {
+      background: var(--btn-primary-hover);
+      transform: scale(1.02);
+    }
+
+    /* ─── Main content card ─── */
     .main-content {
-      background: white;
-      border: 2px solid black;
-      border-radius: 12px;
-      padding: 20px;
+      background: var(--card-bg);
+      border-radius: var(--border-radius-card);
+      border: 1px solid var(--card-border);
+      box-shadow: var(--card-shadow);
+      padding: 24px;
       min-height: 500px;
     }
-    
+
     .community-header {
       display: flex;
       align-items: center;
-      gap: 15px;
-      margin-bottom: 20px;
-      padding-bottom: 15px;
-      border-bottom: 2px solid #eee;
+      gap: 18px;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 2px solid var(--border-light);
     }
-    .community-header-icon { font-size: 3rem; }
-    .community-header-info h2 { margin-bottom: 5px; }
-    .community-header-desc { color: #666; }
-    
+    .community-header-icon {
+      font-size: 3rem;
+    }
+    .community-header-info h2 {
+      margin-bottom: 4px;
+      font-size: 1.8rem;
+    }
+    .community-header-desc {
+      color: var(--text-muted);
+    }
+
+    /* ─── Post form ─── */
     .post-form {
-      background: #f5f5f5;
-      border-radius: 8px;
-      padding: 15px;
-      margin-bottom: 20px;
+      background: var(--card-header-bg);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 24px;
+      border: 1px solid var(--border-light);
     }
     .post-form input, .post-form textarea {
       width: 100%;
-      padding: 10px;
-      margin-bottom: 10px;
-      font-family: inherit;
-      border: 1px solid #ccc;
-      border-radius: 5px;
+      padding: 12px 16px;
+      margin-bottom: 12px;
+      font-family: var(--font-family);
+      border: 1px solid var(--border-light);
+      border-radius: 12px;
+      background: var(--card-bg);
+      color: var(--text-main);
+      font-size: 1rem;
+      transition: border .2s;
+    }
+    .post-form input:focus, .post-form textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(44,110,158,0.15);
     }
     .post-form button {
-      padding: 10px 20px;
-      background: #2196F3;
-      color: white;
+      padding: 10px 24px;
+      background: var(--btn-primary);
+      color: #fff;
       border: none;
-      border-radius: 5px;
+      border-radius: 40px;
+      font-weight: 600;
       cursor: pointer;
-      font-weight: bold;
+      transition: .2s;
+      font-family: var(--font-family);
     }
-    
+    .post-form button:hover {
+      background: var(--btn-primary-hover);
+    }
+
+    .join-btn {
+      padding: 10px 24px;
+      background: var(--btn-primary);
+      color: #fff;
+      border: none;
+      border-radius: 40px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: var(--font-family);
+      transition: .2s;
+      margin-bottom: 16px;
+    }
+    .join-btn:hover {
+      background: var(--btn-primary-hover);
+    }
+
+    /* ─── Post item ─── */
     .post-item {
-      padding: 15px;
-      border-bottom: 1px solid #eee;
+      padding: 16px 0;
+      border-bottom: 1px solid var(--border-light);
       cursor: pointer;
-      transition: background 0.2s;
+      transition: background .15s;
       display: flex;
-      gap: 10px;
+      gap: 12px;
+      align-items: flex-start;
     }
-    .post-item:hover { background: #fafafa; }
+    .post-item:hover {
+      background: var(--card-header-bg);
+      margin: 0 -8px;
+      padding-left: 8px;
+      padding-right: 8px;
+      border-radius: 12px;
+    }
     .post-votes {
       display: flex;
       flex-direction: column;
       align-items: center;
-      min-width: 40px;
+      min-width: 36px;
+      padding-top: 2px;
     }
     .vote-btn {
       background: none;
       border: none;
       cursor: pointer;
       font-size: 1.2rem;
-      color: #888;
+      color: var(--text-muted);
+      transition: .15s;
+      padding: 2px;
+    }
+    .vote-btn:hover {
+      color: var(--accent);
     }
     .vote-btn.upvoted { color: #ff4500; }
     .vote-btn.downvoted { color: #7193ff; }
-    .post-content { flex: 1; }
-    .post-title { font-size: 1.2rem; font-weight: bold; margin-bottom: 5px; }
-    .post-meta { font-size: 0.8rem; color: #666; }
-    .post-stats { display: flex; gap: 15px; margin-top: 5px; font-size: 0.8rem; }
-    
+    .post-content {
+      flex: 1;
+    }
+    .post-title {
+      font-size: 1.2rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .post-meta {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+    .post-stats {
+      display: flex;
+      gap: 16px;
+      margin-top: 6px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    /* ─── Post detail ─── */
     .back-link {
       display: inline-block;
-      margin-bottom: 15px;
-      color: #2196F3;
+      margin-bottom: 16px;
+      color: var(--accent);
       cursor: pointer;
+      font-weight: 500;
+    }
+    .back-link:hover {
+      text-decoration: underline;
     }
     .post-detail-card {
-      background: #f9f9f9;
-      border-radius: 8px;
-      padding: 20px;
-      margin-bottom: 20px;
+      background: var(--card-header-bg);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 24px;
+      border: 1px solid var(--border-light);
     }
-    .post-detail-title { font-size: 1.8rem; margin-bottom: 10px; }
-    .post-detail-content { margin: 20px 0; line-height: 1.6; }
-    
-    .comment-form {
+    .post-detail-title {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .post-detail-content {
       margin: 20px 0;
+      line-height: 1.7;
+    }
+    .post-actions {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      margin-top: 12px;
+    }
+    .post-actions button {
+      background: none;
+      border: 1px solid var(--border-light);
+      padding: 6px 16px;
+      border-radius: 30px;
+      cursor: pointer;
+      transition: .2s;
+      font-family: var(--font-family);
+      font-size: 0.9rem;
+      color: var(--text-main);
+    }
+    .post-actions button:hover {
+      background: var(--btn-ghost);
+    }
+    .post-actions .vote-btn {
+      border: none;
+      padding: 0 8px;
+    }
+
+    /* ─── Comments ─── */
+    .comment-form {
+      margin: 24px 0;
     }
     .comment-form textarea {
       width: 100%;
-      padding: 10px;
-      font-family: inherit;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-      margin-bottom: 10px;
+      padding: 12px 16px;
+      font-family: var(--font-family);
+      border: 1px solid var(--border-light);
+      border-radius: 12px;
+      background: var(--card-bg);
+      color: var(--text-main);
+      resize: vertical;
+      min-height: 80px;
+      margin-bottom: 12px;
+      transition: border .2s;
     }
+    .comment-form textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(44,110,158,0.15);
+    }
+    .comment-form button {
+      padding: 8px 24px;
+      background: var(--btn-primary);
+      color: #fff;
+      border: none;
+      border-radius: 40px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: .2s;
+      font-family: var(--font-family);
+    }
+    .comment-form button:hover {
+      background: var(--btn-primary-hover);
+    }
+
     .comment {
-      margin: 10px 0;
+      margin: 12px 0;
       padding-left: 20px;
-      border-left: 2px solid #ddd;
+      border-left: 2px solid var(--border-light);
     }
     .comment-header {
       display: flex;
       align-items: center;
       gap: 10px;
-      margin-bottom: 5px;
+      margin-bottom: 4px;
+      flex-wrap: wrap;
     }
-    .comment-author { font-weight: bold; }
-    .comment-time { font-size: 0.7rem; color: #666; }
-    .comment-content { margin: 8px 0; }
+    .comment-author {
+      font-weight: 600;
+      color: var(--accent);
+    }
+    .comment-time {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+    }
+    .comment-content {
+      margin: 6px 0;
+      word-wrap: break-word;
+    }
     .comment-actions {
       display: flex;
-      gap: 15px;
+      gap: 12px;
       font-size: 0.8rem;
+      margin-top: 4px;
     }
     .comment-actions button {
       background: none;
       border: none;
-      color: #666;
+      color: var(--text-muted);
       cursor: pointer;
+      padding: 0;
+      font-family: var(--font-family);
       font-size: 0.8rem;
     }
-    .reply-btn { color: #2196F3; }
-    
+    .comment-actions button:hover {
+      color: var(--accent);
+      text-decoration: underline;
+    }
+    .reply-btn { color: var(--accent); }
+
+    .reply-form {
+      display: none;
+      margin-top: 8px;
+    }
+    .reply-form textarea {
+      width: 100%;
+      padding: 8px 12px;
+      border-radius: 12px;
+      border: 1px solid var(--border-light);
+      font-family: var(--font-family);
+      resize: vertical;
+      min-height: 60px;
+      background: var(--card-bg);
+      color: var(--text-main);
+    }
+    .reply-form .reply-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 6px;
+    }
+    .reply-form .reply-actions button {
+      padding: 4px 16px;
+      border-radius: 30px;
+      font-size: 0.8rem;
+      background: var(--btn-primary);
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      font-family: var(--font-family);
+      transition: .2s;
+    }
+    .reply-form .reply-actions button.cancel-reply {
+      background: transparent;
+      border: 1px solid var(--border-light);
+      color: var(--text-muted);
+    }
+    .reply-form .reply-actions button.cancel-reply:hover {
+      background: var(--btn-ghost);
+    }
+
+    /* ─── Modal ─── */
     .modal {
       display: none;
       position: fixed;
       top: 0; left: 0; width: 100%; height: 100%;
       background: rgba(0,0,0,0.5);
       z-index: 1000;
+      align-items: center;
+      justify-content: center;
     }
     .modal-content {
-      position: absolute;
-      top: 50%; left: 50%;
-      transform: translate(-50%, -50%);
-      background: white;
-      padding: 25px;
-      border-radius: 12px;
+      background: var(--card-bg);
+      padding: 28px;
+      border-radius: 24px;
       width: 90%;
       max-width: 500px;
+      border: 1px solid var(--card-border);
+      box-shadow: var(--card-shadow);
     }
-    .modal input, .modal textarea {
+    .modal h3 {
+      margin-bottom: 16px;
+      color: var(--text-main);
+    }
+    .modal input, .modal textarea, .modal select {
       width: 100%;
-      margin: 10px 0;
-      padding: 8px;
-      font-family: inherit;
+      margin: 8px 0 16px;
+      padding: 10px 14px;
+      font-family: var(--font-family);
+      border: 1px solid var(--border-light);
+      border-radius: 12px;
+      background: var(--card-bg);
+      color: var(--text-main);
     }
-    
-    .toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; }
-    .toast { padding: 12px 20px; margin-bottom: 10px; border-radius: 8px; color: white; font-weight: bold; }
+    .modal button {
+      padding: 8px 20px;
+      border-radius: 40px;
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: var(--font-family);
+      margin-right: 8px;
+      transition: .2s;
+    }
+    .modal button:first-of-type {
+      background: var(--btn-primary);
+      color: #fff;
+    }
+    .modal button:first-of-type:hover {
+      background: var(--btn-primary-hover);
+    }
+    .modal button:last-of-type {
+      background: var(--btn-ghost);
+      color: var(--text-main);
+    }
+    .modal button:last-of-type:hover {
+      background: var(--btn-secondary);
+      color: #fff;
+    }
+
+    /* ─── Toast ─── */
+    .toast-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .toast {
+      padding: 12px 24px;
+      border-radius: 40px;
+      color: #fff;
+      font-weight: 500;
+      animation: slideIn 0.3s ease-out;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+      backdrop-filter: blur(4px);
+      font-size: 0.9rem;
+    }
     .toast.success { background: #4CAF50; }
     .toast.error { background: #f44336; }
     .toast.info { background: #2196F3; }
-    
-    .back-button {
-      display: block;
-      width: 200px;
-      margin: 30px auto 0;
-      padding: 12px;
-      background: #666;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      text-align: center;
-      font-weight: bold;
+
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
     }
-    
-    @media (max-width: 700px) {
-      .forum-container { grid-template-columns: 1fr; }
+
+    /* ─── Responsive ─── */
+    @media (max-width: 600px) {
+      .top-bar {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .controls {
+        justify-content: center;
+      }
+      .forum-container {
+        grid-template-columns: 1fr;
+      }
+      .community-header {
+        flex-direction: column;
+        text-align: center;
+      }
     }
   </style>
 </head>
 <body>
 
-<div class="toast-container" id="toastContainer"></div>
-
-<h1>💬 Rheoa Forum</h1>
-<div class="subtitle">Discuss, share, and connect with the community</div>
-
-<div class="forum-container">
-  <div class="sidebar">
-    <div class="sidebar-header">🌐 Communities</div>
-    <ul class="community-list" id="communityList"></ul>
-    <button class="create-community-btn" onclick="showCreateCommunityModal()">+ Create Community</button>
+<div class="container">
+  <!-- Top Bar -->
+  <div class="top-bar">
+    <a href="dashboard.html" class="back-link">← Dashboard</a>
+    <div class="controls">
+      <div class="theme-switcher" id="themeSwitcher">
+        <button data-theme="default" class="theme-btn active">✨ Aurora</button>
+        <button data-theme="dusk" class="theme-btn">🌙 Dusk</button>
+        <button data-theme="meadow" class="theme-btn">🌿 Meadow</button>
+      </div>
+      <div class="font-switcher" id="fontSwitcher">
+        <button data-font="monospace" class="font-btn active">Courier</button>
+        <button data-font="sans-serif" class="font-btn">Inter</button>
+        <button data-font="serif" class="font-btn">Georgia</button>
+      </div>
+    </div>
   </div>
-  
-  <div class="main-content" id="mainContent">
+
+  <!-- Forum Content -->
+  <div class="forum-container">
+    <div class="sidebar">
+      <div class="sidebar-header">🌐 Communities</div>
+      <ul class="community-list" id="communityList"></ul>
+      <button class="create-community-btn" onclick="showCreateCommunityModal()">+ Create Community</button>
+    </div>
+    <div class="main-content" id="mainContent">
+      <!-- Dynamic content -->
+    </div>
   </div>
 </div>
 
-<button class="back-button" onclick="window.location.href='dashboard.html'">← Back to Dashboard</button>
-
+<!-- Create Community Modal -->
 <div id="createCommunityModal" class="modal">
   <div class="modal-content">
     <h3>Create a New Community</h3>
@@ -278,20 +733,32 @@
   </div>
 </div>
 
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 <script>
+// ─────────────────────────────────────────────
+// SUPABASE INIT
+// ─────────────────────────────────────────────
 const sb = window.supabase.createClient(
   "https://mtiwodvsrwvrujbhmmrn.supabase.co",
   "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
 );
 
+// ─────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────
 let currentUser = null;
 let currentPlayer = null;
 let currentCommunity = null;
 let currentPost = null;
 let communities = [];
-let forumChannel = null;  // for real-time subscriptions
+let forumChannel = null;
 
+// ─────────────────────────────────────────────
+// TOAST
+// ─────────────────────────────────────────────
 function showToast(msg, type='info') {
   const container = document.getElementById('toastContainer');
   const toast = document.createElement('div');
@@ -301,25 +768,74 @@ function showToast(msg, type='info') {
   setTimeout(() => toast.remove(), 3000);
 }
 
+// ─────────────────────────────────────────────
+// XSS ESCAPE
+// ─────────────────────────────────────────────
 function escapeHtml(s) {
   if (!s) return '';
   return s.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));
 }
 
+// ─────────────────────────────────────────────
+// THEME & FONT (localStorage)
+// ─────────────────────────────────────────────
+function setTheme(themeName) {
+  const body = document.body;
+  body.classList.remove('theme-dusk', 'theme-meadow');
+  if (themeName === 'dusk') body.classList.add('theme-dusk');
+  else if (themeName === 'meadow') body.classList.add('theme-meadow');
+  localStorage.setItem('forum_theme', themeName);
+  document.querySelectorAll('.theme-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.getAttribute('data-theme') === themeName);
+  });
+}
+
+function setFont(fontName) {
+  const root = document.documentElement;
+  if (fontName === 'monospace') root.style.setProperty('--font-family', "'Courier New', monospace");
+  else if (fontName === 'sans-serif') root.style.setProperty('--font-family', "'Inter', sans-serif");
+  else if (fontName === 'serif') root.style.setProperty('--font-family', "'Georgia', serif");
+  localStorage.setItem('forum_font', fontName);
+  document.querySelectorAll('.font-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.getAttribute('data-font') === fontName);
+  });
+}
+
+function initThemeAndFont() {
+  const savedTheme = localStorage.getItem('forum_theme') || 'default';
+  setTheme(savedTheme);
+  const savedFont = localStorage.getItem('forum_font') || 'monospace';
+  setFont(savedFont);
+
+  document.getElementById('themeSwitcher').addEventListener('click', (e) => {
+    const btn = e.target.closest('.theme-btn');
+    if (btn) setTheme(btn.getAttribute('data-theme'));
+  });
+  document.getElementById('fontSwitcher').addEventListener('click', (e) => {
+    const btn = e.target.closest('.font-btn');
+    if (btn) setFont(btn.getAttribute('data-font'));
+  });
+}
+
+// ─────────────────────────────────────────────
+// AUTH & INIT
+// ─────────────────────────────────────────────
 async function init() {
+  initThemeAndFont();
+
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return window.location.href = 'index.html';
   currentUser = user;
-  
+
   const { data: player } = await sb.from('players').select('*').eq('auth_id', user.id).single();
   currentPlayer = player;
-  
+
   await loadCommunities();
-  
+
   const params = new URLSearchParams(window.location.search);
   const communityName = params.get('c');
   const postId = params.get('p');
-  
+
   if (postId) {
     await loadPostView(postId);
   } else if (communityName) {
@@ -330,6 +846,9 @@ async function init() {
   }
 }
 
+// ─────────────────────────────────────────────
+// COMMUNITIES
+// ─────────────────────────────────────────────
 async function loadCommunities() {
   const { data } = await sb.from('communities').select('*').order('name');
   communities = data || [];
@@ -348,7 +867,7 @@ function renderCommunitySidebar() {
       </div>
     </li>
   `).join('');
-  
+
   const select = document.getElementById('newCommunityParent');
   if (select) {
     select.innerHTML = '<option value="">None (Main Community)</option>' +
@@ -369,13 +888,15 @@ async function selectCommunity(community) {
   window.history.pushState({}, '', `?c=${community.name}`);
   renderCommunitySidebar();
   await loadCommunityView();
-  subscribeToCommunity(community.id);  // start real-time updates
+  subscribeToCommunity(community.id);
 }
 
-// ---------- LOAD COMMUNITY VIEW ----------
+// ─────────────────────────────────────────────
+// COMMUNITY VIEW
+// ─────────────────────────────────────────────
 async function loadCommunityView() {
   if (!currentCommunity) return;
-  
+
   const { data: posts, error } = await sb
     .from('posts')
     .select(`*, author:players(username)`)
@@ -387,9 +908,9 @@ async function loadCommunityView() {
     showToast('Error loading posts', 'error');
     return;
   }
-  
+
   const isMember = await checkMembership(currentCommunity.id);
-  
+
   let html = `
     <div class="community-header" style="border-bottom-color: ${currentCommunity.banner_color || '#2196F3'};">
       <div class="community-header-icon">${currentCommunity.icon || '🌐'}</div>
@@ -399,7 +920,7 @@ async function loadCommunityView() {
       </div>
     </div>
   `;
-  
+
   if (isMember) {
     html += `
       <div class="post-form">
@@ -409,12 +930,12 @@ async function loadCommunityView() {
       </div>
     `;
   } else {
-    html += `<button onclick="joinCommunity('${currentCommunity.id}')">Join Community</button>`;
+    html += `<button class="join-btn" onclick="joinCommunity('${currentCommunity.id}')">Join Community</button>`;
   }
-  
+
   html += `<div id="postsList">`;
   if (!posts || posts.length === 0) {
-    html += '<p style="padding:20px;text-align:center;">No posts yet. Be the first!</p>';
+    html += '<p style="padding:20px;text-align:center;color:var(--text-muted);">No posts yet. Be the first!</p>';
   } else {
     posts.forEach(post => {
       const score = (post.upvotes || 0) - (post.downvotes || 0);
@@ -437,20 +958,21 @@ async function loadCommunityView() {
     });
   }
   html += `</div>`;
-  
+
   document.getElementById('mainContent').innerHTML = html;
 }
 
-// ---------- LOAD FEED (latest posts) ----------
+// ─────────────────────────────────────────────
+// FEED (latest posts)
+// ─────────────────────────────────────────────
 async function loadFeed() {
   currentCommunity = null;
   currentPost = null;
   window.history.pushState({}, '', window.location.pathname);
   renderCommunitySidebar();
-  
-  // Unsubscribe from any previous real-time channel
+
   if (forumChannel) forumChannel.unsubscribe();
-  
+
   const { data: posts, error } = await sb
     .from('posts')
     .select(`*, author:players(username), community:communities(name, display_name, icon)`)
@@ -462,10 +984,10 @@ async function loadFeed() {
     showToast('Error loading feed', 'error');
     return;
   }
-  
-  let html = `<h2>📰 Latest Posts</h2>`;
+
+  let html = `<h2 style="margin-bottom:20px;">📰 Latest Posts</h2>`;
   if (!posts || posts.length === 0) {
-    html += '<p style="padding:20px;text-align:center;">No posts yet. Join a community and create one!</p>';
+    html += '<p style="padding:20px;text-align:center;color:var(--text-muted);">No posts yet. Join a community and create one!</p>';
   } else {
     html += `<div id="postsList">`;
     posts.forEach(post => {
@@ -492,11 +1014,13 @@ async function loadFeed() {
     });
     html += `</div>`;
   }
-  
+
   document.getElementById('mainContent').innerHTML = html;
 }
 
-// ---------- VIEW SINGLE POST ----------
+// ─────────────────────────────────────────────
+// VIEW SINGLE POST
+// ─────────────────────────────────────────────
 async function viewPost(postId) {
   currentPost = postId;
   const params = new URLSearchParams(window.location.search);
@@ -516,25 +1040,23 @@ async function loadPostView(postId) {
     document.getElementById('mainContent').innerHTML = '<p>Post not found</p>';
     return;
   }
-  
+
   currentCommunity = post.community;
   currentPost = post;
   renderCommunitySidebar();
-  
-  // Subscribe to new comments on this post
+
   subscribeToPostComments(postId);
-  
-  // Load comments
+
   const comments = await loadComments(postId);
   const userVote = await getUserVote('post', postId);
-  
+
   let html = `
     <div class="back-link" onclick="selectCommunityById('${post.community.id}')">← Back to ${escapeHtml(post.community.display_name)}</div>
     <div class="post-detail-card">
       <div class="post-detail-title">${escapeHtml(post.title)}</div>
       <div class="post-meta">Posted by ${escapeHtml(post.author?.username)} • ${new Date(post.created_at).toLocaleString()}</div>
       <div class="post-detail-content">${escapeHtml(post.content || '').replace(/\n/g, '<br>')}</div>
-      <div class="post-actions" style="display:flex; gap:15px;">
+      <div class="post-actions">
         <button class="vote-btn ${userVote === 1 ? 'upvoted' : ''}" onclick="vote('post', '${post.id}', 1)">▲ ${post.upvotes || 0}</button>
         <button class="vote-btn ${userVote === -1 ? 'downvoted' : ''}" onclick="vote('post', '${post.id}', -1)">▼ ${post.downvotes || 0}</button>
         ${post.author_id === currentPlayer.id ? `
@@ -550,11 +1072,13 @@ async function loadPostView(postId) {
     </div>
     <div id="commentsContainer">${renderComments(comments)}</div>
   `;
-  
+
   document.getElementById('mainContent').innerHTML = html;
 }
 
-// ---------- LOAD COMMENTS (direct query) ----------
+// ─────────────────────────────────────────────
+// COMMENTS
+// ─────────────────────────────────────────────
 async function loadComments(postId) {
   try {
     const { data, error } = await sb
@@ -570,11 +1094,10 @@ async function loadComments(postId) {
 
     if (error) throw error;
 
-    // Transform to add author_name and user_vote placeholder
     return (data || []).map(c => ({
       ...c,
       author_name: c.author?.username || 'Unknown',
-      user_vote: 0   // We'll ignore vote status for simplicity; you can add later
+      user_vote: 0
     }));
   } catch (err) {
     console.error('Error loading comments:', err);
@@ -583,18 +1106,16 @@ async function loadComments(postId) {
   }
 }
 
-// ---------- RENDER COMMENTS (nested) ----------
 function renderComments(comments, parentId = null) {
   if (!comments || comments.length === 0) return '';
-  
+
   const filtered = comments.filter(c => c.parent_id === parentId);
   if (filtered.length === 0) return '';
-  
+
   return filtered.map(c => {
     const childrenHtml = renderComments(comments, c.id);
     const score = (c.upvotes || 0) - (c.downvotes || 0);
-    const userVote = c.user_vote || 0;
-    
+
     return `
       <div class="comment" style="margin-left: ${(c.depth || 0) * 20}px;">
         <div class="comment-header">
@@ -603,19 +1124,21 @@ function renderComments(comments, parentId = null) {
         </div>
         <div class="comment-content">${escapeHtml(c.content || '').replace(/\n/g, '<br>')}</div>
         <div class="comment-actions">
-          <button class="vote-btn ${userVote === 1 ? 'upvoted' : ''}" onclick="vote('comment', '${c.id}', 1)">▲</button>
+          <button class="vote-btn" onclick="vote('comment', '${c.id}', 1)">▲</button>
           <span>${score}</span>
-          <button class="vote-btn ${userVote === -1 ? 'downvoted' : ''}" onclick="vote('comment', '${c.id}', -1)">▼</button>
+          <button class="vote-btn" onclick="vote('comment', '${c.id}', -1)">▼</button>
           <button class="reply-btn" onclick="showReplyForm('${c.id}')">Reply</button>
           ${c.author_id === currentPlayer?.id ? `
             <button onclick="editComment('${c.id}')">Edit</button>
             <button onclick="deleteComment('${c.id}')">Delete</button>
           ` : ''}
         </div>
-        <div id="reply-form-${c.id}" style="display:none; margin-top:10px;">
+        <div class="reply-form" id="reply-form-${c.id}">
           <textarea id="reply-content-${c.id}" rows="2" placeholder="Write a reply..."></textarea>
-          <button onclick="submitComment('${c.id}')">Reply</button>
-          <button onclick="hideReplyForm('${c.id}')">Cancel</button>
+          <div class="reply-actions">
+            <button onclick="submitComment('${c.id}')">Reply</button>
+            <button class="cancel-reply" onclick="hideReplyForm('${c.id}')">Cancel</button>
+          </div>
         </div>
         ${childrenHtml}
       </div>
@@ -623,7 +1146,9 @@ function renderComments(comments, parentId = null) {
   }).join('');
 }
 
-// ---------- VOTE ----------
+// ─────────────────────────────────────────────
+// VOTE
+// ─────────────────────────────────────────────
 async function vote(targetType, targetId, value) {
   const { error } = await sb.rpc('handle_vote', {
     p_player_id: currentPlayer.id,
@@ -632,42 +1157,43 @@ async function vote(targetType, targetId, value) {
     p_vote_value: value
   });
   if (error) return showToast(error.message, 'error');
-  
-  // Reload the current view
+
   if (currentPost) await loadPostView(currentPost.id);
   else if (currentCommunity) await loadCommunityView();
   else await loadFeed();
 }
 
-// ---------- CREATE POST ----------
+// ─────────────────────────────────────────────
+// CREATE POST
+// ─────────────────────────────────────────────
 async function createPost() {
   const title = document.getElementById('postTitle').value.trim();
   const content = document.getElementById('postContent').value.trim();
   if (!title) return showToast('Title required', 'error');
-  
+
   const { error } = await sb.from('posts').insert({
     title, content, community_id: currentCommunity.id, author_id: currentPlayer.id
   });
   if (error) return showToast(error.message, 'error');
   showToast('Post created!', 'success');
-  // Reload community view; real-time subscription will also pick it up
   loadCommunityView();
 }
 
-// ---------- SUBMIT COMMENT ----------
+// ─────────────────────────────────────────────
+// SUBMIT COMMENT
+// ─────────────────────────────────────────────
 async function submitComment(parentId) {
-  const content = parentId 
+  const content = parentId
     ? document.getElementById(`reply-content-${parentId}`).value.trim()
     : document.getElementById('commentContent').value.trim();
   if (!content) return showToast('Comment cannot be empty', 'error');
-  
-  // Calculate depth if replying
+
   let depth = 0;
   if (parentId) {
     const parentDepth = await getParentDepth(parentId);
     depth = parentDepth + 1;
   }
-  
+
   const { error } = await sb.from('comments').insert({
     content,
     post_id: currentPost.id,
@@ -678,7 +1204,6 @@ async function submitComment(parentId) {
   });
   if (error) return showToast(error.message, 'error');
   showToast('Comment posted', 'success');
-  // Reload post view; real-time subscription will also update
   loadPostView(currentPost.id);
 }
 
@@ -694,7 +1219,9 @@ function hideReplyForm(commentId) {
   document.getElementById(`reply-form-${commentId}`).style.display = 'none';
 }
 
-// ---------- EDIT / DELETE POST ----------
+// ─────────────────────────────────────────────
+// EDIT / DELETE POST
+// ─────────────────────────────────────────────
 async function editPost(postId) {
   const newContent = prompt('Edit your post:', currentPost.content);
   if (newContent !== null) {
@@ -723,15 +1250,17 @@ async function deleteComment(commentId) {
   }
 }
 
-// ---------- COMMUNITY MANAGEMENT ----------
+// ─────────────────────────────────────────────
+// COMMUNITY MANAGEMENT
+// ─────────────────────────────────────────────
 function showCreateCommunityModal() {
-  document.getElementById('createCommunityModal').style.display = 'block';
+  document.getElementById('createCommunityModal').style.display = 'flex';
 }
 async function createCommunity() {
   const name = document.getElementById('newCommunityName').value.trim().toLowerCase().replace(/\s+/g, '');
   const display_name = document.getElementById('newCommunityDisplayName').value.trim();
   if (!name || !display_name) return showToast('Name and display name required', 'error');
-  
+
   const { error } = await sb.from('communities').insert({
     name, display_name,
     description: document.getElementById('newCommunityDesc').value,
@@ -773,16 +1302,19 @@ async function getUserVote(targetType, targetId) {
   return data?.vote_value || 0;
 }
 
-function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+function closeModal(id) {
+  document.getElementById(id).style.display = 'none';
+}
 
-// ---------- REAL-TIME SUBSCRIPTIONS ----------
+// ─────────────────────────────────────────────
+// REAL-TIME SUBSCRIPTIONS
+// ─────────────────────────────────────────────
 function subscribeToCommunity(communityId) {
-  // Unsubscribe from previous channel
   if (forumChannel) {
     forumChannel.unsubscribe();
     forumChannel = null;
   }
-  
+
   forumChannel = sb.channel(`forum-${communityId}`)
     .on('postgres_changes', {
       event: 'INSERT',
@@ -790,33 +1322,21 @@ function subscribeToCommunity(communityId) {
       table: 'posts',
       filter: `community_id=eq.${communityId}`
     }, (payload) => {
-      // When a new post is added, reload the community view
-      // (Alternatively, you could append the post without full reload)
       if (currentCommunity && currentCommunity.id === communityId) {
         loadCommunityView();
       }
     })
     .subscribe((status) => {
-      if (status === 'SUBSCRIBED') {
-        console.log('Subscribed to community posts');
-      }
+      if (status === 'SUBSCRIBED') console.log('Subscribed to community posts');
     });
 }
 
 function subscribeToPostComments(postId) {
-  // If we already have a channel, we could reuse, but we'll create a separate one for comments.
-  // For simplicity, we'll just use a generic channel that listens to comments on this post.
-  // However, we need to avoid duplicates: we can use the same forumChannel or a separate one.
-  // Let's use the same forumChannel but add a filter on comments.
-  // Since forumChannel is already used for posts, we can add another listener.
   if (forumChannel) {
-    // Remove any existing comment listener to avoid duplicates
-    // For simplicity, we'll just add a new listener; but we must ensure we don't have duplicate listeners.
-    // We'll unsubscribe and resubscribe to keep it clean.
     forumChannel.unsubscribe();
     forumChannel = null;
   }
-  
+
   forumChannel = sb.channel(`post-${postId}`)
     .on('postgres_changes', {
       event: 'INSERT',
@@ -824,19 +1344,18 @@ function subscribeToPostComments(postId) {
       table: 'comments',
       filter: `post_id=eq.${postId}`
     }, (payload) => {
-      // New comment – reload post view to show it
       if (currentPost && currentPost.id === postId) {
         loadPostView(postId);
       }
     })
     .subscribe((status) => {
-      if (status === 'SUBSCRIBED') {
-        console.log('Subscribed to post comments');
-      }
+      if (status === 'SUBSCRIBED') console.log('Subscribed to post comments');
     });
 }
 
-// ---------- GLOBAL EVENT HANDLERS (exposed) ----------
+// ─────────────────────────────────────────────
+// EXPOSE GLOBAL FUNCTIONS FOR ONCLICK
+// ─────────────────────────────────────────────
 window.selectCommunityById = selectCommunityById;
 window.vote = vote;
 window.createPost = createPost;
@@ -851,8 +1370,11 @@ window.editPost = editPost;
 window.deletePost = deletePost;
 window.editComment = editComment;
 window.deleteComment = deleteComment;
+window.closeModal = closeModal;
 
-// Start the app
+// ─────────────────────────────────────────────
+// START
+// ─────────────────────────────────────────────
 init();
 </script>
 </body>
