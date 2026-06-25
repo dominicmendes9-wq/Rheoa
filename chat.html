@@ -1550,19 +1550,20 @@
   }
 
   // ─── Final init ──────────────────────────────────────────
-  (async function init() {
-    initThemeAndFont();
-    const player = await getPlayer();
-    if (!player) { window.location.href = 'index.html'; return; }
-    const profile = await loadChatProfile();
-    if (profile) {
-      chatProfile = profile;
-      document.getElementById('statusSelect').value = profile.status;
-      await initializeChat();
-    } else {
-      showEntryModal();
-    }
-  })();
+ (async function init() {
+  initThemeAndFont();
+  const player = await getPlayer();
+  if (!player) { window.location.href = 'index.html'; return; }
+
+  // Load existing chat profile if any (to pre‑fill the modal)
+  const profile = await loadChatProfile();
+  if (profile) {
+    chatProfile = profile;
+  }
+
+  // Always show the entry modal
+  showEntryModal();
+})();
 </script>
 </body>
 </html>
