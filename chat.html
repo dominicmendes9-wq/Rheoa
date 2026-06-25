@@ -238,10 +238,6 @@
             font-weight: 600;
             color: var(--accent);
         }
-        .message-tier-badge {
-            font-size: 0.7rem;
-            margin-left: 2px;
-        }
         .message-time {
             font-size: 0.65rem;
         }
@@ -314,6 +310,7 @@
             display: flex;
             gap: 10px;
             align-items: flex-end;
+            position: relative;
         }
         #messageInput {
             flex: 1;
@@ -347,6 +344,35 @@
         }
         #sendBtn:hover {
             background: var(--btn-primary-hover);
+        }
+
+        /* ─── Emoji Picker ─── */
+        .emoji-picker {
+            display: none;
+            position: absolute;
+            bottom: 70px;
+            right: 0;
+            background: var(--card-bg);
+            border: 1px solid var(--border-light);
+            border-radius: 16px;
+            padding: 12px;
+            box-shadow: var(--card-shadow);
+            z-index: 1000;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 6px;
+            max-width: 300px;
+        }
+        .emoji-picker button {
+            background: transparent;
+            border: none;
+            font-size: 1.8rem;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 8px;
+            transition: background .15s;
+        }
+        .emoji-picker button:hover {
+            background: var(--btn-ghost);
         }
 
         /* ─── Members Sidebar ─── */
@@ -415,37 +441,6 @@
             border-radius: 50%;
             background: #4CAF50;
             flex-shrink: 0;
-        }
-
-        /* ─── Emoji Picker (popup) ─── */
-        .emoji-picker {
-            display: none;
-            position: absolute;
-            bottom: 70px;
-            background: var(--card-bg);
-            border: 1px solid var(--border-light);
-            border-radius: 16px;
-            padding: 12px;
-            box-shadow: var(--card-shadow);
-            z-index: 1000;
-            grid-template-columns: repeat(6, 1fr);
-            gap: 6px;
-            max-width: 300px;
-        }
-        .emoji-picker button {
-            background: transparent;
-            border: none;
-            font-size: 1.8rem;
-            cursor: pointer;
-            padding: 4px;
-            border-radius: 8px;
-            transition: background .15s;
-        }
-        .emoji-picker button:hover {
-            background: var(--btn-ghost);
-        }
-        .input-row {
-            position: relative;
         }
 
         /* ─── Toast ─── */
@@ -533,7 +528,7 @@
                 <div class="loading">Loading messages...</div>
             </div>
             <div class="message-input-area">
-                <!-- Toolbar for Black/Founder (hidden by default) -->
+                <!-- Toolbar (hidden for non-Black/Founder) -->
                 <div class="toolbar" id="toolbar" style="display:none;">
                     <button type="button" onclick="formatMessage('bold')"><b>B</b></button>
                     <button type="button" onclick="formatMessage('italic')"><i>I</i></button>
@@ -604,7 +599,7 @@
         }, duration);
     }
 
-    // ─── Theme & Font (localStorage) ────────────────────────
+    // ─── Theme & Font ────────────────────────────────────────
     function setTheme(themeName) {
         const body = document.body;
         body.classList.remove('theme-dusk', 'theme-meadow');
@@ -730,10 +725,6 @@
         const playerId = currentPlayer.id;
         container.innerHTML = messages.map(msg => {
             const username = msg.players?.[0]?.username || 'Unknown';
-            const tier = getTierInfo(username); // we'll get tier from presence or a separate map
-            // Actually we don't have tier in the message object; we'll just show username
-            // For tier badge in message, we could fetch from a user map, but we'll keep it simple
-            // and just show the tier badge for the online list.
             const isOwn = msg.user_id === playerId;
             return `
                 <div class="message ${isOwn ? 'own' : ''}">
@@ -748,18 +739,12 @@
         container.scrollTop = container.scrollHeight;
     }
 
-    // ─── Render message content (support markdown) ──────────
     function renderMessageContent(text) {
         if (!text) return '';
-        // Convert markdown-like syntax: **bold**, *italic*, # h2, [link](url)
         let html = escapeHtml(text);
-        // Bold
         html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-        // Italic
         html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
-        // H2: # heading
         html = html.replace(/^# (.+)$/gm, '<h2>$1</h2>');
-        // Links: [text](url)
         html = html.replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" target="_blank">$1</a>');
         return html;
     }
@@ -777,14 +762,19 @@
                 list.push(...state[key]);
             });
             onlineUsers = list;
+            // Ensure current user is in the list (fallback)
+            if (!onlineUsers.some(u => u.user_id === currentPlayer.id)) {
+                onlineUsers.push({
+                    user_id: currentPlayer.id,
+                    username: currentPlayer.username,
+                    subscription_tier: currentPlayer.subscription_tier || 'basic'
+                });
+            }
             document.getElementById('onlineCount').textContent = `${onlineUsers.length} online`;
             renderMembers();
         });
 
         messageChannel.on('broadcast', { event: 'message' }, (payload) => {
-            // Update UI with new message (avoid full reload)
-            const msg = payload.payload;
-            // We'll just reload messages for simplicity; but we can append if we want.
             loadMessages();
         });
 
@@ -795,6 +785,24 @@
                     username: currentPlayer.username,
                     subscription_tier: currentPlayer.subscription_tier || 'basic'
                 });
+                // Force a sync update after tracking
+                setTimeout(() => {
+                    const state = messageChannel.presenceState();
+                    const list = [];
+                    Object.keys(state).forEach(key => {
+                        list.push(...state[key]);
+                    });
+                    onlineUsers = list;
+                    if (!onlineUsers.some(u => u.user_id === currentPlayer.id)) {
+                        onlineUsers.push({
+                            user_id: currentPlayer.id,
+                            username: currentPlayer.username,
+                            subscription_tier: currentPlayer.subscription_tier || 'basic'
+                        });
+                    }
+                    document.getElementById('onlineCount').textContent = `${onlineUsers.length} online`;
+                    renderMembers();
+                }, 500);
             }
         });
     }
@@ -872,7 +880,7 @@
         }
     }
 
-    // ─── Formatting Toolbar (Black/Founder only) ────────────
+    // ─── Formatting Toolbar ──────────────────────────────────
     function formatMessage(type) {
         const input = document.getElementById('messageInput');
         const start = input.selectionStart;
@@ -920,26 +928,16 @@
         input.focus();
         const newPos = start + emoji.length;
         input.setSelectionRange(newPos, newPos);
-        // Close picker after selection
         document.getElementById('emojiPicker').style.display = 'none';
         emojiPickerVisible = false;
     }
 
-    // ─── Check user tier and show/hide toolbar ──────────────
+    // ─── Toolbar visibility ──────────────────────────────────
     function updateToolbarVisibility() {
         const tier = currentPlayer?.subscription_tier?.toLowerCase() || 'basic';
         const isBlackOrFounder = ['black', 'founder'].includes(tier);
         const toolbar = document.getElementById('toolbar');
-        if (isBlackOrFounder) {
-            toolbar.style.display = 'flex';
-        } else {
-            toolbar.style.display = 'none';
-        }
-    }
-
-    // ─── Go Back ─────────────────────────────────────────────
-    function goBack() {
-        window.location.href = "dashboard.html";
+        toolbar.style.display = isBlackOrFounder ? 'flex' : 'none';
     }
 
     // ─── Init ─────────────────────────────────────────────────
