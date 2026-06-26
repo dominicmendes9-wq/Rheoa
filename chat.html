@@ -6,7 +6,7 @@
   <title>Chat - Rheoa RPG</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
   <style>
-    /* ─── CSS Variables & Themes ─── */
+    /* ─── Full CSS (same as before, complete) ─── */
     :root {
       --bg-body: #f0f4fa;
       --card-bg: #fff;
@@ -1570,7 +1570,7 @@
     await updatePresence();
   }
 
-  // ─── Activity Tracking ──────────────────────────────────
+  // ─── Activity Tracking (UPDATED for better local tracking) ──
   function startActivityTracking() {
     document.addEventListener('click', updateActivity);
     document.addEventListener('keydown', updateActivity);
@@ -1584,25 +1584,24 @@
 
   function updateActivity() {
     if (!currentPlayer || !chatProfile) return;
-    sb.rpc('update_chat_activity').catch(e => console.warn('Activity update error:', e));
+    // Update local timestamp immediately
     chatProfile.last_activity = new Date().toISOString();
+    // Fire-and-forget DB update
+    sb.rpc('update_chat_activity').catch(e => console.warn('Activity update error:', e));
   }
 
-  // ─── Away Detection ──────────────────────────────────────
+  // ─── Away Detection (FIXED: uses local timestamp, threshold 60s) ──
   function startAwayDetection() {
     if (awayCheckInterval) clearInterval(awayCheckInterval);
     awayCheckInterval = setInterval(async () => {
       if (!currentPlayer || !chatProfile) return;
-      const { data } = await sb
-        .from('chat_profiles')
-        .select('last_activity, status')
-        .eq('player_id', currentPlayer.id)
-        .single();
-      if (!data) return;
-      const lastActivity = new Date(data.last_activity);
+      // Use local timestamp first
+      const lastActivity = chatProfile.last_activity ? new Date(chatProfile.last_activity) : new Date();
       const now = new Date();
       const diffSeconds = (now - lastActivity) / 1000;
-      if (diffSeconds > 120 && (data.status === 'available' || data.status === 'busy')) {
+
+      // Only change status if > 60 seconds of inactivity and not already away
+      if (diffSeconds > 60 && (chatProfile.status === 'available' || chatProfile.status === 'busy')) {
         if (chatProfile.status !== 'away') {
           chatProfile.status = 'away';
           await sb
@@ -1613,8 +1612,8 @@
           document.getElementById('statusSelect').value = 'away';
           renderMembers();
         }
-      }
-      if (diffSeconds < 30 && data.status === 'away') {
+      } else if (diffSeconds < 30 && chatProfile.status === 'away') {
+        // Auto-revert to available if user becomes active again
         chatProfile.status = 'available';
         await sb
           .from('chat_profiles')
@@ -1669,7 +1668,6 @@
           existing = openDMs.find(d => d.recipientId === sender.id);
         }
         if (existing) {
-          // Deduplicate: check if message already exists
           if (!existing.messages.some(m => m.id === msg.id)) {
             existing.messages.push(msg);
             renderDMMessages(existing);
@@ -1701,7 +1699,7 @@
   }
 
   // ────────────────────────────────────────────────────────────
-  //  DM FUNCTIONS
+  //  DM FUNCTIONS (full, identical to previous)
   // ────────────────────────────────────────────────────────────
 
   function getDMDataByWinId(winId) {
@@ -1914,7 +1912,6 @@
       const msg = payload.payload;
       if ((msg.sender_id === currentPlayer.id && msg.recipient_id === recipientId) ||
           (msg.sender_id === recipientId && msg.recipient_id === currentPlayer.id)) {
-        // Deduplicate: check if message already exists
         if (!dmData.messages.some(m => m.id === msg.id)) {
           dmData.messages.push(msg);
           if (msg.sender_id !== currentPlayer.id) {
@@ -1958,7 +1955,7 @@
     dmData.channel = channel;
   }
 
-  // ─── Send DM (FIXED: uses crypto.randomUUID()) ──────────
+  // ─── Send DM (uses crypto.randomUUID()) ──────────
   async function dmSend(winId) {
     const dmData = getDMDataByWinId(winId);
     if (!dmData) return;
@@ -1967,7 +1964,6 @@
     if (!text) return;
     input.value = '';
 
-    // Generate a persistent UUID for this message
     const msgId = crypto.randomUUID();
     const newMsg = {
       id: msgId,
@@ -1978,11 +1974,9 @@
       read_at: null
     };
 
-    // Optimistic add
     dmData.messages.push(newMsg);
     renderDMMessages(dmData);
 
-    // Broadcast
     if (dmData.channel) {
       await dmData.channel.send({
         type: 'broadcast',
@@ -1991,7 +1985,6 @@
       });
     }
 
-    // Insert into DB with the same ID
     const { error } = await sb
       .from('dm_messages')
       .insert({
@@ -2005,13 +1998,9 @@
     if (error) {
       console.error('Failed to send DM:', error);
       showToast('Error sending message', 'error');
-      // Optionally remove the optimistic message
       const index = dmData.messages.findIndex(m => m.id === msgId);
       if (index !== -1) dmData.messages.splice(index, 1);
       renderDMMessages(dmData);
-    } else {
-      // Mark our own message as read (optional)
-      // We could update read_at, but it's not necessary
     }
   }
 
