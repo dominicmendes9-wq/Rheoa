@@ -6,7 +6,7 @@
   <title>Chat - Rheoa RPG</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
   <style>
-    /* ─── Full CSS (same as before, complete) ─── */
+    /* ─── Full CSS (same as before) ─── */
     :root {
       --bg-body: #f0f4fa;
       --card-bg: #fff;
@@ -1276,6 +1276,7 @@
   // ─── Load Global Messages ────────────────────────────────
   async function loadMessages() {
     if (!globalRoom) return;
+    // LEFT JOIN chat_profiles to get temp_username, fallback to players.username
     const { data, error } = await sb
       .from('chat_messages')
       .select(`
@@ -1283,7 +1284,8 @@
         content,
         created_at,
         user_id,
-        players!chat_messages_user_id_fkey ( username )
+        players!chat_messages_user_id_fkey ( username ),
+        profiles:chat_profiles!chat_messages_user_id_fkey ( temp_username )
       `)
       .eq('room_id', globalRoom.id)
       .order('created_at', { ascending: true });
@@ -1302,7 +1304,8 @@
     }
     const playerId = currentPlayer.id;
     container.innerHTML = messages.map(msg => {
-      const username = msg.players?.username || 'Unknown';
+      // Use temp_username if available, else players.username
+      const username = msg.profiles?.temp_username || msg.players?.username || 'Unknown';
       const isOwn = msg.user_id === playerId;
       return `
         <div class="message ${isOwn ? 'own' : ''}">
@@ -1570,7 +1573,7 @@
     await updatePresence();
   }
 
-  // ─── Activity Tracking (UPDATED for better local tracking) ──
+  // ─── Activity Tracking ──────────────────────────────────
   function startActivityTracking() {
     document.addEventListener('click', updateActivity);
     document.addEventListener('keydown', updateActivity);
@@ -1584,23 +1587,19 @@
 
   function updateActivity() {
     if (!currentPlayer || !chatProfile) return;
-    // Update local timestamp immediately
     chatProfile.last_activity = new Date().toISOString();
-    // Fire-and-forget DB update
     sb.rpc('update_chat_activity').catch(e => console.warn('Activity update error:', e));
   }
 
-  // ─── Away Detection (FIXED: uses local timestamp, threshold 60s) ──
+  // ─── Away Detection ──────────────────────────────────────
   function startAwayDetection() {
     if (awayCheckInterval) clearInterval(awayCheckInterval);
     awayCheckInterval = setInterval(async () => {
       if (!currentPlayer || !chatProfile) return;
-      // Use local timestamp first
       const lastActivity = chatProfile.last_activity ? new Date(chatProfile.last_activity) : new Date();
       const now = new Date();
       const diffSeconds = (now - lastActivity) / 1000;
 
-      // Only change status if > 60 seconds of inactivity and not already away
       if (diffSeconds > 60 && (chatProfile.status === 'available' || chatProfile.status === 'busy')) {
         if (chatProfile.status !== 'away') {
           chatProfile.status = 'away';
@@ -1613,7 +1612,6 @@
           renderMembers();
         }
       } else if (diffSeconds < 30 && chatProfile.status === 'away') {
-        // Auto-revert to available if user becomes active again
         chatProfile.status = 'available';
         await sb
           .from('chat_profiles')
@@ -1955,7 +1953,7 @@
     dmData.channel = channel;
   }
 
-  // ─── Send DM (uses crypto.randomUUID()) ──────────
+  // ─── Send DM ─────────────────────────────────────────────
   async function dmSend(winId) {
     const dmData = getDMDataByWinId(winId);
     if (!dmData) return;
