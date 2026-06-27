@@ -1572,20 +1572,25 @@
     renderMembers();
   }
 
-  // ─── Load Friends List (with debug) ──────────────────────
+  // ─── Load Friends List (with debug and error handling) ──
   async function loadFriendsList() {
     if (!currentPlayer) return;
     console.log('🔄 Loading friends list...');
-    const { data, error } = await sb.rpc('get_chat_friends');
-    if (error) {
-      console.error('❌ Error loading friends:', error);
-      return;
-    }
-    console.log('✅ Friends data:', data);
-    friendsList = data || [];
-    // If we're on the friends tab, re-render
-    if (currentMemberTab === 'friends') {
-      renderMembers();
+    try {
+      const { data, error } = await sb.rpc('get_chat_friends');
+      if (error) {
+        console.error('❌ Error loading friends:', error);
+        friendsList = []; // fallback to empty array
+        return;
+      }
+      console.log('✅ Friends data:', data);
+      friendsList = data || [];
+      if (currentMemberTab === 'friends') {
+        renderMembers();
+      }
+    } catch (err) {
+      console.error('❌ Exception loading friends:', err);
+      friendsList = [];
     }
   }
 
@@ -1597,7 +1602,6 @@
       return false;
     }
     showToast(data.message, 'success');
-    // Immediately refresh friends list
     await loadFriendsList();
     return true;
   }
@@ -1609,9 +1613,7 @@
       return false;
     }
     showToast('Friend added!', 'success');
-    // Refresh friends list
     await loadFriendsList();
-    // Also refresh all DM friend buttons
     openDMs.forEach(dm => updateDMFriendButton(dm));
     return true;
   }
@@ -1623,7 +1625,6 @@
       return false;
     }
     showToast('Request rejected', 'info');
-    // No need to refresh friends list
     return true;
   }
 
@@ -1679,7 +1680,6 @@
         await acceptFriendRequest(pendingFriendRequest.fromPlayerId);
         modal.style.display = 'none';
         pendingFriendRequest = null;
-        // Also switch to friends tab to see the new friend
         switchMemberTab('friends');
       }
     };
@@ -1838,16 +1838,17 @@
     activityInterval = setInterval(updateActivity, 30000);
   }
 
+  // FIXED: proper promise handling
   function updateActivity() {
-  if (!currentPlayer || !chatProfile) return;
-  chatProfile.last_activity = new Date().toISOString();
-  // Use try/catch instead of .catch()
-  sb.rpc('update_chat_activity').then(response => {
-    // Success - do nothing
-  }).catch(e => {
-    console.warn('Activity update error:', e);
-  });
-}
+    if (!currentPlayer || !chatProfile) return;
+    chatProfile.last_activity = new Date().toISOString();
+    // Use try/catch or .then/.catch properly
+    sb.rpc('update_chat_activity').then(() => {
+      // success – do nothing
+    }).catch(err => {
+      console.warn('Activity update error:', err);
+    });
+  }
 
   // ─── Away Detection ──────────────────────────────────────
   function startAwayDetection() {
