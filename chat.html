@@ -971,7 +971,7 @@
 </head>
 <body>
 
-<!-- ENTRY MODAL -->
+<!-- ─── Modals (entry, report, reports list, friend request) ─── -->
 <div class="entry-modal" id="entryModal">
   <div class="entry-modal-content">
     <h2>👋 Welcome to Chat</h2>
@@ -1009,7 +1009,6 @@
   </div>
 </div>
 
-<!-- REPORT MODAL -->
 <div class="report-modal" id="reportModal">
   <div class="report-modal-content">
     <h3>🚨 Report User</h3>
@@ -1022,7 +1021,6 @@
   </div>
 </div>
 
-<!-- REPORTS LIST MODAL (founder only) -->
 <div class="reports-list-modal" id="reportsListModal">
   <div class="reports-list-modal-content">
     <h3>📋 User Reports</h3>
@@ -1031,7 +1029,6 @@
   </div>
 </div>
 
-<!-- FRIEND REQUEST MODAL -->
 <div class="friend-request-modal" id="friendRequestModal">
   <div class="friend-request-modal-content">
     <p id="friendRequestText"></p>
@@ -1575,15 +1572,18 @@
     renderMembers();
   }
 
-  // ─── Load Friends List ────────────────────────────────────
+  // ─── Load Friends List (with debug) ──────────────────────
   async function loadFriendsList() {
     if (!currentPlayer) return;
+    console.log('🔄 Loading friends list...');
     const { data, error } = await sb.rpc('get_chat_friends');
     if (error) {
-      console.error('Error loading friends:', error);
+      console.error('❌ Error loading friends:', error);
       return;
     }
+    console.log('✅ Friends data:', data);
     friendsList = data || [];
+    // If we're on the friends tab, re-render
     if (currentMemberTab === 'friends') {
       renderMembers();
     }
@@ -1597,7 +1597,8 @@
       return false;
     }
     showToast(data.message, 'success');
-    // Update button state in the DM window (we'll refresh the whole window)
+    // Immediately refresh friends list
+    await loadFriendsList();
     return true;
   }
 
@@ -1608,7 +1609,10 @@
       return false;
     }
     showToast('Friend added!', 'success');
+    // Refresh friends list
     await loadFriendsList();
+    // Also refresh all DM friend buttons
+    openDMs.forEach(dm => updateDMFriendButton(dm));
     return true;
   }
 
@@ -1619,6 +1623,7 @@
       return false;
     }
     showToast('Request rejected', 'info');
+    // No need to refresh friends list
     return true;
   }
 
@@ -1674,11 +1679,8 @@
         await acceptFriendRequest(pendingFriendRequest.fromPlayerId);
         modal.style.display = 'none';
         pendingFriendRequest = null;
-        await loadFriendsList();
-        // Refresh DM windows to update buttons
-        openDMs.forEach(dm => {
-          updateDMFriendButton(dm);
-        });
+        // Also switch to friends tab to see the new friend
+        switchMemberTab('friends');
       }
     };
     rejectBtn.onclick = async () => {
@@ -2442,7 +2444,6 @@
   async function addChatFriend(winId) {
     const dmData = getDMDataByWinId(winId);
     if (!dmData) return;
-    // Use the existing send_friend_request RPC
     const success = await sendFriendRequest(dmData.recipientId);
     if (success) {
       await updateDMFriendButton(dmData);
