@@ -1523,15 +1523,43 @@
         `;
       }).join('');
     } else {
-      // Friends tab
+      // Friends tab – use onlineUsers to determine status
       if (!friendsList || friendsList.length === 0) {
         container.innerHTML = '<div class="empty">No friends yet. Add some!</div>';
         return;
       }
+      // Build a map of online user info by user_id for quick lookup
+      const onlineMap = {};
+      onlineUsers.forEach(u => {
+        onlineMap[u.user_id] = u;
+      });
       container.innerHTML = friendsList.map(friend => {
         const displayName = friend.temp_username || friend.username;
-        const isOnline = friend.is_online && friend.status !== 'invisible';
-        const statusClass = isOnline ? 'status-online' : 'status-offline';
+        // Get presence info from onlineMap if available
+        const presence = onlineMap[friend.user_id];
+        let isOnline = false;
+        let status = 'offline';
+        let invisible_mode = false;
+        if (presence) {
+          // If user is in onlineUsers, they are online (or away/busy/invisible)
+          isOnline = true;
+          status = presence.status || 'available';
+          invisible_mode = presence.invisible_mode || false;
+        } else {
+          isOnline = false;
+          status = 'offline';
+          invisible_mode = false;
+        }
+        // Determine the dot class
+        let statusClass;
+        if (invisible_mode && currentPlayer.subscription_tier?.toLowerCase() !== 'founder') {
+          statusClass = 'status-offline';
+          isOnline = false;
+        } else if (isOnline) {
+          statusClass = getStatusClass(status);
+        } else {
+          statusClass = 'status-offline';
+        }
         const tierBadge = getTierBadge(friend.subscription_tier || 'basic');
         const details = `${friend.age || '?'}/${friend.gender ? friend.gender.charAt(0).toUpperCase() : '?'}/${friend.country || 'Earth'}${!isOnline ? ' (offline)' : ''}`;
         return `
@@ -1572,7 +1600,7 @@
     renderMembers();
   }
 
-  // ─── Load Friends List (with debug and error handling) ──
+  // ─── Load Friends List ────────────────────────────────────
   async function loadFriendsList() {
     if (!currentPlayer) return;
     console.log('🔄 Loading friends list...');
@@ -1580,7 +1608,7 @@
       const { data, error } = await sb.rpc('get_chat_friends');
       if (error) {
         console.error('❌ Error loading friends:', error);
-        friendsList = []; // fallback to empty array
+        friendsList = [];
         return;
       }
       console.log('✅ Friends data:', data);
@@ -1838,14 +1866,10 @@
     activityInterval = setInterval(updateActivity, 30000);
   }
 
-  // FIXED: proper promise handling
   function updateActivity() {
     if (!currentPlayer || !chatProfile) return;
     chatProfile.last_activity = new Date().toISOString();
-    // Use try/catch or .then/.catch properly
-    sb.rpc('update_chat_activity').then(() => {
-      // success – do nothing
-    }).catch(err => {
+    sb.rpc('update_chat_activity').then(() => {}).catch(err => {
       console.warn('Activity update error:', err);
     });
   }
