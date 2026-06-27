@@ -306,10 +306,15 @@
       font-size: 0.6rem;
       color: var(--text-muted);
       margin-left: 4px;
-      font-weight: normal;
     }
-    .message.own .read-status { color: var(--text-muted); }
-    .message.own .read-status.read { color: #4CAF50; }
+    .message.own .read-status { color: rgba(255,255,255,0.7); }
+    .message-text .read-status.read { color: #4CAF50; }
+    .typing-indicator {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      font-style: italic;
+      padding: 4px 0;
+    }
 
     .message-input-area {
       padding: 16px 24px;
@@ -1518,26 +1523,34 @@
         `;
       }).join('');
     } else {
-      // Friends tab
+      // Friends tab – use onlineUsers to determine status
       if (!friendsList || friendsList.length === 0) {
         container.innerHTML = '<div class="empty">No friends yet. Add some!</div>';
         return;
       }
+      // Build a map of online user info by user_id for quick lookup
       const onlineMap = {};
       onlineUsers.forEach(u => {
         onlineMap[u.user_id] = u;
       });
       container.innerHTML = friendsList.map(friend => {
         const displayName = friend.temp_username || friend.username;
+        // Get presence info from onlineMap if available
         const presence = onlineMap[friend.user_id];
         let isOnline = false;
         let status = 'offline';
         let invisible_mode = false;
         if (presence) {
+          // If user is in onlineUsers, they are online (or away/busy/invisible)
           isOnline = true;
           status = presence.status || 'available';
           invisible_mode = presence.invisible_mode || false;
+        } else {
+          isOnline = false;
+          status = 'offline';
+          invisible_mode = false;
         }
+        // Determine the dot class
         let statusClass;
         if (invisible_mode && currentPlayer.subscription_tier?.toLowerCase() !== 'founder') {
           statusClass = 'status-offline';
@@ -1953,40 +1966,224 @@
       .subscribe();
   }
 
-  // ─── Mark messages as read (UPDATED) ─────────────────────
+  // ─── Mark messages as read ───────────────────────────────
   async function markDMMessagesRead(dmData) {
     if (!dmData || !dmData.recipientId) return;
-    // Check if user has Black or Founder tier
-    const tier = currentPlayer.subscription_tier?.toLowerCase() || 'basic';
-    if (tier !== 'black' && tier !== 'founder') return; // feature not available
-    // Call RPC
-    const { data, error } = await sb.rpc('mark_dm_read', { p_other_user_id: dmData.recipientId });
-    if (error) {
-      console.warn('Error marking read:', error);
-      return;
-    }
-    // Update local messages
+    await sb.rpc('mark_dm_read', { p_other_user_id: dmData.recipientId });
     const now = new Date().toISOString();
     dmData.messages.forEach(msg => {
       if (msg.sender_id === dmData.recipientId && !msg.read_at) {
         msg.read_at = now;
       }
     });
-    // Broadcast read event to the other user
-    if (dmData.channel) {
-      dmData.channel.send({
-        type: 'broadcast',
-        event: 'read',
-        payload: {
-          sender_id: currentPlayer.id,
-          recipient_id: dmData.recipientId,
-          // no extra data needed; the other side will mark all messages from this sender as read
-        }
-      }).catch(() => {});
-    }
   }
 
-  // ─── DM Channel (with read event listener) ──────────────
+  // ─── DM Functions (with friend button) ──────────────────
+  function getDMDataByWinId(winId) {
+    return openDMs.find(d => d.winId === winId);
+  }
+
+  function openDM(recipientId, recipientName) {
+    if (recipientId === currentPlayer.id) {
+      showToast("You can't DM yourself", 'error');
+      return;
+    }
+    (async () => {
+      const { data: blockCheck } = await sb.rpc('check_snooze_block', { p_target_id: recipientId });
+      if (blockCheck && (blockCheck.blocked || blockCheck.snoozed)) {
+        if (blockCheck.blocked) showToast('You have blocked this user.', 'error');
+        else showToast('User is snoozed.', 'error');
+        return;
+      }
+      let existing = openDMs.find(d => d.recipientId === recipientId);
+      if (existing) {
+        if (existing.minimized) restoreDM(existing);
+        existing.windowElement.style.zIndex = 10000 + openDMs.length;
+        return;
+      }
+      if (openDMs.length >= MAX_DMS) {
+        showToast(`Maximum ${MAX_DMS} DMs open. Close one first.`, 'error');
+        return;
+      }
+      createDMWindow(recipientId, recipientName);
+    })();
+  }
+
+  function createDMWindow(recipientId, recipientName) {
+    const winId = 'dm-' + Date.now();
+    const win = document.createElement('div');
+    win.className = 'dm-window';
+    win.dataset.winId = winId;
+    win.style.left = (100 + openDMs.length * 40) + 'px';
+    win.style.top = (100 + openDMs.length * 30) + 'px';
+    win.style.zIndex = 10000 + openDMs.length;
+
+    const header = document.createElement('div');
+    header.className = 'dm-header';
+    header.innerHTML = `
+      <div class="dm-title">
+        <span class="online-dot"></span>
+        ${escapeHtml(recipientName)}
+      </div>
+      <div class="dm-controls">
+        <button id="friend-btn-${winId}" class="friend-btn" title="Add Friend">➕</button>
+        <div class="dm-btn-dropdown" title="Snooze">
+          <button>⏰</button>
+          <div class="dropdown-menu">
+            <button onclick="snoozeUser('${winId}', 20)">20 sec</button>
+            <button onclick="snoozeUser('${winId}', 60)">1 min</button>
+            <button onclick="snoozeUser('${winId}', 300)">5 min</button>
+            <button onclick="snoozeUser('${winId}', 1200)">20 min</button>
+            <button onclick="snoozeUser('${winId}', 3600)">60 min</button>
+            <button onclick="snoozeUser('${winId}', 86400)">1 day</button>
+            <button onclick="snoozeUser('${winId}', 604800)">7 days</button>
+            <button onclick="snoozeUser('${winId}', 2592000)">30 days</button>
+          </div>
+        </div>
+        <button onclick="blockUser('${winId}')" title="Block">🚫</button>
+        <button onclick="reportUser('${winId}')" title="Report">🚨</button>
+        <button onclick="clearChat('${winId}')" title="Clear Chat">🧹</button>
+        <button onclick="minimizeDM('${winId}')" title="Minimize">─</button>
+        <button onclick="closeDM('${winId}')" title="Close">✕</button>
+      </div>
+    `;
+    win.appendChild(header);
+
+    const msgsDiv = document.createElement('div');
+    msgsDiv.className = 'dm-messages';
+    msgsDiv.id = `dmMessages-${winId}`;
+    msgsDiv.innerHTML = '<div class="empty">Loading...</div>';
+    win.appendChild(msgsDiv);
+
+    const inputArea = document.createElement('div');
+    inputArea.className = 'dm-input-area';
+    const toolbar = document.createElement('div');
+    toolbar.className = 'toolbar';
+    const isBlackOrFounder = ['black', 'founder'].includes(currentPlayer.subscription_tier?.toLowerCase() || 'basic');
+    if (isBlackOrFounder) {
+      toolbar.innerHTML = `
+        <button onclick="dmFormat('${winId}', 'bold')"><b>B</b></button>
+        <button onclick="dmFormat('${winId}', 'italic')"><i>I</i></button>
+        <button onclick="dmFormat('${winId}', 'h2')">H2</button>
+        <button onclick="dmInsertLink('${winId}')">🔗 Link</button>
+        <span class="separator"></span>
+        <input type="color" id="dmColorPicker-${winId}" onchange="dmInsertColor('${winId}')" value="#ff0000" title="Text color">
+        <span class="separator"></span>
+        <button onclick="dmToggleEmojiPicker('${winId}')">😊</button>
+        <span class="separator"></span>
+        <button class="nudge-btn" onclick="sendNudge('${winId}')">👋 Nudge</button>
+      `;
+    } else {
+      toolbar.innerHTML = `<button onclick="dmToggleEmojiPicker('${winId}')">😊</button>`;
+    }
+    inputArea.appendChild(toolbar);
+
+    const emojiPicker = document.createElement('div');
+    emojiPicker.className = 'emoji-picker';
+    emojiPicker.id = `dmEmojiPicker-${winId}`;
+    emojiPicker.innerHTML = `
+      <button onclick="dmInsertEmoji('${winId}', '😊')">😊</button>
+      <button onclick="dmInsertEmoji('${winId}', '😂')">😂</button>
+      <button onclick="dmInsertEmoji('${winId}', '🤔')">🤔</button>
+      <button onclick="dmInsertEmoji('${winId}', '🔥')">🔥</button>
+      <button onclick="dmInsertEmoji('${winId}', '💯')">💯</button>
+      <button onclick="dmInsertEmoji('${winId}', '✨')">✨</button>
+      <button onclick="dmInsertEmoji('${winId}', '🎉')">🎉</button>
+      <button onclick="dmInsertEmoji('${winId}', '👏')">👏</button>
+      <button onclick="dmInsertEmoji('${winId}', '👍')">👍</button>
+      <button onclick="dmInsertEmoji('${winId}', '❤️')">❤️</button>
+      <button onclick="dmInsertEmoji('${winId}', '🙌')">🙌</button>
+      <button onclick="dmInsertEmoji('${winId}', '🤩')">🤩</button>
+    `;
+    inputArea.appendChild(emojiPicker);
+
+    const inputRow = document.createElement('div');
+    inputRow.className = 'dm-input-row';
+    inputRow.innerHTML = `
+      <textarea id="dmInput-${winId}" placeholder="Type a message..." rows="2"></textarea>
+      <button onclick="dmSend('${winId}')">Send</button>
+    `;
+    inputArea.appendChild(inputRow);
+    win.appendChild(inputArea);
+
+    document.getElementById('dmContainer').appendChild(win);
+
+    const dmData = {
+      winId, recipientId, recipientName,
+      windowElement: win,
+      minimized: false,
+      messages: [],
+      channel: null,
+      lastNudge: 0,
+      emojiPickerVisible: false,
+      unreadCount: 0
+    };
+    openDMs.push(dmData);
+
+    makeDraggable(win, header);
+    loadDMMessages(dmData);
+    setupDMChannel(dmData);
+    updateTaskbar();
+
+    // Update friend button status
+    setTimeout(() => updateDMFriendButton(dmData), 500);
+  }
+
+  // ─── DM Message Loading & Rendering ──────────────────────
+  async function loadDMMessages(dmData) {
+    const { recipientId, winId } = dmData;
+    const msgsDiv = document.getElementById(`dmMessages-${winId}`);
+    if (!msgsDiv) return;
+
+    const { data, error } = await sb
+      .from('dm_messages')
+      .select('*')
+      .or(`and(sender_id.eq.${currentPlayer.id},recipient_id.eq.${recipientId}),and(sender_id.eq.${recipientId},recipient_id.eq.${currentPlayer.id})`)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      console.error(error);
+      msgsDiv.innerHTML = '<div class="empty">Error loading messages.</div>';
+      return;
+    }
+    dmData.messages = data || [];
+    await markDMMessagesRead(dmData);
+    renderDMMessages(dmData);
+    updateTaskbar();
+  }
+
+  function renderDMMessages(dmData) {
+    const { winId, messages, recipientName } = dmData;
+    const msgsDiv = document.getElementById(`dmMessages-${winId}`);
+    if (!msgsDiv) return;
+    if (!messages || messages.length === 0) {
+      msgsDiv.innerHTML = '<div class="empty">No messages yet. Say hello!</div>';
+      return;
+    }
+    const playerId = currentPlayer.id;
+    msgsDiv.innerHTML = messages.map(msg => {
+      const isOwn = msg.sender_id === playerId;
+      const username = isOwn ? currentPlayer.username : recipientName;
+      const readStatus = msg.read_at ? '✓ read' : '✓';
+      const readClass = msg.read_at ? 'read' : '';
+      return `
+        <div class="message ${isOwn ? 'own' : ''}">
+          <div class="message-header">
+            <span class="message-username">${escapeHtml(username)}</span>
+            <span class="message-time">${new Date(msg.created_at).toLocaleTimeString()}</span>
+            ${isOwn ? `<span class="read-status ${readClass}">${readStatus}</span>` : ''}
+          </div>
+          <div class="message-text">
+            ${renderMessageContent(msg.content)}
+            ${isOwn ? `<button class="delete-msg" onclick="deleteDMMessage('${msg.id}', '${winId}')" title="Delete">✕</button>` : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
+    msgsDiv.scrollTop = msgsDiv.scrollHeight;
+  }
+
+  // ─── DM Channel ──────────────────────────────────────────
   function setupDMChannel(dmData) {
     const { recipientId, winId } = dmData;
     const pairId = [currentPlayer.id, recipientId].sort().join('-');
@@ -2030,20 +2227,6 @@
         }, 3000);
       }
     });
-
-    // NEW: listen for read events
-    channel.on('broadcast', { event: 'read' }, (payload) => {
-      // The other user has read messages from us.
-      // Mark all messages sent by us (currentPlayer) to the other user as read
-      const now = new Date().toISOString();
-      dmData.messages.forEach(msg => {
-        if (msg.sender_id === currentPlayer.id && msg.recipient_id === recipientId && !msg.read_at) {
-          msg.read_at = now;
-        }
-      });
-      renderDMMessages(dmData);
-    });
-
     channel.subscribe(async (status) => {
       if (status === 'SUBSCRIBED') {
         await channel.track({ user_id: currentPlayer.id, username: currentPlayer.username });
@@ -2101,51 +2284,313 @@
     }
   }
 
-  // ─── DM Message Rendering (updated read status display) ──
-  function renderDMMessages(dmData) {
-    const { winId, messages, recipientName } = dmData;
-    const msgsDiv = document.getElementById(`dmMessages-${winId}`);
-    if (!msgsDiv) return;
-    if (!messages || messages.length === 0) {
-      msgsDiv.innerHTML = '<div class="empty">No messages yet. Say hello!</div>';
-      return;
+  // ─── DM Formatting ──────────────────────────────────────
+  function dmFormat(winId, type) {
+    const input = document.getElementById(`dmInput-${winId}`);
+    if (!input) return;
+    const start = input.selectionStart;
+    const end = input.selectionEnd;
+    const selected = input.value.substring(start, end);
+    let replacement = '';
+    switch(type) {
+      case 'bold': replacement = `**${selected}**`; break;
+      case 'italic': replacement = `*${selected}*`; break;
+      case 'h2': replacement = `\n# ${selected || 'Heading'}\n`; break;
     }
-    const playerId = currentPlayer.id;
-    msgsDiv.innerHTML = messages.map(msg => {
-      const isOwn = msg.sender_id === playerId;
-      const username = isOwn ? currentPlayer.username : recipientName;
-      let readStatusHtml = '';
-      if (isOwn) {
-        // own message: show read receipt if applicable
-        const tier = currentPlayer.subscription_tier?.toLowerCase() || 'basic';
-        if (tier === 'black' || tier === 'founder') {
-          if (msg.read_at) {
-            readStatusHtml = `<span class="read-status read">✓✓</span>`;
-          } else {
-            readStatusHtml = `<span class="read-status">✓</span>`;
-          }
-        }
-      }
-      return `
-        <div class="message ${isOwn ? 'own' : ''}">
-          <div class="message-header">
-            <span class="message-username">${escapeHtml(username)}</span>
-            <span class="message-time">${new Date(msg.created_at).toLocaleTimeString()}</span>
-            ${readStatusHtml}
-          </div>
-          <div class="message-text">
-            ${renderMessageContent(msg.content)}
-            ${isOwn ? `<button class="delete-msg" onclick="deleteDMMessage('${msg.id}', '${winId}')" title="Delete">✕</button>` : ''}
-          </div>
-        </div>
-      `;
-    }).join('');
-    msgsDiv.scrollTop = msgsDiv.scrollHeight;
+    input.value = input.value.substring(0, start) + replacement + input.value.substring(end);
+    input.focus();
+    const newPos = start + replacement.length;
+    input.setSelectionRange(newPos, newPos);
   }
 
-  // ─── DM Functions (unchanged) ────────────────────────────
-  // (The rest of the DM functions: getDMDataByWinId, openDM, createDMWindow, loadDMMessages, etc.)
-  // They remain identical; I'll include them fully below.
+  function dmInsertLink(winId) {
+    const url = prompt('Enter URL:', 'https://');
+    if (!url) return;
+    const input = document.getElementById(`dmInput-${winId}`);
+    if (!input) return;
+    const start = input.selectionStart;
+    const end = input.selectionEnd;
+    const selected = input.value.substring(start, end) || 'link';
+    const replacement = `[${selected}](${url})`;
+    input.value = input.value.substring(0, start) + replacement + input.value.substring(end);
+    input.focus();
+    const newPos = start + replacement.length;
+    input.setSelectionRange(newPos, newPos);
+  }
+
+  function dmInsertColor(winId) {
+    const color = document.getElementById(`dmColorPicker-${winId}`).value;
+    const input = document.getElementById(`dmInput-${winId}`);
+    if (!input) return;
+    const start = input.selectionStart;
+    const end = input.selectionEnd;
+    const selected = input.value.substring(start, end) || 'text';
+    const replacement = `<color=${color}>${selected}</color>`;
+    input.value = input.value.substring(0, start) + replacement + input.value.substring(end);
+    input.focus();
+    const newPos = start + replacement.length;
+    input.setSelectionRange(newPos, newPos);
+  }
+
+  function dmToggleEmojiPicker(winId) {
+    const picker = document.getElementById(`dmEmojiPicker-${winId}`);
+    if (!picker) return;
+    const dmData = getDMDataByWinId(winId);
+    if (!dmData) return;
+    dmData.emojiPickerVisible = !dmData.emojiPickerVisible;
+    picker.style.display = dmData.emojiPickerVisible ? 'grid' : 'none';
+  }
+
+  function dmInsertEmoji(winId, emoji) {
+    const input = document.getElementById(`dmInput-${winId}`);
+    if (!input) return;
+    const start = input.selectionStart;
+    input.value = input.value.substring(0, start) + emoji + input.value.substring(start);
+    input.focus();
+    const newPos = start + emoji.length;
+    input.setSelectionRange(newPos, newPos);
+    const picker = document.getElementById(`dmEmojiPicker-${winId}`);
+    if (picker) picker.style.display = 'none';
+    const dmData = getDMDataByWinId(winId);
+    if (dmData) dmData.emojiPickerVisible = false;
+  }
+
+  // ─── Nudge ──────────────────────────────────────────────
+  function sendNudge(winId) {
+    const dmData = getDMDataByWinId(winId);
+    if (!dmData) return;
+    const now = Date.now();
+    if (now - dmData.lastNudge < 30000) {
+      showToast('Nudge cooldown: wait 30 seconds', 'error');
+      return;
+    }
+    dmData.lastNudge = now;
+    const btn = document.querySelector(`#${winId} .nudge-btn`);
+    if (btn) btn.disabled = true;
+    setTimeout(() => { if (btn) btn.disabled = false; }, 30000);
+
+    if (dmData.channel) {
+      dmData.channel.send({ type: 'broadcast', event: 'nudge', payload: { sender_id: currentPlayer.id } });
+    }
+    shakeDMWindow(dmData);
+    playNudgeSound();
+    showToast('Nudge sent!', 'success');
+  }
+
+  // ─── Window Effects ──────────────────────────────────────
+  function shakeDMWindow(dmData) {
+    const win = dmData.windowElement;
+    win.classList.remove('shake');
+    void win.offsetWidth;
+    win.classList.add('shake');
+    setTimeout(() => win.classList.remove('shake'), 500);
+  }
+
+  function glowDMWindow(dmData) {
+    const win = dmData.windowElement;
+    win.classList.add('glow');
+    setTimeout(() => win.classList.remove('glow'), 2000);
+  }
+
+  // ─── Minimize / Restore / Close ──────────────────────────
+  function minimizeDM(winId) {
+    const dmData = getDMDataByWinId(winId);
+    if (!dmData) return;
+    dmData.minimized = true;
+    dmData.windowElement.classList.add('minimized');
+    updateTaskbar();
+  }
+
+  function restoreDM(dmData) {
+    dmData.minimized = false;
+    dmData.windowElement.classList.remove('minimized');
+    dmData.unreadCount = 0;
+    updateTaskbar();
+    dmData.windowElement.style.zIndex = 10000 + openDMs.length;
+    markDMMessagesRead(dmData);
+  }
+
+  function closeDM(winId) {
+    const index = openDMs.findIndex(d => d.winId === winId);
+    if (index === -1) return;
+    const dmData = openDMs[index];
+    if (dmData.channel) dmData.channel.unsubscribe();
+    if (dmData.windowElement.parentNode) dmData.windowElement.parentNode.removeChild(dmData.windowElement);
+    openDMs.splice(index, 1);
+    updateTaskbar();
+    openDMs.forEach((d, i) => d.windowElement.style.zIndex = 10000 + i);
+  }
+
+  // ─── Taskbar ─────────────────────────────────────────────
+  function updateTaskbar() {
+    const taskbar = document.getElementById('dmTaskbar');
+    const minimized = openDMs.filter(d => d.minimized);
+    if (minimized.length === 0) {
+      taskbar.innerHTML = '';
+      return;
+    }
+    taskbar.innerHTML = minimized.map(d => `
+      <div class="dm-taskbar-item" onclick="restoreDM(openDMs.find(dm => dm.winId === '${d.winId}'))">
+        💬 ${escapeHtml(d.recipientName)}
+        ${d.unreadCount > 0 ? `<span class="unread-badge">${d.unreadCount}</span>` : ''}
+        <button class="close-minimized" onclick="event.stopPropagation(); closeDM('${d.winId}')">✕</button>
+      </div>
+    `).join('');
+  }
+
+  // ─── Dragging ─────────────────────────────────────────────
+  function makeDraggable(element, handle) {
+    let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+    handle.onmousedown = (e) => {
+      e.preventDefault();
+      pos3 = e.clientX;
+      pos4 = e.clientY;
+      document.onmouseup = closeDragElement;
+      document.onmousemove = elementDrag;
+      const dmData = openDMs.find(d => d.windowElement === element);
+      if (dmData) {
+        const maxZ = Math.max(...openDMs.map(d => parseInt(d.windowElement.style.zIndex) || 10000));
+        element.style.zIndex = maxZ + 1;
+      }
+    };
+
+    function elementDrag(e) {
+      e.preventDefault();
+      pos1 = pos3 - e.clientX;
+      pos2 = pos4 - e.clientY;
+      pos3 = e.clientX;
+      pos4 = e.clientY;
+      element.style.top = (element.offsetTop - pos2) + 'px';
+      element.style.left = (element.offsetLeft - pos1) + 'px';
+    }
+
+    function closeDragElement() {
+      document.onmouseup = null;
+      document.onmousemove = null;
+    }
+  }
+
+  // ─── DM Actions ──────────────────────────────────────────
+  async function addChatFriend(winId) {
+    const dmData = getDMDataByWinId(winId);
+    if (!dmData) return;
+    const success = await sendFriendRequest(dmData.recipientId);
+    if (success) {
+      await updateDMFriendButton(dmData);
+      await loadFriendsList();
+    }
+  }
+
+  async function snoozeUser(winId, seconds) {
+    const dmData = getDMDataByWinId(winId);
+    if (!dmData) return;
+    const { data, error } = await sb.rpc('snooze_user', { p_target_id: dmData.recipientId, p_duration_seconds: seconds });
+    if (error || !data.success) {
+      showToast(error?.message || data?.error || 'Failed to snooze', 'error');
+    } else {
+      showToast(`${dmData.recipientName} snoozed for ${seconds} seconds.`, 'success');
+      closeDM(winId);
+    }
+  }
+
+  async function blockUser(winId) {
+    const dmData = getDMDataByWinId(winId);
+    if (!dmData) return;
+    if (!confirm(`Block ${dmData.recipientName}? You won't receive DMs from them.`)) return;
+    const { data, error } = await sb.rpc('block_user', { p_target_id: dmData.recipientId });
+    if (error || !data.success) {
+      showToast(error?.message || data?.error || 'Failed to block', 'error');
+    } else {
+      showToast(`${dmData.recipientName} blocked.`, 'success');
+      closeDM(winId);
+    }
+  }
+
+  function reportUser(winId) {
+    const dmData = getDMDataByWinId(winId);
+    if (!dmData) return;
+    document.getElementById('reportTargetName').textContent = `Reporting: ${dmData.recipientName}`;
+    document.getElementById('reportModal').style.display = 'flex';
+    document.getElementById('reportModal').dataset.targetId = dmData.recipientId;
+  }
+
+  async function submitReport() {
+    const reason = document.getElementById('reportReason').value.trim();
+    if (!reason) { showToast('Please provide a reason.', 'error'); return; }
+    const targetId = document.getElementById('reportModal').dataset.targetId;
+    if (!targetId) return;
+    const { data, error } = await sb.rpc('report_user', { p_target_id: targetId, p_reason: reason });
+    if (error || !data.success) {
+      showToast(error?.message || data?.error || 'Failed to submit report', 'error');
+    } else {
+      showToast('Report submitted. Thank you.', 'success');
+      closeReportModal();
+    }
+  }
+
+  function closeReportModal() {
+    document.getElementById('reportModal').style.display = 'none';
+    document.getElementById('reportReason').value = '';
+  }
+
+  async function clearChat(winId) {
+    const dmData = getDMDataByWinId(winId);
+    if (!dmData) return;
+    if (!confirm(`Clear all messages with ${dmData.recipientName}?`)) return;
+    const { data, error } = await sb.rpc('clear_dm_conversation', { p_other_user_id: dmData.recipientId });
+    if (error || !data.success) {
+      showToast(error?.message || data?.error || 'Failed to clear chat', 'error');
+    } else {
+      dmData.messages = [];
+      renderDMMessages(dmData);
+      showToast('Chat cleared.', 'success');
+    }
+  }
+
+  async function deleteDMMessage(messageId, winId) {
+    if (!confirm('Delete this message?')) return;
+    const { data, error } = await sb.rpc('delete_dm_message', { p_message_id: messageId });
+    if (error || !data.success) {
+      showToast(error?.message || 'Failed to delete', 'error');
+    } else {
+      const dmData = getDMDataByWinId(winId);
+      if (dmData) {
+        dmData.messages = dmData.messages.filter(m => m.id !== messageId);
+        renderDMMessages(dmData);
+      }
+      showToast('Message deleted', 'success');
+    }
+  }
+
+  // ─── Reports List ─────────────────────────────────────────
+  async function openReportsList() {
+    document.getElementById('reportsListModal').style.display = 'flex';
+    const container = document.getElementById('reportsListContainer');
+    container.innerHTML = '<div class="loading">Loading reports...</div>';
+    const { data, error } = await sb
+      .from('chat_reports')
+      .select('*, reporter:reporter_id(username), reported:reported_user_id(username)')
+      .order('created_at', { ascending: false });
+    if (error) { console.error(error); container.innerHTML = '<div class="empty">Error loading reports.</div>'; return; }
+    if (!data || data.length === 0) { container.innerHTML = '<div class="empty">No reports yet.</div>'; return; }
+    container.innerHTML = data.map(r => `
+      <div class="report-entry">
+        <div class="report-header">
+          <span>👤 ${escapeHtml(r.reported?.username)}</span>
+          <span>📅 ${new Date(r.created_at).toLocaleString()}</span>
+        </div>
+        <div>📝 Reason: ${escapeHtml(r.reason || 'No reason provided')}</div>
+        <div>📨 Reporter: ${escapeHtml(r.reporter?.username)}</div>
+        <div class="report-messages">
+          ${(r.last_10_messages || []).map(msg => `<div class="msg">${escapeHtml(msg.content || '')}</div>`).join('')}
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function closeReportsList() {
+    document.getElementById('reportsListModal').style.display = 'none';
+  }
 
   // ─── Initialize Chat ─────────────────────────────────────
   async function initializeChat() {
