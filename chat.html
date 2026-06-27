@@ -2721,30 +2721,56 @@
     }
   }
 
-  // ─── Reports List ─────────────────────────────────────────
+  // ─── Reports List (FIXED) ─────────────────────────────────
   async function openReportsList() {
     document.getElementById('reportsListModal').style.display = 'flex';
     const container = document.getElementById('reportsListContainer');
     container.innerHTML = '<div class="loading">Loading reports...</div>';
-    const { data, error } = await sb
-      .from('chat_reports')
-      .select('*, reporter:reporter_id(username), reported:reported_user_id(username)')
-      .order('created_at', { ascending: false });
-    if (error) { console.error(error); container.innerHTML = '<div class="empty">Error loading reports.</div>'; return; }
-    if (!data || data.length === 0) { container.innerHTML = '<div class="empty">No reports yet.</div>'; return; }
-    container.innerHTML = data.map(r => `
-      <div class="report-entry">
-        <div class="report-header">
-          <span>👤 ${escapeHtml(r.reported?.username)}</span>
-          <span>📅 ${new Date(r.created_at).toLocaleString()}</span>
+    try {
+      // First fetch all reports without relations
+      const { data: reports, error } = await sb
+        .from('chat_reports')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      if (!reports || reports.length === 0) {
+        container.innerHTML = '<div class="empty">No reports yet.</div>';
+        return;
+      }
+      // Collect all user IDs from reporter and reported
+      const userIds = new Set();
+      reports.forEach(r => {
+        if (r.reporter_id) userIds.add(r.reporter_id);
+        if (r.reported_user_id) userIds.add(r.reported_user_id);
+      });
+      let userMap = {};
+      if (userIds.size > 0) {
+        const { data: users, error: userError } = await sb
+          .from('players')
+          .select('id, username')
+          .in('id', Array.from(userIds));
+        if (!userError && users) {
+          users.forEach(u => { userMap[u.id] = u.username; });
+        }
+      }
+      // Render each report
+      container.innerHTML = reports.map(r => `
+        <div class="report-entry">
+          <div class="report-header">
+            <span>👤 ${escapeHtml(userMap[r.reported_user_id] || 'Unknown')}</span>
+            <span>📅 ${new Date(r.created_at).toLocaleString()}</span>
+          </div>
+          <div>📝 Reason: ${escapeHtml(r.reason || 'No reason provided')}</div>
+          <div>📨 Reporter: ${escapeHtml(userMap[r.reporter_id] || 'Unknown')}</div>
+          <div class="report-messages">
+            ${(r.last_10_messages || []).map(msg => `<div class="msg">${escapeHtml(msg.content || '')}</div>`).join('')}
+          </div>
         </div>
-        <div>📝 Reason: ${escapeHtml(r.reason || 'No reason provided')}</div>
-        <div>📨 Reporter: ${escapeHtml(r.reporter?.username)}</div>
-        <div class="report-messages">
-          ${(r.last_10_messages || []).map(msg => `<div class="msg">${escapeHtml(msg.content || '')}</div>`).join('')}
-        </div>
-      </div>
-    `).join('');
+      `).join('');
+    } catch (error) {
+      console.error('Error loading reports:', error);
+      container.innerHTML = '<div class="empty">Error loading reports.</div>';
+    }
   }
 
   function closeReportsList() {
