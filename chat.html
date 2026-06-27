@@ -902,6 +902,59 @@
     }
     .report-entry .report-messages .msg { border-bottom:1px solid var(--border-light); padding:2px 0; }
 
+    /* ─── Friend Request Modal ─── */
+    .friend-request-modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 10003;
+      justify-content: center;
+      align-items: center;
+      backdrop-filter: blur(4px);
+    }
+    .friend-request-modal-content {
+      background: var(--card-bg);
+      padding: 30px;
+      border-radius: var(--border-radius-card);
+      max-width: 400px;
+      width: 90%;
+      text-align: center;
+      box-shadow: var(--card-shadow);
+    }
+    .friend-request-modal-content p {
+      margin-bottom: 20px;
+      font-size: 1.1rem;
+    }
+    .friend-request-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+    }
+    .friend-request-actions button {
+      padding: 8px 24px;
+      border: none;
+      border-radius: 30px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: var(--font-family);
+    }
+    .friend-request-actions .accept-btn {
+      background: var(--btn-primary);
+      color: #fff;
+    }
+    .friend-request-actions .accept-btn:hover {
+      background: var(--btn-primary-hover);
+    }
+    .friend-request-actions .reject-btn {
+      background: var(--btn-ghost);
+      color: var(--text-main);
+    }
+    .friend-request-actions .reject-btn:hover {
+      background: var(--btn-secondary);
+      color: #fff;
+    }
+
     /* ─── Responsive ─── */
     @media (max-width:900px) { .members-sidebar { width:200px; } }
     @media (max-width:700px) { .members-sidebar { display:none; } .chat-container { flex-direction:column; } }
@@ -975,6 +1028,17 @@
     <h3>📋 User Reports</h3>
     <div id="reportsListContainer"><div class="loading">Loading reports...</div></div>
     <button style="margin-top:12px; padding:8px 16px; border:none; border-radius:30px; background:var(--btn-ghost); cursor:pointer; font-family:var(--font-family);" onclick="closeReportsList()">Close</button>
+  </div>
+</div>
+
+<!-- FRIEND REQUEST MODAL -->
+<div class="friend-request-modal" id="friendRequestModal">
+  <div class="friend-request-modal-content">
+    <p id="friendRequestText"></p>
+    <div class="friend-request-actions">
+      <button id="friendRequestAccept" class="accept-btn">Accept</button>
+      <button id="friendRequestReject" class="reject-btn">Reject</button>
+    </div>
   </div>
 </div>
 
@@ -1185,6 +1249,8 @@
   let friendsList = [];
   let dmSubscription = null;
   let typingTimeouts = {};
+  let friendRequestSubscription = null;
+  let pendingFriendRequest = null;
 
   // ─── Auth & Player ────────────────────────────────────────
   async function getPlayer() {
@@ -1273,10 +1339,9 @@
     globalRoom = newRoom; return newRoom;
   }
 
-  // ─── Load Global Messages (FIXED) ─────────────────────────
+  // ─── Load Global Messages ────────────────────────────────
   async function loadMessages() {
     if (!globalRoom) return;
-    // Step 1: fetch messages with player usernames
     const { data: messages, error: msgErr } = await sb
       .from('chat_messages')
       .select(`
@@ -1298,7 +1363,6 @@
       return;
     }
 
-    // Step 2: fetch chat_profiles for all unique user_ids
     const userIds = [...new Set(messages.map(m => m.user_id))];
     const { data: profiles, error: profErr } = await sb
       .from('chat_profiles')
@@ -1307,18 +1371,15 @@
 
     if (profErr) {
       console.error('Error loading chat profiles:', profErr);
-      // If profiles fails, we still have the original usernames
       renderMessages(messages);
       return;
     }
 
-    // Build a map: player_id -> temp_username
     const profileMap = {};
     (profiles || []).forEach(p => {
       profileMap[p.player_id] = p.temp_username;
     });
 
-    // Merge: add temp_username to each message
     const enriched = messages.map(msg => ({
       ...msg,
       temp_username: profileMap[msg.user_id] || null
@@ -1335,7 +1396,6 @@
     }
     const playerId = currentPlayer.id;
     container.innerHTML = messages.map(msg => {
-      // Use temp_username if set, else fallback to players.username
       const username = msg.temp_username || msg.players?.username || 'Unknown';
       const isOwn = msg.user_id === playerId;
       return `
@@ -1365,7 +1425,7 @@
     return html;
   }
 
-  // ─── Presence & Global Channel (with deduplication) ────
+  // ─── Presence & Global Channel ────────────────────────────
   function updateOnlineUsers(rawList) {
     const userMap = new Map();
     rawList.forEach(user => {
@@ -1409,7 +1469,6 @@
         if (currentPlayer.subscription_tier?.toLowerCase() === 'founder') {
           document.getElementById('reportsBtn').style.display = 'inline-block';
         }
-        // Force initial sync
         const state = messageChannel.presenceState();
         const rawList = [];
         Object.keys(state).forEach(key => {
@@ -1444,39 +1503,55 @@
         if (u.invisible_mode && currentPlayer.subscription_tier?.toLowerCase() !== 'founder') return false;
         return true;
       });
-    } else {
-      const friendIds = friendsList.map(f => f.friend_id);
-      visibleUsers = onlineUsers.filter(u => {
-        if (u.user_id === currentPlayer.id) return false;
-        if (!friendIds.includes(u.user_id)) return false;
-        if (u.invisible_mode && currentPlayer.subscription_tier?.toLowerCase() !== 'founder') return false;
-        return true;
-      });
-    }
-    if (!visibleUsers.length) {
-      container.innerHTML = currentMemberTab === 'online' ?
-        '<div class="empty">No one else is online.</div>' :
-        '<div class="empty">No friends online.</div>';
-      return;
-    }
-    container.innerHTML = visibleUsers.map(user => {
-      const statusClass = getStatusClass(user.status || 'offline');
-      const tierBadge = getTierBadge(user.subscription_tier || 'basic');
-      const details = `${user.age || '?'}/${user.gender ? user.gender.charAt(0).toUpperCase() : '?'}/${user.country || 'Earth'}`;
-      return `
-        <div class="member-item" onclick="openDM('${user.user_id}', '${escapeHtml(user.username)}')">
-          <div class="member-avatar">${user.username.charAt(0).toUpperCase()}</div>
-          <div class="member-info">
-            <div class="member-name">
-              ${escapeHtml(user.username)}
-              <span class="member-tier-badge">${tierBadge}</span>
+      if (!visibleUsers.length) {
+        container.innerHTML = '<div class="empty">No one else is online.</div>';
+        return;
+      }
+      container.innerHTML = visibleUsers.map(user => {
+        const statusClass = getStatusClass(user.status || 'offline');
+        const tierBadge = getTierBadge(user.subscription_tier || 'basic');
+        const details = `${user.age || '?'}/${user.gender ? user.gender.charAt(0).toUpperCase() : '?'}/${user.country || 'Earth'}`;
+        return `
+          <div class="member-item" onclick="openDM('${user.user_id}', '${escapeHtml(user.username)}')">
+            <div class="member-avatar">${user.username.charAt(0).toUpperCase()}</div>
+            <div class="member-info">
+              <div class="member-name">
+                ${escapeHtml(user.username)}
+                <span class="member-tier-badge">${tierBadge}</span>
+              </div>
+              <div class="member-details">${details}</div>
             </div>
-            <div class="member-details">${details}</div>
+            <div class="member-status-dot ${statusClass}"></div>
           </div>
-          <div class="member-status-dot ${statusClass}"></div>
-        </div>
-      `;
-    }).join('');
+        `;
+      }).join('');
+    } else {
+      // Friends tab
+      if (!friendsList || friendsList.length === 0) {
+        container.innerHTML = '<div class="empty">No friends yet. Add some!</div>';
+        return;
+      }
+      container.innerHTML = friendsList.map(friend => {
+        const displayName = friend.temp_username || friend.username;
+        const isOnline = friend.is_online && friend.status !== 'invisible';
+        const statusClass = isOnline ? 'status-online' : 'status-offline';
+        const tierBadge = getTierBadge(friend.subscription_tier || 'basic');
+        const details = `${friend.age || '?'}/${friend.gender ? friend.gender.charAt(0).toUpperCase() : '?'}/${friend.country || 'Earth'}${!isOnline ? ' (offline)' : ''}`;
+        return `
+          <div class="member-item" onclick="openDM('${friend.user_id}', '${escapeHtml(displayName)}')">
+            <div class="member-avatar">${displayName.charAt(0).toUpperCase()}</div>
+            <div class="member-info">
+              <div class="member-name">
+                ${escapeHtml(displayName)}
+                <span class="member-tier-badge">${tierBadge}</span>
+              </div>
+              <div class="member-details">${details}</div>
+            </div>
+            <div class="member-status-dot ${statusClass}"></div>
+          </div>
+        `;
+      }).join('');
+    }
   }
 
   function getStatusClass(status) {
@@ -1500,14 +1575,159 @@
     renderMembers();
   }
 
+  // ─── Load Friends List ────────────────────────────────────
   async function loadFriendsList() {
     if (!currentPlayer) return;
-    const { data, error } = await sb
-      .from('chat_friends')
-      .select('friend_id')
-      .eq('user_id', currentPlayer.id);
-    if (error) { console.error(error); return; }
+    const { data, error } = await sb.rpc('get_chat_friends');
+    if (error) {
+      console.error('Error loading friends:', error);
+      return;
+    }
     friendsList = data || [];
+    if (currentMemberTab === 'friends') {
+      renderMembers();
+    }
+  }
+
+  // ─── Friend Request Functions ────────────────────────────
+  async function sendFriendRequest(recipientId) {
+    const { data, error } = await sb.rpc('send_friend_request', { p_to_player_id: recipientId });
+    if (error || !data.success) {
+      showToast(data?.error || 'Failed to send request', 'error');
+      return false;
+    }
+    showToast(data.message, 'success');
+    // Update button state in the DM window (we'll refresh the whole window)
+    return true;
+  }
+
+  async function acceptFriendRequest(fromPlayerId) {
+    const { data, error } = await sb.rpc('accept_friend_request', { p_from_player_id: fromPlayerId });
+    if (error || !data.success) {
+      showToast(data?.error || 'Failed to accept', 'error');
+      return false;
+    }
+    showToast('Friend added!', 'success');
+    await loadFriendsList();
+    return true;
+  }
+
+  async function rejectFriendRequest(fromPlayerId) {
+    const { data, error } = await sb.rpc('reject_friend_request', { p_from_player_id: fromPlayerId });
+    if (error || !data.success) {
+      showToast(data?.error || 'Failed to reject', 'error');
+      return false;
+    }
+    showToast('Request rejected', 'info');
+    return true;
+  }
+
+  async function checkFriendRequestStatus(otherUserId) {
+    const { data, error } = await sb.rpc('check_friend_request_status', { p_other_id: otherUserId });
+    if (error) {
+      console.error('Error checking friend status:', error);
+      return { status: 'none' };
+    }
+    return data;
+  }
+
+  // ─── Subscribe to incoming friend requests ──────────────
+  function subscribeToFriendRequests() {
+    if (friendRequestSubscription) return;
+    friendRequestSubscription = sb
+      .channel('friend-requests')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'chat_friend_requests',
+          filter: `to_player_id=eq.${currentPlayer.id}`
+        },
+        async (payload) => {
+          const request = payload.new;
+          const { data: sender } = await sb
+            .from('players')
+            .select('id, username')
+            .eq('id', request.from_player_id)
+            .single();
+          if (!sender) return;
+          showFriendRequestModal(sender.id, sender.username);
+        }
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') console.log('Subscribed to friend requests');
+      });
+  }
+
+  function showFriendRequestModal(fromPlayerId, username) {
+    pendingFriendRequest = { fromPlayerId, username };
+    const modal = document.getElementById('friendRequestModal');
+    document.getElementById('friendRequestText').textContent = `${username} would like to add you as a friend.`;
+    const acceptBtn = document.getElementById('friendRequestAccept');
+    const rejectBtn = document.getElementById('friendRequestReject');
+    // Remove old listeners
+    acceptBtn.onclick = null;
+    rejectBtn.onclick = null;
+    acceptBtn.onclick = async () => {
+      if (pendingFriendRequest) {
+        await acceptFriendRequest(pendingFriendRequest.fromPlayerId);
+        modal.style.display = 'none';
+        pendingFriendRequest = null;
+        await loadFriendsList();
+        // Refresh DM windows to update buttons
+        openDMs.forEach(dm => {
+          updateDMFriendButton(dm);
+        });
+      }
+    };
+    rejectBtn.onclick = async () => {
+      if (pendingFriendRequest) {
+        await rejectFriendRequest(pendingFriendRequest.fromPlayerId);
+        modal.style.display = 'none';
+        pendingFriendRequest = null;
+      }
+    };
+    modal.style.display = 'flex';
+  }
+
+  // ─── Update friend button in a DM window ────────────────
+  async function updateDMFriendButton(dmData) {
+    if (!dmData || !dmData.recipientId) return;
+    const statusData = await checkFriendRequestStatus(dmData.recipientId);
+    const btn = document.getElementById(`friend-btn-${dmData.winId}`);
+    if (!btn) return;
+    if (statusData.status === 'friends') {
+      btn.textContent = '✅ Friends';
+      btn.disabled = true;
+      btn.style.opacity = '0.6';
+    } else if (statusData.status === 'sent') {
+      btn.textContent = '⏳ Pending';
+      btn.disabled = true;
+      btn.style.opacity = '0.6';
+    } else if (statusData.status === 'received') {
+      btn.textContent = '📩 Accept?';
+      btn.disabled = false;
+      btn.style.opacity = '1';
+      btn.onclick = () => {
+        acceptFriendRequest(dmData.recipientId).then(() => {
+          updateDMFriendButton(dmData);
+          loadFriendsList();
+        });
+      };
+    } else if (statusData.status === 'cooldown') {
+      const remaining = Math.ceil((new Date(statusData.expires_at) - new Date()) / 1000 / 60);
+      btn.textContent = `⏳ ${remaining}m cooldown`;
+      btn.disabled = true;
+    } else {
+      btn.textContent = '➕ Add Friend';
+      btn.disabled = false;
+      btn.style.opacity = '1';
+      btn.onclick = async () => {
+        const success = await sendFriendRequest(dmData.recipientId);
+        if (success) updateDMFriendButton(dmData);
+      };
+    }
   }
 
   // ─── Send Global Message ─────────────────────────────────
@@ -1630,7 +1850,6 @@
       const lastActivity = chatProfile.last_activity ? new Date(chatProfile.last_activity) : new Date();
       const now = new Date();
       const diffSeconds = (now - lastActivity) / 1000;
-
       if (diffSeconds > 60 && (chatProfile.status === 'available' || chatProfile.status === 'busy')) {
         if (chatProfile.status !== 'away') {
           chatProfile.status = 'away';
@@ -1727,10 +1946,7 @@
     });
   }
 
-  // ────────────────────────────────────────────────────────────
-  //  DM FUNCTIONS (full, identical to previous)
-  // ────────────────────────────────────────────────────────────
-
+  // ─── DM Functions (with friend button) ──────────────────
   function getDMDataByWinId(winId) {
     return openDMs.find(d => d.winId === winId);
   }
@@ -1778,7 +1994,7 @@
         ${escapeHtml(recipientName)}
       </div>
       <div class="dm-controls">
-        <button onclick="addChatFriend('${winId}')" title="Add Friend">➕</button>
+        <button id="friend-btn-${winId}" class="friend-btn" title="Add Friend">➕</button>
         <div class="dm-btn-dropdown" title="Snooze">
           <button>⏰</button>
           <div class="dropdown-menu">
@@ -1876,6 +2092,9 @@
     loadDMMessages(dmData);
     setupDMChannel(dmData);
     updateTaskbar();
+
+    // Update friend button status
+    setTimeout(() => updateDMFriendButton(dmData), 500);
   }
 
   // ─── DM Message Loading & Rendering ──────────────────────
@@ -2223,11 +2442,10 @@
   async function addChatFriend(winId) {
     const dmData = getDMDataByWinId(winId);
     if (!dmData) return;
-    const { data, error } = await sb.rpc('add_chat_friend', { p_friend_id: dmData.recipientId });
-    if (error || !data.success) {
-      showToast(error?.message || data?.error || 'Failed to add friend', 'error');
-    } else {
-      showToast(`${dmData.recipientName} added as friend!`, 'success');
+    // Use the existing send_friend_request RPC
+    const success = await sendFriendRequest(dmData.recipientId);
+    if (success) {
+      await updateDMFriendButton(dmData);
       await loadFriendsList();
     }
   }
@@ -2351,6 +2569,8 @@
     await loadMessages();
     setupGlobalChannel();
     subscribeToDMIncoming();
+    subscribeToFriendRequests();
+    await loadFriendsList();
   }
 
   // ─── Final init ──────────────────────────────────────────
