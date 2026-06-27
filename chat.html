@@ -1273,27 +1273,58 @@
     globalRoom = newRoom; return newRoom;
   }
 
-  // ─── Load Global Messages ────────────────────────────────
+  // ─── Load Global Messages (FIXED) ─────────────────────────
   async function loadMessages() {
     if (!globalRoom) return;
-    // LEFT JOIN chat_profiles to get temp_username, fallback to players.username
-    const { data, error } = await sb
+    // Step 1: fetch messages with player usernames
+    const { data: messages, error: msgErr } = await sb
       .from('chat_messages')
       .select(`
         id,
         content,
         created_at,
         user_id,
-        players!chat_messages_user_id_fkey ( username ),
-        profiles:chat_profiles!chat_messages_user_id_fkey ( temp_username )
+        players!chat_messages_user_id_fkey ( username )
       `)
       .eq('room_id', globalRoom.id)
       .order('created_at', { ascending: true });
-    if (error) {
-      console.error('Error loading messages:', error);
+
+    if (msgErr) {
+      console.error('Error loading messages:', msgErr);
       return;
     }
-    renderMessages(data || []);
+    if (!messages || messages.length === 0) {
+      renderMessages([]);
+      return;
+    }
+
+    // Step 2: fetch chat_profiles for all unique user_ids
+    const userIds = [...new Set(messages.map(m => m.user_id))];
+    const { data: profiles, error: profErr } = await sb
+      .from('chat_profiles')
+      .select('player_id, temp_username')
+      .in('player_id', userIds);
+
+    if (profErr) {
+      console.error('Error loading chat profiles:', profErr);
+      // If profiles fails, we still have the original usernames
+      renderMessages(messages);
+      return;
+    }
+
+    // Build a map: player_id -> temp_username
+    const profileMap = {};
+    (profiles || []).forEach(p => {
+      profileMap[p.player_id] = p.temp_username;
+    });
+
+    // Merge: add temp_username to each message
+    const enriched = messages.map(msg => ({
+      ...msg,
+      temp_username: profileMap[msg.user_id] || null
+    }));
+
+    renderMessages(enriched);
   }
 
   function renderMessages(messages) {
@@ -1304,8 +1335,8 @@
     }
     const playerId = currentPlayer.id;
     container.innerHTML = messages.map(msg => {
-      // Use temp_username if available, else players.username
-      const username = msg.profiles?.temp_username || msg.players?.username || 'Unknown';
+      // Use temp_username if set, else fallback to players.username
+      const username = msg.temp_username || msg.players?.username || 'Unknown';
       const isOwn = msg.user_id === playerId;
       return `
         <div class="message ${isOwn ? 'own' : ''}">
