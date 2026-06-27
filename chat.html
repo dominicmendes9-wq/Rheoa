@@ -6,7 +6,7 @@
   <title>Chat - Rheoa RPG</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
   <style>
-    /* ─── Full CSS (same as before, with additions) ─── */
+    /* ─── Full CSS (same as before) ─── */
     :root {
       --bg-body: #f0f4fa;
       --card-bg: #fff;
@@ -2721,25 +2721,26 @@
     }
   }
 
-  // ─── Reports List (FIXED) ─────────────────────────────────
+  // ─── Reports List (UPDATED with RPC) ─────────────────────
   async function openReportsList() {
     document.getElementById('reportsListModal').style.display = 'flex';
     const container = document.getElementById('reportsListContainer');
     container.innerHTML = '<div class="loading">Loading reports...</div>';
     try {
-      // First fetch all reports without relations
-      const { data: reports, error } = await sb
-        .from('chat_reports')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      if (!reports || reports.length === 0) {
+      // Call the secure RPC function
+      const { data, error } = await sb.rpc('get_chat_reports');
+      if (error) {
+        console.error('RPC error:', error);
+        container.innerHTML = `<div class="empty">Error: ${error.message}</div>`;
+        return;
+      }
+      if (!data || data.length === 0) {
         container.innerHTML = '<div class="empty">No reports yet.</div>';
         return;
       }
-      // Collect all user IDs from reporter and reported
+      // Build a map of user IDs to usernames for display
       const userIds = new Set();
-      reports.forEach(r => {
+      data.forEach(r => {
         if (r.reporter_id) userIds.add(r.reporter_id);
         if (r.reported_user_id) userIds.add(r.reported_user_id);
       });
@@ -2753,8 +2754,7 @@
           users.forEach(u => { userMap[u.id] = u.username; });
         }
       }
-      // Render each report
-      container.innerHTML = reports.map(r => `
+      container.innerHTML = data.map(r => `
         <div class="report-entry">
           <div class="report-header">
             <span>👤 ${escapeHtml(userMap[r.reported_user_id] || 'Unknown')}</span>
