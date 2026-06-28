@@ -1508,11 +1508,7 @@
         } else {
           // Fallback
           title = '🚫 Account Actioned';
-          text = 'This is an official warning from the Rheoa Administration. Your account has been reported for behavior that appears to violate our Community Guidelines and has been reviewed by our moderation team.
-
-Please treat this warning seriously. Continued or repeated violations may result in actions against your account, including temporary restrictions, suspension, or permanent removal from the platform.
-
-We encourage you to review and follow the Community Guidelines to help keep Rheoa a safe and respectful environment for everyone.';
+          text = 'Your account has been actioned by moderators. Please treat this warning seriously. Continued or repeated violations may result in actions against your account, including temporary restrictions, suspension, or permanent removal from the platform.';
         }
         showModerationModal(title, text);
         document.getElementById('modCloseBtn').onclick = function() {
@@ -2669,13 +2665,13 @@ We encourage you to review and follow the Community Guidelines to help keep Rheo
     win.classList.remove('shake');
     void win.offsetWidth;
     win.classList.add('shake');
-    setTimeout(() => win.classList.remove('shake'), 1200);
+    setTimeout(() => win.classList.remove('shake'), 1500);
   }
 
   function glowDMWindow(dmData) {
     const win = dmData.windowElement;
     win.classList.add('glow');
-    setTimeout(() => win.classList.remove('glow'), 4000);
+    setTimeout(() => win.classList.remove('glow'), 5000);
   }
 
   // ─── Minimize / Restore / Close ──────────────────────────
