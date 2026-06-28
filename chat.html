@@ -6,7 +6,7 @@
   <title>Chat - Rheoa RPG</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
   <style>
-    /* ─── Full CSS (unchanged) ─── */
+    /* ─── Full CSS (same as before, with additions for moderation buttons and modals) ─── */
     :root {
       --bg-body: #f0f4fa;
       --card-bg: #fff;
@@ -1350,6 +1350,40 @@
     }
   }
 
+  // ─── Ban checker ──────────────────────────────────────────
+  // Returns true if banned (and shows modal), false otherwise.
+  async function checkAndHandleBan() {
+    if (!currentPlayer) return false;
+    try {
+      const { data, error } = await sb.rpc('check_user_ban_status', { p_user_id: currentPlayer.id });
+      if (error) {
+        console.error('Ban check error:', error);
+        return false;
+      }
+      if (data.banned) {
+        const banUntil = new Date(data.ban_until);
+        const now = new Date();
+        const diffMs = banUntil - now;
+        let action = 'ban_permanent';
+        const hours = Math.ceil(diffMs / (1000 * 60 * 60));
+        if (hours <= 24) action = 'ban_24h';
+        else if (hours <= 48) action = 'ban_48h';
+        else if (hours <= 168) action = 'ban_7d';
+        else if (banUntil.getFullYear() === 9999) action = 'ban_permanent';
+        const modText = getModerationText(action);
+        showModerationModal(modText.title, modText.text);
+        document.getElementById('modCloseBtn').onclick = function() {
+          closeModerationModal();
+          window.location.href = 'dashboard.html';
+        };
+        return true; // banned
+      }
+    } catch (e) {
+      console.error('Ban check exception:', e);
+    }
+    return false; // not banned
+  }
+
   // ─── Safety Modal ──────────────────────────────────────────
   function openSafetyModal() {
     document.getElementById('safetyModal').style.display = 'flex';
@@ -1456,7 +1490,8 @@
   let typingTimeouts = {};
   let friendRequestSubscription = null;
   let pendingFriendRequest = null;
-  let userNotificationChannel = null; // for moderation kicks
+  let userNotificationChannel = null;
+  let banMonitorInterval = null; // periodic ban check
 
   // ─── Auth & Player ────────────────────────────────────────
   async function getPlayer() {
@@ -1472,47 +1507,15 @@
     return player;
   }
 
-  // ─── Ban Check on Entry ──────────────────────────────────
-  async function checkBanStatus() {
-    if (!currentPlayer) return;
-    const { data, error } = await sb.rpc('check_user_ban_status', { p_user_id: currentPlayer.id });
-    if (error) {
-      console.error('Ban check error:', error);
-      return;
-    }
-    if (data.banned) {
-      // Use the same logic: determine action from ban duration or use a fallback
-      let action = 'ban_permanent'; // default
-      const banUntil = new Date(data.ban_until);
-      const now = new Date();
-      const diffMs = banUntil - now;
-      const hours = Math.ceil(diffMs / (1000 * 60 * 60));
-      if (hours <= 24) action = 'ban_24h';
-      else if (hours <= 48) action = 'ban_48h';
-      else if (hours <= 168) action = 'ban_7d';
-      else if (banUntil.getFullYear() === 9999) action = 'ban_permanent';
-      const modText = getModerationText(action);
-      showModerationModal(modText.title, modText.text);
-      document.getElementById('modCloseBtn').onclick = function() {
-        closeModerationModal();
-        window.location.href = 'dashboard.html';
-      };
-      throw new Error('Banned');
-    }
-  }
-
   // ─── User Notification Channel (for kicks) ──────────────
   function setupUserNotificationChannel() {
     if (!currentPlayer) return;
     if (userNotificationChannel) userNotificationChannel.unsubscribe();
     userNotificationChannel = sb.channel(`user-${currentPlayer.id}`);
     userNotificationChannel.on('broadcast', { event: 'moderation' }, (payload) => {
-      const { action, ban_until } = payload.payload;
+      const { action, ban_until, action_type } = payload.payload;
       if (action === 'kick') {
-        // Use the action string to display the correct modal
-        // The payload also includes 'action_type' from the backend
-        const actionType = payload.payload.action_type || 'ban_24h'; // fallback
-        const modText = getModerationText(actionType);
+        const modText = getModerationText(action_type || 'ban_24h');
         showModerationModal(modText.title, modText.text);
         document.getElementById('modCloseBtn').onclick = function() {
           closeModerationModal();
@@ -1540,6 +1543,21 @@
         console.log('Subscribed to user notifications');
       }
     });
+  }
+
+  // ─── Start periodic ban monitor ─────────────────────────
+  function startBanMonitor() {
+    if (banMonitorInterval) clearInterval(banMonitorInterval);
+    banMonitorInterval = setInterval(async () => {
+      if (currentPlayer) {
+        const banned = await checkAndHandleBan();
+        if (banned) {
+          // Stop further processing – user is banned and will be redirected
+          clearInterval(banMonitorInterval);
+          banMonitorInterval = null;
+        }
+      }
+    }, 15000); // check every 15 seconds
   }
 
   // ─── Chat Profile ─────────────────────────────────────────
@@ -2959,11 +2977,10 @@
 
   // ─── Initialize Chat ─────────────────────────────────────
   async function initializeChat() {
-    try {
-      // Check ban status before proceeding
-      await checkBanStatus();
-    } catch (e) {
-      // Banned – stop initialization
+    // Check ban status before proceeding (again)
+    const banned = await checkAndHandleBan();
+    if (banned) {
+      // User is banned, stop initialization
       return;
     }
 
@@ -2977,6 +2994,8 @@
     await loadFriendsList();
     // Setup user notification channel for moderation kicks
     setupUserNotificationChannel();
+    // Start periodic ban monitor
+    startBanMonitor();
   }
 
   // ─── Final init ──────────────────────────────────────────
@@ -2986,9 +3005,8 @@
     if (!player) { window.location.href = 'index.html'; return; }
 
     // Check ban status early – before even showing entry modal
-    try {
-      await checkBanStatus();
-    } catch (e) {
+    const banned = await checkAndHandleBan();
+    if (banned) {
       // Banned – we already showed modal, redirect after close
       return;
     }
