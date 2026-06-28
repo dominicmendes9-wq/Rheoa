@@ -6,7 +6,7 @@
   <title>Chat - Rheoa RPG</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
   <style>
-    /* ─── Full CSS (same as before, with additions for moderation buttons and modals) ─── */
+    /* ─── Full CSS (same as before) ─── */
     :root {
       --bg-body: #f0f4fa;
       --card-bg: #fff;
@@ -1350,16 +1350,17 @@
     }
   }
 
-  // ─── Ban checker ──────────────────────────────────────────
-  // Returns true if banned (and shows modal), false otherwise.
+  // ─── BAN CHECK – BLOCKS EXECUTION ───────────────────────
   async function checkAndHandleBan() {
     if (!currentPlayer) return false;
     try {
+      console.log('🔍 Checking ban status for user:', currentPlayer.id);
       const { data, error } = await sb.rpc('check_user_ban_status', { p_user_id: currentPlayer.id });
       if (error) {
-        console.error('Ban check error:', error);
+        console.error('Ban check RPC error:', error);
         return false;
       }
+      console.log('Ban check result:', data);
       if (data.banned) {
         const banUntil = new Date(data.ban_until);
         const now = new Date();
@@ -1372,16 +1373,20 @@
         else if (banUntil.getFullYear() === 9999) action = 'ban_permanent';
         const modText = getModerationText(action);
         showModerationModal(modText.title, modText.text);
-        document.getElementById('modCloseBtn').onclick = function() {
-          closeModerationModal();
-          window.location.href = 'dashboard.html';
-        };
-        return true; // banned
+        // Wait for modal to close then redirect
+        await new Promise(resolve => {
+          document.getElementById('modCloseBtn').onclick = function() {
+            closeModerationModal();
+            resolve();
+          };
+        });
+        window.location.href = 'dashboard.html';
+        return true;
       }
     } catch (e) {
       console.error('Ban check exception:', e);
     }
-    return false; // not banned
+    return false;
   }
 
   // ─── Safety Modal ──────────────────────────────────────────
@@ -1491,7 +1496,7 @@
   let friendRequestSubscription = null;
   let pendingFriendRequest = null;
   let userNotificationChannel = null;
-  let banMonitorInterval = null; // periodic ban check
+  let banMonitorInterval = null;
 
   // ─── Auth & Player ────────────────────────────────────────
   async function getPlayer() {
@@ -1552,12 +1557,11 @@
       if (currentPlayer) {
         const banned = await checkAndHandleBan();
         if (banned) {
-          // Stop further processing – user is banned and will be redirected
           clearInterval(banMonitorInterval);
           banMonitorInterval = null;
         }
       }
-    }, 15000); // check every 15 seconds
+    }, 10000); // every 10 seconds
   }
 
   // ─── Chat Profile ─────────────────────────────────────────
@@ -2876,7 +2880,7 @@
         p_target_id: targetId,
         p_action: action,
         p_moderator_id: currentPlayer.id,
-        p_reason: null // optional
+        p_reason: null
       });
       if (error) {
         showToast('Error: ' + error.message, 'error');
@@ -2887,9 +2891,8 @@
         return;
       }
 
-      // Action succeeded – broadcast kick to the target user if they are online
+      // Broadcast kick to target
       const banUntil = data.ban_until;
-      // Send a kick broadcast to the target user's notification channel
       const channel = sb.channel(`user-${targetId}`);
       await channel.subscribe();
       await channel.send({
@@ -2898,14 +2901,12 @@
         payload: {
           action: 'kick',
           ban_until: banUntil,
-          action_type: action  // <-- pass the action string for display
+          action_type: action
         }
       });
-      // Unsubscribe to clean up
       setTimeout(() => channel.unsubscribe(), 1000);
 
       showToast(`Action applied: ${data.message}`, 'success');
-      // Refresh reports list
       openReportsList();
     } catch (err) {
       console.error(err);
@@ -2977,12 +2978,9 @@
 
   // ─── Initialize Chat ─────────────────────────────────────
   async function initializeChat() {
-    // Check ban status before proceeding (again)
+    // Re-check ban before starting chat
     const banned = await checkAndHandleBan();
-    if (banned) {
-      // User is banned, stop initialization
-      return;
-    }
+    if (banned) return;
 
     updateToolbarVisibility();
     const room = await getGlobalRoom();
@@ -2992,9 +2990,7 @@
     subscribeToDMIncoming();
     subscribeToFriendRequests();
     await loadFriendsList();
-    // Setup user notification channel for moderation kicks
     setupUserNotificationChannel();
-    // Start periodic ban monitor
     startBanMonitor();
   }
 
@@ -3004,12 +3000,9 @@
     const player = await getPlayer();
     if (!player) { window.location.href = 'index.html'; return; }
 
-    // Check ban status early – before even showing entry modal
+    // Check ban status before showing entry modal
     const banned = await checkAndHandleBan();
-    if (banned) {
-      // Banned – we already showed modal, redirect after close
-      return;
-    }
+    if (banned) return;
 
     const profile = await loadChatProfile();
     if (profile) {
