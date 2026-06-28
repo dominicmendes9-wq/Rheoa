@@ -728,7 +728,7 @@ let leaderboard = [];
 let raceHistory = [];
 let selectedRace = null;
 let selectedParticipant = null;
-let activeRaceParticipation = null; // store the race the player is currently in (if any)
+let activeRaceParticipation = null;
 
 // Toast notification
 function showToast(message, type = 'info', duration = 3000) {
@@ -806,14 +806,13 @@ async function checkActiveRaceParticipation() {
     
     if (error) throw error;
     activeRaceParticipation = data && data.length > 0 ? data[0] : null;
-    // Re-render races to update button states
     renderRaces();
   } catch (error) {
     console.error('Error checking active race participation:', error);
   }
 }
 
-// Load vehicles (fixed ambiguous relationship)
+// Load vehicles
 async function loadVehicles() {
   try {
     const { data: vehiclesData, error: vehiclesError } = await sb
@@ -908,10 +907,9 @@ async function loadVehicleTypes() {
   }
 }
 
-// ─── Leaderboard (fixed – no external table) ───────────────
+// ─── Leaderboard (fixed) ───────────────────────────────
 async function loadLeaderboard() {
   try {
-    // Fetch all race history records with player info
     const { data, error } = await sb
       .from('race_history')
       .select(`
@@ -929,7 +927,6 @@ async function loadLeaderboard() {
       document.getElementById('leaderboardBody').innerHTML = '<tr><td colspan="6" class="empty-message">No race data yet</td></tr>';
       return;
     }
-    // Compute stats per player
     const statsMap = {};
     data.forEach(record => {
       const pid = record.player_id;
@@ -945,7 +942,6 @@ async function loadLeaderboard() {
       if (record.position === 1) statsMap[pid].total_wins++;
       statsMap[pid].total_earnings += (record.earnings || 0);
     });
-    // Convert to array and sort by total_earnings descending
     const leaderboardArray = Object.values(statsMap).sort((a, b) => b.total_earnings - a.total_earnings);
     renderLeaderboard(leaderboardArray);
   } catch (err) {
@@ -976,8 +972,6 @@ function renderLeaderboard(leaderboardData) {
     `;
   }).join('');
 }
-
-// ─── Remaining functions (unchanged) ──────────────────────
 
 // Load race history
 async function loadRaceHistory() {
@@ -1077,7 +1071,6 @@ function renderRaces() {
     const totalPrize = (race.prize_pool || 0) + (race.base_prize || 0);
     const raceStatus = race.status;
     
-    // Determine if player can join
     let joinDisabled = false;
     let joinButtonText = 'Join Race';
     let joinButtonClass = 'join-btn';
@@ -1099,7 +1092,6 @@ function renderRaces() {
       joinDisabled = true;
     }
     
-    // Show "Quit Race" button if the player is in this race and the race hasn't started
     const showQuit = hasJoined && (raceStatus === 'open' || raceStatus === 'upcoming');
     
     return `
@@ -1314,7 +1306,7 @@ async function executeJoinRace(raceId, vehicleId) {
       showToast(data.message, 'success');
       await loadRaces();
       await loadPlayerData(); // Refresh cash
-      await checkActiveRaceParticipation(); // update active race status
+      await checkActiveRaceParticipation();
     } else {
       showToast(data.error || 'Failed to join race', 'error');
     }
@@ -1343,7 +1335,7 @@ async function quitRace(raceId) {
       showToast(data.message, 'success');
       await loadRaces();
       await loadPlayerData(); // Refresh cash
-      await checkActiveRaceParticipation(); // update active race status
+      await checkActiveRaceParticipation();
     } else {
       showToast(data.error || 'Failed to quit race', 'error');
     }
@@ -1480,6 +1472,5 @@ setInterval(() => {
   }
 }, 30000);
 </script>
-
 </body>
 </html>
