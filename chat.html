@@ -6,7 +6,7 @@
   <title>Chat - Rheoa RPG</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
   <style>
-    /* ─── Full CSS (same as before) ─── */
+    /* ─── Full CSS (same as before, with additions for moderation buttons and modals) ─── */
     :root {
       --bg-body: #f0f4fa;
       --card-bg: #fff;
@@ -29,6 +29,7 @@
       --border-radius-card: 24px;
       --transition: all 0.2s ease;
       --toolbar-bg: #f1f5f9;
+      --mod-action-bg: #f8fafc;
     }
     body.theme-dusk {
       --bg-body: #0f1722;
@@ -49,6 +50,7 @@
       --card-header-bg: #0f172a;
       --avatar-bg: #334155;
       --toolbar-bg: #1e293b;
+      --mod-action-bg: #1e293b;
     }
     body.theme-meadow {
       --bg-body: #eef4e6;
@@ -69,6 +71,7 @@
       --card-header-bg: #fef6e0;
       --avatar-bg: #e2e9cf;
       --toolbar-bg: #e6e6d4;
+      --mod-action-bg: #e6e6d4;
     }
     * { margin:0; padding:0; box-sizing:border-box; }
     body {
@@ -246,17 +249,17 @@
       position: relative;
     }
 
-    /* Pinned safety message – sticky at top of messages area */
+    /* Pinned safety message */
     .pinned-safety {
       position: sticky;
       top: 0;
       z-index: 10;
       background: var(--card-header-bg);
       padding: 8px 0 8px 0;
-      margin: -20px -24px 12px -24px; /* offset parent padding */
+      margin: -20px -24px 12px -24px;
       padding: 12px 24px;
       border-bottom: 1px solid var(--border-light);
-      font-size: 0.875rem; /* 2pt smaller than default (1rem = 16px → 14px) */
+      font-size: 0.875rem;
       color: var(--text-muted);
       cursor: pointer;
       transition: background 0.2s;
@@ -270,21 +273,10 @@
     .pinned-safety:hover {
       background: var(--btn-ghost);
     }
-    .pinned-safety .icon {
-      font-size: 1.1rem;
-      flex-shrink: 0;
-    }
-    .pinned-safety .text {
-      flex: 1;
-      line-height: 1.4;
-    }
-    .pinned-safety .click-hint {
-      font-size: 0.7rem;
-      opacity: 0.6;
-      white-space: nowrap;
-    }
+    .pinned-safety .icon { font-size: 1.1rem; flex-shrink: 0; }
+    .pinned-safety .text { flex: 1; line-height: 1.4; }
+    .pinned-safety .click-hint { font-size: 0.7rem; opacity: 0.6; white-space: nowrap; }
 
-    /* DM window pinned message – same style, placed inside dm-messages */
     .dm-messages .pinned-safety {
       margin: -12px -16px 12px -16px;
       padding: 10px 16px;
@@ -292,7 +284,6 @@
       background: var(--card-header-bg);
     }
 
-    /* Message list container */
     #messages-list, .dm-messages-list {
       display: flex;
       flex-direction: column;
@@ -306,9 +297,7 @@
       animation: fadeIn 0.2s ease;
       position: relative;
     }
-    .message.own {
-      align-self: flex-end;
-    }
+    .message.own { align-self: flex-end; }
     @keyframes fadeIn {
       from { opacity:0; transform:translateY(8px); }
       to { opacity:1; transform:translateY(0); }
@@ -320,13 +309,8 @@
       gap: 10px;
       align-items: baseline;
     }
-    .message-username {
-      font-weight: 600;
-      color: var(--accent);
-    }
-    .message-time {
-      font-size: 0.65rem;
-    }
+    .message-username { font-weight: 600; color: var(--accent); }
+    .message-time { font-size: 0.65rem; }
     .message-text {
       background: var(--card-bg);
       padding: 8px 14px;
@@ -357,19 +341,10 @@
     }
     .message:hover .delete-msg { display: block; }
     .message.own .delete-msg { color: rgba(255,255,255,0.7); }
-    .message-text .read-status {
-      font-size: 0.6rem;
-      color: var(--text-muted);
-      margin-left: 4px;
-    }
+    .message-text .read-status { font-size: 0.6rem; color: var(--text-muted); margin-left: 4px; }
     .message.own .read-status { color: rgba(255,255,255,0.7); }
     .message-text .read-status.read { color: #4CAF50; }
-    .typing-indicator {
-      font-size: 0.8rem;
-      color: var(--text-muted);
-      font-style: italic;
-      padding: 4px 0;
-    }
+    .typing-indicator { font-size: 0.8rem; color: var(--text-muted); font-style: italic; padding: 4px 0; }
 
     .message-input-area {
       padding: 16px 24px;
@@ -402,20 +377,8 @@
     }
     .toolbar button:hover { background: var(--btn-ghost); }
     .toolbar button:active { transform: scale(0.95); }
-    .toolbar .separator {
-      width: 1px;
-      height: 24px;
-      background: var(--border-light);
-      margin: 0 4px;
-    }
-    .toolbar input[type="color"] {
-      width: 24px;
-      height: 24px;
-      border: none;
-      padding: 0;
-      cursor: pointer;
-      background: transparent;
-    }
+    .toolbar .separator { width: 1px; height: 24px; background: var(--border-light); margin: 0 4px; }
+    .toolbar input[type="color"] { width: 24px; height: 24px; border: none; padding: 0; cursor: pointer; background: transparent; }
     .input-row {
       display: flex;
       gap: 10px;
@@ -454,7 +417,6 @@
     }
     #sendBtn:hover { background: var(--btn-primary-hover); }
 
-    /* ─── Emoji Picker ─── */
     .emoji-picker {
       display: none;
       position: absolute;
@@ -481,7 +443,6 @@
     }
     .emoji-picker button:hover { background: var(--btn-ghost); }
 
-    /* ─── Members Sidebar ─── */
     .members-sidebar {
       width: 280px;
       background: var(--card-bg);
@@ -561,7 +522,6 @@
     .status-invisible { background: #9e9e9e; }
     .status-offline { background: #9e9e9e; }
 
-    /* ─── Toast ─── */
     .toast-container {
       position: fixed;
       top: 20px;
@@ -590,7 +550,6 @@
     }
     .loading, .empty { text-align:center; color:var(--text-muted); padding:20px; }
 
-    /* ─── DM Windows ─── */
     .dm-window-container {
       position: fixed;
       top: 0;
@@ -659,14 +618,7 @@
       white-space: nowrap;
       text-overflow: ellipsis;
     }
-    .dm-title .online-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #4CAF50;
-      display: inline-block;
-      flex-shrink: 0;
-    }
+    .dm-title .online-dot { width: 8px; height: 8px; border-radius: 50%; background: #4CAF50; display: inline-block; flex-shrink: 0; }
     .dm-controls {
       display: flex;
       gap: 4px;
@@ -752,11 +704,7 @@
       gap: 6px;
       flex-shrink: 0;
     }
-    .dm-input-area .toolbar {
-      background: var(--toolbar-bg);
-      padding: 4px 6px;
-      gap: 2px;
-    }
+    .dm-input-area .toolbar { background: var(--toolbar-bg); padding: 4px 6px; gap: 2px; }
     .dm-input-area .toolbar button { font-size: 0.8rem; padding: 2px 8px; }
     .dm-input-area .toolbar input[type="color"] { width:20px; height:20px; }
     .dm-input-row {
@@ -805,7 +753,6 @@
     }
     .dm-input-row .nudge-btn:disabled { background: #ccc; cursor: not-allowed; }
 
-    /* ─── Minimized bar ─── */
     .dm-taskbar {
       position: fixed;
       bottom: 0;
@@ -952,18 +899,48 @@
       border-radius: var(--border-radius-card);
       box-shadow: var(--card-shadow);
       padding: 25px;
-      max-width: 600px;
+      max-width: 700px;
       width: 90%;
       max-height: 80vh;
       overflow-y: auto;
     }
     .reports-list-modal-content h3 { margin-bottom:12px; }
-    .report-entry { border-bottom:1px solid var(--border-light); padding:10px 0; }
+    .report-entry {
+      border-bottom:1px solid var(--border-light);
+      padding: 12px 0;
+    }
     .report-entry .report-header { display:flex; justify-content:space-between; font-weight:600; }
     .report-entry .report-messages {
       font-size:0.8rem; color:var(--text-muted); margin-top:4px; max-height:100px; overflow-y:auto; background:var(--card-header-bg); padding:6px 10px; border-radius:6px;
     }
     .report-entry .report-messages .msg { border-bottom:1px solid var(--border-light); padding:2px 0; }
+    /* Moderation action buttons */
+    .mod-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .mod-actions button {
+      padding: 4px 12px;
+      border: none;
+      border-radius: 30px;
+      font-family: var(--font-family);
+      font-weight: 600;
+      font-size: 0.7rem;
+      cursor: pointer;
+      transition: .2s;
+      background: var(--mod-action-bg);
+      color: var(--text-main);
+      border: 1px solid var(--border-light);
+    }
+    .mod-actions button:hover { transform: scale(1.05); }
+    .mod-actions .warning-btn { background: #ff9800; color: white; border-color: #ff9800; }
+    .mod-actions .ban24-btn { background: #f44336; color: white; border-color: #f44336; }
+    .mod-actions .ban48-btn { background: #d32f2f; color: white; border-color: #d32f2f; }
+    .mod-actions .ban7d-btn { background: #c62828; color: white; border-color: #c62828; }
+    .mod-actions .perm-btn { background: #b71c1c; color: white; border-color: #b71c1c; }
+    .mod-actions button:disabled { opacity: 0.5; cursor: not-allowed; }
 
     /* ─── Friend Request Modal ─── */
     .friend-request-modal {
@@ -985,15 +962,8 @@
       text-align: center;
       box-shadow: var(--card-shadow);
     }
-    .friend-request-modal-content p {
-      margin-bottom: 20px;
-      font-size: 1.1rem;
-    }
-    .friend-request-actions {
-      display: flex;
-      gap: 12px;
-      justify-content: center;
-    }
+    .friend-request-modal-content p { margin-bottom: 20px; font-size: 1.1rem; }
+    .friend-request-actions { display: flex; gap: 12px; justify-content: center; }
     .friend-request-actions button {
       padding: 8px 24px;
       border: none;
@@ -1002,21 +972,10 @@
       cursor: pointer;
       font-family: var(--font-family);
     }
-    .friend-request-actions .accept-btn {
-      background: var(--btn-primary);
-      color: #fff;
-    }
-    .friend-request-actions .accept-btn:hover {
-      background: var(--btn-primary-hover);
-    }
-    .friend-request-actions .reject-btn {
-      background: var(--btn-ghost);
-      color: var(--text-main);
-    }
-    .friend-request-actions .reject-btn:hover {
-      background: var(--btn-secondary);
-      color: #fff;
-    }
+    .friend-request-actions .accept-btn { background: var(--btn-primary); color: #fff; }
+    .friend-request-actions .accept-btn:hover { background: var(--btn-primary-hover); }
+    .friend-request-actions .reject-btn { background: var(--btn-ghost); color: var(--text-main); }
+    .friend-request-actions .reject-btn:hover { background: var(--btn-secondary); color: #fff; }
 
     /* ─── Safety Modal ─── */
     .safety-modal {
@@ -1040,19 +999,14 @@
       max-height: 85vh;
       overflow-y: auto;
     }
-    .safety-modal-content h3 {
-      margin-bottom: 15px;
-      color: var(--accent);
-    }
+    .safety-modal-content h3 { margin-bottom: 15px; color: var(--accent); }
     .safety-modal-content .safety-text {
       font-size: 0.875rem;
       line-height: 1.7;
       margin-bottom: 20px;
       color: var(--text-main);
     }
-    .safety-modal-content .safety-text strong {
-      color: var(--accent);
-    }
+    .safety-modal-content .safety-text strong { color: var(--accent); }
     .safety-modal-content .close-safety {
       padding: 10px 30px;
       background: var(--btn-primary);
@@ -1064,9 +1018,56 @@
       font-family: var(--font-family);
       transition: .2s;
     }
-    .safety-modal-content .close-safety:hover {
-      background: var(--btn-primary-hover);
+    .safety-modal-content .close-safety:hover { background: var(--btn-primary-hover); }
+
+    /* ─── Ban/Warning Modals ─── */
+    .moderation-modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.7);
+      z-index: 10020;
+      justify-content: center;
+      align-items: center;
+      backdrop-filter: blur(4px);
     }
+    .moderation-modal-content {
+      background: var(--card-bg);
+      border: 2px solid var(--accent);
+      border-radius: var(--border-radius-card);
+      box-shadow: var(--card-shadow);
+      padding: 30px;
+      max-width: 550px;
+      width: 90%;
+      max-height: 85vh;
+      overflow-y: auto;
+    }
+    .moderation-modal-content h2 {
+      font-size: 1.8rem;
+      margin-bottom: 15px;
+      text-align: center;
+    }
+    .moderation-modal-content .mod-text {
+      font-size: 1rem;
+      line-height: 1.6;
+      margin-bottom: 20px;
+      white-space: pre-wrap;
+      color: var(--text-main);
+    }
+    .moderation-modal-content .close-mod-btn {
+      display: block;
+      margin: 0 auto;
+      padding: 10px 30px;
+      background: var(--btn-primary);
+      color: #fff;
+      border: none;
+      border-radius: 40px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: var(--font-family);
+      transition: .2s;
+    }
+    .moderation-modal-content .close-mod-btn:hover { background: var(--btn-primary-hover); }
 
     /* ─── Responsive ─── */
     @media (max-width:900px) { .members-sidebar { width:200px; } }
@@ -1081,12 +1082,15 @@
       .dm-window { width:90%; height:80vh; min-width:unset; min-height:unset; }
       .pinned-safety { font-size:0.75rem; padding:10px 16px; }
       .pinned-safety .click-hint { display:none; }
+      .mod-actions button { font-size:0.6rem; padding:2px 8px; }
     }
   </style>
 </head>
 <body>
 
-<!-- ─── Modals (entry, report, reports list, friend request, safety) ─── -->
+<!-- ─── All Modals ─── -->
+
+<!-- Entry Modal -->
 <div class="entry-modal" id="entryModal">
   <div class="entry-modal-content">
     <h2>👋 Welcome to Chat</h2>
@@ -1124,6 +1128,7 @@
   </div>
 </div>
 
+<!-- Report Modal -->
 <div class="report-modal" id="reportModal">
   <div class="report-modal-content">
     <h3>🚨 Report User</h3>
@@ -1136,6 +1141,7 @@
   </div>
 </div>
 
+<!-- Reports List Modal -->
 <div class="reports-list-modal" id="reportsListModal">
   <div class="reports-list-modal-content">
     <h3>📋 User Reports</h3>
@@ -1144,6 +1150,7 @@
   </div>
 </div>
 
+<!-- Friend Request Modal -->
 <div class="friend-request-modal" id="friendRequestModal">
   <div class="friend-request-modal-content">
     <p id="friendRequestText"></p>
@@ -1166,6 +1173,15 @@
       <p style="margin-top: 12px;"><strong>Protect your privacy. Stay alert. Chat safely.</strong></p>
     </div>
     <button class="close-safety" onclick="document.getElementById('safetyModal').style.display='none'">Close</button>
+  </div>
+</div>
+
+<!-- Moderation Modal (Warning / Ban) -->
+<div class="moderation-modal" id="moderationModal">
+  <div class="moderation-modal-content">
+    <h2 id="modTitle">⚠️ Official Warning</h2>
+    <div id="modText" class="mod-text"></div>
+    <button class="close-mod-btn" id="modCloseBtn" onclick="closeModerationModal()">Close</button>
   </div>
 </div>
 
@@ -1205,12 +1221,11 @@
         </div>
       </div>
       <div class="messages-area" id="messagesArea">
-        <!-- Pinned safety message (sticky) -->
+        <!-- Pinned safety message -->
         <div class="pinned-safety" id="globalPinnedSafety" onclick="openSafetyModal()">
           <span class="icon">🔒</span>
           <span class="text">Stay Safe on Rheoa – Never share personal or financial info with anyone. <span class="click-hint">(click for more)</span></span>
         </div>
-        <!-- Container for actual messages -->
         <div id="messages-list"></div>
       </div>
       <div class="message-input-area">
@@ -1253,7 +1268,7 @@
   </div>
 </div>
 
-<!-- ─── DM Container & Taskbar ─── -->
+<!-- DM Container & Taskbar -->
 <div class="dm-window-container" id="dmContainer"></div>
 <div class="dm-taskbar" id="dmTaskbar"></div>
 <div class="toast-container" id="toast-container"></div>
@@ -1288,11 +1303,23 @@
     }, duration);
   }
 
+  // ─── Moderation Modal ──────────────────────────────────────
+  function showModerationModal(title, text) {
+    document.getElementById('modTitle').textContent = title;
+    document.getElementById('modText').textContent = text;
+    document.getElementById('moderationModal').style.display = 'flex';
+  }
+
+  function closeModerationModal() {
+    document.getElementById('moderationModal').style.display = 'none';
+    // If the user was banned, we might want to redirect them out of chat.
+    // The kick logic already redirects; we just close the modal.
+  }
+
   // ─── Safety Modal ──────────────────────────────────────────
   function openSafetyModal() {
     document.getElementById('safetyModal').style.display = 'flex';
   }
-  // Close modal when clicking outside content
   document.getElementById('safetyModal').addEventListener('click', function(e) {
     if (e.target === this) this.style.display = 'none';
   });
@@ -1395,6 +1422,7 @@
   let typingTimeouts = {};
   let friendRequestSubscription = null;
   let pendingFriendRequest = null;
+  let userNotificationChannel = null; // for moderation kicks
 
   // ─── Auth & Player ────────────────────────────────────────
   async function getPlayer() {
@@ -1408,6 +1436,111 @@
     if (error) { console.error(error); return null; }
     currentPlayer = player;
     return player;
+  }
+
+  // ─── Ban Check on Entry ──────────────────────────────────
+  async function checkBanStatus() {
+    if (!currentPlayer) return;
+    const { data, error } = await sb.rpc('check_user_ban_status', { p_user_id: currentPlayer.id });
+    if (error) {
+      console.error('Ban check error:', error);
+      return;
+    }
+    if (data.banned) {
+      const banUntil = new Date(data.ban_until);
+      const now = new Date();
+      const diffMs = banUntil - now;
+      let title, text;
+      if (data.ban_until === '9999-12-31 23:59:59+00' || diffMs > 365 * 24 * 60 * 60 * 1000) {
+        title = '🚫 Account Permanently Banned';
+        text = 'Your account has been permanently banned after repeated or serious violations of the Rheoa Community Guidelines. Following a review by our moderation team, we have determined that your account is no longer eligible to use the platform.\n\nThis decision has been made to protect the safety and integrity of the Rheoa community.';
+      } else {
+        const hours = Math.ceil(diffMs / (1000 * 60 * 60));
+        let durationText;
+        if (hours <= 24) durationText = '24 Hours';
+        else if (hours <= 48) durationText = '48 Hours';
+        else if (hours <= 168) durationText = '7 days';
+        else durationText = `${hours} hours`;
+        title = `🚫 Account Suspended for ${durationText}`;
+        text = `Your account has been suspended for ${durationText} after our moderation team determined that your activity violated the Rheoa Community Guidelines following one or more user reports.\n\nThis suspension is intended as a warning. Any further violations of our rules may result in a permanent ban from the platform.\n\nPlease take this time to review and follow the Community Guidelines to help keep Rheoa a safe and respectful community for everyone.`;
+      }
+      showModerationModal(title, text);
+      // Prevent entering chat – we'll show the modal and stay on the page, but chat won't load.
+      // We'll redirect to dashboard after modal close.
+      document.getElementById('modCloseBtn').onclick = function() {
+        closeModerationModal();
+        window.location.href = 'dashboard.html';
+      };
+      throw new Error('Banned'); // stop further init
+    }
+    // Check for warning: we can display a warning modal but allow entry.
+    // For simplicity, we'll not auto-show warning on entry; warning is sent via moderation action.
+  }
+
+  // ─── User Notification Channel (for kicks) ──────────────
+  function setupUserNotificationChannel() {
+    if (!currentPlayer) return;
+    if (userNotificationChannel) userNotificationChannel.unsubscribe();
+    userNotificationChannel = sb.channel(`user-${currentPlayer.id}`);
+    userNotificationChannel.on('broadcast', { event: 'moderation' }, (payload) => {
+      const { action, reason, ban_until } = payload.payload;
+      if (action === 'kick') {
+        // User is being kicked due to a ban.
+        // Show the appropriate ban modal.
+        let title, text;
+        const banUntil = ban_until ? new Date(ban_until) : null;
+        const now = new Date();
+        if (banUntil && banUntil > now) {
+          const diffMs = banUntil - now;
+          const hours = Math.ceil(diffMs / (1000 * 60 * 60));
+          let durationText;
+          if (hours <= 24) durationText = '24 Hours';
+          else if (hours <= 48) durationText = '48 Hours';
+          else if (hours <= 168) durationText = '7 days';
+          else durationText = `${hours} hours`;
+          if (banUntil.getFullYear() === 9999) {
+            title = '🚫 Account Permanently Banned';
+            text = 'Your account has been permanently banned after repeated or serious violations of the Rheoa Community Guidelines. Following a review by our moderation team, we have determined that your account is no longer eligible to use the platform.\n\nThis decision has been made to protect the safety and integrity of the Rheoa community.';
+          } else {
+            title = `🚫 Account Suspended for ${durationText}`;
+            text = `Your account has been suspended for ${durationText} after our moderation team determined that your activity violated the Rheoa Community Guidelines following one or more user reports.\n\nThis suspension is intended as a warning. Any further violations of our rules may result in a permanent ban from the platform.\n\nPlease take this time to review and follow the Community Guidelines to help keep Rheoa a safe and respectful community for everyone.`;
+          }
+        } else {
+          // Fallback
+          title = '🚫 Account Actioned';
+          text = 'Your account has been actioned by moderators. Please contact support for more details.';
+        }
+        showModerationModal(title, text);
+        document.getElementById('modCloseBtn').onclick = function() {
+          closeModerationModal();
+          window.location.href = 'dashboard.html';
+        };
+        // Also unsubscribe from chat channels and clean up.
+        if (messageChannel) messageChannel.unsubscribe();
+        if (userNotificationChannel) userNotificationChannel.unsubscribe();
+        // Close all DMs
+        openDMs.forEach(dm => {
+          if (dm.channel) dm.channel.unsubscribe();
+          if (dm.windowElement.parentNode) dm.windowElement.parentNode.removeChild(dm.windowElement);
+        });
+        openDMs = [];
+        document.getElementById('dmTaskbar').innerHTML = '';
+        // Also hide chat UI? We'll let the modal cover it.
+      } else if (action === 'warning') {
+        // Show warning modal but allow continuing.
+        const warningText = '⚠️ Official Warning from Rheoa Administration\n\nThis is an official warning from the Rheoa Administration. Your account has been reported for behavior that appears to violate our Community Guidelines and has been reviewed by our moderation team.\n\nPlease treat this warning seriously. Continued or repeated violations may result in actions against your account, including temporary restrictions, suspension, or permanent removal from the platform.\n\nWe encourage you to review and follow the Community Guidelines to help keep Rheoa a safe and respectful environment for everyone.';
+        showModerationModal('⚠️ Official Warning', warningText);
+        document.getElementById('modCloseBtn').onclick = function() {
+          closeModerationModal();
+          // Allow user to continue.
+        };
+      }
+    });
+    userNotificationChannel.subscribe((status) => {
+      if (status === 'SUBSCRIBED') {
+        console.log('Subscribed to user notifications');
+      }
+    });
   }
 
   // ─── Chat Profile ─────────────────────────────────────────
@@ -1671,25 +1804,22 @@
         `;
       }).join('');
     } else {
-      // Friends tab – use onlineUsers to determine status
+      // Friends tab
       if (!friendsList || friendsList.length === 0) {
         container.innerHTML = '<div class="empty">No friends yet. Add some!</div>';
         return;
       }
-      // Build a map of online user info by user_id for quick lookup
       const onlineMap = {};
       onlineUsers.forEach(u => {
         onlineMap[u.user_id] = u;
       });
       container.innerHTML = friendsList.map(friend => {
         const displayName = friend.temp_username || friend.username;
-        // Get presence info from onlineMap if available
         const presence = onlineMap[friend.user_id];
         let isOnline = false;
         let status = 'offline';
         let invisible_mode = false;
         if (presence) {
-          // If user is in onlineUsers, they are online (or away/busy/invisible)
           isOnline = true;
           status = presence.status || 'available';
           invisible_mode = presence.invisible_mode || false;
@@ -1698,7 +1828,6 @@
           status = 'offline';
           invisible_mode = false;
         }
-        // Determine the dot class
         let statusClass;
         if (invisible_mode && currentPlayer.subscription_tier?.toLowerCase() !== 'founder') {
           statusClass = 'status-offline';
@@ -1848,7 +1977,6 @@
     document.getElementById('friendRequestText').textContent = `${username} would like to add you as a friend.`;
     const acceptBtn = document.getElementById('friendRequestAccept');
     const rejectBtn = document.getElementById('friendRequestReject');
-    // Remove old listeners
     acceptBtn.onclick = null;
     rejectBtn.onclick = null;
     acceptBtn.onclick = async () => {
@@ -2200,18 +2328,15 @@
     const msgsDiv = document.createElement('div');
     msgsDiv.className = 'dm-messages';
     msgsDiv.id = `dmMessages-${winId}`;
-    // Pinned safety message inside DM
     const pinned = document.createElement('div');
     pinned.className = 'pinned-safety';
     pinned.innerHTML = `<span class="icon">🔒</span><span class="text">Stay Safe on Rheoa – Never share personal or financial info with anyone. <span class="click-hint">(click for more)</span></span>`;
     pinned.onclick = openSafetyModal;
     msgsDiv.appendChild(pinned);
-    // Container for DM messages
     const listDiv = document.createElement('div');
     listDiv.className = 'dm-messages-list';
     listDiv.id = `dmMessagesList-${winId}`;
     msgsDiv.appendChild(listDiv);
-
     win.appendChild(msgsDiv);
 
     const inputArea = document.createElement('div');
@@ -2283,8 +2408,6 @@
     loadDMMessages(dmData);
     setupDMChannel(dmData);
     updateTaskbar();
-
-    // Update friend button status
     setTimeout(() => updateDMFriendButton(dmData), 500);
   }
 
@@ -2542,13 +2665,13 @@
     win.classList.remove('shake');
     void win.offsetWidth;
     win.classList.add('shake');
-    setTimeout(() => win.classList.remove('shake'), 500);
+    setTimeout(() => win.classList.remove('shake'), 1200);
   }
 
   function glowDMWindow(dmData) {
     const win = dmData.windowElement;
     win.classList.add('glow');
-    setTimeout(() => win.classList.remove('glow'), 2000);
+    setTimeout(() => win.classList.remove('glow'), 4000);
   }
 
   // ─── Minimize / Restore / Close ──────────────────────────
@@ -2721,13 +2844,64 @@
     }
   }
 
-  // ─── Reports List (UPDATED with RPC) ─────────────────────
+  // ─── Moderation Actions (by founder) ─────────────────────
+  async function moderateUser(targetId, action) {
+    if (!currentPlayer || currentPlayer.subscription_tier !== 'founder') {
+      showToast('Permission denied', 'error');
+      return;
+    }
+    // Confirm action
+    const confirmMsg = `Are you sure you want to ${action} this user?`;
+    if (!confirm(confirmMsg)) return;
+
+    try {
+      const { data, error } = await sb.rpc('apply_moderation', {
+        p_target_id: targetId,
+        p_action: action,
+        p_moderator_id: currentPlayer.id,
+        p_reason: null // optional
+      });
+      if (error) {
+        showToast('Error: ' + error.message, 'error');
+        return;
+      }
+      if (!data.success) {
+        showToast(data.error, 'error');
+        return;
+      }
+
+      // Action succeeded – broadcast kick to the target user if they are online
+      const banUntil = data.ban_until;
+      // Send a kick broadcast to the target user's notification channel
+      const channel = sb.channel(`user-${targetId}`);
+      await channel.subscribe();
+      await channel.send({
+        type: 'broadcast',
+        event: 'moderation',
+        payload: {
+          action: 'kick',
+          reason: data.message,
+          ban_until: banUntil
+        }
+      });
+      // Unsubscribe to clean up
+      setTimeout(() => channel.unsubscribe(), 1000);
+
+      showToast(`Action applied: ${data.message}`, 'success');
+      // Refresh reports list
+      openReportsList();
+    } catch (err) {
+      console.error(err);
+      showToast('Failed to apply moderation', 'error');
+    }
+  }
+
+  // ─── Reports List ─────────────────────────────────────────
   async function openReportsList() {
     document.getElementById('reportsListModal').style.display = 'flex';
     const container = document.getElementById('reportsListContainer');
     container.innerHTML = '<div class="loading">Loading reports...</div>';
     try {
-      // Call the secure RPC function
       const { data, error } = await sb.rpc('get_chat_reports');
       if (error) {
         console.error('RPC error:', error);
@@ -2738,7 +2912,7 @@
         container.innerHTML = '<div class="empty">No reports yet.</div>';
         return;
       }
-      // Build a map of user IDs to usernames for display
+      // Build user map
       const userIds = new Set();
       data.forEach(r => {
         if (r.reporter_id) userIds.add(r.reporter_id);
@@ -2765,6 +2939,13 @@
           <div class="report-messages">
             ${(r.last_10_messages || []).map(msg => `<div class="msg">${escapeHtml(msg.content || '')}</div>`).join('')}
           </div>
+          <div class="mod-actions">
+            <button class="warning-btn" onclick="moderateUser('${r.reported_user_id}', 'warning')">⚠️ Warning</button>
+            <button class="ban24-btn" onclick="moderateUser('${r.reported_user_id}', 'ban_24h')">🚫 24h</button>
+            <button class="ban48-btn" onclick="moderateUser('${r.reported_user_id}', 'ban_48h')">🚫 48h</button>
+            <button class="ban7d-btn" onclick="moderateUser('${r.reported_user_id}', 'ban_7d')">🚫 7d</button>
+            <button class="perm-btn" onclick="moderateUser('${r.reported_user_id}', 'ban_permanent')">🚫 Permanently</button>
+          </div>
         </div>
       `).join('');
     } catch (error) {
@@ -2779,6 +2960,14 @@
 
   // ─── Initialize Chat ─────────────────────────────────────
   async function initializeChat() {
+    try {
+      // Check ban status before proceeding
+      await checkBanStatus();
+    } catch (e) {
+      // Banned – stop initialization
+      return;
+    }
+
     updateToolbarVisibility();
     const room = await getGlobalRoom();
     if (!room) { showToast('Could not load chat room', 'error'); return; }
@@ -2787,6 +2976,8 @@
     subscribeToDMIncoming();
     subscribeToFriendRequests();
     await loadFriendsList();
+    // Setup user notification channel for moderation kicks
+    setupUserNotificationChannel();
   }
 
   // ─── Final init ──────────────────────────────────────────
@@ -2794,6 +2985,14 @@
     initThemeAndFont();
     const player = await getPlayer();
     if (!player) { window.location.href = 'index.html'; return; }
+
+    // Check ban status early – before even showing entry modal
+    try {
+      await checkBanStatus();
+    } catch (e) {
+      // Banned – we already showed modal, redirect after close
+      return;
+    }
 
     const profile = await loadChatProfile();
     if (profile) {
