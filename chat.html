@@ -1350,38 +1350,59 @@
     }
   }
 
-  // ─── BAN CHECK – BLOCKS EXECUTION ───────────────────────
+  // ─── BAN CHECK – DIRECT QUERY ─────────────────────────────
   async function checkAndHandleBan() {
     if (!currentPlayer) return false;
     try {
-      console.log('🔍 Checking ban status for user:', currentPlayer.id);
-      const { data, error } = await sb.rpc('check_user_ban_status', { p_user_id: currentPlayer.id });
+      console.log('🔍 Checking ban status via direct query for user:', currentPlayer.id);
+      // Directly query the players table
+      const { data, error } = await sb
+        .from('players')
+        .select('banned_until, ban_reason')
+        .eq('id', currentPlayer.id)
+        .maybeSingle();
+
       if (error) {
-        console.error('Ban check RPC error:', error);
+        console.error('Ban query error:', error);
         return false;
       }
-      console.log('Ban check result:', data);
-      if (data.banned) {
-        const banUntil = new Date(data.ban_until);
+
+      console.log('Ban query result:', data);
+
+      if (data && data.banned_until) {
+        const banUntil = new Date(data.banned_until);
         const now = new Date();
-        const diffMs = banUntil - now;
-        let action = 'ban_permanent';
-        const hours = Math.ceil(diffMs / (1000 * 60 * 60));
-        if (hours <= 24) action = 'ban_24h';
-        else if (hours <= 48) action = 'ban_48h';
-        else if (hours <= 168) action = 'ban_7d';
-        else if (banUntil.getFullYear() === 9999) action = 'ban_permanent';
-        const modText = getModerationText(action);
-        showModerationModal(modText.title, modText.text);
-        // Wait for modal to close then redirect
-        await new Promise(resolve => {
-          document.getElementById('modCloseBtn').onclick = function() {
-            closeModerationModal();
-            resolve();
-          };
-        });
-        window.location.href = 'dashboard.html';
-        return true;
+        if (banUntil > now) {
+          // Active ban
+          const diffMs = banUntil - now;
+          const hours = Math.ceil(diffMs / (1000 * 60 * 60));
+          let action = 'ban_permanent';
+          if (hours <= 24) action = 'ban_24h';
+          else if (hours <= 48) action = 'ban_48h';
+          else if (hours <= 168) action = 'ban_7d';
+          else if (banUntil.getFullYear() === 9999) action = 'ban_permanent';
+          const modText = getModerationText(action);
+          showModerationModal(modText.title, modText.text);
+          // Wait for modal close, then redirect
+          await new Promise(resolve => {
+            document.getElementById('modCloseBtn').onclick = function() {
+              closeModerationModal();
+              resolve();
+            };
+          });
+          window.location.href = 'dashboard.html';
+          return true;
+        } else {
+          // Ban expired – clear it
+          console.log('Ban expired, clearing...');
+          await sb
+            .from('players')
+            .update({ banned_until: null, ban_reason: null })
+            .eq('id', currentPlayer.id);
+          // Update local player object
+          currentPlayer.banned_until = null;
+          currentPlayer.ban_reason = null;
+        }
       }
     } catch (e) {
       console.error('Ban check exception:', e);
@@ -1504,7 +1525,7 @@
     if (!user) return null;
     const { data: player, error } = await sb
       .from('players')
-      .select('id, username, subscription_tier')
+      .select('id, username, subscription_tier, banned_until, ban_reason')
       .eq('auth_id', user.id)
       .single();
     if (error) { console.error(error); return null; }
