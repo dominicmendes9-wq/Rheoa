@@ -6,7 +6,7 @@
   <title>Chat - Rheoa RPG</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
   <style>
-    /* ─── Full CSS (same as before, with additions for moderation buttons and modals) ─── */
+    /* ─── Full CSS (unchanged) ─── */
     :root {
       --bg-body: #f0f4fa;
       --card-bg: #fff;
@@ -1312,8 +1312,42 @@
 
   function closeModerationModal() {
     document.getElementById('moderationModal').style.display = 'none';
-    // If the user was banned, we might want to redirect them out of chat.
-    // The kick logic already redirects; we just close the modal.
+  }
+
+  // ─── Helper: get moderation text based on action ─────────
+  function getModerationText(action) {
+    switch(action) {
+      case 'warning':
+        return {
+          title: '⚠️ Official Warning',
+          text: '⚠️ Official Warning from Rheoa Administration\n\nThis is an official warning from the Rheoa Administration. Your account has been reported for behavior that appears to violate our Community Guidelines and has been reviewed by our moderation team.\n\nPlease treat this warning seriously. Continued or repeated violations may result in actions against your account, including temporary restrictions, suspension, or permanent removal from the platform.\n\nWe encourage you to review and follow the Community Guidelines to help keep Rheoa a safe and respectful environment for everyone.'
+        };
+      case 'ban_24h':
+        return {
+          title: '🚫 Account Suspended for 24 Hours',
+          text: 'Your account has been suspended for 24 hours after our moderation team determined that your activity violated the Rheoa Community Guidelines following one or more user reports.\n\nThis suspension is intended as a warning. Any further violations of our rules may result in a permanent ban from the platform.\n\nPlease take this time to review and follow the Community Guidelines to help keep Rheoa a safe and respectful community for everyone.'
+        };
+      case 'ban_48h':
+        return {
+          title: '🚫 Account Suspended for 48 Hours',
+          text: 'Your account has been suspended for 48 hours after our moderation team determined that your activity violated the Rheoa Community Guidelines following one or more user reports.\n\nThis suspension is intended as a warning. Any further violations of our rules may result in a permanent ban from the platform.\n\nPlease take this time to review and follow the Community Guidelines to help keep Rheoa a safe and respectful community for everyone.'
+        };
+      case 'ban_7d':
+        return {
+          title: '🚫 Account Suspended for 7 Days',
+          text: 'Your account has been suspended for 7 days after our moderation team determined that your activity violated the Rheoa Community Guidelines following one or more user reports.\n\nThis suspension is intended as a warning. Any further violations of our rules may result in a permanent ban from the platform.\n\nPlease take this time to review and follow the Community Guidelines to help keep Rheoa a safe and respectful community for everyone.'
+        };
+      case 'ban_permanent':
+        return {
+          title: '🚫 Account Permanently Banned',
+          text: 'Your account has been permanently banned after repeated or serious violations of the Rheoa Community Guidelines. Following a review by our moderation team, we have determined that your account is no longer eligible to use the platform.\n\nThis decision has been made to protect the safety and integrity of the Rheoa community.'
+        };
+      default:
+        return {
+          title: '🚫 Account Actioned',
+          text: 'Your account has been actioned by moderators. Please contact support for more details.'
+        };
+    }
   }
 
   // ─── Safety Modal ──────────────────────────────────────────
@@ -1447,34 +1481,24 @@
       return;
     }
     if (data.banned) {
+      // Use the same logic: determine action from ban duration or use a fallback
+      let action = 'ban_permanent'; // default
       const banUntil = new Date(data.ban_until);
       const now = new Date();
       const diffMs = banUntil - now;
-      let title, text;
-      if (data.ban_until === '9999-12-31 23:59:59+00' || diffMs > 365 * 24 * 60 * 60 * 1000) {
-        title = '🚫 Account Permanently Banned';
-        text = 'Your account has been permanently banned after repeated or serious violations of the Rheoa Community Guidelines. Following a review by our moderation team, we have determined that your account is no longer eligible to use the platform.\n\nThis decision has been made to protect the safety and integrity of the Rheoa community.';
-      } else {
-        const hours = Math.ceil(diffMs / (1000 * 60 * 60));
-        let durationText;
-        if (hours <= 24) durationText = '24 Hours';
-        else if (hours <= 48) durationText = '48 Hours';
-        else if (hours <= 168) durationText = '7 days';
-        else durationText = `${hours} hours`;
-        title = `🚫 Account Suspended for ${durationText}`;
-        text = `Your account has been suspended for ${durationText} after our moderation team determined that your activity violated the Rheoa Community Guidelines following one or more user reports.\n\nThis suspension is intended as a warning. Any further violations of our rules may result in a permanent ban from the platform.\n\nPlease take this time to review and follow the Community Guidelines to help keep Rheoa a safe and respectful community for everyone.`;
-      }
-      showModerationModal(title, text);
-      // Prevent entering chat – we'll show the modal and stay on the page, but chat won't load.
-      // We'll redirect to dashboard after modal close.
+      const hours = Math.ceil(diffMs / (1000 * 60 * 60));
+      if (hours <= 24) action = 'ban_24h';
+      else if (hours <= 48) action = 'ban_48h';
+      else if (hours <= 168) action = 'ban_7d';
+      else if (banUntil.getFullYear() === 9999) action = 'ban_permanent';
+      const modText = getModerationText(action);
+      showModerationModal(modText.title, modText.text);
       document.getElementById('modCloseBtn').onclick = function() {
         closeModerationModal();
         window.location.href = 'dashboard.html';
       };
-      throw new Error('Banned'); // stop further init
+      throw new Error('Banned');
     }
-    // Check for warning: we can display a warning modal but allow entry.
-    // For simplicity, we'll not auto-show warning on entry; warning is sent via moderation action.
   }
 
   // ─── User Notification Channel (for kicks) ──────────────
@@ -1483,56 +1507,31 @@
     if (userNotificationChannel) userNotificationChannel.unsubscribe();
     userNotificationChannel = sb.channel(`user-${currentPlayer.id}`);
     userNotificationChannel.on('broadcast', { event: 'moderation' }, (payload) => {
-      const { action, reason, ban_until } = payload.payload;
+      const { action, ban_until } = payload.payload;
       if (action === 'kick') {
-        // User is being kicked due to a ban.
-        // Show the appropriate ban modal.
-        let title, text;
-        const banUntil = ban_until ? new Date(ban_until) : null;
-        const now = new Date();
-        if (banUntil && banUntil > now) {
-          const diffMs = banUntil - now;
-          const hours = Math.ceil(diffMs / (1000 * 60 * 60));
-          let durationText;
-          if (hours <= 24) durationText = '24 Hours';
-          else if (hours <= 48) durationText = '48 Hours';
-          else if (hours <= 168) durationText = '7 days';
-          else durationText = `${hours} hours`;
-          if (banUntil.getFullYear() === 9999) {
-            title = '🚫 Account Permanently Banned';
-            text = 'Your account has been permanently banned after repeated or serious violations of the Rheoa Community Guidelines. Following a review by our moderation team, we have determined that your account is no longer eligible to use the platform.\n\nThis decision has been made to protect the safety and integrity of the Rheoa community.';
-          } else {
-            title = `🚫 Account Suspended for ${durationText}`;
-            text = `Your account has been suspended for ${durationText} after our moderation team determined that your activity violated the Rheoa Community Guidelines following one or more user reports.\n\nThis suspension is intended as a warning. Any further violations of our rules may result in a permanent ban from the platform.\n\nPlease take this time to review and follow the Community Guidelines to help keep Rheoa a safe and respectful community for everyone.`;
-          }
-        } else {
-          // Fallback
-          title = '🚫 Account Actioned';
-          text = 'Your account has been actioned by moderators. Please treat this warning seriously. Continued or repeated violations may result in actions against your account, including temporary restrictions, suspension, or permanent removal from the platform.';
-        }
-        showModerationModal(title, text);
+        // Use the action string to display the correct modal
+        // The payload also includes 'action_type' from the backend
+        const actionType = payload.payload.action_type || 'ban_24h'; // fallback
+        const modText = getModerationText(actionType);
+        showModerationModal(modText.title, modText.text);
         document.getElementById('modCloseBtn').onclick = function() {
           closeModerationModal();
           window.location.href = 'dashboard.html';
         };
-        // Also unsubscribe from chat channels and clean up.
+        // Clean up chat
         if (messageChannel) messageChannel.unsubscribe();
         if (userNotificationChannel) userNotificationChannel.unsubscribe();
-        // Close all DMs
         openDMs.forEach(dm => {
           if (dm.channel) dm.channel.unsubscribe();
           if (dm.windowElement.parentNode) dm.windowElement.parentNode.removeChild(dm.windowElement);
         });
         openDMs = [];
         document.getElementById('dmTaskbar').innerHTML = '';
-        // Also hide chat UI? We'll let the modal cover it.
       } else if (action === 'warning') {
-        // Show warning modal but allow continuing.
-        const warningText = '⚠️ Official Warning from Rheoa Administration\n\nThis is an official warning from the Rheoa Administration. Your account has been reported for behavior that appears to violate our Community Guidelines and has been reviewed by our moderation team.\n\nPlease treat this warning seriously. Continued or repeated violations may result in actions against your account, including temporary restrictions, suspension, or permanent removal from the platform.\n\nWe encourage you to review and follow the Community Guidelines to help keep Rheoa a safe and respectful environment for everyone.';
-        showModerationModal('⚠️ Official Warning', warningText);
+        const modText = getModerationText('warning');
+        showModerationModal(modText.title, modText.text);
         document.getElementById('modCloseBtn').onclick = function() {
           closeModerationModal();
-          // Allow user to continue.
         };
       }
     });
@@ -2880,8 +2879,8 @@
         event: 'moderation',
         payload: {
           action: 'kick',
-          reason: data.message,
-          ban_until: banUntil
+          ban_until: banUntil,
+          action_type: action  // <-- pass the action string for display
         }
       });
       // Unsubscribe to clean up
