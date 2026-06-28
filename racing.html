@@ -774,7 +774,7 @@ async function loadPlayerData() {
       await loadVehicleTypes();
       await loadLeaderboard();
       await loadRaceHistory();
-      await checkActiveRaceParticipation(); // new: check if player is already in a race
+      await checkActiveRaceParticipation();
     }
   } catch (error) {
     console.error('Error loading player:', error);
@@ -908,28 +908,76 @@ async function loadVehicleTypes() {
   }
 }
 
-// Load leaderboard
+// ─── Leaderboard (fixed – no external table) ───────────────
 async function loadLeaderboard() {
   try {
+    // Fetch all race history records with player info
     const { data, error } = await sb
-      .from('racing_leaderboard')
-      .select('*')
-      .order('total_earnings', { ascending: false })
-      .limit(20);
-    
+      .from('race_history')
+      .select(`
+        player_id,
+        players!inner (username),
+        position,
+        earnings
+      `);
     if (error) {
-      console.error('❌ Leaderboard Error:', error);
-      showToast(`Error loading leaderboard: ${error.message}`, 'error');
+      console.error('Leaderboard query error:', error);
+      document.getElementById('leaderboardBody').innerHTML = '<tr><td colspan="6" class="empty-message">Error loading leaderboard</td></tr>';
       return;
     }
-    
-    leaderboard = data || [];
-    renderLeaderboard();
-  } catch (error) {
-    console.error('❌ Leaderboard Exception:', error);
-    showToast('Error loading leaderboard: ' + error.message, 'error');
+    if (!data || data.length === 0) {
+      document.getElementById('leaderboardBody').innerHTML = '<tr><td colspan="6" class="empty-message">No race data yet</td></tr>';
+      return;
+    }
+    // Compute stats per player
+    const statsMap = {};
+    data.forEach(record => {
+      const pid = record.player_id;
+      if (!statsMap[pid]) {
+        statsMap[pid] = {
+          username: record.players.username,
+          total_races: 0,
+          total_wins: 0,
+          total_earnings: 0,
+        };
+      }
+      statsMap[pid].total_races++;
+      if (record.position === 1) statsMap[pid].total_wins++;
+      statsMap[pid].total_earnings += (record.earnings || 0);
+    });
+    // Convert to array and sort by total_earnings descending
+    const leaderboardArray = Object.values(statsMap).sort((a, b) => b.total_earnings - a.total_earnings);
+    renderLeaderboard(leaderboardArray);
+  } catch (err) {
+    console.error(err);
+    document.getElementById('leaderboardBody').innerHTML = '<tr><td colspan="6" class="empty-message">Error loading leaderboard</td></tr>';
   }
 }
+
+function renderLeaderboard(leaderboardData) {
+  const tbody = document.getElementById('leaderboardBody');
+  if (!leaderboardData || leaderboardData.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" class="empty-message">No race data yet</td></tr>';
+    return;
+  }
+  tbody.innerHTML = leaderboardData.map((entry, index) => {
+    const winRate = entry.total_races > 0 
+      ? ((entry.total_wins / entry.total_races) * 100).toFixed(1)
+      : 0;
+    return `
+       <tr>
+        <td>#${index + 1}</td>
+        <td>${escapeHtml(entry.username)}</td>
+        <td>${entry.total_races}</td>
+        <td>${entry.total_wins}</td>
+        <td>${winRate}%</td>
+        <td>₹${(entry.total_earnings || 0).toLocaleString()}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+// ─── Remaining functions (unchanged) ──────────────────────
 
 // Load race history
 async function loadRaceHistory() {
@@ -1089,8 +1137,7 @@ function renderRaces() {
             const vehicleName = vehicle ? (vehicle.nickname || (vehicle.vehicle_types?.name || 'Unknown')) : 'Unknown';
             return `
               <div class="participant-item">
-                <span>${escapeHtml(p.players?.username || 'Unknown')
-} (${escapeHtml(vehicleName)})</span>
+                <span>${escapeHtml(p.players?.username || 'Unknown')} (${escapeHtml(vehicleName)})</span>
                 ${p.player_id !== currentPlayer.id ? `
                   <button class="bet-btn" style="padding: 2px 8px; font-size: 0.8rem;" 
                           onclick="openBetModal('${race.id}', '${p.id}', '${p.players?.username || 'Unknown'}')">
@@ -1143,33 +1190,6 @@ function renderShop() {
       </button>
     </div>
   `).join('');
-}
-
-// Render leaderboard
-function renderLeaderboard() {
-  const tbody = document.getElementById('leaderboardBody');
-  
-  if (!leaderboard.length) {
-    tbody.innerHTML = '<tr><td colspan="6" class="empty-message">No race data yet</td></tr>';
-    return;
-  }
-  
-  tbody.innerHTML = leaderboard.map((entry, index) => {
-    const winRate = entry.total_races > 0 
-      ? ((entry.total_wins / entry.total_races) * 100).toFixed(1)
-      : 0;
-    
-    return `
-       <tr>
-        <td>#${index + 1}</td>
-        <td>${entry.username || 'Unknown'}</td>
-        <td>${entry.total_races}</td>
-        <td>${entry.total_wins}</td>
-        <td>${winRate}%</td>
-        <td>₹${(entry.total_earnings || 0).toLocaleString()}</td>
-      </tr>
-    `;
-  }).join('');
 }
 
 // Render history
