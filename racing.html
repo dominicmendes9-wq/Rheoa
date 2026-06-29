@@ -4,7 +4,7 @@
   <title>Rheoa RPG - Racing</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    /* ─── All styles unchanged (including racers tab) ─── */
+    /* ─── All styles unchanged (same as before) ─── */
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
@@ -285,7 +285,7 @@
     .profit { color: #4CAF50; }
     .loss { color: #f44336; }
 
-    /* ─── Racers Tab (unchanged) ─── */
+    /* ─── Racers Tab ─── */
     .racers-container {
       display: flex;
       gap: 20px;
@@ -382,6 +382,7 @@
       font-weight: bold;
     }
 
+    /* Challenge Modal */
     .challenge-modal {
       display: none;
       position: fixed;
@@ -707,26 +708,37 @@
   }
 
   async function loadRaces() {
-    const { data, error } = await sb
-      .from('races')
-      .select('*')
-      .in('status', ['open', 'upcoming'])
-      .order('created_at', { ascending: false }); // show newest first
-    if (error) { console.error(error); return; }
-    const racesWithParticipants = [];
-    for (const race of data || []) {
-      const { data: participants } = await sb
-        .from('race_participants')
-        .select(`
-          id, player_id, vehicle_id, bet_amount,
-          players (username),
-          player_vehicles:vehicle_id (nickname, vehicle_types:vehicle_type_id (name))
-        `)
-        .eq('race_id', race.id);
-      racesWithParticipants.push({ ...race, race_participants: participants || [] });
+    try {
+      const { data, error } = await sb
+        .from('races')
+        .select('*')
+        .in('status', ['open', 'upcoming']);
+        // Removed .order() to avoid column error
+
+      if (error) {
+        console.error('❌ Races error:', error);
+        showToast('Error loading races: ' + error.message, 'error');
+        return;
+      }
+
+      const racesWithParticipants = [];
+      for (const race of data || []) {
+        const { data: participants } = await sb
+          .from('race_participants')
+          .select(`
+            id, player_id, vehicle_id, bet_amount,
+            players (username),
+            player_vehicles:vehicle_id (nickname, vehicle_types:vehicle_type_id (name))
+          `)
+          .eq('race_id', race.id);
+        racesWithParticipants.push({ ...race, race_participants: participants || [] });
+      }
+      races = racesWithParticipants;
+      renderRaces();
+    } catch (error) {
+      console.error('❌ Races exception:', error);
+      showToast('Error loading races: ' + error.message, 'error');
     }
-    races = racesWithParticipants;
-    renderRaces();
   }
 
   async function loadVehicleTypes() {
@@ -1220,7 +1232,6 @@
       showToast(error.message, 'error');
     } else if (data.success) {
       showToast('🏁 Race started! Results recorded.', 'success');
-      // Refresh races, leaderboard, history
       await loadRaces();
       await loadLeaderboard();
       await loadRaceHistory();
