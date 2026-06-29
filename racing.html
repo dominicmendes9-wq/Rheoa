@@ -4,7 +4,7 @@
   <title>Rheoa RPG - Racing</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    /* ─── All styles unchanged ─── */
+    /* ─── All styles unchanged (including racers tab) ─── */
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
@@ -216,7 +216,7 @@
       border-bottom: 1px dashed #eee;
     }
 
-    .join-btn, .quit-btn {
+    .join-btn, .quit-btn, .start-btn {
       width: 100%;
       padding: 12px;
       border: none;
@@ -231,6 +231,9 @@
     .join-btn:disabled { background: #ccc; cursor: not-allowed; }
     .quit-btn { background: #f44336; color: white; }
     .quit-btn:hover { background: #d32f2f; }
+    .start-btn { background: #ff9800; color: white; }
+    .start-btn:hover:not(:disabled) { background: #f57c00; }
+    .start-btn:disabled { background: #ccc; cursor: not-allowed; }
 
     .shop-card { text-align: center; }
     .shop-price { font-size: 1.5rem; font-weight: bold; color: #4CAF50; margin: 15px 0; }
@@ -282,7 +285,7 @@
     .profit { color: #4CAF50; }
     .loss { color: #f44336; }
 
-    /* ─── Racers Tab ─── */
+    /* ─── Racers Tab (unchanged) ─── */
     .racers-container {
       display: flex;
       gap: 20px;
@@ -379,7 +382,6 @@
       font-weight: bold;
     }
 
-    /* Challenge Modal */
     .challenge-modal {
       display: none;
       position: fixed;
@@ -617,7 +619,6 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 <script>
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // SUPABASE INIT
   const sb = window.supabase.createClient(
     "https://mtiwodvsrwvrujbhmmrn.supabase.co",
     "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
@@ -671,7 +672,6 @@
       currentPlayer = player;
       updatePlayerStats();
 
-      // Load all data in parallel
       await Promise.all([
         loadVehicles(),
         loadRaces(),
@@ -711,7 +711,7 @@
       .from('races')
       .select('*')
       .in('status', ['open', 'upcoming'])
-      .order('start_time');
+      .order('created_at', { ascending: false }); // show newest first
     if (error) { console.error(error); return; }
     const racesWithParticipants = [];
     for (const race of data || []) {
@@ -841,16 +841,19 @@
     }
     grid.innerHTML = races.map(race => {
       const participants = race.race_participants || [];
-      const startTime = new Date(race.start_time).toLocaleString();
       const hasJoined = participants.some(p => p.player_id === currentPlayer.id);
       const totalPrize = (race.prize_pool || 0) + (race.base_prize || 0);
+      const isFull = participants.length >= race.max_participants;
+      const isOpen = race.status === 'open';
       let joinDisabled = false;
       let joinButtonText = 'Join Race';
       if (hasJoined) { joinButtonText = 'Already Joined'; joinDisabled = true; }
-      else if (participants.length >= race.max_participants) { joinButtonText = 'Race Full'; joinDisabled = true; }
+      else if (isFull) { joinButtonText = 'Race Full'; joinDisabled = true; }
       else if (!vehicles.length) { joinButtonText = 'Need a Vehicle'; joinDisabled = true; }
       else if (currentPlayer.level < race.min_level) { joinButtonText = `Need Level ${race.min_level}`; joinDisabled = true; }
-      const showQuit = hasJoined && (race.status === 'open' || race.status === 'upcoming');
+      const showQuit = hasJoined && isOpen;
+      const showStart = hasJoined && isFull && isOpen;
+
       return `
         <div class="race-card">
           <div class="race-header">
@@ -862,7 +865,7 @@
             <div class="detail-item"><div class="detail-label">Track</div><div class="detail-value">${(race.track_length / 1000).toFixed(1)}km</div></div>
             <div class="detail-item"><div class="detail-label">Entry Fee</div><div class="detail-value">₹${race.entry_fee?.toLocaleString() || 0}</div></div>
             <div class="detail-item"><div class="detail-label">Min Level</div><div class="detail-value">${race.min_level}</div></div>
-            <div class="detail-item"><div class="detail-label">Start</div><div class="detail-value">${startTime}</div></div>
+            <div class="detail-item"><div class="detail-label">Status</div><div class="detail-value">${isFull ? 'Full' : participants.length + '/' + race.max_participants}</div></div>
           </div>
           <div class="prize-pool">🏆 Prize Pool: ₹${totalPrize.toLocaleString()}</div>
           <div class="race-participants">
@@ -876,6 +879,7 @@
           </div>
           <button class="join-btn" onclick="joinRace('${race.id}')" ${joinDisabled ? 'disabled' : ''}>${joinButtonText}</button>
           ${showQuit ? `<button class="quit-btn" onclick="quitRace('${race.id}')">🚪 Quit Race</button>` : ''}
+          ${showStart ? `<button class="start-btn" onclick="startPublicRace('${race.id}')">🏁 Start Race</button>` : ''}
         </div>
       `;
     }).join('');
@@ -936,40 +940,30 @@
     `).join('');
   }
 
-  // ─── Racers Presence & Chat (FIXED) ─────────────────────
+  // ─── Racers Presence & Chat ─────────────────────────────
   async function setupRacingPresence() {
     try {
-      // Fixed UUID for the Racing Chat room (must exist in DB)
       const FIXED_ROOM_ID = '123e4567-e89b-12d3-a456-426614174000';
-
-      // Verify the room exists
       const { data: room, error } = await sb
         .from('chat_rooms')
         .select('id')
         .eq('id', FIXED_ROOM_ID)
         .maybeSingle();
-
       if (error) throw error;
       if (!room) {
         showToast('Racing Chat room not found. Please contact admin.', 'error');
         return;
       }
-
       racingRoomId = FIXED_ROOM_ID;
 
-      // Subscribe to presence channel
       racingChannel = sb.channel(`racing-presence:${racingRoomId}`);
-
       racingChannel.on('presence', { event: 'sync' }, () => {
         const state = racingChannel.presenceState();
         const racers = [];
-        Object.keys(state).forEach(key => {
-          racers.push(...state[key]);
-        });
+        Object.keys(state).forEach(key => { racers.push(...state[key]); });
         onlineRacers = racers;
         renderRacersList();
       });
-
       racingChannel.on('broadcast', { event: 'message' }, (payload) => {
         const msg = payload.payload;
         appendRacingChatMessage(msg);
@@ -977,19 +971,16 @@
 
       await racingChannel.subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
-          // Track current user
           await racingChannel.track({
             user_id: currentPlayer.id,
             username: currentPlayer.username,
             level: currentPlayer.level,
             status: 'available'
           });
-          // Load chat history
           await loadRacingChatMessages(racingRoomId);
         }
       });
 
-      // Listen for new chat messages via database
       sb
         .channel('racing-chat-db')
         .on('postgres_changes', {
@@ -1070,7 +1061,6 @@
       container.innerHTML = '<div class="empty-message">No racers online</div>';
       return;
     }
-    // Deduplicate
     const uniqueRacers = [];
     const seen = new Set();
     onlineRacers.forEach(r => {
@@ -1220,6 +1210,25 @@
     selectedRaceForChallenge = null;
   }
 
+  // ─── Public Race Start ──────────────────────────────────
+  async function startPublicRace(raceId) {
+    if (!confirm('Start this race now? All participants will receive earnings based on their position.')) return;
+    const { data, error } = await sb.rpc('start_public_race', {
+      p_race_id: raceId
+    });
+    if (error) {
+      showToast(error.message, 'error');
+    } else if (data.success) {
+      showToast('🏁 Race started! Results recorded.', 'success');
+      // Refresh races, leaderboard, history
+      await loadRaces();
+      await loadLeaderboard();
+      await loadRaceHistory();
+    } else {
+      showToast(data.error || 'Failed to start race', 'error');
+    }
+  }
+
   // ─── Actions ─────────────────────────────────────────────
   async function buyVehicle(vehicleTypeId) {
     const nickname = prompt('Give your vehicle a nickname (optional):', '');
@@ -1278,7 +1287,6 @@
       const btn = document.querySelector(`.tab-btn[onclick*="${tabName}"]`);
       if (btn) btn.classList.add('active');
     }
-    // Refresh data when switching
     if (tabName === 'garage') loadVehicles();
     else if (tabName === 'races') loadRaces();
     else if (tabName === 'shop') loadVehicleTypes();
@@ -1291,7 +1299,6 @@
   // ─── Init ────────────────────────────────────────────────
   loadPlayerData();
 
-  // Auto-refresh races every 30 seconds
   setInterval(() => {
     const activeTab = document.querySelector('.tab-btn.active');
     if (activeTab && activeTab.textContent.includes('Races')) loadRaces();
@@ -1309,6 +1316,7 @@
   window.closeChallengeModal = closeChallengeModal;
   window.acceptIncomingChallenge = acceptIncomingChallenge;
   window.rejectIncomingChallenge = rejectIncomingChallenge;
+  window.startPublicRace = startPublicRace;
   window.goToDashboard = goToDashboard;
 </script>
 </body>
