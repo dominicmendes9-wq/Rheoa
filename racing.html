@@ -4,7 +4,7 @@
   <title>Rheoa RPG - Racing</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    /* ─── All styles unchanged ─── */
+    /* ─── All styles unchanged, plus challenge tab styles ─── */
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
@@ -58,6 +58,7 @@
       gap: 10px;
       margin-bottom: 30px;
       flex-wrap: wrap;
+      position: relative;
     }
 
     .tab-btn {
@@ -69,15 +70,28 @@
       background: white;
       cursor: pointer;
       transition: all 0.2s;
+      position: relative;
     }
 
     .tab-btn:hover { background: #333; color: white; }
     .tab-btn.active { background: #f44336; color: white; border-color: #f44336; }
 
+    .tab-btn .notification-dot {
+      position: absolute;
+      top: -4px;
+      right: -4px;
+      width: 12px;
+      height: 12px;
+      background: #f44336;
+      border-radius: 50%;
+      display: none;
+      border: 2px solid white;
+    }
+
     .tab-content { display: none; }
     .tab-content.active { display: block; }
 
-    .garage-section, .leaderboard-section {
+    .garage-section, .leaderboard-section, .challenges-section {
       background: white;
       border: 3px solid #f44336;
       border-radius: 15px;
@@ -285,6 +299,43 @@
     .profit { color: #4CAF50; }
     .loss { color: #f44336; }
 
+    /* ─── Challenges Tab ─── */
+    .challenge-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px;
+      border-bottom: 1px solid #eee;
+      background: #fafafa;
+      margin-bottom: 8px;
+      border-radius: 8px;
+    }
+    .challenge-item .info {
+      flex: 1;
+    }
+    .challenge-item .status {
+      font-weight: bold;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+    }
+    .status-pending { background: #ff9800; color: white; }
+    .status-accepted { background: #4CAF50; color: white; }
+    .status-rejected { background: #f44336; color: white; }
+    .status-expired { background: #999; color: white; }
+    .challenge-item .actions button {
+      margin-left: 8px;
+      padding: 4px 12px;
+      border: none;
+      border-radius: 20px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .challenge-item .actions .accept { background: #4CAF50; color: white; }
+    .challenge-item .actions .reject { background: #f44336; color: white; }
+    .challenge-item .actions .accept:hover { background: #388E3C; }
+    .challenge-item .actions .reject:hover { background: #D32F2F; }
+
     /* ─── Racers Tab ─── */
     .racers-container {
       display: flex;
@@ -489,6 +540,8 @@
       .race-details { grid-template-columns: 1fr; }
       .racers-container { flex-direction: column; }
       .racers-chat { height: 400px; }
+      .challenge-item { flex-direction: column; align-items: stretch; gap: 8px; }
+      .challenge-item .actions { text-align: center; }
     }
   </style>
 </head>
@@ -516,6 +569,10 @@
   <button class="tab-btn" onclick="switchTab('leaderboard', event)">📊 Leaderboard</button>
   <button class="tab-btn" onclick="switchTab('history', event)">📜 History</button>
   <button class="tab-btn" onclick="switchTab('racers', event)">👥 Racers</button>
+  <button class="tab-btn" id="challengesTabBtn" onclick="switchTab('challenges', event)">
+    📋 Challenges
+    <span class="notification-dot" id="challengeNotificationDot"></span>
+  </button>
 </div>
 
 <!-- Races Tab -->
@@ -587,6 +644,16 @@
   </div>
 </div>
 
+<!-- Challenges Tab -->
+<div id="challenges" class="tab-content">
+  <div class="challenges-section">
+    <div class="section-title">📋 Your Race Challenges</div>
+    <div id="challengesList">
+      <div class="empty-message"><div class="spinner"></div><p>Loading challenges...</p></div>
+    </div>
+  </div>
+</div>
+
 <!-- Challenge Modal -->
 <div class="challenge-modal" id="challengeModal">
   <div class="challenge-modal-content">
@@ -651,6 +718,7 @@
   let vehicleTypes = [];
   let raceHistory = [];
   let onlineRacers = [];
+  let challenges = [];
   let racingChannel = null;
   let challengeSubscription = null;
   let selectedChallengeTarget = null;
@@ -673,18 +741,19 @@
       currentPlayer = player;
       updatePlayerStats();
 
-      // Load data (no realtime subscriptions here)
+      // Load data
       await Promise.all([
         loadVehicles(),
         loadRaces(),
         loadVehicleTypes(),
         loadLeaderboard(),
-        loadRaceHistory()
+        loadRaceHistory(),
+        loadChallenges()
       ]);
 
-      // Initialize realtime only once – even if it fails, we set flag to avoid retries
+      // Initialize realtime only once
       if (!realtimeInitialized) {
-        realtimeInitialized = true; // set before calling to prevent re-entry
+        realtimeInitialized = true;
         try {
           await initRealtime();
         } catch (err) {
@@ -705,7 +774,7 @@
     document.getElementById('vehicleCount').textContent = vehicles.length;
   }
 
-  // ─── Load Data (data only, no subscriptions) ──────────
+  // ─── Load Data ───────────────────────────────────────────
   async function loadVehicles() {
     const { data, error } = await sb
       .from('player_vehicles')
@@ -810,6 +879,19 @@
     if (error) { console.error(error); return; }
     raceHistory = data || [];
     renderHistory();
+  }
+
+  async function loadChallenges() {
+    try {
+      const { data, error } = await sb.rpc('get_player_challenges');
+      if (error) { throw error; }
+      challenges = data || [];
+      renderChallenges();
+      updateChallengeNotification();
+    } catch (error) {
+      console.error('Error loading challenges:', error);
+      document.getElementById('challengesList').innerHTML = '<div class="empty-message">Error loading challenges</div>';
+    }
   }
 
   // ─── Rendering ──────────────────────────────────────────
@@ -959,15 +1041,58 @@
     `).join('');
   }
 
-  // ─── Real-time Initialization (called once) ────────────
-  async function initRealtime() {
-    // We set the flag before calling, so this function may be called even if already set
-    // but we guard against double setup inside.
-    if (racingChannel && challengeSubscription) {
-      console.log('Realtime already initialized');
+  function renderChallenges() {
+    const container = document.getElementById('challengesList');
+    if (!challenges.length) {
+      container.innerHTML = '<div class="empty-message">No challenges yet.</div>';
       return;
     }
+    container.innerHTML = challenges.map(c => {
+      const isOutgoing = c.challenger_id === currentPlayer.id;
+      const otherName = isOutgoing ? c.challengee_name : c.challenger_name;
+      const statusClass = 'status-' + c.status;
+      const statusLabel = c.status.charAt(0).toUpperCase() + c.status.slice(1);
+      const canAccept = !isOutgoing && c.status === 'pending';
+      const canReject = !isOutgoing && c.status === 'pending';
+      const expires = new Date(c.expires_at);
+      const now = new Date();
+      const expired = expires < now && c.status === 'pending';
 
+      return `
+        <div class="challenge-item">
+          <div class="info">
+            <div><strong>${isOutgoing ? '→' : '←'} ${escapeHtml(otherName)}</strong></div>
+            <div>Race: ${escapeHtml(c.race_name)}</div>
+            <div style="font-size:0.8rem; color:#666;">
+              ${isOutgoing ? 'Sent' : 'Received'} ${new Date(c.created_at).toLocaleString()}
+              ${expired ? ' (Expired)' : ''}
+            </div>
+          </div>
+          <div>
+            <span class="status ${statusClass}">${statusLabel}</span>
+          </div>
+          <div class="actions">
+            ${canAccept && !expired ? `<button class="accept" onclick="handleChallenge('${c.id}', 'accept')">Accept</button>` : ''}
+            ${canReject && !expired ? `<button class="reject" onclick="handleChallenge('${c.id}', 'reject')">Reject</button>` : ''}
+            ${expired ? `<span style="font-size:0.8rem; color:#999;">Expired</span>` : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function updateChallengeNotification() {
+    const pendingIncoming = challenges.filter(c => c.challengee_id === currentPlayer.id && c.status === 'pending');
+    const dot = document.getElementById('challengeNotificationDot');
+    if (pendingIncoming.length > 0) {
+      dot.style.display = 'block';
+    } else {
+      dot.style.display = 'none';
+    }
+  }
+
+  // ─── Real-time Initialization ──────────────────────────
+  async function initRealtime() {
     await initRacingPresence();
     await initChallengeSubscription();
   }
@@ -975,7 +1100,6 @@
   async function initRacingPresence() {
     const FIXED_ROOM_ID = '123e4567-e89b-12d3-a456-426614174000';
 
-    // Verify room exists
     const { data: room, error } = await sb
       .from('chat_rooms')
       .select('id')
@@ -988,15 +1112,12 @@
     }
     racingRoomId = FIXED_ROOM_ID;
 
-    // Create channel and attach listeners BEFORE subscribe
     racingChannel = sb.channel(`racing-presence:${racingRoomId}`);
 
     racingChannel.on('presence', { event: 'sync' }, () => {
       const state = racingChannel.presenceState();
       const racers = [];
-      Object.keys(state).forEach(key => {
-        racers.push(...state[key]);
-      });
+      Object.keys(state).forEach(key => { racers.push(...state[key]); });
       onlineRacers = racers;
       renderRacersList();
     });
@@ -1006,7 +1127,6 @@
       appendRacingChatMessage(msg);
     });
 
-    // Now subscribe
     await racingChannel.subscribe(async (status) => {
       if (status === 'SUBSCRIBED') {
         await racingChannel.track({
@@ -1019,7 +1139,6 @@
       }
     });
 
-    // Database changes for chat messages
     sb
       .channel('racing-chat-db')
       .on('postgres_changes', {
@@ -1037,7 +1156,7 @@
   }
 
   async function initChallengeSubscription() {
-    // Create a new channel and attach listener BEFORE subscribe
+    // Subscribe to new incoming challenges
     challengeSubscription = sb.channel('challenges');
 
     challengeSubscription.on('postgres_changes', {
@@ -1047,93 +1166,26 @@
       filter: `challengee_id=eq.${currentPlayer.id}`
     }, (payload) => {
       const challenge = payload.new;
+      // Show the incoming challenge modal
       showIncomingChallenge(challenge);
+      // Refresh challenges list
+      loadChallenges();
+    });
+
+    // Also listen for updates to challenges (status changes) to refresh the list
+    challengeSubscription.on('postgres_changes', {
+      event: 'UPDATE',
+      schema: 'public',
+      table: 'pvp_challenges',
+      filter: `challengee_id=eq.${currentPlayer.id}`
+    }, (payload) => {
+      loadChallenges();
     });
 
     await challengeSubscription.subscribe();
   }
 
-  async function loadRacingChatMessages(roomId) {
-    try {
-      const { data, error } = await sb
-        .from('chat_messages')
-        .select('*, players!chat_messages_user_id_fkey (username)')
-        .eq('room_id', roomId)
-        .order('created_at', { ascending: true })
-        .limit(50);
-      if (error) throw error;
-      const container = document.getElementById('racingChatMessages');
-      container.innerHTML = data.map(msg => `
-        <div class="chat-message">
-          <span class="sender">${escapeHtml(msg.players?.username || 'System')}</span>
-          <span class="time">${new Date(msg.created_at).toLocaleTimeString()}</span>
-          <div>${escapeHtml(msg.content)}</div>
-        </div>
-      `).join('');
-      container.scrollTop = container.scrollHeight;
-    } catch (error) {
-      console.error('Load racing chat error:', error);
-    }
-  }
-
-  function appendRacingChatMessage(msg) {
-    const container = document.getElementById('racingChatMessages');
-    const username = msg.username || msg.players?.username || 'Unknown';
-    const time = new Date(msg.created_at).toLocaleTimeString();
-    const div = document.createElement('div');
-    div.className = 'chat-message';
-    div.innerHTML = `<span class="sender">${escapeHtml(username)}</span><span class="time">${time}</span><div>${escapeHtml(msg.content)}</div>`;
-    container.appendChild(div);
-    container.scrollTop = container.scrollHeight;
-  }
-
-  async function sendRacingChat() {
-    const input = document.getElementById('racingChatInput');
-    const text = input.value.trim();
-    if (!text || !racingRoomId) return;
-    input.value = '';
-    const { error } = await sb
-      .from('chat_messages')
-      .insert({
-        room_id: racingRoomId,
-        user_id: currentPlayer.id,
-        content: text,
-        created_at: new Date().toISOString()
-      });
-    if (error) {
-      console.error(error);
-      showToast('Failed to send message', 'error');
-    }
-  }
-
-  function renderRacersList() {
-    const container = document.getElementById('racersList');
-    if (!onlineRacers.length) {
-      container.innerHTML = '<div class="empty-message">No racers online</div>';
-      return;
-    }
-    const uniqueRacers = [];
-    const seen = new Set();
-    onlineRacers.forEach(r => {
-      if (!seen.has(r.user_id)) {
-        seen.add(r.user_id);
-        uniqueRacers.push(r);
-      }
-    });
-    container.innerHTML = uniqueRacers.map(racer => {
-      const isSelf = racer.user_id === currentPlayer.id;
-      const statusClass = racer.status === 'busy' ? 'busy' : 'available';
-      return `
-        <div class="racer-item" onclick="${isSelf ? '' : `openChallengeModal('${racer.user_id}', '${escapeHtml(racer.username)}')`}">
-          <span class="status-dot ${statusClass}"></span>
-          <span class="racer-name">${escapeHtml(racer.username)} ${isSelf ? '(You)' : ''}</span>
-          <span class="racer-level">Lv.${racer.level || '?'}</span>
-        </div>
-      `;
-    }).join('');
-  }
-
-  // ─── Challenges ──────────────────────────────────────────
+  // ─── Incoming Challenge Handling ──────────────────────
   function showIncomingChallenge(challenge) {
     sb
       .from('players')
@@ -1149,6 +1201,30 @@
       });
   }
 
+  // ─── Challenge Actions ──────────────────────────────────
+  async function handleChallenge(challengeId, action) {
+    const rpcName = action === 'accept' ? 'accept_race_challenge' : 'reject_race_challenge';
+    const { data, error } = await sb.rpc(rpcName, {
+      p_challenge_id: challengeId
+    });
+    if (error) {
+      showToast(error.message, 'error');
+      return;
+    }
+    if (data.success) {
+      showToast(data.message || `Challenge ${action}ed`, 'success');
+      await loadChallenges();
+      // Refresh leaderboard and history if accepted (race may have run)
+      if (action === 'accept') {
+        await loadLeaderboard();
+        await loadRaceHistory();
+      }
+    } else {
+      showToast(data.error || 'Failed to process challenge', 'error');
+    }
+  }
+
+  // ─── Challenge Modal Functions ──────────────────────────
   function openChallengeModal(targetUserId, targetUsername) {
     selectedChallengeTarget = { id: targetUserId, username: targetUsername };
     document.getElementById('challengeTargetName').textContent = `Challenge ${targetUsername}`;
@@ -1187,11 +1263,19 @@
     } else if (data.success) {
       showToast('Challenge sent!', 'success');
       closeChallengeModal();
+      await loadChallenges();
     } else {
       showToast(data.error || 'Failed to send challenge', 'error');
     }
   }
 
+  function closeChallengeModal() {
+    document.getElementById('challengeModal').style.display = 'none';
+    selectedChallengeTarget = null;
+    selectedRaceForChallenge = null;
+  }
+
+  // ─── Incoming Challenge Modal Handlers ──────────────────
   async function acceptIncomingChallenge() {
     if (!incomingChallengeId) return;
     const { data, error } = await sb.rpc('accept_race_challenge', {
@@ -1204,6 +1288,7 @@
       showToast('Race accepted! Results will appear shortly.', 'success');
       await loadLeaderboard();
       await loadRaceHistory();
+      await loadChallenges();
       await racingChannel.track({
         user_id: currentPlayer.id,
         username: currentPlayer.username,
@@ -1234,16 +1319,11 @@
       showToast(error.message, 'error');
     } else if (data.success) {
       showToast('Challenge rejected', 'info');
+      await loadChallenges();
     } else {
       showToast(data.error || 'Failed to reject', 'error');
     }
     incomingChallengeId = null;
-  }
-
-  function closeChallengeModal() {
-    document.getElementById('challengeModal').style.display = 'none';
-    selectedChallengeTarget = null;
-    selectedRaceForChallenge = null;
   }
 
   // ─── Public Race Start ──────────────────────────────────
@@ -1327,6 +1407,7 @@
     else if (tabName === 'shop') loadVehicleTypes();
     else if (tabName === 'leaderboard') loadLeaderboard();
     else if (tabName === 'history') loadRaceHistory();
+    else if (tabName === 'challenges') loadChallenges();
   }
 
   function goToDashboard() { window.location.href = 'dashboard.html'; }
@@ -1352,6 +1433,7 @@
   window.acceptIncomingChallenge = acceptIncomingChallenge;
   window.rejectIncomingChallenge = rejectIncomingChallenge;
   window.startPublicRace = startPublicRace;
+  window.handleChallenge = handleChallenge;
   window.goToDashboard = goToDashboard;
 </script>
 </body>
