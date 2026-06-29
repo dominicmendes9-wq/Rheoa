@@ -848,8 +848,17 @@
     }
     racingRoomId = FIXED_ROOM_ID;
 
-    // 1. Presence channel (for online racers)
+    // 1. Presence channel (for online racers + broadcast messages)
     racingChannel = sb.channel(`racing-presence:${racingRoomId}`);
+
+    // Broadcast listener for chat messages (instant delivery)
+    racingChannel.on('broadcast', { event: 'message' }, (payload) => {
+      const msg = payload.payload;
+      // Append message (will be deduplicated by ID if already present)
+      appendChatMessage(msg);
+    });
+
+    // Presence sync
     racingChannel.on('presence', { event: 'sync' }, () => {
       const state = racingChannel.presenceState();
       const racers = [];
@@ -857,6 +866,7 @@
       onlineRacers = racers;
       renderRacers();
     });
+
     await racingChannel.subscribe(async (status) => {
       if (status === 'SUBSCRIBED') {
         await racingChannel.track({
@@ -869,7 +879,7 @@
       }
     });
 
-    // 2. Chat messages via DB subscription (realtime)
+    // 2. Chat messages via DB subscription (fallback + persistence)
     chatDbSubscription = sb
       .channel('racing-chat-db')
       .on('postgres_changes', {
@@ -879,7 +889,6 @@
         filter: `room_id=eq.${racingRoomId}`
       }, (payload) => {
         const msg = payload.new;
-        // Append every message (including our own) – we deduplicate by checking if it already exists
         appendChatMessage(msg);
       })
       .subscribe((status) => {
@@ -921,7 +930,7 @@
     if (error) { console.error(error); return; }
     const container = document.getElementById('racingChatMessages');
     container.innerHTML = data.map(msg => `
-      <div class="chat-message">
+      <div class="chat-message" data-msg-id="${msg.id}">
         <span class="sender">${escapeHtml(msg.players?.username || 'System')}</span>
         <span class="time">${new Date(msg.created_at).toLocaleTimeString()}</span>
         <div>${escapeHtml(msg.content)}</div>
@@ -931,7 +940,7 @@
   }
 
   function appendChatMessage(msg) {
-    // Check if message already exists in UI to avoid duplicates
+    // Deduplicate: check if message already exists in DOM
     const container = document.getElementById('racingChatMessages');
     const existing = container.querySelector(`[data-msg-id="${msg.id}"]`);
     if (existing) return;
@@ -952,9 +961,9 @@
     if (!text || !racingRoomId) return;
     input.value = '';
 
-    // Create a temporary message object with a local ID
+    // Generate a temporary ID for optimistic rendering
     const tempId = 'temp-' + Date.now();
-    const tempMsg = {
+    const newMsg = {
       id: tempId,
       user_id: currentPlayer.id,
       content: text,
@@ -962,26 +971,45 @@
       players: { username: currentPlayer.username }
     };
 
-    // Append optimistically
-    appendChatMessage(tempMsg);
+    // 1. Append optimistically (local)
+    appendChatMessage(newMsg);
 
-    // Insert into DB
-    const { error } = await sb
+    // 2. Insert into DB
+    const { data, error } = await sb
       .from('race_chat_messages')
       .insert({
         room_id: racingRoomId,
         user_id: currentPlayer.id,
         content: text,
-        created_at: tempMsg.created_at
-      });
+        created_at: newMsg.created_at
+      })
+      .select()
+      .single();
 
     if (error) {
       console.error(error);
       showToast('Failed to send message', 'error');
-      // Remove the optimistic message if failed
-      const container = document.getElementById('racingChatMessages');
-      const el = container.querySelector(`[data-msg-id="${tempId}"]`);
+      // Remove optimistic message if DB insert failed
+      const el = document.querySelector(`[data-msg-id="${tempId}"]`);
       if (el) el.remove();
+      return;
+    }
+
+    // 3. Broadcast to all online clients via presence channel
+    const finalMsg = data || newMsg; // use DB returned message if available
+    await racingChannel.send({
+      type: 'broadcast',
+      event: 'message',
+      payload: finalMsg
+    });
+
+    // 4. Replace temporary message with the real one from DB (if IDs differ)
+    if (tempId !== finalMsg.id) {
+      const tempEl = document.querySelector(`[data-msg-id="${tempId}"]`);
+      if (tempEl) {
+        tempEl.setAttribute('data-msg-id', finalMsg.id);
+        // optionally update content if needed
+      }
     }
   }
 
