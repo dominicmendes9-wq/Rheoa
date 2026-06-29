@@ -513,6 +513,7 @@
   let racingRoomId = null;
   let realtimeInit = false;
   let chatDbSubscription = null;
+  let raceEntriesSubscription = null; // new
 
   // ─── Auth & Player ──────────────────────────────────────
   async function loadPlayerData() {
@@ -848,17 +849,14 @@
     }
     racingRoomId = FIXED_ROOM_ID;
 
-    // 1. Presence channel (for online racers + broadcast messages)
+    // 1. Presence channel (online racers + broadcast chat)
     racingChannel = sb.channel(`racing-presence:${racingRoomId}`);
 
-    // Broadcast listener for chat messages (instant delivery)
     racingChannel.on('broadcast', { event: 'message' }, (payload) => {
       const msg = payload.payload;
-      // Append message (will be deduplicated by ID if already present)
       appendChatMessage(msg);
     });
 
-    // Presence sync
     racingChannel.on('presence', { event: 'sync' }, () => {
       const state = racingChannel.presenceState();
       const racers = [];
@@ -879,7 +877,7 @@
       }
     });
 
-    // 2. Chat messages via DB subscription (fallback + persistence)
+    // 2. Chat messages via DB subscription
     chatDbSubscription = sb
       .channel('racing-chat-db')
       .on('postgres_changes', {
@@ -891,13 +889,22 @@
         const msg = payload.new;
         appendChatMessage(msg);
       })
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          console.log('Racing chat DB subscription active');
-        }
-      });
+      .subscribe();
 
-    // 3. Challenge subscription
+    // 3. Race entries real‑time updates – NEW
+    raceEntriesSubscription = sb
+      .channel('race-entries-changes')
+      .on('postgres_changes', {
+        event: '*',           // catches INSERT, UPDATE, DELETE
+        schema: 'public',
+        table: 'race_entries'
+      }, (payload) => {
+        // Reload races to update participant lists and counts
+        loadRaces();
+      })
+      .subscribe();
+
+    // 4. Challenges subscription
     challengeSubscription = sb.channel('challenges');
     challengeSubscription.on('postgres_changes', {
       event: 'INSERT',
@@ -940,7 +947,6 @@
   }
 
   function appendChatMessage(msg) {
-    // Deduplicate: check if message already exists in DOM
     const container = document.getElementById('racingChatMessages');
     const existing = container.querySelector(`[data-msg-id="${msg.id}"]`);
     if (existing) return;
@@ -961,7 +967,6 @@
     if (!text || !racingRoomId) return;
     input.value = '';
 
-    // Generate a temporary ID for optimistic rendering
     const tempId = 'temp-' + Date.now();
     const newMsg = {
       id: tempId,
@@ -971,10 +976,8 @@
       players: { username: currentPlayer.username }
     };
 
-    // 1. Append optimistically (local)
     appendChatMessage(newMsg);
 
-    // 2. Insert into DB
     const { data, error } = await sb
       .from('race_chat_messages')
       .insert({
@@ -989,26 +992,22 @@
     if (error) {
       console.error(error);
       showToast('Failed to send message', 'error');
-      // Remove optimistic message if DB insert failed
       const el = document.querySelector(`[data-msg-id="${tempId}"]`);
       if (el) el.remove();
       return;
     }
 
-    // 3. Broadcast to all online clients via presence channel
-    const finalMsg = data || newMsg; // use DB returned message if available
+    const finalMsg = data || newMsg;
     await racingChannel.send({
       type: 'broadcast',
       event: 'message',
       payload: finalMsg
     });
 
-    // 4. Replace temporary message with the real one from DB (if IDs differ)
     if (tempId !== finalMsg.id) {
       const tempEl = document.querySelector(`[data-msg-id="${tempId}"]`);
       if (tempEl) {
         tempEl.setAttribute('data-msg-id', finalMsg.id);
-        // optionally update content if needed
       }
     }
   }
