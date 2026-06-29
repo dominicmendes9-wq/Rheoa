@@ -4,7 +4,6 @@
   <title>Rheoa RPG - Racing</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    /* (keep existing CSS unchanged) */
     * {
       box-sizing: border-box;
       margin: 0;
@@ -33,7 +32,6 @@
       font-style: italic;
     }
     
-    /* Player Stats Bar */
     .player-stats {
       display: flex;
       justify-content: space-between;
@@ -67,7 +65,6 @@
       font-weight: bold;
     }
     
-    /* Racing Tabs */
     .racing-tabs {
       display: flex;
       justify-content: center;
@@ -98,7 +95,6 @@
       border-color: #f44336;
     }
     
-    /* Tab Content */
     .tab-content {
       display: none;
     }
@@ -107,7 +103,6 @@
       display: block;
     }
     
-    /* Garage Section */
     .garage-section {
       background: white;
       border: 3px solid #f44336;
@@ -137,16 +132,36 @@
       background: #fff5f5;
     }
     
+    .vehicle-banner {
+      width: 100%;
+      height: 150px;
+      object-fit: cover;
+      border-radius: 6px;
+      margin-bottom: 10px;
+      background: #eee;
+    }
+    
     .vehicle-header {
       display: flex;
-      justify-content: space-between;
       align-items: center;
+      gap: 10px;
       margin-bottom: 10px;
+    }
+    
+    .vehicle-thumb {
+      width: 40px;
+      height: 40px;
+      object-fit: cover;
+      border-radius: 50%;
+      border: 2px solid #f44336;
+      background: #eee;
+      flex-shrink: 0;
     }
     
     .vehicle-name {
       font-size: 1.2rem;
       font-weight: bold;
+      flex: 1;
     }
     
     .vehicle-type {
@@ -155,6 +170,7 @@
       padding: 3px 10px;
       border-radius: 15px;
       font-size: 0.8rem;
+      white-space: nowrap;
     }
     
     .vehicle-stats {
@@ -189,7 +205,6 @@
     .condition-warning { color: #ff9800; }
     .condition-critical { color: #f44336; }
     
-    /* Races Grid */
     .races-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
@@ -312,7 +327,6 @@
       background: #d32f2f;
     }
     
-    /* Shop Grid */
     .shop-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -325,6 +339,33 @@
       padding: 20px;
       background: white;
       text-align: center;
+    }
+    
+    .shop-card .vehicle-banner {
+      width: 100%;
+      height: 150px;
+      object-fit: cover;
+      border-radius: 6px;
+      margin-bottom: 10px;
+      background: #eee;
+    }
+    
+    .shop-card .vehicle-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      justify-content: center;
+      margin-bottom: 10px;
+    }
+    
+    .shop-card .vehicle-thumb {
+      width: 40px;
+      height: 40px;
+      object-fit: cover;
+      border-radius: 50%;
+      border: 2px solid #f44336;
+      background: #eee;
+      flex-shrink: 0;
     }
     
     .shop-price {
@@ -354,7 +395,6 @@
       cursor: not-allowed;
     }
     
-    /* Leaderboard Table */
     .leaderboard-section {
       background: white;
       border: 3px solid #f44336;
@@ -391,7 +431,6 @@
       background: #fff5f5;
     }
     
-    /* History List */
     .history-list {
       max-height: 400px;
       overflow-y: auto;
@@ -418,7 +457,6 @@
     .profit { color: #4CAF50; }
     .loss { color: #f44336; }
     
-    /* Bet Modal */
     .modal {
       display: none;
       position: fixed;
@@ -484,7 +522,6 @@
       color: white;
     }
     
-    /* Back Button */
     .back-button {
       display: block;
       width: 200px;
@@ -506,7 +543,6 @@
       transform: scale(1.02);
     }
     
-    /* Toast Notifications */
     .toast-container {
       position: fixed;
       top: 20px;
@@ -710,7 +746,7 @@ const sb = window.supabase.createClient(
   "https://mtiwodvsrwvrujbhmmrn.supabase.co",
   "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
 );
-// XSS protection – turns dangerous characters into safe text
+// XSS protection
 function escapeHtml(str) {
     if (!str) return '';
     return str
@@ -730,26 +766,20 @@ let selectedRace = null;
 let selectedParticipant = null;
 let activeRaceParticipation = null;
 
-// Toast notification
 function showToast(message, type = 'info', duration = 3000) {
   const container = document.getElementById('toast-container');
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
   toast.textContent = message;
-  
   container.appendChild(toast);
-  
   setTimeout(() => {
     toast.classList.add('fade-out');
     setTimeout(() => {
-      if (toast.parentNode) {
-        container.removeChild(toast);
-      }
+      if (toast.parentNode) container.removeChild(toast);
     }, 300);
   }, duration);
 }
 
-// Load player data
 async function loadPlayerData() {
   try {
     const { data: { user } } = await sb.auth.getUser();
@@ -782,7 +812,6 @@ async function loadPlayerData() {
   }
 }
 
-// Update player stats display
 function updatePlayerStats() {
   document.getElementById('playerStats').style.display = 'flex';
   document.getElementById('playerCash').textContent = `₹${currentPlayer.cash.toLocaleString()}`;
@@ -790,7 +819,6 @@ function updatePlayerStats() {
   document.getElementById('vehicleCount').textContent = vehicles.length;
 }
 
-// Check if player is already in a race that is not finished
 async function checkActiveRaceParticipation() {
   try {
     const { data, error } = await sb
@@ -812,7 +840,6 @@ async function checkActiveRaceParticipation() {
   }
 }
 
-// Load vehicles
 async function loadVehicles() {
   try {
     const { data: vehiclesData, error: vehiclesError } = await sb
@@ -835,7 +862,6 @@ async function loadVehicles() {
   }
 }
 
-// Load races (with participants)
 async function loadRaces() {
   try {
     const { data: racesData, error: racesError } = await sb
@@ -885,7 +911,6 @@ async function loadRaces() {
   }
 }
 
-// Load vehicle types
 async function loadVehicleTypes() {
   try {
     const { data, error } = await sb
@@ -907,7 +932,6 @@ async function loadVehicleTypes() {
   }
 }
 
-// ─── Leaderboard (fixed) ───────────────────────────────
 async function loadLeaderboard() {
   try {
     const { data, error } = await sb
@@ -973,7 +997,6 @@ function renderLeaderboard(leaderboardData) {
   }).join('');
 }
 
-// Load race history
 async function loadRaceHistory() {
   try {
     const { data, error } = await sb
@@ -997,7 +1020,8 @@ async function loadRaceHistory() {
   }
 }
 
-// Render vehicles
+// ─── RENDER FUNCTIONS ─────────────────────────────────────
+
 function renderVehicles() {
   const grid = document.getElementById('vehiclesGrid');
   
@@ -1018,9 +1042,14 @@ function renderVehicles() {
     const handling = type.base_handling + (v.handling_level - 1) * 5;
     const nitro = type.base_nitro + (v.nitro_level - 1) * 5;
     
+    const bannerUrl = type.image_url || 'https://placehold.co/400x300/1e293b/ffffff?text=No+Image';
+    const thumbUrl = type.image_url || 'https://placehold.co/100/1e293b/ffffff?text=?';
+    
     return `
       <div class="vehicle-card">
+        <img class="vehicle-banner" src="${escapeHtml(bannerUrl)}" alt="${escapeHtml(type.name)}">
         <div class="vehicle-header">
+          <img class="vehicle-thumb" src="${escapeHtml(thumbUrl)}" alt="${escapeHtml(type.name)}">
           <span class="vehicle-name">${escapeHtml(v.nickname || type.name)}</span>
           <span class="vehicle-type">${type.name}</span>
         </div>
@@ -1055,7 +1084,6 @@ function renderVehicles() {
   }).join('');
 }
 
-// Render races
 function renderRaces() {
   const grid = document.getElementById('racesGrid');
   
@@ -1155,7 +1183,6 @@ function renderRaces() {
   }).join('');
 }
 
-// Render shop
 function renderShop() {
   const grid = document.getElementById('shopGrid');
   
@@ -1164,27 +1191,34 @@ function renderShop() {
     return;
   }
   
-  grid.innerHTML = vehicleTypes.map(vt => `
-    <div class="shop-card">
-      <h3>${vt.name}</h3>
-      <p>${vt.description || ''}</p>
-      <div class="vehicle-stats" style="margin: 10px 0;">
-        <div>Speed: ${vt.base_speed}</div>
-        <div>Acceleration: ${vt.base_acceleration}</div>
-        <div>Handling: ${vt.base_handling}</div>
-        <div>Nitro: ${vt.base_nitro}</div>
+  grid.innerHTML = vehicleTypes.map(vt => {
+    const bannerUrl = vt.image_url || 'https://placehold.co/400x300/1e293b/ffffff?text=No+Image';
+    const thumbUrl = vt.image_url || 'https://placehold.co/100/1e293b/ffffff?text=?';
+    return `
+      <div class="shop-card">
+        <img class="vehicle-banner" src="${escapeHtml(bannerUrl)}" alt="${escapeHtml(vt.name)}">
+        <div class="vehicle-header">
+          <img class="vehicle-thumb" src="${escapeHtml(thumbUrl)}" alt="${escapeHtml(vt.name)}">
+          <h3 style="margin:0; flex:1;">${vt.name}</h3>
+        </div>
+        <p>${vt.description || ''}</p>
+        <div class="vehicle-stats" style="margin: 10px 0;">
+          <div>Speed: ${vt.base_speed}</div>
+          <div>Acceleration: ${vt.base_acceleration}</div>
+          <div>Handling: ${vt.base_handling}</div>
+          <div>Nitro: ${vt.base_nitro}</div>
+        </div>
+        <div class="shop-price">₹${vt.price.toLocaleString()}</div>
+        <div style="margin: 10px 0;">Required Level: ${vt.min_level}</div>
+        <button class="shop-btn" onclick="buyVehicle('${vt.id}')" 
+                ${currentPlayer.level < vt.min_level ? 'disabled' : ''}>
+          ${currentPlayer.level < vt.min_level ? 'Level ' + vt.min_level + ' Required' : 'Buy Now'}
+        </button>
       </div>
-      <div class="shop-price">₹${vt.price.toLocaleString()}</div>
-      <div style="margin: 10px 0;">Required Level: ${vt.min_level}</div>
-      <button class="shop-btn" onclick="buyVehicle('${vt.id}')" 
-              ${currentPlayer.level < vt.min_level ? 'disabled' : ''}>
-        ${currentPlayer.level < vt.min_level ? 'Level ' + vt.min_level + ' Required' : 'Buy Now'}
-      </button>
-    </div>
-  `).join('');
+    `;
+  }).join('');
 }
 
-// Render history
 function renderHistory() {
   const list = document.getElementById('historyList');
   
@@ -1214,7 +1248,8 @@ function renderHistory() {
   `).join('');
 }
 
-// Buy vehicle
+// ─── ACTION FUNCTIONS ─────────────────────────────────────
+
 async function buyVehicle(vehicleTypeId) {
   const nickname = prompt('Give your vehicle a nickname (optional):', '');
   
@@ -1233,7 +1268,7 @@ async function buyVehicle(vehicleTypeId) {
     if (data.success) {
       showToast(data.message, 'success');
       await loadVehicles();
-      await loadPlayerData(); // Refresh cash
+      await loadPlayerData();
       if (!document.getElementById('garage').classList.contains('active')) {
         switchTab('garage');
       } else {
@@ -1248,7 +1283,6 @@ async function buyVehicle(vehicleTypeId) {
   }
 }
 
-// Join race
 async function joinRace(raceId) {
   if (!vehicles.length) {
     showToast('You need a vehicle to join races!', 'error');
@@ -1269,7 +1303,6 @@ async function joinRace(raceId) {
   await executeJoinRace(raceId, vehicleId);
 }
 
-// Show vehicle selector
 function showVehicleSelector(raceId) {
   let vehicleOptions = vehicles.map((v, index) => {
     const type = v.vehicle_types;
@@ -1288,7 +1321,6 @@ function showVehicleSelector(raceId) {
   }
 }
 
-// Execute join race
 async function executeJoinRace(raceId, vehicleId) {
   try {
     const { data, error } = await sb.rpc('join_race', {
@@ -1305,7 +1337,7 @@ async function executeJoinRace(raceId, vehicleId) {
     if (data.success) {
       showToast(data.message, 'success');
       await loadRaces();
-      await loadPlayerData(); // Refresh cash
+      await loadPlayerData();
       await checkActiveRaceParticipation();
     } else {
       showToast(data.error || 'Failed to join race', 'error');
@@ -1316,7 +1348,6 @@ async function executeJoinRace(raceId, vehicleId) {
   }
 }
 
-// Quit race
 async function quitRace(raceId) {
   if (!confirm('Are you sure you want to quit this race? You will get your entry fee back, but you will lose any bets placed.')) return;
   
@@ -1334,7 +1365,7 @@ async function quitRace(raceId) {
     if (data.success) {
       showToast(data.message, 'success');
       await loadRaces();
-      await loadPlayerData(); // Refresh cash
+      await loadPlayerData();
       await checkActiveRaceParticipation();
     } else {
       showToast(data.error || 'Failed to quit race', 'error');
@@ -1345,7 +1376,6 @@ async function quitRace(raceId) {
   }
 }
 
-// Open bet modal
 function openBetModal(raceId, participantId, participantName) {
   selectedRace = raceId;
   selectedParticipant = { id: participantId, name: participantName };
@@ -1357,21 +1387,18 @@ function openBetModal(raceId, participantId, participantName) {
   document.getElementById('betModal').style.display = 'block';
 }
 
-// Close bet modal
 function closeBetModal() {
   document.getElementById('betModal').style.display = 'none';
   selectedRace = null;
   selectedParticipant = null;
 }
 
-// Calculate potential payout
 document.getElementById('betAmount')?.addEventListener('input', function(e) {
   const amount = parseInt(e.target.value) || 0;
-  const payout = amount * 2; // Simple 2x odds for demo
+  const payout = amount * 2;
   document.getElementById('potentialPayout').textContent = `Potential payout: ₹${payout}`;
 });
 
-// Confirm bet
 async function confirmBet() {
   if (!selectedRace || !selectedParticipant) return;
   
@@ -1404,7 +1431,7 @@ async function confirmBet() {
     if (data.success) {
       showToast(data.message, 'success');
       closeBetModal();
-      await loadPlayerData(); // Refresh cash
+      await loadPlayerData();
     } else {
       showToast(data.error || 'Failed to place bet', 'error');
       closeBetModal();
@@ -1416,7 +1443,6 @@ async function confirmBet() {
   }
 }
 
-// Switch tabs
 function switchTab(tabName, evt) {
   document.querySelectorAll('.tab-content').forEach(tab => {
     tab.classList.remove('active');
@@ -1440,7 +1466,6 @@ function switchTab(tabName, evt) {
     }
   }
   
-  // Refresh data when switching tabs
   if (tabName === 'garage') {
     loadVehicles();
   } else if (tabName === 'races') {
@@ -1455,15 +1480,12 @@ function switchTab(tabName, evt) {
   }
 }
 
-// Navigation
 function goToDashboard() {
   window.location.href = "dashboard.html";
 }
 
-// Initialize
 loadPlayerData();
 
-// Refresh races every 30 seconds
 setInterval(() => {
   const activeTab = document.querySelector('.tab-btn.active');
   if (activeTab && activeTab.textContent.includes('Races')) {
