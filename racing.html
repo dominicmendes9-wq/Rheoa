@@ -656,7 +656,6 @@
   let selectedRaceForChallenge = null;
   let incomingChallengeId = null;
   let racingRoomId = null;
-  let presenceSynced = false;
 
   // ─── Auth & Player ──────────────────────────────────────
   async function loadPlayerData() {
@@ -937,31 +936,26 @@
     `).join('');
   }
 
-  // ─── Racers Presence & Chat ─────────────────────────────
+  // ─── Racers Presence & Chat (FIXED) ─────────────────────
   async function setupRacingPresence() {
     try {
-      // Get or create the racing chat room
-      const { data: existing, error: findError } = await sb
+      // Fixed UUID for the Racing Chat room (must exist in DB)
+      const FIXED_ROOM_ID = '123e4567-e89b-12d3-a456-426614174000';
+
+      // Verify the room exists
+      const { data: room, error } = await sb
         .from('chat_rooms')
         .select('id')
-        .eq('name', 'Racing Chat')
+        .eq('id', FIXED_ROOM_ID)
         .maybeSingle();
 
-      if (findError && findError.code !== 'PGRST116') {
-        throw findError;
+      if (error) throw error;
+      if (!room) {
+        showToast('Racing Chat room not found. Please contact admin.', 'error');
+        return;
       }
 
-      if (existing) {
-        racingRoomId = existing.id;
-      } else {
-        const { data: newRoom, error: createError } = await sb
-          .from('chat_rooms')
-          .insert({ name: 'Racing Chat', type: 'public' })
-          .select('id')
-          .single();
-        if (createError) throw createError;
-        racingRoomId = newRoom.id;
-      }
+      racingRoomId = FIXED_ROOM_ID;
 
       // Subscribe to presence channel
       racingChannel = sb.channel(`racing-presence:${racingRoomId}`);
@@ -1013,7 +1007,6 @@
 
     } catch (error) {
       console.error('Setup racing presence error:', error);
-      // Do not throw – allow page to load
       showToast('Could not set up racers presence: ' + error.message, 'error');
     }
   }
@@ -1077,7 +1070,7 @@
       container.innerHTML = '<div class="empty-message">No racers online</div>';
       return;
     }
-    // Group by user_id to avoid duplicates (presence state may have duplicates)
+    // Deduplicate
     const uniqueRacers = [];
     const seen = new Set();
     onlineRacers.forEach(r => {
@@ -1110,14 +1103,12 @@
         filter: `challengee_id=eq.${currentPlayer.id}`
       }, (payload) => {
         const challenge = payload.new;
-        // Show incoming challenge notification
         showIncomingChallenge(challenge);
       })
       .subscribe();
   }
 
   function showIncomingChallenge(challenge) {
-    // Fetch challenger name
     sb
       .from('players')
       .select('username')
@@ -1135,9 +1126,7 @@
   function openChallengeModal(targetUserId, targetUsername) {
     selectedChallengeTarget = { id: targetUserId, username: targetUsername };
     document.getElementById('challengeTargetName').textContent = `Challenge ${targetUsername}`;
-    // Load available races (filter by both players' levels)
-    const minLevel = currentPlayer.level;
-    const filtered = races.filter(r => r.min_level <= minLevel && r.status === 'open');
+    const filtered = races.filter(r => r.min_level <= currentPlayer.level && r.status === 'open');
     const container = document.getElementById('raceOptions');
     if (!filtered.length) {
       container.innerHTML = '<div class="empty-message">No races available for your level</div>';
@@ -1187,17 +1176,14 @@
       showToast(error.message, 'error');
     } else if (data.success) {
       showToast('Race accepted! Results will appear shortly.', 'success');
-      // Refresh leaderboard and history
       await loadLeaderboard();
       await loadRaceHistory();
-      // Update status to busy for both players? (optional)
       await racingChannel.track({
         user_id: currentPlayer.id,
         username: currentPlayer.username,
         level: currentPlayer.level,
         status: 'busy'
       });
-      // After a few seconds, set back to available
       setTimeout(() => {
         racingChannel.track({
           user_id: currentPlayer.id,
