@@ -682,10 +682,15 @@
         loadRaceHistory()
       ]);
 
-      // Initialize realtime only once
+      // Initialize realtime only once – even if it fails, we set flag to avoid retries
       if (!realtimeInitialized) {
-        await initRealtime();
-        realtimeInitialized = true;
+        realtimeInitialized = true; // set before calling to prevent re-entry
+        try {
+          await initRealtime();
+        } catch (err) {
+          console.error('Realtime init failed:', err);
+          showToast('Realtime features may not work: ' + err.message, 'error');
+        }
       }
     } catch (error) {
       console.error('Error loading player:', error);
@@ -956,13 +961,15 @@
 
   // ─── Real-time Initialization (called once) ────────────
   async function initRealtime() {
-    try {
-      await initRacingPresence();
-      await initChallengeSubscription();
-    } catch (error) {
-      console.error('Realtime init error:', error);
-      showToast('Error initializing real-time features: ' + error.message, 'error');
+    // We set the flag before calling, so this function may be called even if already set
+    // but we guard against double setup inside.
+    if (racingChannel && challengeSubscription) {
+      console.log('Realtime already initialized');
+      return;
     }
+
+    await initRacingPresence();
+    await initChallengeSubscription();
   }
 
   async function initRacingPresence() {
