@@ -512,6 +512,7 @@
   let incomingChallengeId = null;
   let racingRoomId = null;
   let realtimeInit = false;
+  let chatDbSubscription = null;
 
   // ─── Auth & Player ──────────────────────────────────────
   async function loadPlayerData() {
@@ -847,7 +848,7 @@
     }
     racingRoomId = FIXED_ROOM_ID;
 
-    // Presence channel
+    // 1. Presence channel (for online racers)
     racingChannel = sb.channel(`racing-presence:${racingRoomId}`);
     racingChannel.on('presence', { event: 'sync' }, () => {
       const state = racingChannel.presenceState();
@@ -855,9 +856,6 @@
       Object.keys(state).forEach(key => racers.push(...state[key]));
       onlineRacers = racers;
       renderRacers();
-    });
-    racingChannel.on('broadcast', { event: 'message' }, (payload) => {
-      appendChatMessage(payload.payload);
     });
     await racingChannel.subscribe(async (status) => {
       if (status === 'SUBSCRIBED') {
@@ -871,8 +869,8 @@
       }
     });
 
-    // Chat DB changes
-    sb
+    // 2. Chat messages via DB subscription (realtime)
+    chatDbSubscription = sb
       .channel('racing-chat-db')
       .on('postgres_changes', {
         event: 'INSERT',
@@ -881,13 +879,16 @@
         filter: `room_id=eq.${racingRoomId}`
       }, (payload) => {
         const msg = payload.new;
-        if (msg.user_id !== currentPlayer.id) {
-          appendChatMessage({ user: msg.user_id, content: msg.content, created_at: msg.created_at });
-        }
+        // Append every message (including our own) – we deduplicate by checking if it already exists
+        appendChatMessage(msg);
       })
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('Racing chat DB subscription active');
+        }
+      });
 
-    // Challenge subscription
+    // 3. Challenge subscription
     challengeSubscription = sb.channel('challenges');
     challengeSubscription.on('postgres_changes', {
       event: 'INSERT',
@@ -930,11 +931,16 @@
   }
 
   function appendChatMessage(msg) {
+    // Check if message already exists in UI to avoid duplicates
     const container = document.getElementById('racingChatMessages');
+    const existing = container.querySelector(`[data-msg-id="${msg.id}"]`);
+    if (existing) return;
+
     const username = msg.username || msg.players?.username || 'Unknown';
     const time = new Date(msg.created_at).toLocaleTimeString();
     const div = document.createElement('div');
     div.className = 'chat-message';
+    div.setAttribute('data-msg-id', msg.id);
     div.innerHTML = `<span class="sender">${escapeHtml(username)}</span><span class="time">${time}</span><div>${escapeHtml(msg.content)}</div>`;
     container.appendChild(div);
     container.scrollTop = container.scrollHeight;
@@ -945,17 +951,37 @@
     const text = input.value.trim();
     if (!text || !racingRoomId) return;
     input.value = '';
+
+    // Create a temporary message object with a local ID
+    const tempId = 'temp-' + Date.now();
+    const tempMsg = {
+      id: tempId,
+      user_id: currentPlayer.id,
+      content: text,
+      created_at: new Date().toISOString(),
+      players: { username: currentPlayer.username }
+    };
+
+    // Append optimistically
+    appendChatMessage(tempMsg);
+
+    // Insert into DB
     const { error } = await sb
       .from('race_chat_messages')
       .insert({
         room_id: racingRoomId,
         user_id: currentPlayer.id,
         content: text,
-        created_at: new Date().toISOString()
+        created_at: tempMsg.created_at
       });
+
     if (error) {
       console.error(error);
       showToast('Failed to send message', 'error');
+      // Remove the optimistic message if failed
+      const container = document.getElementById('racingChatMessages');
+      const el = container.querySelector(`[data-msg-id="${tempId}"]`);
+      if (el) el.remove();
     }
   }
 
