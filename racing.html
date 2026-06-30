@@ -513,7 +513,8 @@
   let racingRoomId = null;
   let realtimeInit = false;
   let chatDbSubscription = null;
-  let raceEntriesSubscription = null; // new
+  let raceEntriesSubscription = null;
+  let raceUpdateTimeout = null;
 
   // ─── Auth & Player ──────────────────────────────────────
   async function loadPlayerData() {
@@ -849,14 +850,26 @@
     }
     racingRoomId = FIXED_ROOM_ID;
 
-    // 1. Presence channel (online racers + broadcast chat)
+    // 1. Presence channel (online racers + broadcast for chat and race updates)
     racingChannel = sb.channel(`racing-presence:${racingRoomId}`);
 
+    // Chat broadcast
     racingChannel.on('broadcast', { event: 'message' }, (payload) => {
       const msg = payload.payload;
       appendChatMessage(msg);
     });
 
+    // NEW: race update broadcast – instantly refresh race list for all clients
+    racingChannel.on('broadcast', { event: 'race_update' }, (payload) => {
+      // Debounce refresh to avoid multiple rapid reloads
+      if (raceUpdateTimeout) clearTimeout(raceUpdateTimeout);
+      raceUpdateTimeout = setTimeout(() => {
+        loadRaces();
+        raceUpdateTimeout = null;
+      }, 200);
+    });
+
+    // Presence sync
     racingChannel.on('presence', { event: 'sync' }, () => {
       const state = racingChannel.presenceState();
       const racers = [];
@@ -877,7 +890,7 @@
       }
     });
 
-    // 2. Chat messages via DB subscription
+    // 2. Chat messages via DB subscription (fallback)
     chatDbSubscription = sb
       .channel('racing-chat-db')
       .on('postgres_changes', {
@@ -891,16 +904,21 @@
       })
       .subscribe();
 
-    // 3. Race entries real‑time updates – NEW
+    // 3. Race entries real‑time updates (direct DB subscription – fallback)
     raceEntriesSubscription = sb
       .channel('race-entries-changes')
       .on('postgres_changes', {
-        event: '*',           // catches INSERT, UPDATE, DELETE
+        event: '*',
         schema: 'public',
         table: 'race_entries'
       }, (payload) => {
-        // Reload races to update participant lists and counts
-        loadRaces();
+        // Reload races, but we already have broadcast for instant updates.
+        // This is a secondary fallback.
+        if (raceUpdateTimeout) clearTimeout(raceUpdateTimeout);
+        raceUpdateTimeout = setTimeout(() => {
+          loadRaces();
+          raceUpdateTimeout = null;
+        }, 300);
       })
       .subscribe();
 
@@ -1146,8 +1164,18 @@
     });
     if (error) {
       showToast(error.message, 'error');
-    } else if (data.success) {
+      return;
+    }
+    if (data.success) {
       showToast(data.message, 'success');
+      // Broadcast the update to all other clients
+      if (racingChannel) {
+        await racingChannel.send({
+          type: 'broadcast',
+          event: 'race_update',
+          payload: { race_id: raceId, action: 'join', player_id: currentPlayer.id }
+        });
+      }
       await loadRaces();
       await loadPlayerData();
     } else {
@@ -1160,8 +1188,18 @@
     const { data, error } = await sb.rpc('leave_race', { p_race_id: raceId });
     if (error) {
       showToast(error.message, 'error');
-    } else if (data.success) {
+      return;
+    }
+    if (data.success) {
       showToast(data.message, 'success');
+      // Broadcast the update to all other clients
+      if (racingChannel) {
+        await racingChannel.send({
+          type: 'broadcast',
+          event: 'race_update',
+          payload: { race_id: raceId, action: 'leave', player_id: currentPlayer.id }
+        });
+      }
       await loadRaces();
       await loadPlayerData();
     } else {
@@ -1176,6 +1214,14 @@
       showToast(error.message, 'error');
     } else if (data.success) {
       showToast('Race started! Results recorded.', 'success');
+      // Broadcast so other clients refresh
+      if (racingChannel) {
+        await racingChannel.send({
+          type: 'broadcast',
+          event: 'race_update',
+          payload: { race_id: raceId, action: 'start' }
+        });
+      }
       await loadRaces();
       await loadLeaderboard();
       await loadHistory();
