@@ -276,6 +276,41 @@
     .challenge-modal-content .actions .send { background: #f44336; color: white; }
     .challenge-modal-content .actions .cancel { background: #ccc; color: #333; }
 
+    /* ─── Race Result Modal ─── */
+    .result-modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.7);
+      z-index: 10001;
+      justify-content: center;
+      align-items: center;
+    }
+    .result-modal-content {
+      background: white;
+      border-radius: 20px;
+      padding: 30px;
+      max-width: 600px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+    }
+    .result-modal-content h2 {
+      text-align: center;
+      color: #f44336;
+      margin-bottom: 20px;
+    }
+    .result-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid #eee;
+    }
+    .result-item .pos { font-weight: bold; }
+    .result-item .name { flex: 1; margin-left: 10px; }
+    .result-item .earnings { color: #4CAF50; font-weight: bold; }
+
     .back-button {
       display: block;
       width: 200px;
@@ -464,6 +499,15 @@
       <button class="send" onclick="sendChallenge()">Send Challenge</button>
       <button class="cancel" onclick="closeChallengeModal()">Cancel</button>
     </div>
+  </div>
+</div>
+
+<!-- Race Result Modal -->
+<div class="result-modal" id="resultModal">
+  <div class="result-modal-content">
+    <h2 id="resultTitle">🏁 Race Results</h2>
+    <div id="resultList"></div>
+    <button onclick="closeResultModal()" style="margin-top:20px; padding:10px 30px; background:#f44336; color:white; border:none; border-radius:30px; font-weight:bold; cursor:pointer;">Close</button>
   </div>
 </div>
 
@@ -779,7 +823,9 @@
               ${isFull ? 'Race Full' : 'Join Race'}
             </button>
           ` : `
-            <button class="btn btn-danger" onclick="leaveRace('${race.id}')">Leave Race</button>
+            <button class="btn btn-danger" onclick="leaveRace('${race.id}')" ${race.status != 'open' ? 'disabled' : ''}>
+              Leave Race
+            </button>
           `}
           ${canStart ? `<button class="btn btn-warning" onclick="startRace('${race.id}')">🏁 Start Race</button>` : ''}
         </div>
@@ -909,7 +955,7 @@
     raceEntriesSubscription = sb
       .channel('race-entries-changes')
       .on('postgres_changes', {
-        event: '*', // insert, update, delete
+        event: '*',
         schema: 'public',
         table: 'race_entries'
       }, (payload) => {
@@ -1146,7 +1192,7 @@
     incomingChallengeId = null;
   }
 
-  // ─── Actions ─────────────────────────────────────────────
+  // ─── Race actions ─────────────────────────────────────────
   async function buyVehicle(modelId) {
     const nickname = prompt('Give your vehicle a nickname (optional):', '');
     const { data, error } = await sb.rpc('buy_vehicle', {
@@ -1177,7 +1223,6 @@
     }
     if (data.success) {
       showToast(data.message, 'success');
-      // Broadcast to refresh other clients
       if (racingChannel) {
         await racingChannel.send({
           type: 'broadcast',
@@ -1220,7 +1265,9 @@
     const { data, error } = await sb.rpc('start_race', { p_race_id: raceId });
     if (error) {
       showToast(error.message, 'error');
-    } else if (data.success) {
+      return;
+    }
+    if (data.success) {
       showToast('Race started! Results recorded.', 'success');
       if (racingChannel) {
         await racingChannel.send({
@@ -1229,12 +1276,39 @@
           payload: { race_id: raceId, action: 'start' }
         });
       }
+      // Show results modal
+      if (data.results && data.results.length) {
+        showResultsModal(data.results, data.winner);
+      }
       await loadRaces();
       await loadLeaderboard();
       await loadHistory();
     } else {
-      showToast(data.error || 'Failed to start', 'error');
+      showToast(data.error || 'Failed to start race', 'error');
     }
+  }
+
+  function showResultsModal(results, winnerId) {
+    const modal = document.getElementById('resultModal');
+    const title = document.getElementById('resultTitle');
+    const list = document.getElementById('resultList');
+
+    const winnerName = results.find(r => r.player_id === winnerId)?.players?.username || 'Winner';
+    title.textContent = `🏁 Race Finished - Winner: ${escapeHtml(winnerName)}`;
+
+    list.innerHTML = results.map((r, index) => `
+      <div class="result-item">
+        <span class="pos">#${r.position}</span>
+        <span class="name">${escapeHtml(r.players?.username || 'Unknown')}</span>
+        <span class="earnings">+₹${r.earnings}</span>
+      </div>
+    `).join('');
+
+    modal.style.display = 'flex';
+  }
+
+  function closeResultModal() {
+    document.getElementById('resultModal').style.display = 'none';
   }
 
   async function sellVehicle(vehicleId) {
@@ -1308,6 +1382,7 @@
   window.sendChallenge = sendChallenge;
   window.closeChallengeModal = closeChallengeModal;
   window.handleChallenge = handleChallenge;
+  window.closeResultModal = closeResultModal;
   window.goToDashboard = goToDashboard;
 </script>
 </body>
