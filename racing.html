@@ -795,7 +795,7 @@
       const entries = race.entries || [];
       const hasJoined = entries.some(e => e.player_id === currentPlayer.id);
       const isFull = entries.length >= race.max_participants;
-      const canStart = hasJoined && isFull && race.status === 'open';
+      const isFinished = race.status === 'finished';
       return `
         <div class="card">
           <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -807,7 +807,7 @@
             <div>Entry Fee: ₹${race.entry_fee}</div>
             <div>Prize Pool: ₹${race.prize_pool}</div>
             <div>Min Level: ${race.min_level}</div>
-            <div>Status: ${race.status}</div>
+            <div>Status: ${isFinished ? 'Finished' : (isFull ? 'Full' : 'Open')}</div>
           </div>
           <div class="participants">
             <strong>Participants (${entries.length}/${race.max_participants})</strong>
@@ -818,16 +818,16 @@
               </div>
             `).join('')}
           </div>
-          ${!hasJoined ? `
+          ${!hasJoined && !isFull && !isFinished ? `
             <button class="btn btn-primary" onclick="joinRace('${race.id}')" ${isFull ? 'disabled' : ''}>
-              ${isFull ? 'Race Full' : 'Join Race'}
+              Join Race
             </button>
-          ` : `
+          ` : hasJoined && !isFinished ? `
             <button class="btn btn-danger" onclick="leaveRace('${race.id}')" ${race.status != 'open' ? 'disabled' : ''}>
               Leave Race
             </button>
-          `}
-          ${canStart ? `<button class="btn btn-warning" onclick="startRace('${race.id}')">🏁 Start Race</button>` : ''}
+          ` : ''}
+          ${isFinished ? '<div style="text-align:center; color:#4CAF50; font-weight:bold;">✅ Race Finished</div>' : ''}
         </div>
       `;
     }).join('');
@@ -907,6 +907,10 @@
     // Broadcast listener for race updates (instant refresh)
     racingChannel.on('broadcast', { event: 'race_update' }, (payload) => {
       console.log('📡 Race update broadcast received:', payload);
+      if (payload.action === 'start' && payload.result) {
+        // Show results immediately
+        showResultsModal(payload.result.results, payload.result.winner);
+      }
       if (raceUpdateTimeout) clearTimeout(raceUpdateTimeout);
       raceUpdateTimeout = setTimeout(() => {
         loadRaces();
@@ -1222,12 +1226,21 @@
       return;
     }
     if (data.success) {
-      showToast(data.message, 'success');
+      let message = data.message;
+      if (data.auto_started && data.result && data.result.success) {
+        message += ' Race auto-started!';
+        // Show results if available
+        if (data.result.results) {
+          showResultsModal(data.result.results, data.result.winner);
+        }
+      }
+      showToast(message, 'success');
+      // Broadcast update to others
       if (racingChannel) {
         await racingChannel.send({
           type: 'broadcast',
           event: 'race_update',
-          payload: { race_id: raceId, action: 'join', player_id: currentPlayer.id }
+          payload: { action: 'join', race_id: raceId, player_id: currentPlayer.id }
         });
       }
       await loadRaces();
@@ -1250,41 +1263,13 @@
         await racingChannel.send({
           type: 'broadcast',
           event: 'race_update',
-          payload: { race_id: raceId, action: 'leave', player_id: currentPlayer.id }
+          payload: { action: 'leave', race_id: raceId, player_id: currentPlayer.id }
         });
       }
       await loadRaces();
       await loadPlayerData();
     } else {
       showToast(data.error || 'Failed to leave', 'error');
-    }
-  }
-
-  async function startRace(raceId) {
-    if (!confirm('Start the race?')) return;
-    const { data, error } = await sb.rpc('start_race', { p_race_id: raceId });
-    if (error) {
-      showToast(error.message, 'error');
-      return;
-    }
-    if (data.success) {
-      showToast('Race started! Results recorded.', 'success');
-      if (racingChannel) {
-        await racingChannel.send({
-          type: 'broadcast',
-          event: 'race_update',
-          payload: { race_id: raceId, action: 'start' }
-        });
-      }
-      // Show results modal
-      if (data.results && data.results.length) {
-        showResultsModal(data.results, data.winner);
-      }
-      await loadRaces();
-      await loadLeaderboard();
-      await loadHistory();
-    } else {
-      showToast(data.error || 'Failed to start race', 'error');
     }
   }
 
@@ -1373,7 +1358,6 @@
   window.buyVehicle = buyVehicle;
   window.joinRace = joinRace;
   window.leaveRace = leaveRace;
-  window.startRace = startRace;
   window.sellVehicle = sellVehicle;
   window.renameVehicle = renameVehicle;
   window.sendRacingChat = sendRacingChat;
