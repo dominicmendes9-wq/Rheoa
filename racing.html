@@ -221,10 +221,41 @@
       overflow-y: auto;
       background: #fafafa;
       border-radius: 12px 12px 0 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
     }
-    .racers-chat .chat-message { margin-bottom: 10px; }
-    .racers-chat .chat-message .sender { font-weight: bold; color: #f44336; }
-    .racers-chat .chat-message .time { font-size: 0.7rem; color: #666; margin-left: 8px; }
+    /* ── Chat messages: own vs other ── */
+    .chat-message {
+      display: flex;
+      flex-direction: column;
+      max-width: 80%;
+      animation: fadeIn 0.2s ease;
+    }
+    .chat-message.own { align-self: flex-end; }
+    .chat-message-header {
+      font-size: 0.8rem;
+      color: #666;
+      display: flex;
+      gap: 8px;
+      align-items: baseline;
+    }
+    .chat-message-username { font-weight: 600; color: #f44336; }
+    .chat-message-time { font-size: 0.65rem; }
+    .chat-message-content {
+      background: #fff;
+      padding: 6px 14px;
+      border-radius: 16px;
+      margin-top: 2px;
+      word-wrap: break-word;
+      border: 1px solid #ddd;
+    }
+    .chat-message.own .chat-message-content {
+      background: #f44336;
+      color: white;
+      border-color: #f44336;
+    }
+
     .racers-chat .chat-input {
       display: flex;
       gap: 10px;
@@ -1199,27 +1230,42 @@
       .limit(50);
     if (error) { console.error(error); return; }
     const container = document.getElementById('racingChatMessages');
-    container.innerHTML = data.map(msg => `
-      <div class="chat-message" data-msg-id="${msg.id}">
-        <span class="sender">${escapeHtml(msg.players?.username || 'System')}</span>
-        <span class="time">${new Date(msg.created_at).toLocaleTimeString()}</span>
-        <div>${escapeHtml(msg.content)}</div>
-      </div>
-    `).join('');
+    container.innerHTML = data.map(msg => {
+      const isOwn = msg.user_id === currentPlayer.id;
+      return `
+        <div class="chat-message ${isOwn ? 'own' : ''}" data-msg-id="${msg.id}">
+          <div class="chat-message-header">
+            <span class="chat-message-username">${escapeHtml(msg.players?.username || 'Unknown')}</span>
+            <span class="chat-message-time">${new Date(msg.created_at).toLocaleTimeString()}</span>
+          </div>
+          <div class="chat-message-content">${escapeHtml(msg.content)}</div>
+        </div>
+      `;
+    }).join('');
     container.scrollTop = container.scrollHeight;
   }
 
   function appendChatMessage(msg) {
     const container = document.getElementById('racingChatMessages');
+    // Avoid duplicates by checking id
     const existing = container.querySelector(`[data-msg-id="${msg.id}"]`);
     if (existing) return;
 
+    // Determine sender username: from broadcast payload's 'username' field, or fallback to players.username
     const username = msg.username || msg.players?.username || 'Unknown';
+    const isOwn = msg.user_id === currentPlayer.id;
     const time = new Date(msg.created_at).toLocaleTimeString();
+
     const div = document.createElement('div');
-    div.className = 'chat-message';
+    div.className = `chat-message ${isOwn ? 'own' : ''}`;
     div.setAttribute('data-msg-id', msg.id);
-    div.innerHTML = `<span class="sender">${escapeHtml(username)}</span><span class="time">${time}</span><div>${escapeHtml(msg.content)}</div>`;
+    div.innerHTML = `
+      <div class="chat-message-header">
+        <span class="chat-message-username">${escapeHtml(username)}</span>
+        <span class="chat-message-time">${time}</span>
+      </div>
+      <div class="chat-message-content">${escapeHtml(msg.content)}</div>
+    `;
     container.appendChild(div);
     container.scrollTop = container.scrollHeight;
   }
@@ -1234,13 +1280,15 @@
     const newMsg = {
       id: tempId,
       user_id: currentPlayer.id,
+      username: currentPlayer.username, // explicitly include username
       content: text,
-      created_at: new Date().toISOString(),
-      players: { username: currentPlayer.username }
+      created_at: new Date().toISOString()
     };
 
+    // Add to UI immediately (optimistic)
     appendChatMessage(newMsg);
 
+    // Insert into DB
     const { data, error } = await sb
       .from('race_chat_messages')
       .insert({
@@ -1255,24 +1303,25 @@
     if (error) {
       console.error(error);
       showToast('Failed to send message', 'error');
-      const el = document.querySelector(`[data-msg-id="${tempId}"]`);
+      // Remove the optimistic message
+      const el = container.querySelector(`[data-msg-id="${tempId}"]`);
       if (el) el.remove();
       return;
     }
 
-    const finalMsg = data || newMsg;
+    // Update temp message with real DB id
+    const finalMsg = { ...newMsg, id: data.id };
+    const tempEl = container.querySelector(`[data-msg-id="${tempId}"]`);
+    if (tempEl) {
+      tempEl.setAttribute('data-msg-id', finalMsg.id);
+    }
+
+    // Broadcast to others via presence channel
     await racingChannel.send({
       type: 'broadcast',
       event: 'message',
-      payload: finalMsg
+      payload: finalMsg // contains username, user_id, content, id, created_at
     });
-
-    if (tempId !== finalMsg.id) {
-      const tempEl = document.querySelector(`[data-msg-id="${tempId}"]`);
-      if (tempEl) {
-        tempEl.setAttribute('data-msg-id', finalMsg.id);
-      }
-    }
   }
 
   function renderRacers() {
