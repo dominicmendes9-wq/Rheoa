@@ -614,7 +614,7 @@
   </div>
 </div>
 
-<!-- ==================== NEW MODALS ==================== -->
+<!-- ==================== MODALS ==================== -->
 
 <!-- Race Creation Modal -->
 <div class="modal" id="createRaceModal">
@@ -1400,10 +1400,9 @@
     }
   }
 
-  // ─── NEW joinRace with animation support ─────────────────
+  // ─── joinRace with animation support ─────────────────
   async function joinRace(raceId) {
     if (!vehicles.length) { showToast('You need a vehicle to join!', 'error'); return; }
-    // For simplicity, use first vehicle. Could add vehicle selector.
     const vehicleId = vehicles[0].id;
     const { data, error } = await sb.rpc('join_race', {
       p_race_id: raceId,
@@ -1419,11 +1418,9 @@
     }
 
     showToast('Joined race!', 'success');
-    // If race auto-started, start animation
     if (data.status === 'running') {
       startRaceAnimation(raceId, data.duration_seconds || 10);
     } else {
-      // Still open, refresh list
       loadRaces();
     }
   }
@@ -1460,7 +1457,6 @@
       return;
     }
     showToast('Race started!', 'success');
-    // Get duration from race object
     const race = races.find(r => r.id === raceId);
     if (race) startRaceAnimation(raceId, race.duration_seconds || 10);
     loadRaces();
@@ -1477,7 +1473,6 @@
     const closeBtn = document.getElementById('raceCloseBtn');
     closeBtn.style.display = 'none';
 
-    // Countdown
     countdownEl.style.display = 'block';
     title.textContent = '🏁 Race Starting...';
     const countdown = [3,2,1,'GO!'];
@@ -1488,13 +1483,10 @@
     countdownEl.style.display = 'none';
     title.textContent = '🏁 Racing...';
 
-    // Clear track
     track.innerHTML = '';
 
-    // Fetch participants for this race
     const race = races.find(r => r.id === raceId);
     const entries = race?.entries || [];
-    // Create car elements
     entries.forEach((entry, index) => {
       const div = document.createElement('div');
       div.className = 'car-on-track';
@@ -1506,39 +1498,30 @@
       track.appendChild(div);
     });
 
-    // Progress bar reset
     progressFill.style.width = '0%';
 
-    // Simulate race progress
     const startTime = Date.now();
     raceStartTime = startTime;
     raceDuration = duration;
 
-    // We'll animate based on time, but we also need to know final results.
-    // We'll call finish_race after duration, but we can animate cars moving randomly until then.
     let elapsed = 0;
     clearInterval(raceInterval);
     raceInterval = setInterval(() => {
       elapsed = (Date.now() - startTime) / 1000;
       const progress = Math.min(elapsed / duration, 1);
       progressFill.style.width = (progress * 100) + '%';
-
-      // Move cars: each car gets a random factor to simulate overtaking
       const cars = track.querySelectorAll('.car-on-track');
       cars.forEach((car, idx) => {
-        // Random jitter for fun
-        const base = (idx + 1) / cars.length; // just for variety
+        const base = (idx + 1) / cars.length;
         const jitter = Math.sin(elapsed * 2 + idx) * 0.05 + 0.05 * Math.random();
         const pos = Math.min(progress * 0.9 + jitter, 0.95) * 100;
         car.style.left = pos + '%';
       });
     }, 100);
 
-    // After duration, finish the race
     setTimeout(async () => {
       clearInterval(raceInterval);
       raceInterval = null;
-      // Call finish_race RPC
       const { data: result, error } = await sb.rpc('finish_race', { p_race_id: raceId });
       if (error) {
         showToast('Race finish error: '+error.message, 'error');
@@ -1553,7 +1536,6 @@
         return;
       }
 
-      // Update UI with results
       title.textContent = `🏁 Winner: ${result.winner_username}`;
       progressFill.style.width = '100%';
       const cars = track.querySelectorAll('.car-on-track');
@@ -1567,7 +1549,6 @@
       });
       closeBtn.style.display = 'block';
       showToast(`Race finished! Winner: ${result.winner_username}`, 'success');
-      // Reload races
       loadRaces();
     }, duration * 1000 + 500);
   }
@@ -1580,7 +1561,6 @@
 
   // ─── Vehicle Tuning ──────────────────────────────────────
   async function showTuneModal(vehicleId) {
-    // Fetch vehicle with model
     const { data: vehicle, error } = await sb
       .from('racer_vehicles')
       .select('*, model:model_id(*)')
@@ -1588,7 +1568,6 @@
       .single();
     if (error) { showToast('Error loading vehicle', 'error'); return; }
 
-    // Fetch current upgrades
     const { data: upgrades } = await sb
       .from('vehicle_upgrades')
       .select('stat_name, level')
@@ -1637,9 +1616,7 @@
       return;
     }
     showToast(data.message, 'success');
-    // Refresh vehicle list and update modal
     await loadVehicles();
-    // Refresh modal content
     showTuneModal(vehicleId);
   }
 
@@ -1668,7 +1645,6 @@
     showToast('Race created!', 'success');
     closeModal('createRaceModal');
     loadRaces();
-    // Switch to races tab
     switchTab('races');
   });
 
