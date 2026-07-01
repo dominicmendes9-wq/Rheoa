@@ -124,6 +124,7 @@
     .btn-secondary { background: #666; color: white; }
     .btn-secondary:hover { background: #555; }
     .btn:disabled { background: #ccc; cursor: not-allowed; }
+    .btn-sm { padding: 6px 12px; font-size: 0.8rem; width: auto; margin-top: 0; }
 
     .race-details {
       display: grid;
@@ -311,6 +312,105 @@
     .result-item .name { flex: 1; margin-left: 10px; }
     .result-item .earnings { color: #4CAF50; font-weight: bold; }
 
+    /* ─── NEW: Race Creation Modal ─── */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.6);
+      z-index: 10000;
+      justify-content: center;
+      align-items: center;
+    }
+    .modal-content {
+      background: white;
+      border-radius: 20px;
+      padding: 25px;
+      max-width: 500px;
+      width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+    }
+    .modal-content h2 { margin-bottom: 15px; }
+    .modal-content label { display: block; margin-top: 10px; font-weight: bold; font-size: 0.9rem; }
+    .modal-content input, .modal-content select, .modal-content textarea {
+      width: 100%;
+      padding: 8px 12px;
+      margin-top: 4px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-family: inherit;
+    }
+    .modal-content .form-row { display: flex; gap: 10px; align-items: center; }
+    .modal-content .form-row input[type="checkbox"] { width: auto; }
+    .modal-content .actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+      justify-content: flex-end;
+    }
+
+    /* ─── Race Overlay ─── */
+    #raceOverlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.85);
+      z-index: 9999;
+      color: white;
+      padding: 20px;
+      justify-content: center;
+      align-items: center;
+    }
+    .race-overlay-box {
+      max-width: 800px;
+      width: 100%;
+      text-align: center;
+    }
+    #raceCountdown {
+      font-size: 5rem;
+      margin: 30px 0;
+      font-weight: bold;
+    }
+    #raceTrack {
+      position: relative;
+      height: 300px;
+      background: #222;
+      border-radius: 10px;
+      overflow: hidden;
+      padding: 10px;
+      margin: 20px 0;
+    }
+    .car-on-track {
+      position: absolute;
+      bottom: 10px;
+      left: 0%;
+      transition: left 0.2s linear;
+      background: #f44336;
+      color: white;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      white-space: nowrap;
+      border: 2px solid #fff;
+      transform: translateY(-50%);
+    }
+    #raceTimeline {
+      height: 20px;
+      background: #555;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-top: 20px;
+    }
+    #raceProgressFill {
+      height: 100%;
+      width: 0%;
+      background: #4CAF50;
+      transition: width 0.3s;
+    }
+    #raceCloseBtn { margin-top: 20px; }
+
     .back-button {
       display: block;
       width: 200px;
@@ -369,6 +469,8 @@
       .racers-container { flex-direction: column; }
       .racers-chat { height: 400px; }
       .challenge-item { flex-direction: column; align-items: stretch; gap: 8px; }
+      .race-overlay-box { padding: 10px; }
+      #raceTrack { height: 200px; }
     }
   </style>
 </head>
@@ -397,6 +499,7 @@
   <button class="tab-btn" onclick="switchTab('history', event)">📜 History</button>
   <button class="tab-btn" onclick="switchTab('racers', event)">👥 Racers</button>
   <button class="tab-btn" onclick="switchTab('challenges', event)">📋 Challenges</button>
+  <button class="tab-btn" onclick="showCreateRaceModal()" style="background:#4CAF50; color:white; border-color:#4CAF50;">➕ Create Race</button>
 </div>
 
 <!-- Races Tab -->
@@ -511,6 +614,70 @@
   </div>
 </div>
 
+<!-- ==================== NEW MODALS ==================== -->
+
+<!-- Race Creation Modal -->
+<div class="modal" id="createRaceModal">
+  <div class="modal-content">
+    <h2>🏁 Create New Race</h2>
+    <form id="createRaceForm">
+      <label>Race Name *</label>
+      <input type="text" id="raceName" required placeholder="e.g., Midnight Sprint">
+      <label>Race Type</label>
+      <select id="raceType">
+        <option value="drag">Drag</option>
+        <option value="circuit">Circuit</option>
+        <option value="rally">Rally</option>
+      </select>
+      <label>Description</label>
+      <textarea id="raceDesc" placeholder="Optional details..."></textarea>
+      <label>Entry Fee (₹)</label>
+      <input type="number" id="raceEntryFee" value="0" min="0">
+      <label>Max Participants</label>
+      <input type="number" id="raceMaxParticipants" value="10" min="2" max="20">
+      <label>Race Duration (seconds) – visual race length</label>
+      <input type="number" id="raceDuration" value="10" min="5" max="30">
+      <div class="form-row">
+        <input type="checkbox" id="raceAutoStart" checked>
+        <label style="margin:0; font-weight:normal;">Auto-start when full</label>
+      </div>
+      <div class="actions">
+        <button type="submit" class="btn btn-primary" style="width:auto; padding:8px 24px;">Create</button>
+        <button type="button" class="btn btn-secondary" onclick="closeModal('createRaceModal')">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Race Overlay (animated) -->
+<div id="raceOverlay">
+  <div class="race-overlay-box">
+    <h2 id="raceOverlayTitle">🏁 Race Starting...</h2>
+    <div id="raceCountdown">3</div>
+    <div id="raceTrack">
+      <!-- Cars will be inserted here -->
+    </div>
+    <div id="raceTimeline">
+      <div id="raceProgressFill"></div>
+    </div>
+    <button id="raceCloseBtn" style="display:none;" class="btn btn-primary" onclick="closeRaceOverlay()">Close</button>
+  </div>
+</div>
+
+<!-- Vehicle Tuning Modal -->
+<div class="modal" id="tuneModal">
+  <div class="modal-content">
+    <h2>🔧 Tune Vehicle</h2>
+    <div id="tuneVehicleInfo"></div>
+    <div id="tuneStats"></div>
+    <div class="actions">
+      <button class="btn btn-secondary" onclick="closeModal('tuneModal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================== -->
+
 <button class="back-button" onclick="goToDashboard()">← Back to Dashboard</button>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
@@ -540,6 +707,14 @@
     }, duration);
   }
 
+  function closeModal(id) {
+    document.getElementById(id).style.display = 'none';
+  }
+
+  function openModal(id) {
+    document.getElementById(id).style.display = 'flex';
+  }
+
   // ─── State ────────────────────────────────────────────────
   let currentPlayer = null;
   let vehicles = [];
@@ -559,6 +734,11 @@
   let chatDbSubscription = null;
   let raceEntriesSubscription = null;
   let raceUpdateTimeout = null;
+
+  // New state for race animation
+  let raceInterval = null;
+  let raceStartTime = null;
+  let raceDuration = 10;
 
   // ─── Auth & Player ──────────────────────────────────────
   async function loadPlayerData() {
@@ -744,9 +924,10 @@
             <div><div>Grip: ${v.grip}</div><div class="stat-bar"><div class="fill" style="width:${v.grip}%"></div></div></div>
           </div>
           <div class="condition ${condClass}">Condition: ${v.condition}% ${v.condition < 50 ? '⚠️' : ''}</div>
-          <div style="display:flex; gap:5px;">
-            <button class="btn btn-primary" onclick="sellVehicle('${v.id}')">Sell</button>
-            <button class="btn btn-secondary" onclick="renameVehicle('${v.id}')">Rename</button>
+          <div style="display:flex; gap:5px; flex-wrap:wrap; margin-top:10px;">
+            <button class="btn btn-primary btn-sm" onclick="sellVehicle('${v.id}')">Sell</button>
+            <button class="btn btn-secondary btn-sm" onclick="renameVehicle('${v.id}')">Rename</button>
+            <button class="btn btn-warning btn-sm" onclick="showTuneModal('${v.id}')">🔧 Tune</button>
           </div>
         </div>
       `;
@@ -796,6 +977,9 @@
       const hasJoined = entries.some(e => e.player_id === currentPlayer.id);
       const isFull = entries.length >= race.max_participants;
       const isFinished = race.status === 'finished';
+      const isCreator = race.created_by === currentPlayer.id;
+      const canStart = isCreator && race.status === 'open' && entries.length >= 2;
+
       return `
         <div class="card">
           <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -807,7 +991,8 @@
             <div>Entry Fee: ₹${race.entry_fee}</div>
             <div>Prize Pool: ₹${race.prize_pool}</div>
             <div>Min Level: ${race.min_level}</div>
-            <div>Status: ${isFinished ? 'Finished' : (isFull ? 'Full' : 'Open')}</div>
+            <div>Status: ${race.status}</div>
+            ${race.duration_seconds ? `<div>⏱️ ${race.duration_seconds}s</div>` : ''}
           </div>
           <div class="participants">
             <strong>Participants (${entries.length}/${race.max_participants})</strong>
@@ -818,16 +1003,17 @@
               </div>
             `).join('')}
           </div>
-          ${!hasJoined && !isFull && !isFinished ? `
-            <button class="btn btn-primary" onclick="joinRace('${race.id}')" ${isFull ? 'disabled' : ''}>
-              Join Race
-            </button>
-          ` : hasJoined && !isFinished ? `
-            <button class="btn btn-danger" onclick="leaveRace('${race.id}')" ${race.status != 'open' ? 'disabled' : ''}>
-              Leave Race
-            </button>
+          ${!hasJoined && !isFull && race.status === 'open' ? `
+            <button class="btn btn-primary" onclick="joinRace('${race.id}')">Join Race</button>
           ` : ''}
-          ${isFinished ? '<div style="text-align:center; color:#4CAF50; font-weight:bold;">✅ Race Finished</div>' : ''}
+          ${hasJoined && race.status === 'open' ? `
+            <button class="btn btn-danger" onclick="leaveRace('${race.id}')">Leave Race</button>
+          ` : ''}
+          ${canStart ? `
+            <button class="btn btn-warning" onclick="startRaceManually('${race.id}')">▶ Start Race</button>
+          ` : ''}
+          ${race.status === 'running' ? '<div style="text-align:center; color:#ff9800; font-weight:bold;">🏁 Race in progress...</div>' : ''}
+          ${race.status === 'finished' ? '<div style="text-align:center; color:#4CAF50; font-weight:bold;">✅ Finished</div>' : ''}
         </div>
       `;
     }).join('');
@@ -1214,8 +1400,10 @@
     }
   }
 
+  // ─── NEW joinRace with animation support ─────────────────
   async function joinRace(raceId) {
     if (!vehicles.length) { showToast('You need a vehicle to join!', 'error'); return; }
+    // For simplicity, use first vehicle. Could add vehicle selector.
     const vehicleId = vehicles[0].id;
     const { data, error } = await sb.rpc('join_race', {
       p_race_id: raceId,
@@ -1225,31 +1413,22 @@
       showToast(error.message, 'error');
       return;
     }
-    if (data.success) {
-      let message = data.message;
-      if (data.auto_started && data.result && data.result.success) {
-        message += ' Race auto-started!';
-        // Show results if available
-        if (data.result.results) {
-          showResultsModal(data.result.results, data.result.winner);
-        }
-      }
-      showToast(message, 'success');
-      // Broadcast update to others
-      if (racingChannel) {
-        await racingChannel.send({
-          type: 'broadcast',
-          event: 'race_update',
-          payload: { action: 'join', race_id: raceId, player_id: currentPlayer.id }
-        });
-      }
-      await loadRaces();
-      await loadPlayerData();
+    if (!data.success) {
+      showToast(data.error, 'error');
+      return;
+    }
+
+    showToast('Joined race!', 'success');
+    // If race auto-started, start animation
+    if (data.status === 'running') {
+      startRaceAnimation(raceId, data.duration_seconds || 10);
     } else {
-      showToast(data.error || 'Failed to join', 'error');
+      // Still open, refresh list
+      loadRaces();
     }
   }
 
+  // ─── Leave race ──────────────────────────────────────────
   async function leaveRace(raceId) {
     if (!confirm('Leave this race?')) return;
     const { data, error } = await sb.rpc('leave_race', { p_race_id: raceId });
@@ -1273,18 +1452,238 @@
     }
   }
 
-  function showResultsModal(results, winnerId) {
+  // ─── Manual start ────────────────────────────────────────
+  async function startRaceManually(raceId) {
+    const { data, error } = await sb.rpc('start_race', { p_race_id: raceId });
+    if (error || !data.success) {
+      showToast(error?.message || data?.error, 'error');
+      return;
+    }
+    showToast('Race started!', 'success');
+    // Get duration from race object
+    const race = races.find(r => r.id === raceId);
+    if (race) startRaceAnimation(raceId, race.duration_seconds || 10);
+    loadRaces();
+  }
+
+  // ─── Race Animation ──────────────────────────────────────
+  async function startRaceAnimation(raceId, duration) {
+    const overlay = document.getElementById('raceOverlay');
+    overlay.style.display = 'flex';
+    const countdownEl = document.getElementById('raceCountdown');
+    const track = document.getElementById('raceTrack');
+    const progressFill = document.getElementById('raceProgressFill');
+    const title = document.getElementById('raceOverlayTitle');
+    const closeBtn = document.getElementById('raceCloseBtn');
+    closeBtn.style.display = 'none';
+
+    // Countdown
+    countdownEl.style.display = 'block';
+    title.textContent = '🏁 Race Starting...';
+    const countdown = [3,2,1,'GO!'];
+    for (let i=0; i<countdown.length; i++) {
+      countdownEl.textContent = countdown[i];
+      await new Promise(r => setTimeout(r, 800));
+    }
+    countdownEl.style.display = 'none';
+    title.textContent = '🏁 Racing...';
+
+    // Clear track
+    track.innerHTML = '';
+
+    // Fetch participants for this race
+    const race = races.find(r => r.id === raceId);
+    const entries = race?.entries || [];
+    // Create car elements
+    entries.forEach((entry, index) => {
+      const div = document.createElement('div');
+      div.className = 'car-on-track';
+      div.style.bottom = (30 + index * 40) + 'px';
+      div.style.left = '0%';
+      div.style.backgroundColor = ['#f44336','#2196F3','#4CAF50','#ff9800','#9c27b0'][index % 5];
+      div.textContent = entry.players?.username || 'Player';
+      div.dataset.playerId = entry.player_id;
+      track.appendChild(div);
+    });
+
+    // Progress bar reset
+    progressFill.style.width = '0%';
+
+    // Simulate race progress
+    const startTime = Date.now();
+    raceStartTime = startTime;
+    raceDuration = duration;
+
+    // We'll animate based on time, but we also need to know final results.
+    // We'll call finish_race after duration, but we can animate cars moving randomly until then.
+    let elapsed = 0;
+    clearInterval(raceInterval);
+    raceInterval = setInterval(() => {
+      elapsed = (Date.now() - startTime) / 1000;
+      const progress = Math.min(elapsed / duration, 1);
+      progressFill.style.width = (progress * 100) + '%';
+
+      // Move cars: each car gets a random factor to simulate overtaking
+      const cars = track.querySelectorAll('.car-on-track');
+      cars.forEach((car, idx) => {
+        // Random jitter for fun
+        const base = (idx + 1) / cars.length; // just for variety
+        const jitter = Math.sin(elapsed * 2 + idx) * 0.05 + 0.05 * Math.random();
+        const pos = Math.min(progress * 0.9 + jitter, 0.95) * 100;
+        car.style.left = pos + '%';
+      });
+    }, 100);
+
+    // After duration, finish the race
+    setTimeout(async () => {
+      clearInterval(raceInterval);
+      raceInterval = null;
+      // Call finish_race RPC
+      const { data: result, error } = await sb.rpc('finish_race', { p_race_id: raceId });
+      if (error) {
+        showToast('Race finish error: '+error.message, 'error');
+        title.textContent = '⚠️ Race Error';
+        closeBtn.style.display = 'block';
+        return;
+      }
+      if (!result.success) {
+        showToast(result.error, 'error');
+        title.textContent = '⚠️ Race Error';
+        closeBtn.style.display = 'block';
+        return;
+      }
+
+      // Update UI with results
+      title.textContent = `🏁 Winner: ${result.winner_username}`;
+      progressFill.style.width = '100%';
+      const cars = track.querySelectorAll('.car-on-track');
+      result.results.forEach((r, idx) => {
+        const car = track.querySelector(`[data-player-id="${r.player_id}"]`);
+        if (car) {
+          car.style.left = (idx === 0 ? 95 : (95 - idx * 10)) + '%';
+          car.style.backgroundColor = idx === 0 ? '#FFD700' : '#4CAF50';
+          car.textContent += ` #${r.position} +₹${r.earnings}`;
+        }
+      });
+      closeBtn.style.display = 'block';
+      showToast(`Race finished! Winner: ${result.winner_username}`, 'success');
+      // Reload races
+      loadRaces();
+    }, duration * 1000 + 500);
+  }
+
+  function closeRaceOverlay() {
+    document.getElementById('raceOverlay').style.display = 'none';
+    clearInterval(raceInterval);
+    raceInterval = null;
+  }
+
+  // ─── Vehicle Tuning ──────────────────────────────────────
+  async function showTuneModal(vehicleId) {
+    // Fetch vehicle with model
+    const { data: vehicle, error } = await sb
+      .from('racer_vehicles')
+      .select('*, model:model_id(*)')
+      .eq('id', vehicleId)
+      .single();
+    if (error) { showToast('Error loading vehicle', 'error'); return; }
+
+    // Fetch current upgrades
+    const { data: upgrades } = await sb
+      .from('vehicle_upgrades')
+      .select('stat_name, level')
+      .eq('vehicle_id', vehicleId);
+
+    const upgradeMap = {};
+    (upgrades || []).forEach(u => upgradeMap[u.stat_name] = u.level);
+
+    const statNames = ['top_speed','acceleration','handling','grip','nitro'];
+    const statLabels = {'top_speed':'Speed','acceleration':'Accel','handling':'Handling','grip':'Grip','nitro':'Nitro'};
+    const baseCost = 500;
+
+    document.getElementById('tuneVehicleInfo').innerHTML = `
+      <h3>${escapeHtml(vehicle.nickname || vehicle.model.name)}</h3>
+      <p>Base: ${escapeHtml(vehicle.model.name)}</p>
+    `;
+
+    const statsDiv = document.getElementById('tuneStats');
+    statsDiv.innerHTML = statNames.map(stat => {
+      const level = upgradeMap[stat] || 0;
+      const currentStat = vehicle[stat] || 50;
+      const cost = baseCost * (level + 1);
+      const maxed = currentStat >= 100;
+      return `
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #eee;">
+          <span><strong>${statLabels[stat]}</strong> (${currentStat})</span>
+          <span>Lv.${level}</span>
+          <button class="btn btn-sm btn-primary" onclick="upgradeStat('${vehicleId}','${stat}',${cost})" ${maxed ? 'disabled' : ''}>
+            +1 (₹${cost})
+          </button>
+        </div>
+      `;
+    }).join('');
+
+    openModal('tuneModal');
+  }
+
+  async function upgradeStat(vehicleId, statName, cost) {
+    const { data, error } = await sb.rpc('upgrade_vehicle_stat', {
+      p_vehicle_id: vehicleId,
+      p_stat_name: statName,
+      p_cost: cost
+    });
+    if (error || !data.success) {
+      showToast(error?.message || data?.error, 'error');
+      return;
+    }
+    showToast(data.message, 'success');
+    // Refresh vehicle list and update modal
+    await loadVehicles();
+    // Refresh modal content
+    showTuneModal(vehicleId);
+  }
+
+  // ─── Race Creation ──────────────────────────────────────
+  function showCreateRaceModal() {
+    openModal('createRaceModal');
+    document.getElementById('createRaceForm').reset();
+  }
+
+  document.getElementById('createRaceForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = document.getElementById('raceName').value.trim();
+    if (!name) { showToast('Race name is required', 'error'); return; }
+    const data = {
+      p_name: name,
+      p_race_type: document.getElementById('raceType').value,
+      p_description: document.getElementById('raceDesc').value,
+      p_entry_fee: parseInt(document.getElementById('raceEntryFee').value) || 0,
+      p_max_participants: parseInt(document.getElementById('raceMaxParticipants').value) || 10,
+      p_duration_seconds: parseInt(document.getElementById('raceDuration').value) || 10,
+      p_auto_start: document.getElementById('raceAutoStart').checked
+    };
+    const { data: result, error } = await sb.rpc('create_race', data);
+    if (error) { showToast('Error: '+error.message, 'error'); return; }
+    if (!result.success) { showToast(result.error, 'error'); return; }
+    showToast('Race created!', 'success');
+    closeModal('createRaceModal');
+    loadRaces();
+    // Switch to races tab
+    switchTab('races');
+  });
+
+  // ─── General ──────────────────────────────────────────────
+  function showResultsModal(results, winnerName) {
     const modal = document.getElementById('resultModal');
     const title = document.getElementById('resultTitle');
     const list = document.getElementById('resultList');
 
-    const winnerName = results.find(r => r.player_id === winnerId)?.players?.username || 'Winner';
     title.textContent = `🏁 Race Finished - Winner: ${escapeHtml(winnerName)}`;
 
     list.innerHTML = results.map((r, index) => `
       <div class="result-item">
         <span class="pos">#${r.position}</span>
-        <span class="name">${escapeHtml(r.players?.username || 'Unknown')}</span>
+        <span class="name">${escapeHtml(r.username || 'Unknown')}</span>
         <span class="earnings">+₹${r.earnings}</span>
       </div>
     `).join('');
@@ -1296,6 +1695,27 @@
     document.getElementById('resultModal').style.display = 'none';
   }
 
+  // ─── Tab Switching ──────────────────────────────────────
+  function switchTab(tabName, evt) {
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(tabName).classList.add('active');
+    if (evt && evt.target) evt.target.classList.add('active');
+    else {
+      const btn = document.querySelector(`.tab-btn[onclick*="${tabName}"]`);
+      if (btn) btn.classList.add('active');
+    }
+    if (tabName === 'garage') loadVehicles();
+    else if (tabName === 'races') loadRaces();
+    else if (tabName === 'shop') loadVehicleModels();
+    else if (tabName === 'leaderboard') loadLeaderboard();
+    else if (tabName === 'history') loadHistory();
+    else if (tabName === 'challenges') loadChallenges();
+  }
+
+  function goToDashboard() { window.location.href = 'dashboard.html'; }
+
+  // ─── Sell / Rename ──────────────────────────────────────
   async function sellVehicle(vehicleId) {
     if (!confirm('Sell this vehicle? You will get 85% of its value back.')) return;
     const { data, error } = await sb.rpc('sell_vehicle', { p_vehicle_id: vehicleId });
@@ -1325,26 +1745,6 @@
     }
   }
 
-  // ─── Tab Switching ──────────────────────────────────────
-  function switchTab(tabName, evt) {
-    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById(tabName).classList.add('active');
-    if (evt && evt.target) evt.target.classList.add('active');
-    else {
-      const btn = document.querySelector(`.tab-btn[onclick*="${tabName}"]`);
-      if (btn) btn.classList.add('active');
-    }
-    if (tabName === 'garage') loadVehicles();
-    else if (tabName === 'races') loadRaces();
-    else if (tabName === 'shop') loadVehicleModels();
-    else if (tabName === 'leaderboard') loadLeaderboard();
-    else if (tabName === 'history') loadHistory();
-    else if (tabName === 'challenges') loadChallenges();
-  }
-
-  function goToDashboard() { window.location.href = 'dashboard.html'; }
-
   // ─── Init ────────────────────────────────────────────────
   loadPlayerData();
 
@@ -1367,6 +1767,13 @@
   window.closeChallengeModal = closeChallengeModal;
   window.handleChallenge = handleChallenge;
   window.closeResultModal = closeResultModal;
+  window.startRaceManually = startRaceManually;
+  window.showTuneModal = showTuneModal;
+  window.upgradeStat = upgradeStat;
+  window.showCreateRaceModal = showCreateRaceModal;
+  window.closeModal = closeModal;
+  window.openModal = openModal;
+  window.closeRaceOverlay = closeRaceOverlay;
   window.goToDashboard = goToDashboard;
 </script>
 </body>
