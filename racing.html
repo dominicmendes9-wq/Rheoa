@@ -4,7 +4,7 @@
   <title>Rheoa RPG - Racing</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    /* ─── all styles same as before ─── */
+    /* ─── all styles ─── */
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Courier New', monospace; background: #f8f8f0; color: #222; padding: 20px; min-height: 100vh; }
     h1 { text-align: center; margin-bottom: 10px; font-size: clamp(1.5rem, 5vw, 2.5rem); color: #f44336; }
@@ -203,7 +203,7 @@
     .racer-item .dot.available { background: #4CAF50; }
     .racer-item .dot.busy { background: #f44336; }
     .racer-name { flex: 1; font-weight: 500; }
-    .racer-level { font-size: 0.8rem; color: #666; }
+    /* Removed .racer-level */
 
     .racers-chat {
       flex: 2;
@@ -225,7 +225,6 @@
       flex-direction: column;
       gap: 8px;
     }
-    /* ── Chat messages: own vs other ── */
     .chat-message {
       display: flex;
       flex-direction: column;
@@ -308,7 +307,6 @@
     .challenge-modal-content .actions .send { background: #f44336; color: white; }
     .challenge-modal-content .actions .cancel { background: #ccc; color: #333; }
 
-    /* ─── Race Result Modal ─── */
     .result-modal {
       display: none;
       position: fixed;
@@ -343,7 +341,6 @@
     .result-item .name { flex: 1; margin-left: 10px; }
     .result-item .earnings { color: #4CAF50; font-weight: bold; }
 
-    /* ─── NEW: Race Creation Modal ─── */
     .modal {
       display: none;
       position: fixed;
@@ -382,7 +379,6 @@
       justify-content: flex-end;
     }
 
-    /* ─── Race Overlay ─── */
     #raceOverlay {
       display: none;
       position: fixed;
@@ -645,8 +641,6 @@
   </div>
 </div>
 
-<!-- ==================== MODALS ==================== -->
-
 <!-- Race Creation Modal -->
 <div class="modal" id="createRaceModal">
   <div class="modal-content">
@@ -680,14 +674,12 @@
   </div>
 </div>
 
-<!-- Race Overlay (animated) -->
+<!-- Race Overlay -->
 <div id="raceOverlay">
   <div class="race-overlay-box">
     <h2 id="raceOverlayTitle">🏁 Race Starting...</h2>
     <div id="raceCountdown">3</div>
-    <div id="raceTrack">
-      <!-- Cars will be inserted here -->
-    </div>
+    <div id="raceTrack"></div>
     <div id="raceTimeline">
       <div id="raceProgressFill"></div>
     </div>
@@ -706,8 +698,6 @@
     </div>
   </div>
 </div>
-
-<!-- ================================================== -->
 
 <button class="back-button" onclick="goToDashboard()">← Back to Dashboard</button>
 
@@ -765,11 +755,10 @@
   let chatDbSubscription = null;
   let raceEntriesSubscription = null;
   let raceUpdateTimeout = null;
-
-  // New state for race animation
   let raceInterval = null;
   let raceStartTime = null;
   let raceDuration = 10;
+  const MAX_CHAT_MESSAGES = 100;
 
   // ─── Auth & Player ──────────────────────────────────────
   async function loadPlayerData() {
@@ -1097,11 +1086,30 @@
     }).join('');
   }
 
+  // ─── Chat trimming ──────────────────────────────────────
+  async function trimChatIfNeeded() {
+    try {
+      const { data, error } = await sb.rpc('trim_racing_chat', {
+        p_room_id: racingRoomId,
+        p_max_count: MAX_CHAT_MESSAGES
+      });
+      if (error) {
+        console.error('Trim error:', error);
+        return;
+      }
+      if (data && data.deleted > 0) {
+        console.log(`Trimming: removed ${data.deleted} old messages.`);
+        // Remove from DOM as well – we'll simply reload the last 100 messages.
+        await loadChatMessages();
+      }
+    } catch (err) {
+      console.error('Trim exception:', err);
+    }
+  }
+
   // ─── Realtime Initialisation ────────────────────────────
   async function initRealtime() {
     const FIXED_ROOM_ID = '123e4567-e89b-12d3-a456-426614174000';
-
-    // Ensure room exists
     const { data: room, error } = await sb
       .from('race_chat_rooms')
       .select('id')
@@ -1116,17 +1124,14 @@
     // ─── 1. Presence channel ──────────────────────────────
     racingChannel = sb.channel(`racing-presence:${racingRoomId}`);
 
-    // Broadcast listener for chat
     racingChannel.on('broadcast', { event: 'message' }, (payload) => {
       console.log('📨 Broadcast received:', payload);
       appendChatMessage(payload.payload);
     });
 
-    // Broadcast listener for race updates (instant refresh)
     racingChannel.on('broadcast', { event: 'race_update' }, (payload) => {
       console.log('📡 Race update broadcast received:', payload);
       if (payload.action === 'start' && payload.result) {
-        // Show results immediately
         showResultsModal(payload.result.results, payload.result.winner);
       }
       if (raceUpdateTimeout) clearTimeout(raceUpdateTimeout);
@@ -1136,7 +1141,6 @@
       }, 200);
     });
 
-    // Presence sync
     racingChannel.on('presence', { event: 'sync' }, () => {
       const state = racingChannel.presenceState();
       const racers = [];
@@ -1155,6 +1159,7 @@
           status: 'available'
         });
         await loadChatMessages();
+        await trimChatIfNeeded(); // ensure only 100 messages
       } else {
         console.warn('⚠️ Racing presence channel subscription status:', status);
       }
@@ -1171,6 +1176,8 @@
       }, (payload) => {
         console.log('📩 DB insert received:', payload);
         appendChatMessage(payload.new);
+        // trim after insertion
+        trimChatIfNeeded();
       })
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') console.log('✅ Racing chat DB subscription active');
@@ -1229,11 +1236,13 @@
       .from('race_chat_messages')
       .select('*, players!race_chat_messages_user_id_fkey (username)')
       .eq('room_id', racingRoomId)
-      .order('created_at', { ascending: true })
-      .limit(50);
+      .order('created_at', { ascending: false })
+      .limit(MAX_CHAT_MESSAGES);
     if (error) { console.error(error); return; }
+    // Reverse to display oldest first
+    const messages = (data || []).reverse();
     const container = document.getElementById('racingChatMessages');
-    container.innerHTML = data.map(msg => {
+    container.innerHTML = messages.map(msg => {
       const isOwn = msg.user_id === currentPlayer.id;
       return `
         <div class="chat-message ${isOwn ? 'own' : ''}" data-msg-id="${msg.id}">
@@ -1250,14 +1259,12 @@
 
   function appendChatMessage(msg) {
     const container = document.getElementById('racingChatMessages');
-    // Avoid duplicates by checking id
     const existing = container.querySelector(`[data-msg-id="${msg.id}"]`);
     if (existing) {
       console.log('⏭️ Message already exists, skipping:', msg.id);
       return;
     }
 
-    // Determine sender username: from broadcast payload's 'username' field, or fallback to players.username
     const username = msg.username || msg.players?.username || 'Unknown';
     const isOwn = msg.user_id === currentPlayer.id;
     const time = new Date(msg.created_at).toLocaleTimeString();
@@ -1280,25 +1287,20 @@
   async function sendRacingChat() {
     const input = document.getElementById('racingChatInput');
     const text = input.value.trim();
-    if (!text || !racingRoomId) {
-      console.warn('No text or roomId');
-      return;
-    }
+    if (!text || !racingRoomId) return;
     input.value = '';
 
     const tempId = 'temp-' + Date.now();
     const newMsg = {
       id: tempId,
       user_id: currentPlayer.id,
-      username: currentPlayer.username, // explicitly include username
+      username: currentPlayer.username,
       content: text,
       created_at: new Date().toISOString()
     };
 
-    // Add to UI immediately (optimistic)
     appendChatMessage(newMsg);
 
-    // Insert into DB
     const { data, error } = await sb
       .from('race_chat_messages')
       .insert({
@@ -1313,26 +1315,22 @@
     if (error) {
       console.error('❌ Failed to insert message:', error);
       showToast('Failed to send message', 'error');
-      // Remove the optimistic message
       const el = container.querySelector(`[data-msg-id="${tempId}"]`);
       if (el) el.remove();
       return;
     }
 
-    // Update temp message with real DB id
     const finalMsg = { ...newMsg, id: data.id };
     const tempEl = document.querySelector(`[data-msg-id="${tempId}"]`);
     if (tempEl) {
       tempEl.setAttribute('data-msg-id', finalMsg.id);
     }
 
-    // Broadcast to others via presence channel
-    console.log('📤 Broadcasting message:', finalMsg);
     try {
       await racingChannel.send({
         type: 'broadcast',
         event: 'message',
-        payload: finalMsg // contains username, user_id, content, id, created_at
+        payload: finalMsg
       });
       console.log('✅ Broadcast sent');
     } catch (err) {
@@ -1359,7 +1357,6 @@
         <div class="racer-item" onclick="${isSelf ? '' : `openChallengeModal('${r.user_id}', '${escapeHtml(r.username)}')`}">
           <span class="dot ${dotClass}"></span>
           <span class="racer-name">${escapeHtml(r.username)} ${isSelf ? '(You)' : ''}</span>
-          <span class="racer-level">Lv.${r.level || '?'}</span>
         </div>
       `;
     }).join('');
@@ -1466,7 +1463,6 @@
     }
   }
 
-  // ─── joinRace with animation support ─────────────────
   async function joinRace(raceId) {
     if (!vehicles.length) { showToast('You need a vehicle to join!', 'error'); return; }
     const vehicleId = vehicles[0].id;
@@ -1491,7 +1487,6 @@
     }
   }
 
-  // ─── Leave race ──────────────────────────────────────────
   async function leaveRace(raceId) {
     if (!confirm('Leave this race?')) return;
     const { data, error } = await sb.rpc('leave_race', { p_race_id: raceId });
@@ -1515,7 +1510,6 @@
     }
   }
 
-  // ─── Manual start ────────────────────────────────────────
   async function startRaceManually(raceId) {
     const { data, error } = await sb.rpc('start_race', { p_race_id: raceId });
     if (error || !data.success) {
