@@ -4,7 +4,7 @@
   <title>Rheoa RPG - Racing</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    /* ─── all styles ─── */
+    /* ─── Styles (unchanged) ─── */
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Courier New', monospace; background: #f8f8f0; color: #222; padding: 20px; min-height: 100vh; }
     h1 { text-align: center; margin-bottom: 10px; font-size: clamp(1.5rem, 5vw, 2.5rem); color: #f44336; }
@@ -203,7 +203,6 @@
     .racer-item .dot.available { background: #4CAF50; }
     .racer-item .dot.busy { background: #f44336; }
     .racer-name { flex: 1; font-weight: 500; }
-    /* Removed .racer-level */
 
     .racers-chat {
       flex: 2;
@@ -827,7 +826,7 @@
       const { data, error } = await sb
         .from('races')
         .select('*')
-        .in('status', ['open', 'running'])
+        .in('status', ['open', 'running', 'finished'])
         .order('created_at', { ascending: false });
       if (error) throw error;
       const racesWithEntries = [];
@@ -1099,7 +1098,6 @@
       }
       if (data && data.deleted > 0) {
         console.log(`Trimming: removed ${data.deleted} old messages.`);
-        // Remove from DOM as well – we'll simply reload the last 100 messages.
         await loadChatMessages();
       }
     } catch (err) {
@@ -1159,7 +1157,7 @@
           status: 'available'
         });
         await loadChatMessages();
-        await trimChatIfNeeded(); // ensure only 100 messages
+        await trimChatIfNeeded();
       } else {
         console.warn('⚠️ Racing presence channel subscription status:', status);
       }
@@ -1176,7 +1174,6 @@
       }, (payload) => {
         console.log('📩 DB insert received:', payload);
         appendChatMessage(payload.new);
-        // trim after insertion
         trimChatIfNeeded();
       })
       .subscribe((status) => {
@@ -1239,7 +1236,6 @@
       .order('created_at', { ascending: false })
       .limit(MAX_CHAT_MESSAGES);
     if (error) { console.error(error); return; }
-    // Reverse to display oldest first
     const messages = (data || []).reverse();
     const container = document.getElementById('racingChatMessages');
     container.innerHTML = messages.map(msg => {
@@ -1582,34 +1578,45 @@
     setTimeout(async () => {
       clearInterval(raceInterval);
       raceInterval = null;
-      const { data: result, error } = await sb.rpc('finish_race', { p_race_id: raceId });
-      if (error) {
-        showToast('Race finish error: '+error.message, 'error');
-        title.textContent = '⚠️ Race Error';
-        closeBtn.style.display = 'block';
-        return;
-      }
-      if (!result.success) {
-        showToast(result.error, 'error');
-        title.textContent = '⚠️ Race Error';
-        closeBtn.style.display = 'block';
-        return;
-      }
-
-      title.textContent = `🏁 Winner: ${result.winner_username}`;
-      progressFill.style.width = '100%';
-      const cars = track.querySelectorAll('.car-on-track');
-      result.results.forEach((r, idx) => {
-        const car = track.querySelector(`[data-player-id="${r.player_id}"]`);
-        if (car) {
-          car.style.left = (idx === 0 ? 95 : (95 - idx * 10)) + '%';
-          car.style.backgroundColor = idx === 0 ? '#FFD700' : '#4CAF50';
-          car.textContent += ` #${r.position} +₹${r.earnings}`;
+      try {
+        const { data: result, error } = await sb.rpc('finish_race', { p_race_id: raceId });
+        if (error) {
+          console.error('Race finish error:', error);
+          showToast('Race finish error: ' + error.message, 'error');
+          title.textContent = '⚠️ Race Error';
+          closeBtn.style.display = 'block';
+          loadRaces();
+          return;
         }
-      });
-      closeBtn.style.display = 'block';
-      showToast(`Race finished! Winner: ${result.winner_username}`, 'success');
-      loadRaces();
+        if (!result.success) {
+          showToast(result.error, 'error');
+          title.textContent = '⚠️ Race Error';
+          closeBtn.style.display = 'block';
+          loadRaces();
+          return;
+        }
+        // Success
+        title.textContent = `🏁 Winner: ${result.winner_username}`;
+        progressFill.style.width = '100%';
+        const cars = track.querySelectorAll('.car-on-track');
+        result.results.forEach((r, idx) => {
+          const car = track.querySelector(`[data-player-id="${r.player_id}"]`);
+          if (car) {
+            car.style.left = (idx === 0 ? 95 : (95 - idx * 10)) + '%';
+            car.style.backgroundColor = idx === 0 ? '#FFD700' : '#4CAF50';
+            car.textContent += ` #${r.position} +₹${r.earnings}`;
+          }
+        });
+        closeBtn.style.display = 'block';
+        showToast(`Race finished! Winner: ${result.winner_username}`, 'success');
+        loadRaces();
+      } catch (err) {
+        console.error('Exception in finish_race:', err);
+        showToast('Error finishing race: ' + err.message, 'error');
+        title.textContent = '⚠️ Race Error';
+        closeBtn.style.display = 'block';
+        loadRaces();
+      }
     }, duration * 1000 + 500);
   }
 
@@ -1617,6 +1624,8 @@
     document.getElementById('raceOverlay').style.display = 'none';
     clearInterval(raceInterval);
     raceInterval = null;
+    // Refresh races in case the status was stuck
+    loadRaces();
   }
 
   // ─── Vehicle Tuning ──────────────────────────────────────
