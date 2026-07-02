@@ -4,7 +4,7 @@
   <title>Rheoa RPG - Racing</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    /* ─── all styles unchanged ─── */
+    /* ─── all styles same as before ─── */
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Courier New', monospace; background: #f8f8f0; color: #222; padding: 20px; min-height: 100vh; }
     h1 { text-align: center; margin-bottom: 10px; font-size: clamp(1.5rem, 5vw, 2.5rem); color: #f44336; }
@@ -1118,6 +1118,7 @@
 
     // Broadcast listener for chat
     racingChannel.on('broadcast', { event: 'message' }, (payload) => {
+      console.log('📨 Broadcast received:', payload);
       appendChatMessage(payload.payload);
     });
 
@@ -1154,6 +1155,8 @@
           status: 'available'
         });
         await loadChatMessages();
+      } else {
+        console.warn('⚠️ Racing presence channel subscription status:', status);
       }
     });
 
@@ -1166,10 +1169,12 @@
         table: 'race_chat_messages',
         filter: `room_id=eq.${racingRoomId}`
       }, (payload) => {
+        console.log('📩 DB insert received:', payload);
         appendChatMessage(payload.new);
       })
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') console.log('✅ Racing chat DB subscription active');
+        else console.warn('⚠️ Chat DB subscription status:', status);
       });
 
     // ─── 3. Race entries Realtime subscription ────────────
@@ -1188,11 +1193,8 @@
         }, 300);
       })
       .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          console.log('✅ Race entries Realtime subscription active');
-        } else {
-          console.warn('⚠️ Race entries Realtime subscription status:', status);
-        }
+        if (status === 'SUBSCRIBED') console.log('✅ Race entries Realtime subscription active');
+        else console.warn('⚠️ Race entries Realtime subscription status:', status);
       });
 
     // ─── 4. Challenges subscription ────────────────────────
@@ -1217,6 +1219,7 @@
     });
     await challengeSubscription.subscribe((status) => {
       if (status === 'SUBSCRIBED') console.log('✅ Challenges subscription active');
+      else console.warn('⚠️ Challenges subscription status:', status);
     });
   }
 
@@ -1249,7 +1252,10 @@
     const container = document.getElementById('racingChatMessages');
     // Avoid duplicates by checking id
     const existing = container.querySelector(`[data-msg-id="${msg.id}"]`);
-    if (existing) return;
+    if (existing) {
+      console.log('⏭️ Message already exists, skipping:', msg.id);
+      return;
+    }
 
     // Determine sender username: from broadcast payload's 'username' field, or fallback to players.username
     const username = msg.username || msg.players?.username || 'Unknown';
@@ -1268,12 +1274,16 @@
     `;
     container.appendChild(div);
     container.scrollTop = container.scrollHeight;
+    console.log('✅ Appended message:', msg.id);
   }
 
   async function sendRacingChat() {
     const input = document.getElementById('racingChatInput');
     const text = input.value.trim();
-    if (!text || !racingRoomId) return;
+    if (!text || !racingRoomId) {
+      console.warn('No text or roomId');
+      return;
+    }
     input.value = '';
 
     const tempId = 'temp-' + Date.now();
@@ -1301,7 +1311,7 @@
       .single();
 
     if (error) {
-      console.error(error);
+      console.error('❌ Failed to insert message:', error);
       showToast('Failed to send message', 'error');
       // Remove the optimistic message
       const el = container.querySelector(`[data-msg-id="${tempId}"]`);
@@ -1311,17 +1321,24 @@
 
     // Update temp message with real DB id
     const finalMsg = { ...newMsg, id: data.id };
-    const tempEl = container.querySelector(`[data-msg-id="${tempId}"]`);
+    const tempEl = document.querySelector(`[data-msg-id="${tempId}"]`);
     if (tempEl) {
       tempEl.setAttribute('data-msg-id', finalMsg.id);
     }
 
     // Broadcast to others via presence channel
-    await racingChannel.send({
-      type: 'broadcast',
-      event: 'message',
-      payload: finalMsg // contains username, user_id, content, id, created_at
-    });
+    console.log('📤 Broadcasting message:', finalMsg);
+    try {
+      await racingChannel.send({
+        type: 'broadcast',
+        event: 'message',
+        payload: finalMsg // contains username, user_id, content, id, created_at
+      });
+      console.log('✅ Broadcast sent');
+    } catch (err) {
+      console.error('❌ Broadcast send error:', err);
+      showToast('Failed to broadcast message', 'error');
+    }
   }
 
   function renderRacers() {
