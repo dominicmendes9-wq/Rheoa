@@ -4,7 +4,7 @@
   <title>Rheoa RPG - Racing</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    /* ─── Styles (same as before) ─── */
+    /* ─── styles as before (unchanged) ─── */
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Courier New', monospace; background: #f8f8f0; color: #222; padding: 20px; min-height: 100vh; }
     h1 { text-align: center; margin-bottom: 10px; font-size: clamp(1.5rem, 5vw, 2.5rem); color: #f44336; }
@@ -1480,18 +1480,21 @@
       p_vehicle_id: vehicleId
     });
     if (error) {
-      showToast(error.message, 'error');
+      console.error('Join race RPC error:', error);
+      showToast('Error joining race: ' + error.message, 'error');
       return;
     }
     if (!data.success) {
-      showToast(data.error, 'error');
+      showToast('Failed to join: ' + data.error, 'error');
       return;
     }
 
     showToast('Joined race!', 'success');
     if (data.status === 'running') {
+      // Race auto-started
       startRaceAnimation(raceId, data.duration_seconds || 10);
     } else {
+      // Race still open, refresh list
       loadRaces();
     }
   }
@@ -1608,17 +1611,18 @@
       try {
         const { data: result, error } = await sb.rpc('finish_race', { p_race_id: raceId });
         if (error) {
-          console.error('Race finish error:', error);
-          showToast('Race finish error: ' + error.message, 'error');
-          title.textContent = '⚠️ Race Error';
+          console.error('RPC error in finish_race:', error);
+          showToast('RPC error: ' + error.message, 'error');
+          title.textContent = '⚠️ Error';
           closeBtn.style.display = 'block';
           await sb.from('races').update({ status: 'open' }).eq('id', raceId);
           loadRaces();
           return;
         }
         if (!result.success) {
-          showToast(result.error, 'error');
-          title.textContent = '⚠️ Race Error: ' + result.error;
+          console.error('finish_race returned error:', result.error);
+          showToast('Race finish error: ' + result.error, 'error');
+          title.textContent = '⚠️ ' + result.error;
           closeBtn.style.display = 'block';
           await sb.from('races').update({ status: 'open' }).eq('id', raceId);
           loadRaces();
@@ -1655,7 +1659,7 @@
       } catch (err) {
         console.error('Exception in finish_race:', err);
         showToast('Error finishing race: ' + err.message, 'error');
-        title.textContent = '⚠️ Race Error';
+        title.textContent = '⚠️ Error';
         closeBtn.style.display = 'block';
         await sb.from('races').update({ status: 'open' }).eq('id', raceId);
         loadRaces();
