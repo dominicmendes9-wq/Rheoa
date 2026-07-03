@@ -4,7 +4,7 @@
   <title>Rheoa RPG - Racing</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    /* ─── Styles (unchanged except toast z-index) ─── */
+    /* ─── styles (same as before, with toast z-index fix) ─── */
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Courier New', monospace; background: #f8f8f0; color: #222; padding: 20px; min-height: 100vh; }
     h1 { text-align: center; margin-bottom: 10px; font-size: clamp(1.5rem, 5vw, 2.5rem); color: #f44336; }
@@ -464,9 +464,6 @@
       top: 20px;
       right: 20px;
       z-index: 99999; /* Ensure toast is above overlay */
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
     }
     .toast {
       padding: 15px 25px;
@@ -475,11 +472,6 @@
       color: white;
       font-weight: bold;
       animation: slideIn 0.3s ease-out;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      min-width: 250px;
-      max-width: 350px;
-      word-wrap: break-word;
-      z-index: 99999;
     }
     .toast.success { background: #4CAF50; }
     .toast.error { background: #f44336; }
@@ -1499,10 +1491,8 @@
 
     showToast('Joined race!', 'success');
     if (data.status === 'running') {
-      // Race auto-started
       startRaceAnimation(raceId, data.duration_seconds || 10);
     } else {
-      // Race still open, refresh list
       loadRaces();
     }
   }
