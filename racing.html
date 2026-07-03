@@ -4,7 +4,7 @@
   <title>Rheoa RPG - Racing</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    /* ─── all styles unchanged ─── */
+    /* ─── Styles (same as before) ─── */
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Courier New', monospace; background: #f8f8f0; color: #222; padding: 20px; min-height: 100vh; }
     h1 { text-align: center; margin-bottom: 10px; font-size: clamp(1.5rem, 5vw, 2.5rem); color: #f44336; }
@@ -1005,7 +1005,6 @@
       const isCreator = race.created_by === currentPlayer.id;
       const canStart = isCreator && isOpen && entries.length >= 2;
 
-      // Determine card class for finished races
       const cardClass = isFinished ? 'card finished' : 'card';
 
       return `
@@ -1140,8 +1139,11 @@
 
     racingChannel.on('broadcast', { event: 'race_update' }, (payload) => {
       console.log('📡 Race update broadcast received:', payload);
-      if (payload.action === 'start' && payload.result) {
-        showResultsModal(payload.result.results, payload.result.winner);
+      if (payload.action === 'finish' && payload.result) {
+        showResultsModal(payload.result.results, payload.result.winner_username);
+        loadRaces();
+        loadLeaderboard();
+        loadHistory();
       }
       if (raceUpdateTimeout) clearTimeout(raceUpdateTimeout);
       raceUpdateTimeout = setTimeout(() => {
@@ -1533,7 +1535,6 @@
   async function raceAgain(raceId) {
     const race = races.find(r => r.id === raceId);
     if (!race) return;
-    // Open create modal with pre-filled values
     document.getElementById('raceName').value = race.name + ' (Run 2)';
     document.getElementById('raceType').value = race.race_type;
     document.getElementById('raceDesc').value = race.description || '';
@@ -1611,7 +1612,6 @@
           showToast('Race finish error: ' + error.message, 'error');
           title.textContent = '⚠️ Race Error';
           closeBtn.style.display = 'block';
-          // Reset race status to open if finish failed
           await sb.from('races').update({ status: 'open' }).eq('id', raceId);
           loadRaces();
           return;
@@ -1620,7 +1620,6 @@
           showToast(result.error, 'error');
           title.textContent = '⚠️ Race Error: ' + result.error;
           closeBtn.style.display = 'block';
-          // Reset race status to open if finish failed
           await sb.from('races').update({ status: 'open' }).eq('id', raceId);
           loadRaces();
           return;
@@ -1639,13 +1638,25 @@
         });
         closeBtn.style.display = 'block';
         showToast(`Race finished! Winner: ${result.winner_username}`, 'success');
-        loadRaces();
+
+        // Broadcast finish to others
+        if (racingChannel) {
+          await racingChannel.send({
+            type: 'broadcast',
+            event: 'race_update',
+            payload: { action: 'finish', result: result }
+          });
+        }
+
+        // Refresh data
+        await loadRaces();
+        await loadLeaderboard();
+        await loadHistory();
       } catch (err) {
         console.error('Exception in finish_race:', err);
         showToast('Error finishing race: ' + err.message, 'error');
         title.textContent = '⚠️ Race Error';
         closeBtn.style.display = 'block';
-        // Reset race status to open if finish failed
         await sb.from('races').update({ status: 'open' }).eq('id', raceId);
         loadRaces();
       }
