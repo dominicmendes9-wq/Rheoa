@@ -1481,7 +1481,7 @@
     });
     if (error) {
       console.error('Join race RPC error:', error);
-      showToast('Error joining race: ' + error.message, 'error');
+      showToast('Error joining race: ' + JSON.stringify(error), 'error');
       return;
     }
     if (!data.success) {
@@ -1612,7 +1612,7 @@
         const { data: result, error } = await sb.rpc('finish_race', { p_race_id: raceId });
         if (error) {
           console.error('RPC error in finish_race:', error);
-          showToast('RPC error: ' + error.message, 'error');
+          showToast('RPC error: ' + JSON.stringify(error), 'error');
           title.textContent = '⚠️ Error';
           closeBtn.style.display = 'block';
           await sb.from('races').update({ status: 'open' }).eq('id', raceId);
@@ -1620,9 +1620,9 @@
           return;
         }
         if (!result.success) {
-          console.error('finish_race returned error:', result.error);
-          showToast('Race finish error: ' + result.error, 'error');
-          title.textContent = '⚠️ ' + result.error;
+          console.error('finish_race returned error:', result);
+          showToast('Race finish error: ' + JSON.stringify(result), 'error');
+          title.textContent = '⚠️ ' + (result.error || 'Unknown error');
           closeBtn.style.display = 'block';
           await sb.from('races').update({ status: 'open' }).eq('id', raceId);
           loadRaces();
@@ -1658,7 +1658,7 @@
         await loadHistory();
       } catch (err) {
         console.error('Exception in finish_race:', err);
-        showToast('Error finishing race: ' + err.message, 'error');
+        showToast('Error finishing race: ' + JSON.stringify(err), 'error');
         title.textContent = '⚠️ Error';
         closeBtn.style.display = 'block';
         await sb.from('races').update({ status: 'open' }).eq('id', raceId);
