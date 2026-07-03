@@ -4,7 +4,7 @@
   <title>Rheoa RPG - Racing</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    /* ─── styles (same as before, with toast z-index fix) ─── */
+    /* ─── all styles (same as before) ─── */
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Courier New', monospace; background: #f8f8f0; color: #222; padding: 20px; min-height: 100vh; }
     h1 { text-align: center; margin-bottom: 10px; font-size: clamp(1.5rem, 5vw, 2.5rem); color: #f44336; }
@@ -459,19 +459,25 @@
     }
     .back-button:hover { background: #555; transform: scale(1.02); }
 
+    /* ─── Toast container: high z-index to appear above overlay ─── */
     .toast-container {
       position: fixed;
       top: 20px;
       right: 20px;
-      z-index: 99999; /* Ensure toast is above overlay */
+      z-index: 99999;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
     }
     .toast {
       padding: 15px 25px;
-      margin-bottom: 10px;
       border-radius: 8px;
       color: white;
       font-weight: bold;
       animation: slideIn 0.3s ease-out;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      max-width: 400px;
+      word-wrap: break-word;
     }
     .toast.success { background: #4CAF50; }
     .toast.error { background: #f44336; }
@@ -718,7 +724,7 @@
     return str.replace(/[&<>]/g, m => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;' }[m]));
   }
 
-  function showToast(message, type = 'info', duration = 3000) {
+  function showToast(message, type = 'info', duration = 5000) {
     const container = document.getElementById('toast-container');
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
