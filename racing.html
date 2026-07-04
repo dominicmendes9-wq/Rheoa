@@ -4,7 +4,7 @@
   <title>Rheoa RPG - Racing</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    /* ─── all styles (same as before) ─── */
+    /* ─── all styles (unchanged) ─── */
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Courier New', monospace; background: #f8f8f0; color: #222; padding: 20px; min-height: 100vh; }
     h1 { text-align: center; margin-bottom: 10px; font-size: clamp(1.5rem, 5vw, 2.5rem); color: #f44336; }
@@ -311,6 +311,41 @@
     .challenge-modal-content .actions .send { background: #f44336; color: white; }
     .challenge-modal-content .actions .cancel { background: #ccc; color: #333; }
 
+    /* Incoming challenge modal (popup) */
+    .incoming-challenge-modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.6);
+      z-index: 10002;
+      justify-content: center;
+      align-items: center;
+    }
+    .incoming-challenge-modal-content {
+      background: white;
+      border-radius: 20px;
+      padding: 30px;
+      max-width: 450px;
+      width: 90%;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+      text-align: center;
+    }
+    .incoming-challenge-modal-content .actions {
+      display: flex;
+      gap: 15px;
+      margin-top: 20px;
+      justify-content: center;
+    }
+    .incoming-challenge-modal-content .actions button {
+      padding: 10px 30px;
+      border: none;
+      border-radius: 30px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .incoming-challenge-modal-content .actions .accept { background: #4CAF50; color: white; }
+    .incoming-challenge-modal-content .actions .reject { background: #f44336; color: white; }
+
     .result-modal {
       display: none;
       position: fixed;
@@ -459,7 +494,6 @@
     }
     .back-button:hover { background: #555; transform: scale(1.02); }
 
-    /* ─── Toast container: high z-index to appear above overlay ─── */
     .toast-container {
       position: fixed;
       top: 20px;
@@ -627,10 +661,10 @@
   </div>
 </div>
 
-<!-- Challenge Modal -->
+<!-- Challenge Modal (to send a challenge) -->
 <div class="challenge-modal" id="challengeModal">
   <div class="challenge-modal-content">
-    <h2>🏁 Challenge to Race</h2>
+    <h2>🏁 Send Challenge</h2>
     <p id="challengeTargetName"></p>
     <div id="raceOptions">
       <div class="empty-message">Loading races...</div>
@@ -638,6 +672,18 @@
     <div class="actions">
       <button class="send" onclick="sendChallenge()">Send Challenge</button>
       <button class="cancel" onclick="closeChallengeModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Incoming Challenge Modal (popup) -->
+<div class="incoming-challenge-modal" id="incomingChallengeModal">
+  <div class="incoming-challenge-modal-content">
+    <h2>📨 Incoming Challenge</h2>
+    <p id="incomingChallengeText"></p>
+    <div class="actions">
+      <button class="accept" onclick="acceptIncomingChallenge()">Accept</button>
+      <button class="reject" onclick="rejectIncomingChallenge()">Reject</button>
     </div>
   </div>
 </div>
@@ -758,7 +804,7 @@
   let racingChannel = null;
   let challengeSubscription = null;
   let selectedTarget = null;
-  let selectedRaceType = null;
+  let selectedRaceId = null;
   let incomingChallengeId = null;
   let racingRoomId = null;
   let realtimeInit = false;
@@ -1085,7 +1131,7 @@
         <div class="challenge-item">
           <div>
             <div><strong>${isOutgoing ? '→' : '←'} ${escapeHtml(other)}</strong></div>
-            <div>${c.race_type} race</div>
+            <div>Race: ${escapeHtml(c.race_name || 'Unknown')}</div>
             <div style="font-size:0.8rem;color:#666;">${new Date(c.created_at).toLocaleString()}</div>
           </div>
           <div>
@@ -1378,52 +1424,73 @@
   }
 
   // ─── Challenges ──────────────────────────────────────────
-  function showIncomingChallenge(challenge) {
-    sb
-      .from('players')
-      .select('username')
-      .eq('id', challenge.challenger_id)
-      .single()
-      .then(({ data }) => {
-        const name = data?.username || 'Unknown';
-        document.getElementById('incomingChallengeText').textContent = `${name} challenged you to a ${challenge.race_type} race!`;
-        incomingChallengeId = challenge.id;
-        document.getElementById('incomingChallengeModal').style.display = 'flex';
-        showToast(`🏁 ${name} challenged you!`, 'challenge', 5000);
-      });
-  }
-
+  // Show modal with active races
   function openChallengeModal(targetId, targetName) {
     selectedTarget = { id: targetId, name: targetName };
     document.getElementById('challengeTargetName').textContent = `Challenge ${targetName}`;
     const container = document.getElementById('raceOptions');
-    container.innerHTML = ['drag', 'circuit', 'rally'].map(type => `
-      <div class="race-option" data-race-type="${type}" onclick="selectRaceType('${type}')">
-        <strong>${type.charAt(0).toUpperCase()+type.slice(1)}</strong>
-      </div>
-    `).join('');
-    selectedRaceType = null;
+    container.innerHTML = '<div class="empty-message">Loading races...</div>';
+
+    // Fetch open races that are not full and the challenger is not already in
+    sb
+      .from('races')
+      .select('id, name, max_participants')
+      .eq('status', 'open')
+      .then(({ data, error }) => {
+        if (error) {
+          container.innerHTML = '<div class="empty-message">Error loading races</div>';
+          return;
+        }
+        // Filter out races where challenger is already in
+        const filtered = data.filter(race => {
+          // We'll check if current player is already in this race
+          return !race.entries || !race.entries.some(e => e.player_id === currentPlayer.id);
+        });
+        // Also filter out full races
+        const openRaces = filtered.filter(race => {
+          // we need to count entries for each race
+          // We'll fetch entries count for each race or rely on loaded races array
+          const fullRace = races.find(r => r.id === race.id);
+          if (fullRace) {
+            return fullRace.entries.length < fullRace.max_participants;
+          }
+          return true; // fallback
+        });
+        if (openRaces.length === 0) {
+          container.innerHTML = '<div class="empty-message">No open races available to challenge</div>';
+          return;
+        }
+        container.innerHTML = openRaces.map(race => `
+          <div class="race-option" data-race-id="${race.id}" onclick="selectRace('${race.id}')">
+            <strong>${escapeHtml(race.name)}</strong>
+            (${race.entries ? race.entries.length : 0}/${race.max_participants} participants)
+          </div>
+        `).join('');
+        selectedRaceId = null;
+      });
     document.getElementById('challengeModal').style.display = 'flex';
   }
 
-  function selectRaceType(type) {
+  function selectRace(raceId) {
     document.querySelectorAll('.race-option').forEach(el => el.classList.remove('selected'));
-    document.querySelector(`.race-option[data-race-type="${type}"]`).classList.add('selected');
-    selectedRaceType = type;
+    document.querySelector(`.race-option[data-race-id="${raceId}"]`).classList.add('selected');
+    selectedRaceId = raceId;
   }
 
   async function sendChallenge() {
-    if (!selectedTarget || !selectedRaceType) {
-      showToast('Please select a race type', 'warning');
+    if (!selectedTarget || !selectedRaceId) {
+      showToast('Please select a race first', 'warning');
       return;
     }
     const { data, error } = await sb.rpc('send_challenge', {
       p_challengee_id: selectedTarget.id,
-      p_race_type: selectedRaceType
+      p_race_id: selectedRaceId
     });
     if (error) {
       showToast(error.message, 'error');
-    } else if (data.success) {
+      return;
+    }
+    if (data.success) {
       showToast('Challenge sent!', 'success');
       closeChallengeModal();
       loadChallenges();
@@ -1435,9 +1502,65 @@
   function closeChallengeModal() {
     document.getElementById('challengeModal').style.display = 'none';
     selectedTarget = null;
-    selectedRaceType = null;
+    selectedRaceId = null;
   }
 
+  // Show incoming challenge popup
+  function showIncomingChallenge(challenge) {
+    sb
+      .from('players')
+      .select('username')
+      .eq('id', challenge.challenger_id)
+      .single()
+      .then(({ data }) => {
+        const name = data?.username || 'Unknown';
+        // Get race name
+        sb
+          .from('races')
+          .select('name')
+          .eq('id', challenge.race_id)
+          .single()
+          .then(({ data: raceData }) => {
+            const raceName = raceData?.name || 'a race';
+            document.getElementById('incomingChallengeText').textContent =
+              `${name} challenged you to join the race "${raceName}"!`;
+            incomingChallengeId = challenge.id;
+            document.getElementById('incomingChallengeModal').style.display = 'flex';
+            showToast(`🏁 ${name} challenged you!`, 'challenge', 5000);
+          });
+      });
+  }
+
+  async function acceptIncomingChallenge() {
+    if (!incomingChallengeId) return;
+    const { data, error } = await sb.rpc('accept_challenge', { p_challenge_id: incomingChallengeId });
+    if (error || !data.success) {
+      showToast(error?.message || data?.error || 'Failed to accept', 'error');
+    } else {
+      showToast(data.message || 'Challenge accepted!', 'success');
+      document.getElementById('incomingChallengeModal').style.display = 'none';
+      incomingChallengeId = null;
+      loadChallenges();
+      loadRaces();
+      // If the race auto-started, the race list will reflect it; we can also manually check
+      // The backend will auto-start if full, and we have real-time subscription for race entries.
+    }
+  }
+
+  async function rejectIncomingChallenge() {
+    if (!incomingChallengeId) return;
+    const { data, error } = await sb.rpc('reject_challenge', { p_challenge_id: incomingChallengeId });
+    if (error || !data.success) {
+      showToast(error?.message || data?.error || 'Failed to reject', 'error');
+    } else {
+      showToast('Challenge rejected', 'info');
+      document.getElementById('incomingChallengeModal').style.display = 'none';
+      incomingChallengeId = null;
+      loadChallenges();
+    }
+  }
+
+  // Handle challenge from challenges list (accept/reject)
   async function handleChallenge(challengeId, action) {
     const rpc = action === 'accept' ? 'accept_challenge' : 'reject_challenge';
     const { data, error } = await sb.rpc(rpc, { p_challenge_id: challengeId });
@@ -1456,8 +1579,6 @@
     } else {
       showToast(data.error || 'Failed', 'error');
     }
-    document.getElementById('incomingChallengeModal').style.display = 'none';
-    incomingChallengeId = null;
   }
 
   // ─── Race actions ─────────────────────────────────────────
@@ -1857,9 +1978,11 @@
   window.renameVehicle = renameVehicle;
   window.sendRacingChat = sendRacingChat;
   window.openChallengeModal = openChallengeModal;
-  window.selectRaceType = selectRaceType;
+  window.selectRace = selectRace;
   window.sendChallenge = sendChallenge;
   window.closeChallengeModal = closeChallengeModal;
+  window.acceptIncomingChallenge = acceptIncomingChallenge;
+  window.rejectIncomingChallenge = rejectIncomingChallenge;
   window.handleChallenge = handleChallenge;
   window.closeResultModal = closeResultModal;
   window.startRaceManually = startRaceManually;
