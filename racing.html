@@ -4,7 +4,7 @@
   <title>Rheoa RPG - Racing</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    /* ─── Styles (unchanged) ─── */
+    /* ─── all styles (unchanged) ─── */
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Courier New', monospace; background: #f8f8f0; color: #222; padding: 20px; min-height: 100vh; }
     h1 { text-align: center; margin-bottom: 10px; font-size: clamp(1.5rem, 5vw, 2.5rem); color: #f44336; }
@@ -1199,8 +1199,9 @@
     // ─── 1. Presence channel ──────────────────────────────
     racingChannel = sb.channel(`racing-presence:${racingRoomId}`);
 
+    // --- Add all broadcast listeners BEFORE subscribing ---
     racingChannel.on('broadcast', { event: 'message' }, (payload) => {
-      console.log('📨 Broadcast received:', payload);
+      console.log('📨 Broadcast (message) received:', payload);
       appendChatMessage(payload.payload);
     });
 
@@ -1217,6 +1218,37 @@
         loadRaces();
         raceUpdateTimeout = null;
       }, 200);
+    });
+
+    // Challenge broadcast listener
+    racingChannel.on('broadcast', { event: 'challenge' }, (payload) => {
+      console.log('📨 Challenge broadcast received:', payload);
+      appendChallengeMessage(payload.payload);
+    });
+
+    racingChannel.on('presence', { event: 'sync' }, () => {
+      const state = racingChannel.presenceState();
+      const racers = [];
+      Object.keys(state).forEach(key => racers.push(...state[key]));
+      onlineRacers = racers;
+      renderRacers();
+    });
+
+    // --- Subscribe to presence channel ---
+    await racingChannel.subscribe(async (status) => {
+      if (status === 'SUBSCRIBED') {
+        console.log('✅ Racing presence channel subscribed');
+        await racingChannel.track({
+          user_id: currentPlayer.id,
+          username: currentPlayer.username,
+          level: currentPlayer.level,
+          status: 'available'
+        });
+        await loadChatMessages();
+        await trimChatIfNeeded();
+      } else {
+        console.warn('⚠️ Racing presence channel subscription status:', status);
+      }
     });
 
     // ─── 2. Chat DB subscription ──────────────────────────
@@ -1266,6 +1298,7 @@
       filter: `challengee_id=eq.${currentPlayer.id}`
     }, (payload) => {
       const challenge = payload.new;
+      console.log('📩 New challenge for you:', challenge);
       showIncomingChallenge(challenge);
       loadChallenges();
     });
@@ -1280,31 +1313,6 @@
     await challengeSubscription.subscribe((status) => {
       if (status === 'SUBSCRIBED') console.log('✅ Challenges subscription active');
       else console.warn('⚠️ Challenges subscription status:', status);
-    });
-
-    // ─── Presence sync after subscriptions ────────────────
-    racingChannel.on('presence', { event: 'sync' }, () => {
-      const state = racingChannel.presenceState();
-      const racers = [];
-      Object.keys(state).forEach(key => racers.push(...state[key]));
-      onlineRacers = racers;
-      renderRacers();
-    });
-
-    await racingChannel.subscribe(async (status) => {
-      if (status === 'SUBSCRIBED') {
-        console.log('✅ Racing presence channel subscribed');
-        await racingChannel.track({
-          user_id: currentPlayer.id,
-          username: currentPlayer.username,
-          level: currentPlayer.level,
-          status: 'available'
-        });
-        await loadChatMessages();
-        await trimChatIfNeeded();
-      } else {
-        console.warn('⚠️ Racing presence channel subscription status:', status);
-      }
     });
   }
 
@@ -1334,9 +1342,41 @@
     container.scrollTop = container.scrollHeight;
   }
 
-  // Special function to render challenge message in chat
+  function appendChatMessage(msg) {
+    const container = document.getElementById('racingChatMessages');
+    // Avoid duplicates by id
+    const existing = container.querySelector(`[data-msg-id="${msg.id}"]`);
+    if (existing) {
+      console.log('⏭️ Message already exists, skipping:', msg.id);
+      return;
+    }
+
+    // Determine sender: from broadcast payload's 'username' field, or fallback to players.username
+    const username = msg.username || msg.players?.username || 'Unknown';
+    const isOwn = msg.user_id === currentPlayer.id;
+    const time = new Date(msg.created_at).toLocaleTimeString();
+
+    const div = document.createElement('div');
+    div.className = `chat-message ${isOwn ? 'own' : ''}`;
+    div.setAttribute('data-msg-id', msg.id);
+    div.innerHTML = `
+      <div class="chat-message-header">
+        <span class="chat-message-username">${escapeHtml(username)}</span>
+        <span class="chat-message-time">${time}</span>
+      </div>
+      <div class="chat-message-content">${escapeHtml(msg.content)}</div>
+    `;
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+    console.log('✅ Appended message:', msg.id);
+  }
+
   function appendChallengeMessage(payload) {
     const container = document.getElementById('racingChatMessages');
+    // Avoid duplicates by challenge_id
+    const existing = container.querySelector(`[data-msg-id="challenge-${payload.challenge_id}"]`);
+    if (existing) return;
+
     const isForMe = payload.challengee_id === currentPlayer.id;
     const isExpired = new Date(payload.expires_at) < new Date();
 
@@ -1397,8 +1437,10 @@
       created_at: new Date().toISOString()
     };
 
+    // Immediate DOM update
     appendChatMessage(newMsg);
 
+    // Insert into DB
     const { data, error } = await sb
       .from('race_chat_messages')
       .insert({
@@ -1413,17 +1455,21 @@
     if (error) {
       console.error('❌ Failed to insert message:', error);
       showToast('Failed to send message', 'error');
+      const container = document.getElementById('racingChatMessages');
       const el = container.querySelector(`[data-msg-id="${tempId}"]`);
       if (el) el.remove();
       return;
     }
 
+    // Update temp with real DB id
     const finalMsg = { ...newMsg, id: data.id };
-    const tempEl = document.querySelector(`[data-msg-id="${tempId}"]`);
+    const container = document.getElementById('racingChatMessages');
+    const tempEl = container.querySelector(`[data-msg-id="${tempId}"]`);
     if (tempEl) {
       tempEl.setAttribute('data-msg-id', finalMsg.id);
     }
 
+    // Broadcast to others
     try {
       await racingChannel.send({
         type: 'broadcast',
@@ -1472,7 +1518,6 @@
         if (race.status !== 'open') return false;
         const entriesCount = race.entries ? race.entries.length : 0;
         if (entriesCount >= race.max_participants) return false;
-        // Allow showing even if challenger is in the race
         return true;
       });
       if (openRaces.length === 0) {
@@ -1533,6 +1578,7 @@
           event: 'challenge',
           payload: challengePayload
         });
+        console.log('📤 Challenge broadcast sent');
       }
     } else {
       showToast(data.error || 'Failed to send challenge', 'error');
@@ -1591,7 +1637,6 @@
       showToast(data.message || 'Challenge accepted!', 'success');
       loadChallenges();
       loadRaces();
-      // Remove the challenge message from chat or mark as accepted? We'll just update.
     }
   }
 
@@ -2022,14 +2067,6 @@
 
   // ─── Init ────────────────────────────────────────────────
   loadPlayerData();
-
-  // Listen for challenge broadcasts
-  if (racingChannel) {
-    racingChannel.on('broadcast', { event: 'challenge' }, (payload) => {
-      console.log('📨 Challenge broadcast received:', payload);
-      appendChallengeMessage(payload.payload);
-    });
-  }
 
   setInterval(() => {
     const activeTab = document.querySelector('.tab-btn.active');
