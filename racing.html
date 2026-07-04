@@ -4,7 +4,7 @@
   <title>Rheoa RPG - Racing</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    /* ─── all styles (unchanged) ─── */
+    /* ─── all styles unchanged ─── */
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Courier New', monospace; background: #f8f8f0; color: #222; padding: 20px; min-height: 100vh; }
     h1 { text-align: center; margin-bottom: 10px; font-size: clamp(1.5rem, 5vw, 2.5rem); color: #f44336; }
@@ -830,6 +830,7 @@
   let raceStartTime = null;
   let raceDuration = 10;
   const MAX_CHAT_MESSAGES = 100;
+  let isChannelReady = false;
 
   // ─── Auth & Player ──────────────────────────────────────
   async function loadPlayerData() {
@@ -1199,7 +1200,7 @@
     // ─── 1. Presence channel ──────────────────────────────
     racingChannel = sb.channel(`racing-presence:${racingRoomId}`);
 
-    // --- Add all broadcast listeners BEFORE subscribing ---
+    // Attach all broadcast listeners BEFORE subscribing
     racingChannel.on('broadcast', { event: 'message' }, (payload) => {
       console.log('📨 Broadcast (message) received:', payload);
       appendChatMessage(payload.payload);
@@ -1224,6 +1225,10 @@
     racingChannel.on('broadcast', { event: 'challenge' }, (payload) => {
       console.log('📨 Challenge broadcast received:', payload);
       appendChallengeMessage(payload.payload);
+      // Also trigger pop-up for the challengee
+      if (payload.payload.challengee_id === currentPlayer.id) {
+        showIncomingChallenge(payload.payload);
+      }
     });
 
     racingChannel.on('presence', { event: 'sync' }, () => {
@@ -1234,10 +1239,11 @@
       renderRacers();
     });
 
-    // --- Subscribe to presence channel ---
+    // Subscribe to presence channel
     await racingChannel.subscribe(async (status) => {
       if (status === 'SUBSCRIBED') {
         console.log('✅ Racing presence channel subscribed');
+        isChannelReady = true;
         await racingChannel.track({
           user_id: currentPlayer.id,
           username: currentPlayer.username,
@@ -1248,6 +1254,7 @@
         await trimChatIfNeeded();
       } else {
         console.warn('⚠️ Racing presence channel subscription status:', status);
+        isChannelReady = false;
       }
     });
 
@@ -1298,7 +1305,7 @@
       filter: `challengee_id=eq.${currentPlayer.id}`
     }, (payload) => {
       const challenge = payload.new;
-      console.log('📩 New challenge for you:', challenge);
+      console.log('📩 New challenge for you (DB):', challenge);
       showIncomingChallenge(challenge);
       loadChallenges();
     });
@@ -1420,12 +1427,20 @@
     `;
     container.appendChild(div);
     container.scrollTop = container.scrollHeight;
+    console.log('✅ Appended challenge message:', payload.challenge_id);
   }
 
   async function sendRacingChat() {
     const input = document.getElementById('racingChatInput');
     const text = input.value.trim();
-    if (!text || !racingRoomId) return;
+    if (!text || !racingRoomId) {
+      console.warn('No text or roomId');
+      return;
+    }
+    if (!isChannelReady) {
+      showToast('Chat is not ready yet, please wait.', 'warning');
+      return;
+    }
     input.value = '';
 
     const tempId = 'temp-' + Date.now();
@@ -1549,6 +1564,10 @@
       showToast('Please select a race first', 'warning');
       return;
     }
+    if (!isChannelReady) {
+      showToast('Chat is not ready yet, please wait.', 'warning');
+      return;
+    }
     const { data, error } = await sb.rpc('send_challenge', {
       p_challengee_id: selectedTarget.id,
       p_race_id: selectedRaceId
@@ -1563,22 +1582,25 @@
       loadChallenges();
 
       // Broadcast challenge to chat room
-      if (racingChannel) {
-        const challengePayload = {
-          challenge_id: data.challenge_id,
-          challenger_id: currentPlayer.id,
-          challenger_name: currentPlayer.username,
-          challengee_id: selectedTarget.id,
-          challengee_name: selectedTarget.name,
-          race_name: races.find(r => r.id === selectedRaceId)?.name || 'a race',
-          expires_at: new Date(Date.now() + 60000).toISOString()
-        };
+      const challengePayload = {
+        challenge_id: data.challenge_id,
+        challenger_id: currentPlayer.id,
+        challenger_name: currentPlayer.username,
+        challengee_id: selectedTarget.id,
+        challengee_name: selectedTarget.name,
+        race_name: races.find(r => r.id === selectedRaceId)?.name || 'a race',
+        expires_at: new Date(Date.now() + 60000).toISOString()
+      };
+      try {
         await racingChannel.send({
           type: 'broadcast',
           event: 'challenge',
           payload: challengePayload
         });
         console.log('📤 Challenge broadcast sent');
+      } catch (err) {
+        console.error('❌ Broadcast challenge error:', err);
+        showToast('Failed to broadcast challenge', 'error');
       }
     } else {
       showToast(data.error || 'Failed to send challenge', 'error');
@@ -1591,26 +1613,40 @@
     selectedRaceId = null;
   }
 
-  // Show incoming challenge popup
-  function showIncomingChallenge(challenge) {
-    // Fetch challenger name and race name
-    Promise.all([
-      sb.from('players').select('username').eq('id', challenge.challenger_id).single(),
-      sb.from('races').select('name').eq('id', challenge.race_id).single()
-    ]).then(([playerRes, raceRes]) => {
-      const challengerName = playerRes.data?.username || 'Unknown';
-      const raceName = raceRes.data?.name || 'a race';
+  // Show incoming challenge popup (from DB subscription or broadcast)
+  function showIncomingChallenge(payload) {
+    const challengerId = payload.challenger_id || payload.challenger_id;
+    const raceId = payload.race_id || payload.race_id;
+    // If payload is from broadcast, it has challenger_name and race_name
+    let challengerName = payload.challenger_name || 'Unknown';
+    let raceName = payload.race_name || 'a race';
+
+    // If we only have IDs, fetch details
+    if (!payload.challenger_name || !payload.race_name) {
+      Promise.all([
+        sb.from('players').select('username').eq('id', challengerId).single(),
+        sb.from('races').select('name').eq('id', raceId).single()
+      ]).then(([playerRes, raceRes]) => {
+        const cName = playerRes.data?.username || 'Unknown';
+        const rName = raceRes.data?.name || 'a race';
+        document.getElementById('incomingChallengeText').textContent =
+          `${cName} challenged you to join the race "${rName}"!`;
+        incomingChallengeId = payload.id || payload.challenge_id;
+        document.getElementById('incomingChallengeModal').style.display = 'flex';
+        showToast(`🏁 ${cName} challenged you!`, 'challenge', 5000);
+      }).catch(err => {
+        console.error('Error fetching challenge details:', err);
+        document.getElementById('incomingChallengeText').textContent = 'You have a new challenge!';
+        incomingChallengeId = payload.id || payload.challenge_id;
+        document.getElementById('incomingChallengeModal').style.display = 'flex';
+      });
+    } else {
       document.getElementById('incomingChallengeText').textContent =
         `${challengerName} challenged you to join the race "${raceName}"!`;
-      incomingChallengeId = challenge.id;
+      incomingChallengeId = payload.challenge_id || payload.id;
       document.getElementById('incomingChallengeModal').style.display = 'flex';
       showToast(`🏁 ${challengerName} challenged you!`, 'challenge', 5000);
-    }).catch(err => {
-      console.error('Error fetching challenge details:', err);
-      document.getElementById('incomingChallengeText').textContent = 'You have a new challenge!';
-      incomingChallengeId = challenge.id;
-      document.getElementById('incomingChallengeModal').style.display = 'flex';
-    });
+    }
   }
 
   // Accept from popup
@@ -1737,7 +1773,7 @@
     }
     if (data.success) {
       showToast(data.message, 'success');
-      if (racingChannel) {
+      if (racingChannel && isChannelReady) {
         await racingChannel.send({
           type: 'broadcast',
           event: 'race_update',
@@ -1873,7 +1909,7 @@
         showToast(`Race finished! Winner: ${result.winner_username}`, 'success');
 
         // Broadcast finish to others
-        if (racingChannel) {
+        if (racingChannel && isChannelReady) {
           await racingChannel.send({
             type: 'broadcast',
             event: 'race_update',
