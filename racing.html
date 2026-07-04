@@ -4,7 +4,7 @@
   <title>Rheoa RPG - Racing</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    /* ─── all styles unchanged ─── */
+    /* ─── all styles unchanged (same as previous) ─── */
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Courier New', monospace; background: #f8f8f0; color: #222; padding: 20px; min-height: 100vh; }
     h1 { text-align: center; margin-bottom: 10px; font-size: clamp(1.5rem, 5vw, 2.5rem); color: #f44336; }
@@ -1572,14 +1572,20 @@
       p_challengee_id: selectedTarget.id,
       p_race_id: selectedRaceId
     });
+    console.log('📤 sendChallenge response:', data, error);
     if (error) {
       showToast(error.message, 'error');
       return;
     }
-    if (data.success) {
+    if (data && data.success) {
       showToast('Challenge sent!', 'success');
       closeChallengeModal();
       loadChallenges();
+
+      if (!data.challenge_id) {
+        console.warn('⚠️ No challenge_id returned, skipping broadcast.');
+        return;
+      }
 
       // Broadcast challenge to chat room
       const challengePayload = {
@@ -1603,7 +1609,7 @@
         showToast('Failed to broadcast challenge', 'error');
       }
     } else {
-      showToast(data.error || 'Failed to send challenge', 'error');
+      showToast(data?.error || 'Failed to send challenge', 'error');
     }
   }
 
