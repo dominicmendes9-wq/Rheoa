@@ -661,7 +661,7 @@
   </div>
 </div>
 
-<!-- Challenge Modal (to send a challenge) -->
+<!-- Challenge Modal -->
 <div class="challenge-modal" id="challengeModal">
   <div class="challenge-modal-content">
     <h2>🏁 Send Challenge</h2>
@@ -1424,50 +1424,37 @@
   }
 
   // ─── Challenges ──────────────────────────────────────────
-  // Show modal with active races
   function openChallengeModal(targetId, targetName) {
     selectedTarget = { id: targetId, name: targetName };
     document.getElementById('challengeTargetName').textContent = `Challenge ${targetName}`;
     const container = document.getElementById('raceOptions');
     container.innerHTML = '<div class="empty-message">Loading races...</div>';
 
-    // Fetch open races that are not full and the challenger is not already in
-    sb
-      .from('races')
-      .select('id, name, max_participants')
-      .eq('status', 'open')
-      .then(({ data, error }) => {
-        if (error) {
-          container.innerHTML = '<div class="empty-message">Error loading races</div>';
-          return;
-        }
-        // Filter out races where challenger is already in
-        const filtered = data.filter(race => {
-          // We'll check if current player is already in this race
-          return !race.entries || !race.entries.some(e => e.player_id === currentPlayer.id);
-        });
-        // Also filter out full races
-        const openRaces = filtered.filter(race => {
-          // we need to count entries for each race
-          // We'll fetch entries count for each race or rely on loaded races array
-          const fullRace = races.find(r => r.id === race.id);
-          if (fullRace) {
-            return fullRace.entries.length < fullRace.max_participants;
-          }
-          return true; // fallback
-        });
-        if (openRaces.length === 0) {
-          container.innerHTML = '<div class="empty-message">No open races available to challenge</div>';
-          return;
-        }
-        container.innerHTML = openRaces.map(race => `
+    // Reload races to get fresh entries
+    loadRaces().then(() => {
+      const openRaces = races.filter(race => {
+        if (race.status !== 'open') return false;
+        // Check if not full
+        const entriesCount = race.entries ? race.entries.length : 0;
+        if (entriesCount >= race.max_participants) return false;
+        // Allow challenge even if challenger is in the race
+        return true;
+      });
+      if (openRaces.length === 0) {
+        container.innerHTML = '<div class="empty-message">No open races available to challenge</div>';
+        return;
+      }
+      container.innerHTML = openRaces.map(race => {
+        const entriesCount = race.entries ? race.entries.length : 0;
+        return `
           <div class="race-option" data-race-id="${race.id}" onclick="selectRace('${race.id}')">
             <strong>${escapeHtml(race.name)}</strong>
-            (${race.entries ? race.entries.length : 0}/${race.max_participants} participants)
+            (${entriesCount}/${race.max_participants} participants)
           </div>
-        `).join('');
-        selectedRaceId = null;
-      });
+        `;
+      }).join('');
+      selectedRaceId = null;
+    });
     document.getElementById('challengeModal').style.display = 'flex';
   }
 
@@ -1514,7 +1501,6 @@
       .single()
       .then(({ data }) => {
         const name = data?.username || 'Unknown';
-        // Get race name
         sb
           .from('races')
           .select('name')
@@ -1542,8 +1528,7 @@
       incomingChallengeId = null;
       loadChallenges();
       loadRaces();
-      // If the race auto-started, the race list will reflect it; we can also manually check
-      // The backend will auto-start if full, and we have real-time subscription for race entries.
+      // Auto-start will be handled by backend and real-time updates
     }
   }
 
@@ -1617,10 +1602,9 @@
     }
 
     showToast('Joined race!', 'success');
+    loadRaces(); // Refresh immediately
     if (data.status === 'running') {
       startRaceAnimation(raceId, data.duration_seconds || 10);
-    } else {
-      loadRaces();
     }
   }
 
