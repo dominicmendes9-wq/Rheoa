@@ -4,7 +4,7 @@
   <title>Rheoa RPG - Racing</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    /* ─── all styles unchanged ─── */
+    /* ─── all styles (unchanged) ─── */
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Courier New', monospace; background: #f8f8f0; color: #222; padding: 20px; min-height: 100vh; }
     h1 { text-align: center; margin-bottom: 10px; font-size: clamp(1.5rem, 5vw, 2.5rem); color: #f44336; }
@@ -1560,6 +1560,7 @@
   }
 
   async function sendChallenge() {
+    // Check prerequisites
     if (!selectedTarget || !selectedRaceId) {
       showToast('Please select a race first', 'warning');
       return;
@@ -1569,10 +1570,13 @@
       return;
     }
 
-    // Capture target info before it gets cleared
+    // Store values before closing modal
     const targetId = selectedTarget.id;
     const targetName = selectedTarget.name;
     const raceId = selectedRaceId;
+
+    // Close modal
+    closeChallengeModal();
 
     const { data, error } = await sb.rpc('send_challenge', {
       p_challengee_id: targetId,
@@ -1589,12 +1593,11 @@
     }
 
     showToast('Challenge sent!', 'success');
-    closeChallengeModal();
     loadChallenges();
 
     let challengeId = data.challenge_id;
     if (!challengeId) {
-      // fallback fetch
+      // fallback: get latest pending challenge for this pair
       const { data: challengesData, error: challengesError } = await sb
         .from('pvp_challenges')
         .select('id')
@@ -1645,11 +1648,9 @@
   function showIncomingChallenge(payload) {
     const challengerId = payload.challenger_id || payload.challenger_id;
     const raceId = payload.race_id || payload.race_id;
-    // If payload is from broadcast, it has challenger_name and race_name
     let challengerName = payload.challenger_name || 'Unknown';
     let raceName = payload.race_name || 'a race';
 
-    // If we only have IDs, fetch details
     if (!payload.challenger_name || !payload.race_name) {
       Promise.all([
         sb.from('players').select('username').eq('id', challengerId).single(),
