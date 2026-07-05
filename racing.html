@@ -4,7 +4,7 @@
   <title>Rheoa RPG - Racing</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    /* ─── all styles unchanged (same as previous) ─── */
+    /* ─── all styles unchanged ─── */
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Courier New', monospace; background: #f8f8f0; color: #222; padding: 20px; min-height: 100vh; }
     h1 { text-align: center; margin-bottom: 10px; font-size: clamp(1.5rem, 5vw, 2.5rem); color: #f44336; }
@@ -1568,16 +1568,21 @@
       showToast('Chat is not ready yet, please wait.', 'warning');
       return;
     }
+
+    // Capture target info before it gets cleared
+    const targetId = selectedTarget.id;
+    const targetName = selectedTarget.name;
+    const raceId = selectedRaceId;
+
     const { data, error } = await sb.rpc('send_challenge', {
-      p_challengee_id: selectedTarget.id,
-      p_race_id: selectedRaceId
+      p_challengee_id: targetId,
+      p_race_id: raceId
     });
     console.log('📤 sendChallenge response:', data, error);
     if (error) {
       showToast(error.message, 'error');
       return;
     }
-    // If data is null or missing success, handle gracefully
     if (!data || !data.success) {
       showToast(data?.error || 'Failed to send challenge', 'error');
       return;
@@ -1587,17 +1592,14 @@
     closeChallengeModal();
     loadChallenges();
 
-    // Try to get challenge_id from response
     let challengeId = data.challenge_id;
-    // If not present, try to fetch the latest challenge for this pair
     if (!challengeId) {
-      console.warn('No challenge_id in response, fetching latest...');
-      // Fetch the most recent pending challenge for this challenger/challengee pair
+      // fallback fetch
       const { data: challengesData, error: challengesError } = await sb
         .from('pvp_challenges')
         .select('id')
         .eq('challenger_id', currentPlayer.id)
-        .eq('challengee_id', selectedTarget.id)
+        .eq('challengee_id', targetId)
         .eq('status', 'pending')
         .order('created_at', { ascending: false })
         .limit(1);
@@ -1610,14 +1612,14 @@
       }
     }
 
-    // Broadcast challenge to chat room
+    const raceName = races.find(r => r.id === raceId)?.name || 'a race';
     const challengePayload = {
       challenge_id: challengeId,
       challenger_id: currentPlayer.id,
       challenger_name: currentPlayer.username,
-      challengee_id: selectedTarget.id,
-      challengee_name: selectedTarget.name,
-      race_name: races.find(r => r.id === selectedRaceId)?.name || 'a race',
+      challengee_id: targetId,
+      challengee_name: targetName,
+      race_name: raceName,
       expires_at: new Date(Date.now() + 60000).toISOString()
     };
     try {
