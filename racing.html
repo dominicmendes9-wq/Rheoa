@@ -1577,39 +1577,59 @@
       showToast(error.message, 'error');
       return;
     }
-    if (data && data.success) {
-      showToast('Challenge sent!', 'success');
-      closeChallengeModal();
-      loadChallenges();
+    // If data is null or missing success, handle gracefully
+    if (!data || !data.success) {
+      showToast(data?.error || 'Failed to send challenge', 'error');
+      return;
+    }
 
-      if (!data.challenge_id) {
-        console.warn('⚠️ No challenge_id returned, skipping broadcast.');
+    showToast('Challenge sent!', 'success');
+    closeChallengeModal();
+    loadChallenges();
+
+    // Try to get challenge_id from response
+    let challengeId = data.challenge_id;
+    // If not present, try to fetch the latest challenge for this pair
+    if (!challengeId) {
+      console.warn('No challenge_id in response, fetching latest...');
+      // Fetch the most recent pending challenge for this challenger/challengee pair
+      const { data: challengesData, error: challengesError } = await sb
+        .from('pvp_challenges')
+        .select('id')
+        .eq('challenger_id', currentPlayer.id)
+        .eq('challengee_id', selectedTarget.id)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false })
+        .limit(1);
+      if (!challengesError && challengesData && challengesData.length > 0) {
+        challengeId = challengesData[0].id;
+        console.log('🔍 Found challenge_id from DB:', challengeId);
+      } else {
+        console.warn('⚠️ Could not find challenge_id, skipping broadcast.');
         return;
       }
+    }
 
-      // Broadcast challenge to chat room
-      const challengePayload = {
-        challenge_id: data.challenge_id,
-        challenger_id: currentPlayer.id,
-        challenger_name: currentPlayer.username,
-        challengee_id: selectedTarget.id,
-        challengee_name: selectedTarget.name,
-        race_name: races.find(r => r.id === selectedRaceId)?.name || 'a race',
-        expires_at: new Date(Date.now() + 60000).toISOString()
-      };
-      try {
-        await racingChannel.send({
-          type: 'broadcast',
-          event: 'challenge',
-          payload: challengePayload
-        });
-        console.log('📤 Challenge broadcast sent');
-      } catch (err) {
-        console.error('❌ Broadcast challenge error:', err);
-        showToast('Failed to broadcast challenge', 'error');
-      }
-    } else {
-      showToast(data?.error || 'Failed to send challenge', 'error');
+    // Broadcast challenge to chat room
+    const challengePayload = {
+      challenge_id: challengeId,
+      challenger_id: currentPlayer.id,
+      challenger_name: currentPlayer.username,
+      challengee_id: selectedTarget.id,
+      challengee_name: selectedTarget.name,
+      race_name: races.find(r => r.id === selectedRaceId)?.name || 'a race',
+      expires_at: new Date(Date.now() + 60000).toISOString()
+    };
+    try {
+      await racingChannel.send({
+        type: 'broadcast',
+        event: 'challenge',
+        payload: challengePayload
+      });
+      console.log('📤 Challenge broadcast sent');
+    } catch (err) {
+      console.error('❌ Broadcast challenge error:', err);
+      showToast('Failed to broadcast challenge', 'error');
     }
   }
 
