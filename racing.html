@@ -3,21 +3,167 @@
 <head>
   <title>Rheoa RPG - Racing</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
   <style>
-    /* ─── all styles unchanged ─── */
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Courier New', monospace; background: #f8f8f0; color: #222; padding: 20px; min-height: 100vh; }
-    h1 { text-align: center; margin-bottom: 10px; font-size: clamp(1.5rem, 5vw, 2.5rem); color: #f44336; }
-    .subtitle { text-align: center; color: #666; margin-bottom: 30px; font-style: italic; }
+    /* ─── CSS Variables & Themes ─── */
+    :root {
+      --bg-body: #f0f4fa;
+      --card-bg: #fff;
+      --card-border: rgba(148,163,184,0.2);
+      --card-shadow: 0 12px 30px rgba(0,0,0,0.05);
+      --header-bg: linear-gradient(135deg,#1e2f5e 0%,#1a4b7a 100%);
+      --header-text: #fff;
+      --accent: #2c6e9e;
+      --accent-hover: #1f5480;
+      --btn-primary: #2c6e9e;
+      --btn-primary-hover: #1f5480;
+      --btn-secondary: #475569;
+      --btn-ghost: #e2e8f0;
+      --text-main: #0f172a;
+      --text-muted: #334155;
+      --border-light: #e2e8f0;
+      --card-header-bg: #f8fafc;
+      --avatar-bg: #e0f2fe;
+      --font-family: 'Inter', system-ui, sans-serif;
+      --border-radius-card: 24px;
+      --transition: all 0.2s ease;
+      --color-danger: #dc2626;
+      --color-success: #16a34a;
+      --color-warning: #f59e0b;
+    }
 
+    body.theme-dusk {
+      --bg-body: #0f1722;
+      --card-bg: #1e293b;
+      --card-border: rgba(51,65,85,0.6);
+      --card-shadow: 0 15px 35px rgba(0,0,0,0.3);
+      --header-bg: linear-gradient(135deg,#0f172a 0%,#1e293b 100%);
+      --header-text: #e2e8f0;
+      --accent: #60a5fa;
+      --accent-hover: #3b82f6;
+      --btn-primary: #3b82f6;
+      --btn-primary-hover: #2563eb;
+      --btn-secondary: #334155;
+      --btn-ghost: #334155;
+      --text-main: #f1f5f9;
+      --text-muted: #cbd5e1;
+      --border-light: #334155;
+      --card-header-bg: #0f172a;
+      --avatar-bg: #334155;
+    }
+
+    body.theme-meadow {
+      --bg-body: #eef4e6;
+      --card-bg: #ffffffea;
+      --card-border: #cbd5b0;
+      --card-shadow: 0 12px 24px rgba(60,70,40,0.08);
+      --header-bg: linear-gradient(135deg,#2b5e3b 0%,#4a7c59 100%);
+      --header-text: #fef9e6;
+      --accent: #4b6b3e;
+      --accent-hover: #3a5530;
+      --btn-primary: #4b6b3e;
+      --btn-primary-hover: #3a5530;
+      --btn-secondary: #7f6b4a;
+      --btn-ghost: #e9e1c7;
+      --text-main: #2c2b26;
+      --text-muted: #5b5a4c;
+      --border-light: #d9d2b0;
+      --card-header-bg: #fef6e0;
+      --avatar-bg: #e2e9cf;
+    }
+
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      background: var(--bg-body);
+      font-family: var(--font-family);
+      color: var(--text-main);
+      padding: 28px 20px;
+      transition: background .25s, color .2s;
+      min-height: 100vh;
+    }
+    .container { max-width: 1400px; margin: 0 auto; }
+
+    /* ─── Top Bar ─── */
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 28px;
+      padding: 0 8px;
+    }
+    .back-link {
+      background: var(--card-bg);
+      padding: 8px 18px;
+      border-radius: 60px;
+      text-decoration: none;
+      font-weight: 500;
+      color: var(--accent);
+      border: 1px solid var(--border-light);
+      transition: var(--transition);
+      font-size: .9rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      backdrop-filter: blur(2px);
+    }
+    .back-link:hover {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .theme-switcher, .font-switcher {
+      display: flex;
+      gap: 6px;
+      background: var(--card-bg);
+      padding: 4px 8px;
+      border-radius: 60px;
+      border: 1px solid var(--border-light);
+      backdrop-filter: blur(4px);
+      align-items: center;
+    }
+    .theme-btn, .font-btn {
+      background: transparent;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 40px;
+      font-weight: 500;
+      font-size: .8rem;
+      cursor: pointer;
+      transition: .2s;
+      color: var(--text-muted);
+      font-family: var(--font-family);
+    }
+    .theme-btn.active, .font-btn.active {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .theme-btn:hover:not(.active), .font-btn:hover:not(.active) {
+      background: var(--btn-ghost);
+      color: var(--text-main);
+    }
+    .font-btn {
+      font-size: .75rem;
+      padding: 4px 12px;
+    }
+
+    /* ─── Player Stats ─── */
     .player-stats {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
-      color: white;
+      background: var(--header-bg);
+      color: var(--header-text);
       padding: 15px 25px;
-      border-radius: 10px;
+      border-radius: var(--border-radius-card);
       margin-bottom: 30px;
       flex-wrap: wrap;
       gap: 15px;
@@ -27,74 +173,108 @@
     .stat-label { font-size: 0.8rem; opacity: 0.9; }
     .stat-value { font-size: 1.3rem; font-weight: bold; }
 
+    /* ─── Tabs ─── */
     .racing-tabs {
       display: flex;
       justify-content: center;
       gap: 10px;
       margin-bottom: 30px;
       flex-wrap: wrap;
+      border-bottom: 2px solid var(--border-light);
+      padding-bottom: 12px;
     }
     .tab-btn {
-      padding: 12px 25px;
-      font-family: 'Courier New', monospace;
-      font-weight: bold;
-      border: 2px solid black;
+      padding: 10px 22px;
+      font-family: var(--font-family);
+      font-weight: 600;
+      border: none;
       border-radius: 30px;
-      background: white;
+      background: transparent;
+      color: var(--text-muted);
       cursor: pointer;
-      transition: all 0.2s;
+      transition: var(--transition);
+      font-size: 0.95rem;
       position: relative;
     }
-    .tab-btn:hover { background: #333; color: white; }
-    .tab-btn.active { background: #f44336; color: white; border-color: #f44336; }
+    .tab-btn:hover { color: var(--text-main); background: var(--btn-ghost); }
+    .tab-btn.active {
+      color: var(--accent);
+      background: rgba(44,110,158,0.08);
+    }
+    .tab-btn.active::after {
+      content: '';
+      position: absolute;
+      bottom: -14px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 30px;
+      height: 3px;
+      background: var(--accent);
+      border-radius: 3px;
+    }
 
     .tab-content { display: none; }
     .tab-content.active { display: block; }
 
+    /* ─── Cards ─── */
     .section-card {
-      background: white;
-      border: 3px solid #f44336;
-      border-radius: 15px;
-      padding: 20px;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--border-radius-card);
+      box-shadow: var(--card-shadow);
+      padding: 24px;
       margin-bottom: 30px;
+      transition: var(--transition);
     }
+    .section-card:hover { box-shadow: 0 16px 40px rgba(0,0,0,0.07); }
     .section-title {
       font-size: 1.5rem;
-      font-weight: bold;
+      font-weight: 700;
       margin-bottom: 20px;
-      color: #f44336;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
+    .section-title .emoji { font-size: 1.6rem; }
+
     .grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
       gap: 20px;
     }
+
     .card {
-      border: 2px solid #f44336;
-      border-radius: 10px;
-      padding: 15px;
-      background: #fff5f5;
+      background: var(--card-bg);
+      border: 1px solid var(--border-light);
+      border-radius: 16px;
+      padding: 18px;
+      transition: var(--transition);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.02);
     }
+    .card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.06); }
     .card.finished {
-      background: #f0f0f0;
-      border-color: #999;
-      opacity: 0.85;
+      background: var(--btn-ghost);
+      opacity: 0.8;
+      border-color: var(--text-muted);
     }
-    .card img { width: 100%; height: 150px; object-fit: cover; border-radius: 6px; margin-bottom: 10px; background: #eee; }
+    .card img { width: 100%; height: 150px; object-fit: cover; border-radius: 12px; margin-bottom: 12px; background: #eee; }
     .vehicle-header {
       display: flex;
       align-items: center;
       gap: 10px;
       margin-bottom: 10px;
     }
-    .vehicle-header .thumb { width: 40px; height: 40px; object-fit: cover; border-radius: 50%; border: 2px solid #f44336; background: #eee; }
-    .vehicle-name { font-size: 1.2rem; font-weight: bold; flex: 1; }
+    .vehicle-header .thumb { width: 40px; height: 40px; object-fit: cover; border-radius: 50%; border: 2px solid var(--accent); background: #eee; }
+    .vehicle-name { font-size: 1.2rem; font-weight: 600; flex: 1; }
     .vehicle-type {
-      background: #f44336;
+      background: var(--accent);
       color: white;
       padding: 3px 10px;
       border-radius: 15px;
-      font-size: 0.8rem;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
       white-space: nowrap;
     }
     .stat-bars {
@@ -103,80 +283,55 @@
       gap: 10px;
       margin: 15px 0;
     }
-    .stat-bar { height: 8px; background: #eee; border-radius: 4px; overflow: hidden; margin-top: 3px; }
-    .stat-bar .fill { height: 100%; background: #f44336; }
-    .condition { margin: 10px 0; padding: 8px; background: white; border-radius: 5px; text-align: center; }
-    .condition-good { color: #4CAF50; }
-    .condition-warning { color: #ff9800; }
-    .condition-critical { color: #f44336; }
+    .stat-bar { height: 6px; background: #e2e8f0; border-radius: 4px; overflow: hidden; margin-top: 3px; }
+    .stat-bar .fill { height: 100%; background: var(--accent); border-radius: 4px; }
+    .condition { margin: 10px 0; padding: 8px; background: var(--card-header-bg); border-radius: 8px; text-align: center; font-weight: 500; }
+    .condition-good { color: var(--color-success); }
+    .condition-warning { color: var(--color-warning); }
+    .condition-critical { color: var(--color-danger); }
 
     .btn {
+      display: inline-block;
       width: 100%;
       padding: 12px;
       border: none;
-      border-radius: 8px;
-      font-weight: bold;
+      border-radius: 40px;
+      font-weight: 600;
       cursor: pointer;
-      font-family: 'Courier New', monospace;
+      font-family: var(--font-family);
       margin-top: 10px;
+      transition: var(--transition);
+      text-align: center;
+      font-size: 0.9rem;
     }
-    .btn-primary { background: #4CAF50; color: white; }
-    .btn-primary:hover:not(:disabled) { background: #45a049; }
-    .btn-danger { background: #f44336; color: white; }
-    .btn-danger:hover { background: #d32f2f; }
-    .btn-warning { background: #ff9800; color: white; }
-    .btn-warning:hover:not(:disabled) { background: #f57c00; }
-    .btn-secondary { background: #666; color: white; }
-    .btn-secondary:hover { background: #555; }
-    .btn:disabled { background: #ccc; cursor: not-allowed; }
+    .btn-primary { background: var(--btn-primary); color: white; }
+    .btn-primary:hover:not(:disabled) { background: var(--btn-primary-hover); transform: translateY(-1px); }
+    .btn-danger { background: var(--color-danger); color: white; }
+    .btn-danger:hover { background: #b91c1c; }
+    .btn-warning { background: var(--color-warning); color: white; }
+    .btn-warning:hover:not(:disabled) { background: #d97706; }
+    .btn-secondary { background: var(--btn-secondary); color: white; }
+    .btn-secondary:hover { background: #1e293b; }
+    .btn:disabled { background: #94a3b8; cursor: not-allowed; opacity: 0.6; }
     .btn-sm { padding: 6px 12px; font-size: 0.8rem; width: auto; margin-top: 0; }
 
     .race-details {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 10px;
+      gap: 8px;
       margin: 15px 0;
+      font-size: 0.9rem;
     }
     .participants { margin: 15px 0; max-height: 150px; overflow-y: auto; }
     .participant-item {
       display: flex;
       justify-content: space-between;
       padding: 8px 0;
-      border-bottom: 1px dashed #eee;
+      border-bottom: 1px solid var(--border-light);
+      font-size: 0.9rem;
     }
 
-    .challenge-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 12px;
-      border-bottom: 1px solid #eee;
-      background: #fafafa;
-      margin-bottom: 8px;
-      border-radius: 8px;
-    }
-    .challenge-item .status {
-      font-weight: bold;
-      padding: 4px 12px;
-      border-radius: 20px;
-      font-size: 0.8rem;
-    }
-    .status-pending { background: #ff9800; color: white; }
-    .status-accepted { background: #4CAF50; color: white; }
-    .status-rejected { background: #f44336; color: white; }
-    .status-expired { background: #999; color: white; }
-
-    .challenge-item .actions button {
-      margin-left: 8px;
-      padding: 4px 12px;
-      border: none;
-      border-radius: 20px;
-      font-weight: bold;
-      cursor: pointer;
-    }
-    .challenge-item .actions .accept { background: #4CAF50; color: white; }
-    .challenge-item .actions .reject { background: #f44336; color: white; }
-
+    /* ─── Racers / Chat ─── */
     .racers-container {
       display: flex;
       gap: 20px;
@@ -187,44 +342,44 @@
       min-width: 250px;
       max-height: 500px;
       overflow-y: auto;
-      background: white;
-      border: 3px solid #f44336;
-      border-radius: 15px;
-      padding: 15px;
+      background: var(--card-bg);
+      border: 1px solid var(--border-light);
+      border-radius: 16px;
+      padding: 16px;
     }
     .racer-item {
       display: flex;
       align-items: center;
       gap: 10px;
       padding: 8px 10px;
-      border-radius: 8px;
-      background: #fafafa;
+      border-radius: 10px;
+      background: var(--card-header-bg);
       margin-bottom: 6px;
       cursor: pointer;
-      transition: background 0.2s;
+      transition: var(--transition);
     }
-    .racer-item:hover { background: #f0f0f0; }
+    .racer-item:hover { background: var(--btn-ghost); }
     .racer-item .dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
-    .racer-item .dot.available { background: #4CAF50; }
-    .racer-item .dot.busy { background: #f44336; }
+    .racer-item .dot.available { background: var(--color-success); }
+    .racer-item .dot.busy { background: var(--color-danger); }
     .racer-name { flex: 1; font-weight: 500; }
 
     .racers-chat {
       flex: 2;
       min-width: 300px;
-      background: white;
-      border: 3px solid #f44336;
-      border-radius: 15px;
+      background: var(--card-bg);
+      border: 1px solid var(--border-light);
+      border-radius: 16px;
       display: flex;
       flex-direction: column;
       height: 500px;
     }
     .racers-chat .chat-messages {
       flex: 1;
-      padding: 15px;
+      padding: 16px;
       overflow-y: auto;
-      background: #fafafa;
-      border-radius: 12px 12px 0 0;
+      background: var(--card-header-bg);
+      border-radius: 16px 16px 0 0;
       display: flex;
       flex-direction: column;
       gap: 8px;
@@ -238,25 +393,25 @@
     .chat-message.own { align-self: flex-end; }
     .chat-message-header {
       font-size: 0.8rem;
-      color: #666;
+      color: var(--text-muted);
       display: flex;
       gap: 8px;
       align-items: baseline;
     }
-    .chat-message-username { font-weight: 600; color: #f44336; }
+    .chat-message-username { font-weight: 600; color: var(--accent); }
     .chat-message-time { font-size: 0.65rem; }
     .chat-message-content {
-      background: #fff;
+      background: var(--card-bg);
       padding: 6px 14px;
       border-radius: 16px;
       margin-top: 2px;
       word-wrap: break-word;
-      border: 1px solid #ddd;
+      border: 1px solid var(--border-light);
     }
     .chat-message.own .chat-message-content {
-      background: #f44336;
+      background: var(--accent);
       color: white;
-      border-color: #f44336;
+      border-color: var(--accent);
     }
     .chat-message-content .challenge-actions {
       margin-top: 6px;
@@ -267,172 +422,103 @@
       padding: 4px 12px;
       border: none;
       border-radius: 20px;
-      font-weight: bold;
+      font-weight: 600;
       cursor: pointer;
     }
-    .chat-message-content .challenge-actions .accept-btn { background: #4CAF50; color: white; }
-    .chat-message-content .challenge-actions .reject-btn { background: #f44336; color: white; }
-    .chat-message-content .challenge-actions .disabled-btn { background: #999; color: #fff; cursor: default; }
+    .chat-message-content .challenge-actions .accept-btn { background: var(--color-success); color: white; }
+    .chat-message-content .challenge-actions .reject-btn { background: var(--color-danger); color: white; }
+    .chat-message-content .challenge-actions .disabled-btn { background: #94a3b8; color: #fff; cursor: default; }
 
     .racers-chat .chat-input {
       display: flex;
       gap: 10px;
-      padding: 10px;
-      border-top: 2px solid #f44336;
+      padding: 12px 16px;
+      border-top: 1px solid var(--border-light);
+      background: var(--card-bg);
+      border-radius: 0 0 16px 16px;
     }
-    .racers-chat .chat-input input { flex: 1; padding: 8px 12px; border: 1px solid #ccc; border-radius: 20px; font-family: inherit; }
-    .racers-chat .chat-input button { padding: 8px 20px; background: #f44336; color: white; border: none; border-radius: 20px; cursor: pointer; font-weight: bold; }
-
-    .challenge-modal {
-      display: none;
-      position: fixed;
-      top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.6);
-      z-index: 10000;
-      justify-content: center;
-      align-items: center;
+    .racers-chat .chat-input input {
+      flex: 1;
+      padding: 10px 14px;
+      border: 1px solid var(--border-light);
+      border-radius: 40px;
+      font-family: var(--font-family);
+      background: var(--card-header-bg);
+      color: var(--text-main);
+      font-size: 0.9rem;
     }
-    .challenge-modal-content {
-      background: white;
-      border-radius: 20px;
-      padding: 30px;
-      max-width: 500px;
-      width: 90%;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-    }
-    .challenge-modal-content .race-option {
-      padding: 10px;
-      margin: 8px 0;
-      border: 2px solid #eee;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: 0.2s;
-    }
-    .challenge-modal-content .race-option:hover { border-color: #f44336; background: #fff5f5; }
-    .challenge-modal-content .race-option.selected { border-color: #f44336; background: #ffe5e5; }
-    .challenge-modal-content .actions {
-      display: flex;
-      gap: 10px;
-      margin-top: 20px;
-      justify-content: flex-end;
-    }
-    .challenge-modal-content .actions button {
+    .racers-chat .chat-input button {
       padding: 8px 20px;
+      background: var(--btn-primary);
+      color: white;
       border: none;
-      border-radius: 20px;
-      font-weight: bold;
+      border-radius: 40px;
       cursor: pointer;
+      font-weight: 600;
+      transition: var(--transition);
     }
-    .challenge-modal-content .actions .send { background: #f44336; color: white; }
-    .challenge-modal-content .actions .cancel { background: #ccc; color: #333; }
+    .racers-chat .chat-input button:hover { background: var(--btn-primary-hover); }
 
-    /* Incoming challenge modal (popup) */
-    .incoming-challenge-modal {
+    /* ─── Modals ─── */
+    .modal, .challenge-modal, .incoming-challenge-modal, .result-modal {
       display: none;
       position: fixed;
       top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.6);
-      z-index: 10002;
-      justify-content: center;
-      align-items: center;
-    }
-    .incoming-challenge-modal-content {
-      background: white;
-      border-radius: 20px;
-      padding: 30px;
-      max-width: 450px;
-      width: 90%;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-      text-align: center;
-    }
-    .incoming-challenge-modal-content .actions {
-      display: flex;
-      gap: 15px;
-      margin-top: 20px;
-      justify-content: center;
-    }
-    .incoming-challenge-modal-content .actions button {
-      padding: 10px 30px;
-      border: none;
-      border-radius: 30px;
-      font-weight: bold;
-      cursor: pointer;
-    }
-    .incoming-challenge-modal-content .actions .accept { background: #4CAF50; color: white; }
-    .incoming-challenge-modal-content .actions .reject { background: #f44336; color: white; }
-
-    .result-modal {
-      display: none;
-      position: fixed;
-      top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.7);
-      z-index: 10001;
-      justify-content: center;
-      align-items: center;
-    }
-    .result-modal-content {
-      background: white;
-      border-radius: 20px;
-      padding: 30px;
-      max-width: 600px;
-      width: 90%;
-      max-height: 80vh;
-      overflow-y: auto;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-    }
-    .result-modal-content h2 {
-      text-align: center;
-      color: #f44336;
-      margin-bottom: 20px;
-    }
-    .result-item {
-      display: flex;
-      justify-content: space-between;
-      padding: 8px 0;
-      border-bottom: 1px solid #eee;
-    }
-    .result-item .pos { font-weight: bold; }
-    .result-item .name { flex: 1; margin-left: 10px; }
-    .result-item .earnings { color: #4CAF50; font-weight: bold; }
-
-    .modal {
-      display: none;
-      position: fixed;
-      top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.6);
+      background: rgba(0,0,0,0.5);
       z-index: 10000;
       justify-content: center;
       align-items: center;
+      backdrop-filter: blur(4px);
     }
-    .modal-content {
-      background: white;
-      border-radius: 20px;
-      padding: 25px;
+    .modal-content, .challenge-modal-content, .incoming-challenge-modal-content, .result-modal-content {
+      background: var(--card-bg);
+      border-radius: var(--border-radius-card);
+      padding: 30px;
       max-width: 500px;
       width: 90%;
       max-height: 90vh;
       overflow-y: auto;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+      box-shadow: var(--card-shadow);
+      border: 1px solid var(--card-border);
     }
-    .modal-content h2 { margin-bottom: 15px; }
-    .modal-content label { display: block; margin-top: 10px; font-weight: bold; font-size: 0.9rem; }
-    .modal-content input, .modal-content select, .modal-content textarea {
-      width: 100%;
-      padding: 8px 12px;
-      margin-top: 4px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      font-family: inherit;
+    .modal-content h2, .challenge-modal-content h2, .incoming-challenge-modal-content h2, .result-modal-content h2 {
+      margin-bottom: 16px;
+      color: var(--text-main);
+      font-weight: 700;
     }
-    .modal-content .form-row { display: flex; gap: 10px; align-items: center; }
-    .modal-content .form-row input[type="checkbox"] { width: auto; }
-    .modal-content .actions {
+    .modal-content .actions, .challenge-modal-content .actions, .incoming-challenge-modal-content .actions {
       display: flex;
       gap: 10px;
       margin-top: 20px;
       justify-content: flex-end;
     }
+    .modal-content .actions button, .challenge-modal-content .actions button, .incoming-challenge-modal-content .actions button {
+      padding: 8px 20px;
+      border: none;
+      border-radius: 40px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: var(--font-family);
+    }
+    .modal-content .actions .send { background: var(--btn-primary); color: white; }
+    .modal-content .actions .cancel { background: var(--btn-ghost); color: var(--text-main); }
 
+    .incoming-challenge-modal-content .actions .accept { background: var(--color-success); color: white; }
+    .incoming-challenge-modal-content .actions .reject { background: var(--color-danger); color: white; }
+
+    .race-option {
+      padding: 10px 14px;
+      margin: 8px 0;
+      border: 2px solid var(--border-light);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: var(--transition);
+      font-weight: 500;
+    }
+    .race-option:hover { border-color: var(--accent); background: var(--card-header-bg); }
+    .race-option.selected { border-color: var(--accent); background: rgba(44,110,158,0.08); }
+
+    /* ─── Race Overlay ─── */
     #raceOverlay {
       display: none;
       position: fixed;
@@ -449,16 +535,12 @@
       width: 100%;
       text-align: center;
     }
-    #raceCountdown {
-      font-size: 5rem;
-      margin: 30px 0;
-      font-weight: bold;
-    }
+    #raceCountdown { font-size: 5rem; margin: 30px 0; font-weight: bold; }
     #raceTrack {
       position: relative;
       height: 300px;
       background: #222;
-      border-radius: 10px;
+      border-radius: 16px;
       overflow: hidden;
       padding: 10px;
       margin: 20px 0;
@@ -487,28 +569,12 @@
     #raceProgressFill {
       height: 100%;
       width: 0%;
-      background: #4CAF50;
+      background: var(--color-success);
       transition: width 0.3s;
     }
     #raceCloseBtn { margin-top: 20px; }
 
-    .back-button {
-      display: block;
-      width: 200px;
-      margin: 40px auto;
-      padding: 12px 24px;
-      font-family: 'Courier New', monospace;
-      font-weight: bold;
-      border: 2px solid black;
-      border-radius: 8px;
-      background: #666;
-      color: white;
-      cursor: pointer;
-      transition: all 0.2s;
-      text-align: center;
-    }
-    .back-button:hover { background: #555; transform: scale(1.02); }
-
+    /* ─── Toast ─── */
     .toast-container {
       position: fixed;
       top: 20px;
@@ -519,42 +585,63 @@
       gap: 8px;
     }
     .toast {
-      padding: 15px 25px;
-      border-radius: 8px;
+      padding: 12px 20px;
+      border-radius: 12px;
       color: white;
-      font-weight: bold;
+      font-weight: 500;
       animation: slideIn 0.3s ease-out;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.15);
       max-width: 400px;
       word-wrap: break-word;
+      backdrop-filter: blur(4px);
     }
-    .toast.success { background: #4CAF50; }
-    .toast.error { background: #f44336; }
-    .toast.info { background: #2196F3; }
-    .toast.warning { background: #ff9800; }
-    .toast.challenge { background: #9c27b0; }
+    .toast.success { background: var(--color-success); }
+    .toast.error { background: var(--color-danger); }
+    .toast.info { background: var(--btn-primary); }
+    .toast.warning { background: var(--color-warning); }
+    .toast.challenge { background: #7c3aed; }
 
     @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
     .spinner {
       display: inline-block;
       width: 30px;
       height: 30px;
-      border: 3px solid #f3f3f3;
-      border-top: 3px solid #f44336;
+      border: 3px solid #e2e8f0;
+      border-top: 3px solid var(--accent);
       border-radius: 50%;
       animation: spin 1s linear infinite;
     }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    .empty-message { text-align: center; padding: 40px; color: #666; }
+    .empty-message { text-align: center; padding: 40px; color: var(--text-muted); font-size: 1.1rem; }
 
+    .back-button {
+      display: block;
+      width: 200px;
+      margin: 40px auto;
+      padding: 12px 24px;
+      font-family: var(--font-family);
+      font-weight: 600;
+      border: none;
+      border-radius: 60px;
+      background: var(--btn-secondary);
+      color: white;
+      cursor: pointer;
+      transition: var(--transition);
+      text-align: center;
+    }
+    .back-button:hover { background: #1e293b; transform: scale(1.02); }
+
+    /* ─── Responsive ─── */
     @media (max-width: 600px) {
+      body { padding: 16px; }
       .player-stats { flex-direction: column; text-align: center; }
       .stat-group { justify-content: center; }
-      .racing-tabs { flex-direction: column; }
-      .tab-btn { width: 100%; }
+      .racing-tabs { flex-direction: column; align-items: stretch; }
+      .tab-btn { width: 100%; text-align: center; }
+      .tab-btn.active::after { display: none; }
       .racers-container { flex-direction: column; }
       .racers-chat { height: 400px; }
-      .challenge-item { flex-direction: column; align-items: stretch; gap: 8px; }
+      .grid { grid-template-columns: 1fr; }
       .race-overlay-box { padding: 10px; }
       #raceTrack { height: 200px; }
     }
@@ -564,202 +651,194 @@
 
 <div class="toast-container" id="toast-container"></div>
 
-<h1>🏁 Racing & Competitions</h1>
-<div class="subtitle">Speed, skill, and high stakes!</div>
-
-<!-- Player Stats -->
-<div class="player-stats" id="playerStats" style="display: none;">
-  <div class="stat-group">
-    <div class="stat"><div class="stat-label">💰 Cash</div><div class="stat-value" id="playerCash">₹0</div></div>
-    <div class="stat"><div class="stat-label">⭐ Level</div><div class="stat-value" id="playerLevel">1</div></div>
-    <div class="stat"><div class="stat-label">🚗 Vehicles</div><div class="stat-value" id="vehicleCount">0</div></div>
-  </div>
-</div>
-
-<!-- Tabs -->
-<div class="racing-tabs">
-  <button class="tab-btn active" onclick="switchTab('races', event)">🏁 Races</button>
-  <button class="tab-btn" onclick="switchTab('garage', event)">🔧 Garage</button>
-  <button class="tab-btn" onclick="switchTab('shop', event)">🏪 Shop</button>
-  <button class="tab-btn" onclick="switchTab('leaderboard', event)">📊 Leaderboard</button>
-  <button class="tab-btn" onclick="switchTab('history', event)">📜 History</button>
-  <button class="tab-btn" onclick="switchTab('racers', event)">👥 Racers</button>
-  <button class="tab-btn" onclick="showCreateRaceModal()" style="background:#4CAF50; color:white; border-color:#4CAF50;">➕ Create Race</button>
-</div>
-
-<!-- Races Tab -->
-<div id="races" class="tab-content active">
-  <div class="section-card">
-    <div class="section-title">🏁 Public Races</div>
-    <div class="grid" id="racesGrid">
-      <div class="empty-message"><div class="spinner"></div><p>Loading races...</p></div>
-    </div>
-  </div>
-</div>
-
-<!-- Garage Tab -->
-<div id="garage" class="tab-content">
-  <div class="section-card">
-    <div class="section-title">🔧 My Vehicles</div>
-    <div class="grid" id="vehiclesGrid">
-      <div class="empty-message"><div class="spinner"></div><p>Loading vehicles...</p></div>
-    </div>
-  </div>
-</div>
-
-<!-- Shop Tab -->
-<div id="shop" class="tab-content">
-  <div class="section-card">
-    <div class="section-title">🏪 Vehicle Shop</div>
-    <div class="grid" id="shopGrid">
-      <div class="empty-message"><div class="spinner"></div><p>Loading vehicles...</p></div>
-    </div>
-  </div>
-</div>
-
-<!-- Leaderboard Tab -->
-<div id="leaderboard" class="tab-content">
-  <div class="section-card">
-    <div class="section-title">🏆 Racing Champions</div>
-    <table style="width:100%; border-collapse: collapse;">
-      <thead>
-        <tr style="background:#333; color:white;">
-          <th>Rank</th><th>Player</th><th>Races</th><th>Wins</th><th>Win Rate</th><th>Earnings</th>
-        </tr>
-      </thead>
-      <tbody id="leaderboardBody">
-        <tr><td colspan="6" class="empty-message"><div class="spinner"></div><p>Loading leaderboard...</p></td></tr>
-      </tbody>
-    </table>
-  </div>
-</div>
-
-<!-- History Tab -->
-<div id="history" class="tab-content">
-  <div class="section-card">
-    <div class="section-title">📜 Race History</div>
-    <div id="historyList">
-      <div class="empty-message"><div class="spinner"></div><p>Loading history...</p></div>
-    </div>
-  </div>
-</div>
-
-<!-- Racers Tab -->
-<div id="racers" class="tab-content">
-  <div class="section-card">
-    <div class="racers-container">
-      <div class="racers-sidebar">
-        <h3>🟢 Online Racers</h3>
-        <div id="racersList"><div class="empty-message">Loading...</div></div>
+<div class="container">
+  <!-- Top Bar -->
+  <div class="top-bar">
+    <a href="dashboard.html" class="back-link">← Dashboard</a>
+    <div class="controls">
+      <div class="theme-switcher" id="themeSwitcher">
+        <button data-theme="default" class="theme-btn active">✨ Aurora</button>
+        <button data-theme="dusk" class="theme-btn">🌙 Dusk</button>
+        <button data-theme="meadow" class="theme-btn">🌿 Meadow</button>
       </div>
-      <div class="racers-chat">
-        <div class="chat-messages" id="racingChatMessages">
-          <div class="empty-message">No messages yet</div>
-        </div>
-        <div class="chat-input">
-          <input type="text" id="racingChatInput" placeholder="Type a message...">
-          <button onclick="sendRacingChat()">Send</button>
-        </div>
+      <div class="font-switcher" id="fontSwitcher">
+        <button data-font="inter" class="font-btn active">Inter</button>
+        <button data-font="monospace" class="font-btn">Courier</button>
+        <button data-font="serif" class="font-btn">Georgia</button>
       </div>
     </div>
   </div>
-</div>
 
-<!-- Challenge Modal (send) -->
-<div class="challenge-modal" id="challengeModal">
-  <div class="challenge-modal-content">
-    <h2>🏁 Send Challenge</h2>
-    <p id="challengeTargetName"></p>
-    <div id="raceOptions">
-      <div class="empty-message">Loading races...</div>
-    </div>
-    <div class="actions">
-      <button class="send" onclick="sendChallenge()">Send Challenge</button>
-      <button class="cancel" onclick="closeChallengeModal()">Cancel</button>
+  <h1 style="text-align:center; font-size: 2.2rem; font-weight:700; margin-bottom: 10px; color: var(--text-main);">🏁 Racing &amp; Competitions</h1>
+  <p class="subtitle" style="text-align:center; color: var(--text-muted); margin-bottom: 30px; font-style:italic;">Speed, skill, and high stakes!</p>
+
+  <!-- Player Stats -->
+  <div class="player-stats" id="playerStats" style="display: none;">
+    <div class="stat-group">
+      <div class="stat"><div class="stat-label">💰 Cash</div><div class="stat-value" id="playerCash">₹0</div></div>
+      <div class="stat"><div class="stat-label">⭐ Level</div><div class="stat-value" id="playerLevel">1</div></div>
+      <div class="stat"><div class="stat-label">🚗 Vehicles</div><div class="stat-value" id="vehicleCount">0</div></div>
     </div>
   </div>
-</div>
 
-<!-- Incoming Challenge Modal (popup) -->
-<div class="incoming-challenge-modal" id="incomingChallengeModal">
-  <div class="incoming-challenge-modal-content">
-    <h2>📨 Incoming Challenge</h2>
-    <p id="incomingChallengeText"></p>
-    <div class="actions">
-      <button class="accept" onclick="acceptIncomingChallenge()">Accept</button>
-      <button class="reject" onclick="rejectIncomingChallenge()">Reject</button>
+  <!-- Tabs -->
+  <div class="racing-tabs">
+    <button class="tab-btn active" onclick="switchTab('races', event)">🏁 Races</button>
+    <button class="tab-btn" onclick="switchTab('garage', event)">🔧 Garage</button>
+    <button class="tab-btn" onclick="switchTab('shop', event)">🏪 Shop</button>
+    <button class="tab-btn" onclick="switchTab('leaderboard', event)">📊 Leaderboard</button>
+    <button class="tab-btn" onclick="switchTab('history', event)">📜 History</button>
+    <button class="tab-btn" onclick="switchTab('racers', event)">👥 Racers</button>
+  </div>
+
+  <!-- Races Tab -->
+  <div id="races" class="tab-content active">
+    <div class="section-card">
+      <div class="section-title"><span class="emoji">🏁</span> Public Races</div>
+      <div class="grid" id="racesGrid">
+        <div class="empty-message"><div class="spinner"></div><p>Loading races...</p></div>
+      </div>
     </div>
   </div>
-</div>
 
-<!-- Race Result Modal -->
-<div class="result-modal" id="resultModal">
-  <div class="result-modal-content">
-    <h2 id="resultTitle">🏁 Race Results</h2>
-    <div id="resultList"></div>
-    <button onclick="closeResultModal()" style="margin-top:20px; padding:10px 30px; background:#f44336; color:white; border:none; border-radius:30px; font-weight:bold; cursor:pointer;">Close</button>
+  <!-- Garage Tab -->
+  <div id="garage" class="tab-content">
+    <div class="section-card">
+      <div class="section-title"><span class="emoji">🔧</span> My Vehicles</div>
+      <div class="grid" id="vehiclesGrid">
+        <div class="empty-message"><div class="spinner"></div><p>Loading vehicles...</p></div>
+      </div>
+    </div>
   </div>
-</div>
 
-<!-- Race Creation Modal -->
-<div class="modal" id="createRaceModal">
-  <div class="modal-content">
-    <h2>🏁 Create New Race</h2>
-    <form id="createRaceForm">
-      <label>Race Name *</label>
-      <input type="text" id="raceName" required placeholder="e.g., Midnight Sprint">
-      <label>Race Type</label>
-      <select id="raceType">
-        <option value="drag">Drag</option>
-        <option value="circuit">Circuit</option>
-        <option value="rally">Rally</option>
-      </select>
-      <label>Description</label>
-      <textarea id="raceDesc" placeholder="Optional details..."></textarea>
-      <label>Entry Fee (₹)</label>
-      <input type="number" id="raceEntryFee" value="0" min="0">
-      <label>Max Participants</label>
-      <input type="number" id="raceMaxParticipants" value="10" min="2" max="20">
-      <label>Race Duration (seconds) – visual race length</label>
-      <input type="number" id="raceDuration" value="10" min="5" max="30">
-      <div class="form-row">
-        <input type="checkbox" id="raceAutoStart" checked>
-        <label style="margin:0; font-weight:normal;">Auto-start when full</label>
+  <!-- Shop Tab -->
+  <div id="shop" class="tab-content">
+    <div class="section-card">
+      <div class="section-title"><span class="emoji">🏪</span> Vehicle Shop</div>
+      <div class="grid" id="shopGrid">
+        <div class="empty-message"><div class="spinner"></div><p>Loading vehicles...</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Leaderboard Tab -->
+  <div id="leaderboard" class="tab-content">
+    <div class="section-card">
+      <div class="section-title"><span class="emoji">🏆</span> Racing Champions</div>
+      <table style="width:100%; border-collapse: collapse;">
+        <thead>
+          <tr style="background: var(--card-header-bg); border-bottom: 2px solid var(--border-light);">
+            <th style="padding:12px; text-align:left;">Rank</th>
+            <th style="padding:12px; text-align:left;">Player</th>
+            <th style="padding:12px; text-align:center;">Races</th>
+            <th style="padding:12px; text-align:center;">Wins</th>
+            <th style="padding:12px; text-align:center;">Win Rate</th>
+            <th style="padding:12px; text-align:right;">Earnings</th>
+          </tr>
+        </thead>
+        <tbody id="leaderboardBody">
+          <tr><td colspan="6" class="empty-message"><div class="spinner"></div><p>Loading leaderboard...</p></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- History Tab -->
+  <div id="history" class="tab-content">
+    <div class="section-card">
+      <div class="section-title"><span class="emoji">📜</span> Race History</div>
+      <div id="historyList">
+        <div class="empty-message"><div class="spinner"></div><p>Loading history...</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Racers Tab -->
+  <div id="racers" class="tab-content">
+    <div class="section-card">
+      <div class="racers-container">
+        <div class="racers-sidebar">
+          <h3 style="margin-bottom:12px;">🟢 Online Racers</h3>
+          <div id="racersList"><div class="empty-message">Loading...</div></div>
+        </div>
+        <div class="racers-chat">
+          <div class="chat-messages" id="racingChatMessages">
+            <div class="empty-message">No messages yet</div>
+          </div>
+          <div class="chat-input">
+            <input type="text" id="racingChatInput" placeholder="Type a message...">
+            <button onclick="sendRacingChat()">Send</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Challenge Modal (send) -->
+  <div class="challenge-modal" id="challengeModal">
+    <div class="challenge-modal-content">
+      <h2>🏁 Send Challenge</h2>
+      <p id="challengeTargetName"></p>
+      <div id="raceOptions">
+        <div class="empty-message">Loading races...</div>
       </div>
       <div class="actions">
-        <button type="submit" class="btn btn-primary" style="width:auto; padding:8px 24px;">Create</button>
-        <button type="button" class="btn btn-secondary" onclick="closeModal('createRaceModal')">Cancel</button>
+        <button class="send" onclick="sendChallenge()">Send Challenge</button>
+        <button class="cancel" onclick="closeChallengeModal()">Cancel</button>
       </div>
-    </form>
-  </div>
-</div>
-
-<!-- Race Overlay -->
-<div id="raceOverlay">
-  <div class="race-overlay-box">
-    <h2 id="raceOverlayTitle">🏁 Race Starting...</h2>
-    <div id="raceCountdown">3</div>
-    <div id="raceTrack"></div>
-    <div id="raceTimeline">
-      <div id="raceProgressFill"></div>
-    </div>
-    <button id="raceCloseBtn" style="display:none;" class="btn btn-primary" onclick="closeRaceOverlay()">Close</button>
-  </div>
-</div>
-
-<!-- Vehicle Tuning Modal -->
-<div class="modal" id="tuneModal">
-  <div class="modal-content">
-    <h2>🔧 Tune Vehicle</h2>
-    <div id="tuneVehicleInfo"></div>
-    <div id="tuneStats"></div>
-    <div class="actions">
-      <button class="btn btn-secondary" onclick="closeModal('tuneModal')">Close</button>
     </div>
   </div>
-</div>
 
-<button class="back-button" onclick="goToDashboard()">← Back to Dashboard</button>
+  <!-- Incoming Challenge Modal (popup) -->
+  <div class="incoming-challenge-modal" id="incomingChallengeModal">
+    <div class="incoming-challenge-modal-content">
+      <h2>📨 Incoming Challenge</h2>
+      <p id="incomingChallengeText"></p>
+      <div class="actions">
+        <button class="accept" onclick="acceptIncomingChallenge()">Accept</button>
+        <button class="reject" onclick="rejectIncomingChallenge()">Reject</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Race Result Modal -->
+  <div class="result-modal" id="resultModal">
+    <div class="result-modal-content">
+      <h2 id="resultTitle">🏁 Race Results</h2>
+      <div id="resultList"></div>
+      <div class="actions">
+        <button onclick="closeResultModal()" style="background:var(--btn-secondary); color:white;">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Race Overlay -->
+  <div id="raceOverlay">
+    <div class="race-overlay-box">
+      <h2 id="raceOverlayTitle">🏁 Race Starting...</h2>
+      <div id="raceCountdown">3</div>
+      <div id="raceTrack"></div>
+      <div id="raceTimeline">
+        <div id="raceProgressFill"></div>
+      </div>
+      <button id="raceCloseBtn" style="display:none;" class="btn btn-primary" onclick="closeRaceOverlay()">Close</button>
+    </div>
+  </div>
+
+  <!-- Vehicle Tuning Modal -->
+  <div class="modal" id="tuneModal">
+    <div class="modal-content">
+      <h2>🔧 Tune Vehicle</h2>
+      <div id="tuneVehicleInfo"></div>
+      <div id="tuneStats"></div>
+      <div class="actions">
+        <button class="cancel" onclick="closeModal('tuneModal')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <button class="back-button" onclick="goToDashboard()">← Back to Dashboard</button>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 <script>
@@ -796,6 +875,44 @@
     document.getElementById(id).style.display = 'flex';
   }
 
+  // ─── Theme & Font ──────────────────────────────────────
+  function setTheme(themeName) {
+    const body = document.body;
+    body.classList.remove('theme-dusk', 'theme-meadow');
+    if (themeName === 'dusk') body.classList.add('theme-dusk');
+    else if (themeName === 'meadow') body.classList.add('theme-meadow');
+    localStorage.setItem('racing_theme', themeName);
+    document.querySelectorAll('.theme-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.getAttribute('data-theme') === themeName);
+    });
+  }
+
+  function setFont(fontName) {
+    const root = document.documentElement;
+    if (fontName === 'inter') root.style.setProperty('--font-family', "'Inter', system-ui, sans-serif");
+    else if (fontName === 'monospace') root.style.setProperty('--font-family', "'Courier New', monospace");
+    else if (fontName === 'serif') root.style.setProperty('--font-family', "'Georgia', serif");
+    localStorage.setItem('racing_font', fontName);
+    document.querySelectorAll('.font-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.getAttribute('data-font') === fontName);
+    });
+  }
+
+  function initThemeAndFont() {
+    const savedTheme = localStorage.getItem('racing_theme') || 'default';
+    setTheme(savedTheme);
+    const savedFont = localStorage.getItem('racing_font') || 'inter';
+    setFont(savedFont);
+    document.getElementById('themeSwitcher').addEventListener('click', (e) => {
+      const btn = e.target.closest('.theme-btn');
+      if (btn) setTheme(btn.getAttribute('data-theme'));
+    });
+    document.getElementById('fontSwitcher').addEventListener('click', (e) => {
+      const btn = e.target.closest('.font-btn');
+      if (btn) setFont(btn.getAttribute('data-font'));
+    });
+  }
+
   // ─── State ────────────────────────────────────────────────
   let currentPlayer = null;
   let vehicles = [];
@@ -804,7 +921,6 @@
   let leaderboard = [];
   let history = [];
   let onlineRacers = [];
-  let challenges = [];
   let racingChannel = null;
   let challengeSubscription = null;
   let selectedTarget = null;
@@ -841,7 +957,6 @@
         loadVehicleModels(),
         loadLeaderboard(),
         loadHistory()
-        // loadChallenges() removed
       ]);
 
       if (!realtimeInit) {
@@ -1055,10 +1170,10 @@
       return `
         <div class="${cardClass}">
           <div style="display:flex; justify-content:space-between; align-items:center;">
-            <span style="font-weight:bold;font-size:1.2rem;">${escapeHtml(race.name)}</span>
-            <span style="background:#f44336;color:white;padding:2px 10px;border-radius:20px;font-size:0.8rem;">${race.race_type}</span>
+            <span style="font-weight:600;font-size:1.2rem;">${escapeHtml(race.name)}</span>
+            <span style="background:var(--accent);color:white;padding:2px 10px;border-radius:20px;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.3px;">${race.race_type}</span>
           </div>
-          <p>${escapeHtml(race.description || '')}</p>
+          <p style="color:var(--text-muted);margin:8px 0;">${escapeHtml(race.description || '')}</p>
           <div class="race-details">
             <div>Entry Fee: ₹${race.entry_fee}</div>
             <div>Prize Pool: ₹${race.prize_pool}</div>
@@ -1084,7 +1199,7 @@
           ${canStart ? `
             <button class="btn btn-warning" onclick="startRaceManually('${race.id}')">▶ Start Race</button>
           ` : ''}
-          ${isRunning ? '<div style="text-align:center; color:#ff9800; font-weight:bold;">🏁 Race in progress...</div>' : ''}
+          ${isRunning ? '<div style="text-align:center; color:var(--color-warning); font-weight:bold;">🏁 Race in progress...</div>' : ''}
           ${isFinished ? `
             <button class="btn btn-secondary" onclick="raceAgain('${race.id}')">🔄 Race Again</button>
           ` : ''}
@@ -1100,10 +1215,10 @@
       return;
     }
     container.innerHTML = history.map(h => `
-      <div style="border-bottom:1px solid #eee; padding:10px;">
+      <div style="border-bottom:1px solid var(--border-light); padding:12px 0;">
         <div><strong>${escapeHtml(h.races?.name || 'Unknown Race')}</strong></div>
         <div>Position: ${h.position} | Earnings: ₹${h.earnings}</div>
-        <div style="font-size:0.8rem; color:#666;">${new Date(h.created_at).toLocaleString()}</div>
+        <div style="font-size:0.8rem; color:var(--text-muted);">${new Date(h.created_at).toLocaleString()}</div>
       </div>
     `).join('');
   }
@@ -1145,7 +1260,6 @@
     // ─── 1. Presence channel ──────────────────────────────
     racingChannel = sb.channel(`racing-presence:${racingRoomId}`);
 
-    // Attach all broadcast listeners BEFORE subscribing
     racingChannel.on('broadcast', { event: 'message' }, (payload) => {
       console.log('📨 Broadcast (message) received:', payload);
       appendChatMessage(payload.payload);
@@ -1166,7 +1280,6 @@
       }, 200);
     });
 
-    // Challenge broadcast listener
     racingChannel.on('broadcast', { event: 'challenge' }, (payload) => {
       console.log('📨 Challenge broadcast received:', payload);
       appendChallengeMessage(payload.payload);
@@ -1183,7 +1296,6 @@
       renderRacers();
     });
 
-    // Subscribe to presence channel
     await racingChannel.subscribe(async (status) => {
       if (status === 'SUBSCRIBED') {
         console.log('✅ Racing presence channel subscribed');
@@ -1251,16 +1363,13 @@
       const challenge = payload.new;
       console.log('📩 New challenge for you (DB):', challenge);
       showIncomingChallenge(challenge);
-      // loadChallenges() removed
     });
     challengeSubscription.on('postgres_changes', {
       event: 'UPDATE',
       schema: 'public',
       table: 'pvp_challenges',
       filter: `challengee_id=eq.${currentPlayer.id}`
-    }, () => {
-      // loadChallenges() removed
-    });
+    }, () => {});
     await challengeSubscription.subscribe((status) => {
       if (status === 'SUBSCRIBED') console.log('✅ Challenges subscription active');
       else console.warn('⚠️ Challenges subscription status:', status);
@@ -1290,8 +1399,6 @@
         </div>
       `;
     }).join('');
-    // Scroll to bottom after messages load
-    // Use a small delay to ensure the container height is computed
     setTimeout(() => {
       container.scrollTop = container.scrollHeight;
     }, 100);
@@ -1300,10 +1407,7 @@
   function appendChatMessage(msg) {
     const container = document.getElementById('racingChatMessages');
     const existing = container.querySelector(`[data-msg-id="${msg.id}"]`);
-    if (existing) {
-      console.log('⏭️ Message already exists, skipping:', msg.id);
-      return;
-    }
+    if (existing) return;
 
     const username = msg.username || msg.players?.username || 'Unknown';
     const isOwn = msg.user_id === currentPlayer.id;
@@ -1321,7 +1425,6 @@
     `;
     container.appendChild(div);
     container.scrollTop = container.scrollHeight;
-    console.log('✅ Appended message:', msg.id);
   }
 
   function appendChallengeMessage(payload) {
@@ -1372,16 +1475,12 @@
     `;
     container.appendChild(div);
     container.scrollTop = container.scrollHeight;
-    console.log('✅ Appended challenge message:', payload.challenge_id);
   }
 
   async function sendRacingChat() {
     const input = document.getElementById('racingChatInput');
     const text = input.value.trim();
-    if (!text || !racingRoomId) {
-      console.warn('No text or roomId');
-      return;
-    }
+    if (!text || !racingRoomId) return;
     if (!isChannelReady) {
       showToast('Chat is not ready yet, please wait.', 'warning');
       return;
@@ -1413,26 +1512,17 @@
     if (error) {
       console.error('❌ Failed to insert message:', error);
       showToast('Failed to send message', 'error');
-      const container = document.getElementById('racingChatMessages');
-      const el = container.querySelector(`[data-msg-id="${tempId}"]`);
+      const el = document.querySelector(`[data-msg-id="${tempId}"]`);
       if (el) el.remove();
       return;
     }
 
     const finalMsg = { ...newMsg, id: data.id };
-    const container = document.getElementById('racingChatMessages');
-    const tempEl = container.querySelector(`[data-msg-id="${tempId}"]`);
-    if (tempEl) {
-      tempEl.setAttribute('data-msg-id', finalMsg.id);
-    }
+    const tempEl = document.querySelector(`[data-msg-id="${tempId}"]`);
+    if (tempEl) tempEl.setAttribute('data-msg-id', finalMsg.id);
 
     try {
-      await racingChannel.send({
-        type: 'broadcast',
-        event: 'message',
-        payload: finalMsg
-      });
-      console.log('✅ Broadcast sent');
+      await racingChannel.send({ type: 'broadcast', event: 'message', payload: finalMsg });
     } catch (err) {
       console.error('❌ Broadcast send error:', err);
       showToast('Failed to broadcast message', 'error');
@@ -1513,14 +1603,12 @@
     const targetId = selectedTarget.id;
     const targetName = selectedTarget.name;
     const raceId = selectedRaceId;
-
     closeChallengeModal();
 
     const { data, error } = await sb.rpc('send_challenge', {
       p_challengee_id: targetId,
       p_race_id: raceId
     });
-    console.log('📤 sendChallenge response:', data, error);
     if (error) {
       showToast(error.message, 'error');
       return;
@@ -1531,7 +1619,6 @@
     }
 
     showToast('Challenge sent!', 'success');
-    // loadChallenges() removed
 
     let challengeId = data.challenge_id;
     if (!challengeId) {
@@ -1545,9 +1632,7 @@
         .limit(1);
       if (!challengesError && challengesData && challengesData.length > 0) {
         challengeId = challengesData[0].id;
-        console.log('🔍 Found challenge_id from DB:', challengeId);
       } else {
-        console.warn('⚠️ Could not find challenge_id, skipping broadcast.');
         return;
       }
     }
@@ -1563,12 +1648,7 @@
       expires_at: new Date(Date.now() + 60000).toISOString()
     };
     try {
-      await racingChannel.send({
-        type: 'broadcast',
-        event: 'challenge',
-        payload: challengePayload
-      });
-      console.log('📤 Challenge broadcast sent');
+      await racingChannel.send({ type: 'broadcast', event: 'challenge', payload: challengePayload });
     } catch (err) {
       console.error('❌ Broadcast challenge error:', err);
       showToast('Failed to broadcast challenge', 'error');
@@ -1600,8 +1680,7 @@
         incomingChallengeId = payload.id || payload.challenge_id;
         document.getElementById('incomingChallengeModal').style.display = 'flex';
         showToast(`🏁 ${cName} challenged you!`, 'challenge', 5000);
-      }).catch(err => {
-        console.error('Error fetching challenge details:', err);
+      }).catch(() => {
         document.getElementById('incomingChallengeText').textContent = 'You have a new challenge!';
         incomingChallengeId = payload.id || payload.challenge_id;
         document.getElementById('incomingChallengeModal').style.display = 'flex';
@@ -1627,15 +1706,7 @@
     document.getElementById('incomingChallengeModal').style.display = 'none';
     incomingChallengeId = null;
 
-    // Refresh races and check if the race auto-started
     await loadRaces();
-    // Find the race that was involved in this challenge (we need to know which race)
-    const { data: challengeData } = await sb
-      .from('pvp_challenges')
-      .select('race_id')
-      .eq('id', incomingChallengeId) // note: incomingChallengeId is null now, so we need to fetch differently
-      .single(); // This won't work because we nulled it. We'll fetch from the challenge we accepted.
-    // Actually we need to store the race_id before accepting. Let's refetch the latest accepted challenge.
     const { data: challengesData } = await sb
       .from('pvp_challenges')
       .select('race_id')
@@ -1668,7 +1739,6 @@
     }
     showToast(data.message || 'Challenge accepted!', 'success');
 
-    // Find the race_id for this challenge
     const { data: challengeData } = await sb
       .from('pvp_challenges')
       .select('race_id')
@@ -1810,14 +1880,10 @@
   async function raceAgain(raceId) {
     const race = races.find(r => r.id === raceId);
     if (!race) return;
-    document.getElementById('raceName').value = race.name + ' (Run 2)';
-    document.getElementById('raceType').value = race.race_type;
-    document.getElementById('raceDesc').value = race.description || '';
-    document.getElementById('raceEntryFee').value = race.entry_fee;
-    document.getElementById('raceMaxParticipants').value = race.max_participants;
-    document.getElementById('raceDuration').value = race.duration_seconds || 10;
-    document.getElementById('raceAutoStart').checked = race.auto_start;
-    openModal('createRaceModal');
+    // Remove create race modal, just show a message that admin creates races.
+    showToast('Races are created by admins only. New race created.', 'info');
+    // Actually we could create a new race with same settings via RPC, but we removed the modal.
+    // So just inform.
   }
 
   // ─── Race Animation ──────────────────────────────────────
@@ -1977,10 +2043,10 @@
       const cost = baseCost * (level + 1);
       const maxed = currentStat >= 100;
       return `
-        <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #eee;">
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border-light);">
           <span><strong>${statLabels[stat]}</strong> (${currentStat})</span>
           <span>Lv.${level}</span>
-          <button class="btn btn-sm btn-primary" onclick="upgradeStat('${vehicleId}','${stat}',${cost})" ${maxed ? 'disabled' : ''}>
+          <button class="btn btn-primary btn-sm" onclick="upgradeStat('${vehicleId}','${stat}',${cost})" ${maxed ? 'disabled' : ''}>
             +1 (₹${cost})
           </button>
         </div>
@@ -2005,34 +2071,6 @@
     showTuneModal(vehicleId);
   }
 
-  // ─── Race Creation ──────────────────────────────────────
-  function showCreateRaceModal() {
-    openModal('createRaceModal');
-    document.getElementById('createRaceForm').reset();
-  }
-
-  document.getElementById('createRaceForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const name = document.getElementById('raceName').value.trim();
-    if (!name) { showToast('Race name is required', 'error'); return; }
-    const data = {
-      p_name: name,
-      p_race_type: document.getElementById('raceType').value,
-      p_description: document.getElementById('raceDesc').value,
-      p_entry_fee: parseInt(document.getElementById('raceEntryFee').value) || 0,
-      p_max_participants: parseInt(document.getElementById('raceMaxParticipants').value) || 10,
-      p_duration_seconds: parseInt(document.getElementById('raceDuration').value) || 10,
-      p_auto_start: document.getElementById('raceAutoStart').checked
-    };
-    const { data: result, error } = await sb.rpc('create_race', data);
-    if (error) { showToast('Error: '+error.message, 'error'); return; }
-    if (!result.success) { showToast(result.error, 'error'); return; }
-    showToast('Race created!', 'success');
-    closeModal('createRaceModal');
-    loadRaces();
-    switchTab('races');
-  });
-
   // ─── General ──────────────────────────────────────────────
   function showResultsModal(results, winnerName) {
     const modal = document.getElementById('resultModal');
@@ -2042,10 +2080,10 @@
     title.textContent = `🏁 Race Finished - Winner: ${escapeHtml(winnerName)}`;
 
     list.innerHTML = results.map((r, index) => `
-      <div class="result-item">
-        <span class="pos">#${r.position}</span>
-        <span class="name">${escapeHtml(r.username || 'Unknown')}</span>
-        <span class="earnings">+₹${r.earnings}</span>
+      <div class="result-item" style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border-light);">
+        <span style="font-weight:bold;">#${r.position}</span>
+        <span style="flex:1; margin-left:10px;">${escapeHtml(r.username || 'Unknown')}</span>
+        <span style="color:var(--color-success); font-weight:bold;">+₹${r.earnings}</span>
       </div>
     `).join('');
 
@@ -2071,11 +2109,7 @@
     else if (tabName === 'shop') loadVehicleModels();
     else if (tabName === 'leaderboard') loadLeaderboard();
     else if (tabName === 'history') loadHistory();
-    else if (tabName === 'racers') {
-      // load racers tab content
-      loadChatMessages();
-      renderRacers();
-    }
+    else if (tabName === 'racers') { loadChatMessages(); renderRacers(); }
   }
 
   function goToDashboard() { window.location.href = 'dashboard.html'; }
@@ -2111,6 +2145,7 @@
   }
 
   // ─── Init ────────────────────────────────────────────────
+  initThemeAndFont();
   loadPlayerData();
 
   setInterval(() => {
@@ -2139,7 +2174,6 @@
   window.raceAgain = raceAgain;
   window.showTuneModal = showTuneModal;
   window.upgradeStat = upgradeStat;
-  window.showCreateRaceModal = showCreateRaceModal;
   window.closeModal = closeModal;
   window.openModal = openModal;
   window.closeRaceOverlay = closeRaceOverlay;
