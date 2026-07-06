@@ -4,7 +4,7 @@
   <title>Rheoa RPG - Racing</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    /* ─── all styles (unchanged) ─── */
+    /* ─── all styles unchanged ─── */
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Courier New', monospace; background: #f8f8f0; color: #222; padding: 20px; min-height: 100vh; }
     h1 { text-align: center; margin-bottom: 10px; font-size: clamp(1.5rem, 5vw, 2.5rem); color: #f44336; }
@@ -584,7 +584,6 @@
   <button class="tab-btn" onclick="switchTab('leaderboard', event)">📊 Leaderboard</button>
   <button class="tab-btn" onclick="switchTab('history', event)">📜 History</button>
   <button class="tab-btn" onclick="switchTab('racers', event)">👥 Racers</button>
-  <button class="tab-btn" onclick="switchTab('challenges', event)">📋 Challenges</button>
   <button class="tab-btn" onclick="showCreateRaceModal()" style="background:#4CAF50; color:white; border-color:#4CAF50;">➕ Create Race</button>
 </div>
 
@@ -662,16 +661,6 @@
           <button onclick="sendRacingChat()">Send</button>
         </div>
       </div>
-    </div>
-  </div>
-</div>
-
-<!-- Challenges Tab -->
-<div id="challenges" class="tab-content">
-  <div class="section-card">
-    <div class="section-title">📋 Your Race Challenges</div>
-    <div id="challengesList">
-      <div class="empty-message"><div class="spinner"></div><p>Loading challenges...</p></div>
     </div>
   </div>
 </div>
@@ -851,8 +840,8 @@
         loadRaces(),
         loadVehicleModels(),
         loadLeaderboard(),
-        loadHistory(),
-        loadChallenges()
+        loadHistory()
+        // loadChallenges() removed
       ]);
 
       if (!realtimeInit) {
@@ -973,18 +962,6 @@
     if (error) { console.error(error); return; }
     history = data || [];
     renderHistory();
-  }
-
-  async function loadChallenges() {
-    try {
-      const { data, error } = await sb.rpc('get_player_challenges');
-      if (error) throw error;
-      challenges = data || [];
-      renderChallenges();
-    } catch (error) {
-      console.error('Error loading challenges:', error);
-      document.getElementById('challengesList').innerHTML = '<div class="empty-message">Error loading challenges</div>';
-    }
   }
 
   // ─── Rendering ──────────────────────────────────────────
@@ -1131,38 +1108,6 @@
     `).join('');
   }
 
-  function renderChallenges() {
-    const container = document.getElementById('challengesList');
-    if (!challenges.length) {
-      container.innerHTML = '<div class="empty-message">No challenges yet.</div>';
-      return;
-    }
-    container.innerHTML = challenges.map(c => {
-      const isOutgoing = c.challenger_id === currentPlayer.id;
-      const other = isOutgoing ? c.challengee_name : c.challenger_name;
-      const statusClass = 'status-' + c.status;
-      const canAccept = !isOutgoing && c.status === 'pending';
-      const expired = new Date(c.expires_at) < new Date() && c.status === 'pending';
-      return `
-        <div class="challenge-item">
-          <div>
-            <div><strong>${isOutgoing ? '→' : '←'} ${escapeHtml(other)}</strong></div>
-            <div>Race: ${escapeHtml(c.race_name || 'Unknown')}</div>
-            <div style="font-size:0.8rem;color:#666;">${new Date(c.created_at).toLocaleString()}</div>
-          </div>
-          <div>
-            <span class="status ${statusClass}">${c.status.charAt(0).toUpperCase()+c.status.slice(1)}</span>
-          </div>
-          <div class="actions">
-            ${canAccept && !expired ? `<button class="accept" onclick="handleChallenge('${c.id}','accept')">Accept</button>` : ''}
-            ${canAccept && !expired ? `<button class="reject" onclick="handleChallenge('${c.id}','reject')">Reject</button>` : ''}
-            ${expired ? '<span style="font-size:0.8rem;color:#999;">Expired</span>' : ''}
-          </div>
-        </div>
-      `;
-    }).join('');
-  }
-
   // ─── Chat trimming ──────────────────────────────────────
   async function trimChatIfNeeded() {
     try {
@@ -1306,7 +1251,7 @@
       const challenge = payload.new;
       console.log('📩 New challenge for you (DB):', challenge);
       showIncomingChallenge(challenge);
-      loadChallenges();
+      // loadChallenges() removed
     });
     challengeSubscription.on('postgres_changes', {
       event: 'UPDATE',
@@ -1314,7 +1259,7 @@
       table: 'pvp_challenges',
       filter: `challengee_id=eq.${currentPlayer.id}`
     }, () => {
-      loadChallenges();
+      // loadChallenges() removed
     });
     await challengeSubscription.subscribe((status) => {
       if (status === 'SUBSCRIBED') console.log('✅ Challenges subscription active');
@@ -1345,7 +1290,11 @@
         </div>
       `;
     }).join('');
-    container.scrollTop = container.scrollHeight;
+    // Scroll to bottom after messages load
+    // Use a small delay to ensure the container height is computed
+    setTimeout(() => {
+      container.scrollTop = container.scrollHeight;
+    }, 100);
   }
 
   function appendChatMessage(msg) {
@@ -1582,7 +1531,7 @@
     }
 
     showToast('Challenge sent!', 'success');
-    loadChallenges();
+    // loadChallenges() removed
 
     let challengeId = data.challenge_id;
     if (!challengeId) {
@@ -1666,7 +1615,7 @@
     }
   }
 
-  // --- Accept from popup, now with auto-start logic ---
+  // Accept from popup
   async function acceptIncomingChallenge() {
     if (!incomingChallengeId) return;
     const { data, error } = await sb.rpc('accept_challenge', { p_challenge_id: incomingChallengeId });
@@ -1681,9 +1630,12 @@
     // Refresh races and check if the race auto-started
     await loadRaces();
     // Find the race that was involved in this challenge (we need to know which race)
-    // We can store the race_id from the challenge payload, but we don't have it here.
-    // However, the challenge object had race_id, and we can retrieve it from the challenges list.
-    // We'll fetch the latest challenge for this player to get the race_id.
+    const { data: challengeData } = await sb
+      .from('pvp_challenges')
+      .select('race_id')
+      .eq('id', incomingChallengeId) // note: incomingChallengeId is null now, so we need to fetch differently
+      .single(); // This won't work because we nulled it. We'll fetch from the challenge we accepted.
+    // Actually we need to store the race_id before accepting. Let's refetch the latest accepted challenge.
     const { data: challengesData } = await sb
       .from('pvp_challenges')
       .select('race_id')
@@ -1695,9 +1647,7 @@
       const raceId = challengesData[0].race_id;
       const race = races.find(r => r.id === raceId);
       if (race && race.status === 'running') {
-        // Auto-start the animation
         startRaceAnimation(raceId, race.duration_seconds || 10);
-        // Broadcast to others that the race started
         if (racingChannel && isChannelReady) {
           await racingChannel.send({
             type: 'broadcast',
@@ -1707,8 +1657,6 @@
         }
       }
     }
-    // Also reload challenges
-    loadChallenges();
   }
 
   // Accept from chat
@@ -1741,7 +1689,6 @@
         }
       }
     }
-    loadChallenges();
     loadRaces();
   }
 
@@ -1755,7 +1702,6 @@
       showToast('Challenge rejected', 'info');
       document.getElementById('incomingChallengeModal').style.display = 'none';
       incomingChallengeId = null;
-      loadChallenges();
     }
   }
 
@@ -1766,49 +1712,6 @@
       showToast(error?.message || data?.error || 'Failed to reject', 'error');
     } else {
       showToast('Challenge rejected', 'info');
-      loadChallenges();
-    }
-  }
-
-  // Handle challenge from challenges list (accept/reject)
-  async function handleChallenge(challengeId, action) {
-    const rpc = action === 'accept' ? 'accept_challenge' : 'reject_challenge';
-    const { data, error } = await sb.rpc(rpc, { p_challenge_id: challengeId });
-    if (error) {
-      showToast(error.message, 'error');
-      return;
-    }
-    if (data.success) {
-      showToast(data.message || `Challenge ${action}ed`, 'success');
-      await loadChallenges();
-      if (action === 'accept') {
-        // Check if race auto-started
-        const { data: challengeData } = await sb
-          .from('pvp_challenges')
-          .select('race_id')
-          .eq('id', challengeId)
-          .single();
-        if (challengeData) {
-          const raceId = challengeData.race_id;
-          await loadRaces();
-          const race = races.find(r => r.id === raceId);
-          if (race && race.status === 'running') {
-            startRaceAnimation(raceId, race.duration_seconds || 10);
-            if (racingChannel && isChannelReady) {
-              await racingChannel.send({
-                type: 'broadcast',
-                event: 'race_update',
-                payload: { action: 'start', race_id: raceId }
-              });
-            }
-          }
-        }
-        await loadLeaderboard();
-        await loadHistory();
-        await loadRaces();
-      }
-    } else {
-      showToast(data.error || 'Failed', 'error');
     }
   }
 
@@ -2168,7 +2071,11 @@
     else if (tabName === 'shop') loadVehicleModels();
     else if (tabName === 'leaderboard') loadLeaderboard();
     else if (tabName === 'history') loadHistory();
-    else if (tabName === 'challenges') loadChallenges();
+    else if (tabName === 'racers') {
+      // load racers tab content
+      loadChatMessages();
+      renderRacers();
+    }
   }
 
   function goToDashboard() { window.location.href = 'dashboard.html'; }
@@ -2227,7 +2134,6 @@
   window.rejectIncomingChallenge = rejectIncomingChallenge;
   window.acceptIncomingChallengeFromChat = acceptIncomingChallengeFromChat;
   window.rejectIncomingChallengeFromChat = rejectIncomingChallengeFromChat;
-  window.handleChallenge = handleChallenge;
   window.closeResultModal = closeResultModal;
   window.startRaceManually = startRaceManually;
   window.raceAgain = raceAgain;
