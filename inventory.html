@@ -34,8 +34,43 @@
       --color-cash: #16a34a;
     }
 
-    body.theme-dusk { /* same as before */ }
-    body.theme-meadow { /* same as before */ }
+    body.theme-dusk {
+      --bg-body: #0f1722;
+      --card-bg: #1e293b;
+      --card-border: rgba(51,65,85,0.6);
+      --card-shadow: 0 15px 35px rgba(0,0,0,0.3);
+      --header-bg: linear-gradient(135deg,#0f172a 0%,#1e293b 100%);
+      --header-text: #e2e8f0;
+      --accent: #60a5fa;
+      --accent-hover: #3b82f6;
+      --btn-primary: #3b82f6;
+      --btn-primary-hover: #2563eb;
+      --btn-secondary: #334155;
+      --btn-ghost: #334155;
+      --text-main: #f1f5f9;
+      --text-muted: #cbd5e1;
+      --border-light: #334155;
+      --card-header-bg: #0f172a;
+    }
+
+    body.theme-meadow {
+      --bg-body: #eef4e6;
+      --card-bg: #ffffffea;
+      --card-border: #cbd5b0;
+      --card-shadow: 0 12px 24px rgba(60,70,40,0.08);
+      --header-bg: linear-gradient(135deg,#2b5e3b 0%,#4a7c59 100%);
+      --header-text: #fef9e6;
+      --accent: #4b6b3e;
+      --accent-hover: #3a5530;
+      --btn-primary: #4b6b3e;
+      --btn-primary-hover: #3a5530;
+      --btn-secondary: #7f6b4a;
+      --btn-ghost: #e9e1c7;
+      --text-main: #2c2b26;
+      --text-muted: #5b5a4c;
+      --border-light: #d9d2b0;
+      --card-header-bg: #fef6e0;
+    }
 
     * { margin:0; padding:0; box-sizing:border-box; }
     body {
@@ -402,7 +437,7 @@
 
   // ─── State ──────────────────────────────────────────────
   let currentPlayer = null;
-  let playerInventory = [];  // array of { id, player_id, item_id, quantity, items (merged) }
+  let playerInventory = [];
   let shopItems = [];
 
   // ─── Load Player & Data ──────────────────────────────
@@ -476,10 +511,10 @@
     }
   }
 
-  // ─── Load Inventory (manual join – safe and reliable) ──
+  // ─── Load Inventory (safe manual join) ───────────────
   async function loadInventory() {
     try {
-      // 1. Fetch player_items
+      // 1. Get player_items
       const { data: playerItems, error: pError } = await sb
         .from('player_items')
         .select('id, player_id, item_id, quantity')
@@ -492,7 +527,7 @@
         return;
       }
 
-      // 2. Fetch all items that are referenced
+      // 2. Get items
       const itemIds = playerItems.map(pi => pi.item_id);
       const { data: items, error: iError } = await sb
         .from('items')
@@ -500,7 +535,7 @@
         .in('id', itemIds);
       if (iError) throw iError;
 
-      // 3. Merge items into playerItems
+      // 3. Merge
       const itemMap = {};
       items.forEach(item => { itemMap[item.id] = item; });
 
@@ -667,6 +702,9 @@
           .eq('id', existing.id);
         if (error) throw error;
         existing.quantity += 1;
+        // Re-fetch inventory to get the updated item details (optional, but we already have the item)
+        // For simplicity, we'll just update local and re-render.
+        renderInventory();
       } else {
         const { error } = await sb
           .from('player_items')
