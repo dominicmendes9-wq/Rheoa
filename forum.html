@@ -6,7 +6,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
   <style>
-    /* ─── CSS Variables & Themes ─── */
+    /* ─── CSS Variables & Themes (unchanged) ─── */
     :root {
       --bg-body: #f0f4fa;
       --card-bg: #fff;
@@ -934,6 +934,7 @@ async function loadCommunityView() {
     .from('posts')
     .select(`*, author:players(username)`)
     .eq('community_id', currentCommunity.id)
+    .is('deleted_at', null)          // 🔹 Exclude soft-deleted posts
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -1036,6 +1037,7 @@ async function loadFeed() {
   const { data: posts, error } = await sb
     .from('posts')
     .select(`*, author:players(username), community:communities(name, display_name, icon)`)
+    .is('deleted_at', null)          // 🔹 Exclude soft-deleted posts
     .order('created_at', { ascending: false })
     .limit(50);
 
@@ -1102,6 +1104,20 @@ async function loadPostView(postId) {
 
   if (error || !post) {
     document.getElementById('mainContent').innerHTML = '<p>Post not found</p>';
+    return;
+  }
+
+  // 🔹 Check if post is deleted
+  if (post.deleted_at !== null) {
+    document.getElementById('mainContent').innerHTML = `
+      <div style="padding:40px;text-align:center;color:var(--text-muted);">
+        <h2>This post has been deleted.</h2>
+        <p style="margin-top:12px;">It was removed by the author.</p>
+        <button class="action-btn" onclick="selectCommunityById('${post.community.id}')" style="margin-top:16px;">
+          ← Back to ${escapeHtml(post.community.display_name)}
+        </button>
+      </div>
+    `;
     return;
   }
 
@@ -1446,7 +1462,7 @@ function hideReplyForm(commentId) {
 }
 
 // ─────────────────────────────────────────────
-// EDIT / DELETE POST
+// EDIT / DELETE POST  (UPDATED)
 // ─────────────────────────────────────────────
 async function editPost(postId) {
   const newContent = prompt('Edit your post content (HTML allowed):', currentPost.content);
@@ -1456,13 +1472,37 @@ async function editPost(postId) {
     loadPostView(postId);
   }
 }
+
 async function deletePost(postId) {
-  if (confirm('Delete this post?')) {
-    await sb.from('posts').delete().eq('id', postId);
-    if (currentCommunity) loadCommunityView();
-    else loadFeed();
+  if (!confirm('Delete this post? This action cannot be undone.')) return;
+
+  try {
+    // 🔹 Soft-delete: set deleted_at timestamp
+    const { error } = await sb
+      .from('posts')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', postId);
+
+    if (error) {
+      console.error('Delete error:', error);
+      showToast('Failed to delete post: ' + error.message, 'error');
+      return;
+    }
+
+    showToast('Post deleted successfully.', 'success');
+
+    // Redirect to community view or feed
+    if (currentCommunity) {
+      await loadCommunityView();
+    } else {
+      await loadFeed();
+    }
+  } catch (err) {
+    console.error('Delete exception:', err);
+    showToast('Error deleting post.', 'error');
   }
 }
+
 async function editComment(commentId) {
   const newContent = prompt('Edit your comment:');
   if (newContent) {
