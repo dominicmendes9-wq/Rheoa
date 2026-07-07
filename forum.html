@@ -6,7 +6,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
   <style>
-    /* ─── CSS Variables & Themes ─── */
+    /* ─── same CSS as before ─── */
     :root {
       --bg-body: #f0f4fa;
       --card-bg: #fff;
@@ -1611,7 +1611,6 @@ function startCommentEdit(commentId) {
     return;
   }
   editingCommentId = commentId;
-  // Reload the post view to show the edit form for this comment
   if (currentPost) loadPostView(currentPost.id);
 }
 
@@ -1621,7 +1620,7 @@ function cancelCommentEdit() {
 }
 
 async function saveCommentEdit(commentId) {
-  // Find the textarea
+  console.log('saveCommentEdit called for comment:', commentId);
   const textarea = document.getElementById('commentEditTextarea-' + commentId);
   if (!textarea) {
     showToast('Error: Could not find comment editor.', 'error');
@@ -1639,6 +1638,7 @@ async function saveCommentEdit(commentId) {
   try {
     const { error } = await sb.from('comments').update({ content }).eq('id', commentId);
     if (error) {
+      console.error('Update error:', error);
       showToast('Error saving comment: ' + error.message, 'error');
       return;
     }
@@ -1655,10 +1655,12 @@ async function saveCommentEdit(commentId) {
 }
 
 async function deleteComment(commentId) {
+  console.log('deleteComment called for comment:', commentId);
   if (!confirm('Delete this comment?')) return;
   try {
     const { error } = await sb.from('comments').delete().eq('id', commentId);
     if (error) {
+      console.error('Delete error:', error);
       showToast('Error deleting comment: ' + error.message, 'error');
       return;
     }
@@ -1776,7 +1778,6 @@ function renderComments(comments, parentId = null) {
 
     let commentContentHtml;
     if (isEditing) {
-      // Render edit textarea with unique ID
       commentContentHtml = `
         <div class="comment-content">
           <textarea id="commentEditTextarea-${c.id}" class="comment-edit-textarea" rows="3">${escapeHtml(c.content || '')}</textarea>
