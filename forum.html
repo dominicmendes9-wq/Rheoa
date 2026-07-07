@@ -6,7 +6,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
   <style>
-    /* ─── CSS Variables & Themes (unchanged) ─── */
+    /* ─── CSS Variables & Themes ─── */
     :root {
       --bg-body: #f0f4fa;
       --card-bg: #fff;
@@ -182,8 +182,25 @@
       display: flex;
       align-items: center;
       gap: 8px;
+      cursor: pointer;
     }
-    .community-list { list-style: none; padding: 8px 0; }
+    .sidebar-header .toggle-icon {
+      margin-left: auto;
+      font-size: 0.8rem;
+      opacity: 0.6;
+    }
+    .sidebar-section {
+      border-bottom: 1px solid var(--border-light);
+    }
+    .sidebar-section:last-child {
+      border-bottom: none;
+    }
+    .community-list {
+      list-style: none;
+      padding: 8px 0;
+      max-height: 300px;
+      overflow-y: auto;
+    }
     .community-item {
       padding: 10px 20px;
       cursor: pointer;
@@ -199,6 +216,17 @@
     .community-info { flex: 1; }
     .community-name { font-weight: 600; }
     .community-stats { font-size: 0.7rem; opacity: 0.7; }
+    .community-follow-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 1.2rem;
+      padding: 4px;
+      transition: transform 0.2s;
+      color: var(--text-muted);
+    }
+    .community-follow-btn:hover { transform: scale(1.2); }
+    .community-follow-btn.following { color: #fbbf24; }
 
     .create-community-btn {
       width: calc(100% - 40px);
@@ -219,6 +247,13 @@
       transform: scale(1.02);
     }
 
+    .empty-favorites {
+      padding: 12px 20px;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      text-align: center;
+    }
+
     /* ─── Main content ─── */
     .main-content {
       background: var(--card-bg);
@@ -236,10 +271,36 @@
       margin-bottom: 24px;
       padding-bottom: 16px;
       border-bottom: 2px solid var(--border-light);
+      flex-wrap: wrap;
     }
     .community-header-icon { font-size: 3rem; }
+    .community-header-info { flex: 1; }
     .community-header-info h2 { margin-bottom: 4px; font-size: 1.8rem; }
     .community-header-desc { color: var(--text-muted); }
+    .community-follow-header-btn {
+      background: none;
+      border: 1px solid var(--border-light);
+      border-radius: 30px;
+      padding: 6px 16px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: .2s;
+      font-family: var(--font-family);
+      color: var(--text-main);
+      background: var(--btn-ghost);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .community-follow-header-btn:hover {
+      background: var(--btn-secondary);
+      color: #fff;
+    }
+    .community-follow-header-btn.following {
+      background: #fbbf24;
+      border-color: #fbbf24;
+      color: #0f172a;
+    }
 
     /* ─── Post form ─── */
     .post-form {
@@ -377,6 +438,15 @@
       font-size: 0.8rem;
       color: var(--text-muted);
     }
+    .post-meta .author-link {
+      color: var(--accent);
+      cursor: pointer;
+      font-weight: 500;
+      text-decoration: none;
+    }
+    .post-meta .author-link:hover {
+      text-decoration: underline;
+    }
     .post-stats {
       display: flex;
       gap: 16px;
@@ -425,6 +495,15 @@
       margin-bottom: 16px;
       color: var(--text-muted);
       font-size: 0.9rem;
+    }
+    .post-detail-meta .author-link {
+      color: var(--accent);
+      cursor: pointer;
+      font-weight: 500;
+      text-decoration: none;
+    }
+    .post-detail-meta .author-link:hover {
+      text-decoration: underline;
     }
     .post-detail-meta .stat-pill {
       background: var(--btn-ghost);
@@ -559,7 +638,15 @@
       margin-bottom: 4px;
       flex-wrap: wrap;
     }
-    .comment-author { font-weight: 600; color: var(--accent); }
+    .comment-author {
+      font-weight: 600;
+      color: var(--accent);
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .comment-author:hover {
+      text-decoration: underline;
+    }
     .comment-time { font-size: 0.7rem; color: var(--text-muted); }
     .comment-content { margin: 6px 0; word-wrap: break-word; }
     .comment-actions {
@@ -711,12 +798,24 @@
       to { transform: translateX(0); opacity: 1; }
     }
 
+    /* ─── Responsive Mobile ─── */
     @media (max-width: 600px) {
+      body { padding: 12px; }
       .top-bar { flex-direction: column; align-items: stretch; }
-      .controls { justify-content: center; }
-      .forum-container { grid-template-columns: 1fr; }
-      .community-header { flex-direction: column; text-align: center; }
+      .top-bar .left { justify-content: space-between; }
+      .top-bar .right { justify-content: center; }
+      .forum-container { grid-template-columns: 1fr; gap: 16px; }
+      .sidebar { position: static; }
+      .community-header { flex-direction: column; align-items: flex-start; text-align: left; }
+      .community-header-icon { font-size: 2rem; }
+      .community-header-info h2 { font-size: 1.4rem; }
       .post-form .toolbar button { font-size: 0.8rem; padding: 2px 8px; }
+      .post-item { flex-direction: column; }
+      .post-detail-title { font-size: 1.4rem; }
+      .reaction-bar { gap: 4px; }
+      .reaction-btn { font-size: 0.9rem; padding: 2px 8px; }
+      .community-follow-header-btn { padding: 4px 12px; font-size: 0.85rem; }
+      .community-list { max-height: 200px; }
     }
   </style>
 </head>
@@ -724,8 +823,11 @@
 
 <div class="container">
   <div class="top-bar">
-    <a href="dashboard.html" class="back-link">← Dashboard</a>
-    <div class="controls">
+    <div class="left">
+      <a href="dashboard.html" class="back-link">← Dashboard</a>
+      <span style="font-weight:700; font-size:1.2rem;">💬 Forum</span>
+    </div>
+    <div class="right controls">
       <div class="theme-switcher" id="themeSwitcher">
         <button data-theme="default" class="theme-btn active">✨ Aurora</button>
         <button data-theme="dusk" class="theme-btn">🌙 Dusk</button>
@@ -740,11 +842,28 @@
   </div>
 
   <div class="forum-container">
-    <div class="sidebar">
-      <div class="sidebar-header">🌐 Communities</div>
-      <ul class="community-list" id="communityList"></ul>
+    <div class="sidebar" id="sidebar">
+      <!-- All Communities -->
+      <div class="sidebar-section">
+        <div class="sidebar-header" onclick="toggleSidebarSection(this)">
+          🌐 All Communities
+          <span class="toggle-icon">▼</span>
+        </div>
+        <ul class="community-list" id="communityList"></ul>
+      </div>
+      <!-- My Favorites -->
+      <div class="sidebar-section">
+        <div class="sidebar-header" onclick="toggleSidebarSection(this)">
+          ⭐ My Favorites
+          <span class="toggle-icon">▼</span>
+        </div>
+        <ul class="community-list" id="favoritesList">
+          <li class="empty-favorites">You haven't followed any communities yet.</li>
+        </ul>
+      </div>
       <button class="create-community-btn" onclick="showCreateCommunityModal()">+ Create Community</button>
     </div>
+
     <div class="main-content" id="mainContent"></div>
   </div>
 </div>
@@ -787,6 +906,7 @@ let currentPlayer = null;
 let currentCommunity = null;
 let currentPost = null;
 let communities = [];
+let followedCommunityIds = new Set(); // to quickly check if followed
 let forumChannel = null;
 
 // ─────────────────────────────────────────────
@@ -851,6 +971,18 @@ function initThemeAndFont() {
 }
 
 // ─────────────────────────────────────────────
+// SIDEBAR COLLAPSE TOGGLE
+// ─────────────────────────────────────────────
+function toggleSidebarSection(header) {
+  const list = header.nextElementSibling;
+  if (list && list.classList.contains('community-list')) {
+    list.style.display = list.style.display === 'none' ? '' : 'none';
+    const icon = header.querySelector('.toggle-icon');
+    if (icon) icon.textContent = list.style.display === 'none' ? '▶' : '▼';
+  }
+}
+
+// ─────────────────────────────────────────────
 // AUTH & INIT
 // ─────────────────────────────────────────────
 async function init() {
@@ -864,6 +996,7 @@ async function init() {
   currentPlayer = player;
 
   await loadCommunities();
+  await loadFollowedCommunities();
 
   const params = new URLSearchParams(window.location.search);
   const communityName = params.get('c');
@@ -886,21 +1019,8 @@ async function loadCommunities() {
   const { data } = await sb.from('communities').select('*').order('name');
   communities = data || [];
   renderCommunitySidebar();
-}
-
-function renderCommunitySidebar() {
-  const list = document.getElementById('communityList');
-  list.innerHTML = communities.map(c => `
-    <li class="community-item ${currentCommunity && currentCommunity.id === c.id ? 'active' : ''}" 
-        onclick="selectCommunityById('${c.id}')">
-      <span class="community-icon">${c.icon || '🌐'}</span>
-      <div class="community-info">
-        <div class="community-name">${escapeHtml(c.display_name)}</div>
-        <div class="community-stats">${c.member_count || 0} members</div>
-      </div>
-    </li>
-  `).join('');
-
+  renderFavoritesSidebar();
+  // Populate parent select in modal
   const select = document.getElementById('newCommunityParent');
   if (select) {
     select.innerHTML = '<option value="">None (Main Community)</option>' +
@@ -908,6 +1028,110 @@ function renderCommunitySidebar() {
         `<option value="${c.id}">${escapeHtml(c.display_name)}</option>`
       ).join('');
   }
+}
+
+async function loadFollowedCommunities() {
+  if (!currentPlayer) return;
+  const { data, error } = await sb.rpc('get_followed_community_ids', { p_user_id: currentPlayer.id });
+  if (error) {
+    console.error('Error loading followed communities:', error);
+    return;
+  }
+  followedCommunityIds = new Set(data.map(r => r.community_id));
+  renderCommunitySidebar();
+  renderFavoritesSidebar();
+}
+
+function renderCommunitySidebar() {
+  const list = document.getElementById('communityList');
+  list.innerHTML = communities.map(c => {
+    const isFollowed = followedCommunityIds.has(c.id);
+    return `
+      <li class="community-item ${currentCommunity && currentCommunity.id === c.id ? 'active' : ''}" 
+          onclick="selectCommunityById('${c.id}')">
+        <span class="community-icon">${c.icon || '🌐'}</span>
+        <div class="community-info">
+          <div class="community-name">${escapeHtml(c.display_name)}</div>
+          <div class="community-stats">${c.member_count || 0} members</div>
+        </div>
+        <button class="community-follow-btn ${isFollowed ? 'following' : ''}" 
+                onclick="event.stopPropagation(); toggleFollowCommunity('${c.id}')" 
+                title="${isFollowed ? 'Unfollow' : 'Follow'}">
+          ${isFollowed ? '⭐' : '☆'}
+        </button>
+      </li>
+    `;
+  }).join('');
+}
+
+function renderFavoritesSidebar() {
+  const list = document.getElementById('favoritesList');
+  const followed = communities.filter(c => followedCommunityIds.has(c.id));
+  if (followed.length === 0) {
+    list.innerHTML = '<li class="empty-favorites">You haven\'t followed any communities yet.</li>';
+    return;
+  }
+  list.innerHTML = followed.map(c => `
+    <li class="community-item ${currentCommunity && currentCommunity.id === c.id ? 'active' : ''}" 
+        onclick="selectCommunityById('${c.id}')">
+      <span class="community-icon">${c.icon || '🌐'}</span>
+      <div class="community-info">
+        <div class="community-name">${escapeHtml(c.display_name)}</div>
+        <div class="community-stats">${c.member_count || 0} members</div>
+      </div>
+      <button class="community-follow-btn following" 
+              onclick="event.stopPropagation(); toggleFollowCommunity('${c.id}')" 
+              title="Unfollow">
+        ⭐
+      </button>
+    </li>
+  `).join('');
+}
+
+async function toggleFollowCommunity(communityId) {
+  if (!currentPlayer) return showToast('Please log in', 'error');
+  const isFollowed = followedCommunityIds.has(communityId);
+  let error;
+  if (isFollowed) {
+    const { error: err } = await sb.rpc('unfollow_community', {
+      p_user_id: currentPlayer.id,
+      p_community_id: communityId
+    });
+    error = err;
+    if (!error) {
+      followedCommunityIds.delete(communityId);
+      showToast('Unfollowed community', 'info');
+    }
+  } else {
+    const { error: err } = await sb.rpc('follow_community', {
+      p_user_id: currentPlayer.id,
+      p_community_id: communityId
+    });
+    error = err;
+    if (!error) {
+      followedCommunityIds.add(communityId);
+      showToast('Following community!', 'success');
+    }
+  }
+  if (error) {
+    console.error('Follow/unfollow error:', error);
+    showToast('Error updating follow status', 'error');
+    return;
+  }
+  renderCommunitySidebar();
+  renderFavoritesSidebar();
+  // If we are on a community view, update the header button
+  if (currentCommunity && currentCommunity.id === communityId) {
+    updateCommunityFollowButton();
+  }
+}
+
+function updateCommunityFollowButton() {
+  const btn = document.querySelector('.community-follow-header-btn');
+  if (!btn) return;
+  const isFollowed = followedCommunityIds.has(currentCommunity.id);
+  btn.innerHTML = isFollowed ? '⭐ Unfollow' : '☆ Follow';
+  btn.classList.toggle('following', isFollowed);
 }
 
 async function selectCommunityById(id) {
@@ -920,6 +1144,7 @@ async function selectCommunity(community) {
   currentPost = null;
   window.history.pushState({}, '', `?c=${community.name}`);
   renderCommunitySidebar();
+  renderFavoritesSidebar();
   await loadCommunityView();
   subscribeToCommunity(community.id);
 }
@@ -934,7 +1159,7 @@ async function loadCommunityView() {
     .from('posts')
     .select(`*, author:players(username)`)
     .eq('community_id', currentCommunity.id)
-    .is('deleted_at', null)          // 🔹 Exclude soft-deleted posts
+    .is('deleted_at', null)
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -945,6 +1170,7 @@ async function loadCommunityView() {
 
   const isMember = await checkMembership(currentCommunity.id);
   const isBlackOrFounder = currentPlayer && ['black', 'founder'].includes(currentPlayer.subscription_tier?.toLowerCase());
+  const isFollowed = followedCommunityIds.has(currentCommunity.id);
 
   let html = `
     <div class="community-header" style="border-bottom-color: ${currentCommunity.banner_color || '#2196F3'};">
@@ -953,6 +1179,10 @@ async function loadCommunityView() {
         <h2>${escapeHtml(currentCommunity.display_name)}</h2>
         <div class="community-header-desc">${escapeHtml(currentCommunity.description || '')}</div>
       </div>
+      <button class="community-follow-header-btn ${isFollowed ? 'following' : ''}" 
+              onclick="toggleFollowCommunity('${currentCommunity.id}')">
+        ${isFollowed ? '⭐ Unfollow' : '☆ Follow'}
+      </button>
     </div>
   `;
 
@@ -1007,7 +1237,10 @@ async function loadCommunityView() {
         <div class="post-item" onclick="viewPost('${post.id}')">
           <div class="post-content">
             <div class="post-title">${escapeHtml(post.title)}</div>
-            <div class="post-meta">Posted by ${escapeHtml(post.author?.username || 'Unknown')} • ${new Date(post.created_at).toLocaleString()}</div>
+            <div class="post-meta">
+              Posted by <span class="author-link" onclick="event.stopPropagation(); viewProfile('${post.author_id}')">${escapeHtml(post.author?.username || 'Unknown')}</span>
+              • ${new Date(post.created_at).toLocaleString()}
+            </div>
             <div class="post-stats">
               <span class="stat-pill"><span class="icon">👁️</span> ${post.view_count || 0}</span>
               <span class="stat-pill"><span class="icon">📖</span> ${readTime}</span>
@@ -1031,13 +1264,14 @@ async function loadFeed() {
   currentPost = null;
   window.history.pushState({}, '', window.location.pathname);
   renderCommunitySidebar();
+  renderFavoritesSidebar();
 
   if (forumChannel) forumChannel.unsubscribe();
 
   const { data: posts, error } = await sb
     .from('posts')
     .select(`*, author:players(username), community:communities(name, display_name, icon)`)
-    .is('deleted_at', null)          // 🔹 Exclude soft-deleted posts
+    .is('deleted_at', null)
     .order('created_at', { ascending: false })
     .limit(50);
 
@@ -1060,7 +1294,8 @@ async function loadFeed() {
             <div class="post-title">${escapeHtml(post.title)}</div>
             <div class="post-meta">
               Posted in ${post.community?.icon || '🌐'} ${escapeHtml(post.community?.display_name || 'Unknown')} 
-              by ${escapeHtml(post.author?.username || 'Unknown')} • ${new Date(post.created_at).toLocaleString()}
+              by <span class="author-link" onclick="event.stopPropagation(); viewProfile('${post.author_id}')">${escapeHtml(post.author?.username || 'Unknown')}</span>
+              • ${new Date(post.created_at).toLocaleString()}
             </div>
             <div class="post-stats">
               <span class="stat-pill"><span class="icon">👁️</span> ${post.view_count || 0}</span>
@@ -1086,9 +1321,7 @@ async function viewPost(postId) {
   params.set('p', postId);
   window.history.pushState({}, '', `?${params.toString()}`);
 
-  // Increment view count
   await sb.rpc('increment_post_view', { p_post_id: postId });
-
   await loadPostView(postId);
 }
 
@@ -1107,7 +1340,6 @@ async function loadPostView(postId) {
     return;
   }
 
-  // 🔹 Check if post is deleted
   if (post.deleted_at !== null) {
     document.getElementById('mainContent').innerHTML = `
       <div style="padding:40px;text-align:center;color:var(--text-muted);">
@@ -1124,6 +1356,7 @@ async function loadPostView(postId) {
   currentCommunity = post.community;
   currentPost = post;
   renderCommunitySidebar();
+  renderFavoritesSidebar();
 
   subscribeToPostComments(postId);
 
@@ -1141,7 +1374,8 @@ async function loadPostView(postId) {
     <div class="post-detail-card">
       <div class="post-detail-title">${escapeHtml(post.title)}</div>
       <div class="post-detail-meta">
-        <span>Posted by ${escapeHtml(post.author?.username)} • ${new Date(post.created_at).toLocaleString()}</span>
+        <span>Posted by <span class="author-link" onclick="viewProfile('${post.author_id}')">${escapeHtml(post.author?.username)}</span></span>
+        <span>• ${new Date(post.created_at).toLocaleString()}</span>
         <span class="stat-pill"><span class="icon">👁️</span> ${post.view_count || 0}</span>
         <span class="stat-pill"><span class="icon">📖</span> ${readTime}</span>
       </div>
@@ -1176,7 +1410,6 @@ async function loadPostView(postId) {
 // ─────────────────────────────────────────────
 async function loadComments(postId) {
   try {
-    // 1. Fetch comments
     const { data: commentsData, error } = await sb
       .from('comments')
       .select(`
@@ -1189,10 +1422,8 @@ async function loadComments(postId) {
       .order('created_at', { ascending: true });
 
     if (error) throw error;
-
     if (!commentsData || commentsData.length === 0) return [];
 
-    // 2. Fetch current user's votes on these comments
     const commentIds = commentsData.map(c => c.id);
     let userVotes = {};
     if (currentPlayer) {
@@ -1207,7 +1438,6 @@ async function loadComments(postId) {
       }
     }
 
-    // 3. Merge
     return commentsData.map(c => ({
       ...c,
       author_name: c.author?.username || 'Unknown',
@@ -1237,7 +1467,7 @@ function renderComments(comments, parentId = null) {
     return `
       <div class="comment" style="margin-left: ${(c.depth || 0) * 20}px;">
         <div class="comment-header">
-          <span class="comment-author">${escapeHtml(c.author_name || 'Unknown')}</span>
+          <span class="comment-author" onclick="viewProfile('${c.author_id}')">${escapeHtml(c.author_name || 'Unknown')}</span>
           <span class="comment-time">${new Date(c.created_at).toLocaleString()}</span>
         </div>
         <div class="comment-content">${escapeHtml(c.content || '').replace(/\n/g, '<br>')}</div>
@@ -1332,7 +1562,6 @@ async function vote(targetType, targetId, value) {
     return showToast(error.message, 'error');
   }
   
-  // Reload the current view to refresh comment votes
   if (currentPost) await loadPostView(currentPost.id);
   else if (currentCommunity) await loadCommunityView();
   else await loadFeed();
@@ -1462,7 +1691,7 @@ function hideReplyForm(commentId) {
 }
 
 // ─────────────────────────────────────────────
-// EDIT / DELETE POST  (UPDATED)
+// EDIT / DELETE POST
 // ─────────────────────────────────────────────
 async function editPost(postId) {
   const newContent = prompt('Edit your post content (HTML allowed):', currentPost.content);
@@ -1475,23 +1704,17 @@ async function editPost(postId) {
 
 async function deletePost(postId) {
   if (!confirm('Delete this post? This action cannot be undone.')) return;
-
   try {
-    // 🔹 Soft-delete: set deleted_at timestamp
     const { error } = await sb
       .from('posts')
       .update({ deleted_at: new Date().toISOString() })
       .eq('id', postId);
-
     if (error) {
       console.error('Delete error:', error);
       showToast('Failed to delete post: ' + error.message, 'error');
       return;
     }
-
     showToast('Post deleted successfully.', 'success');
-
-    // Redirect to community view or feed
     if (currentCommunity) {
       await loadCommunityView();
     } else {
@@ -1622,6 +1845,13 @@ function subscribeToPostComments(postId) {
 }
 
 // ─────────────────────────────────────────────
+// PROFILE NAVIGATION
+// ─────────────────────────────────────────────
+function viewProfile(userId) {
+  window.location.href = `profile.html?id=${userId}`;
+}
+
+// ─────────────────────────────────────────────
 // EXPOSE GLOBAL FUNCTIONS
 // ─────────────────────────────────────────────
 window.selectCommunityById = selectCommunityById;
@@ -1644,6 +1874,9 @@ window.execCmd = execCmd;
 window.insertLink = insertLink;
 window.openEmojiPicker = openEmojiPicker;
 window.clearPostEditor = clearPostEditor;
+window.toggleFollowCommunity = toggleFollowCommunity;
+window.toggleSidebarSection = toggleSidebarSection;
+window.viewProfile = viewProfile;
 
 // ─────────────────────────────────────────────
 // START
