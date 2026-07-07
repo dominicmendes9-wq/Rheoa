@@ -1,610 +1,831 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rheoa RPG – Historical Map</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <style>
-        :root { --bg-parchment: #f4e4c1; --border-dark: #3e2723; --accent: #8d6e63; }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Georgia', 'Times New Roman', serif; background: var(--bg-parchment); color: #3e2723; height: 100vh; display: flex; flex-direction: column; }
-        #map-container { flex: 1; position: relative; background: var(--bg-parchment); }
-        #map { width: 100%; height: 100%; }
-        #timeline-panel { background: rgba(255,255,255,0.85); border-top: 3px solid var(--border-dark); padding: 10px 20px 5px; display: flex; flex-direction: column; gap: 0; position: relative; }
-        .timeline-controls { display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
-        #timeline-slider { flex: 1; -webkit-appearance: none; height: 8px; background: var(--border-dark); border-radius: 4px; outline: none; }
-        #timeline-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 24px; height: 24px; background: #5d4037; border-radius: 50%; cursor: pointer; border: 2px solid #3e2723; }
-        #era-label { font-weight: bold; font-size: 1.2rem; min-width: 160px; text-align: center; }
-        .ticks-container { display: flex; justify-content: space-between; padding: 0 12px; font-size: 0.7rem; color: #5d4037; user-select: none; margin-top: 5px; }
-        .tick { display: flex; flex-direction: column; align-items: center; width: 1px; position: relative; }
-        .tick-line { width: 1px; height: 8px; background: #3e2723; margin-bottom: 2px; }
-        .tick-label { white-space: nowrap; font-size: 0.6rem; cursor: pointer; color: #3e2723; margin-top: 2px; }
-        .tick-label.major { font-weight: bold; font-size: 0.75rem; }
-        .tick-label:hover { text-decoration: underline; }
-        button { background: var(--border-dark); color: white; border: none; padding: 8px 16px; font-family: inherit; cursor: pointer; border-radius: 4px; transition: background 0.2s; }
-        button:hover { background: #5d4037; }
-        #sidebar { position: absolute; top: 10px; right: 10px; width: 360px; max-height: calc(100% - 20px); background: rgba(255,255,255,0.95); border: 2px solid var(--border-dark); border-radius: 8px; padding: 15px; overflow-y: auto; display: none; z-index: 1000; }
-        .sidebar-close { position: absolute; top: 5px; right: 10px; background: none; border: none; font-size: 1.4rem; font-weight: bold; color: #3e2723; cursor: pointer; padding: 0; line-height: 1; }
-        .sidebar-close:hover { color: #a00; }
-        #sidebar h3 { margin-top: 0; margin-bottom: 5px; padding-right: 20px; }
-        .action-btn { display: block; width: 100%; margin-top: 10px; }
-        .region-owner { font-size: 0.9rem; margin: 10px 0; }
-        .cooldown-text { font-size: 0.8rem; color: #b71c1c; }
-        #battle-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.7); z-index: 2000; }
-        #battle-overlay > div { position: absolute; top:50%; left:50%; transform: translate(-50%,-50%); background: white; padding: 30px; border-radius: 15px; text-align: center; }
-        .dice-box { display: flex; justify-content: center; gap: 50px; font-size: 3rem; margin: 20px 0; }
-        .market-offer, .event-item, .route-item, .tech-item, .building-item { border: 1px solid #ccc; margin: 5px 0; padding: 5px; font-size: 0.9rem; }
-        hr { margin: 15px 0; border: 0; border-top: 1px solid #8d6e63; }
-        .hidden { display: none; }
-        .trade-route-line { stroke-dasharray: 10 6; animation: dash 1s linear infinite; }
-        @keyframes dash { to { stroke-dashoffset: -16; } }
-        .ai-btn { background: #4CAF50; }
-        .ai-btn:hover { background: #45a049; }
-        .modal { display: none; position: fixed; left:0; top:0; width:100%; height:100%; background: rgba(0,0,0,0.5); z-index: 3000; }
-        .modal-content { background: white; margin: 10% auto; padding: 20px; width: 400px; border-radius: 10px; max-height: 70vh; overflow-y: auto; }
-        .history-item { border-bottom: 1px solid #ccc; padding: 5px 0; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rheoa - Conquest</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+  <style>
+    /* ─── Reset & Variables ─── */
+    * { margin:0; padding:0; box-sizing:border-box; }
+    :root {
+      --bg-body: #0f172a;
+      --card-bg: #1e293b;
+      --card-border: #334155;
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --btn-primary: #3b82f6;
+      --btn-primary-hover: #2563eb;
+      --btn-success: #22c55e;
+      --btn-success-hover: #16a34a;
+      --btn-danger: #ef4444;
+      --btn-danger-hover: #dc2626;
+      --btn-ghost: #334155;
+      --border-light: #334155;
+      --font-family: 'Inter', system-ui, sans-serif;
+      --radius: 12px;
+      --shadow: 0 8px 24px rgba(0,0,0,0.3);
+    }
+    body {
+      background: var(--bg-body);
+      color: var(--text-main);
+      font-family: var(--font-family);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding: 12px;
+    }
+    .container {
+      max-width: 1600px;
+      margin: 0 auto;
+      width: 100%;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* ─── Top Bar ─── */
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px 16px;
+      padding: 8px 16px;
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      border: 1px solid var(--card-border);
+    }
+    .top-bar .left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .top-bar .left a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+    .top-bar .left a:hover { color: var(--text-main); }
+    .top-bar .right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .empire-stats {
+      display: flex;
+      gap: 20px;
+      font-size: 0.9rem;
+    }
+    .empire-stats span {
+      background: var(--bg-body);
+      padding: 4px 12px;
+      border-radius: 20px;
+      white-space: nowrap;
+    }
+    .empire-stats .gold { color: #fbbf24; }
+    .empire-stats .army { color: #f87171; }
+    .empire-stats .regions { color: #34d399; }
+
+    .theme-btn {
+      background: var(--btn-ghost);
+      border: none;
+      color: var(--text-main);
+      padding: 4px 12px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-family: var(--font-family);
+      font-size: 0.8rem;
+      transition: 0.2s;
+    }
+    .theme-btn:hover { background: var(--accent); }
+
+    /* ─── Main Layout ─── */
+    .main {
+      flex: 1;
+      display: flex;
+      gap: 12px;
+      min-height: 0;
+    }
+    #map {
+      flex: 1;
+      background: #1e293b;
+      border-radius: var(--radius);
+      border: 1px solid var(--card-border);
+      min-height: 400px;
+    }
+
+    /* ─── Sidebar ─── */
+    .sidebar {
+      width: 340px;
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      border: 1px solid var(--card-border);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      overflow-y: auto;
+      flex-shrink: 0;
+    }
+    .sidebar .region-name {
+      font-size: 1.4rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .sidebar .region-owner {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+    .sidebar .region-details {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      font-size: 0.9rem;
+      margin-bottom: 16px;
+    }
+    .sidebar .region-details .label { color: var(--text-muted); }
+    .sidebar .region-details .value { font-weight: 600; }
+    .sidebar .action-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .sidebar .action-buttons button {
+      padding: 10px;
+      border: none;
+      border-radius: var(--radius);
+      font-weight: 600;
+      font-family: var(--font-family);
+      cursor: pointer;
+      transition: 0.2s;
+      font-size: 0.95rem;
+      background: var(--btn-ghost);
+      color: var(--text-main);
+    }
+    .sidebar .action-buttons button:hover:not(:disabled) {
+      transform: scale(1.02);
+    }
+    .sidebar .action-buttons button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .sidebar .action-buttons .primary { background: var(--btn-primary); color: white; }
+    .sidebar .action-buttons .primary:hover:not(:disabled) { background: var(--btn-primary-hover); }
+    .sidebar .action-buttons .success { background: var(--btn-success); color: white; }
+    .sidebar .action-buttons .success:hover:not(:disabled) { background: var(--btn-success-hover); }
+    .sidebar .action-buttons .danger { background: var(--btn-danger); color: white; }
+    .sidebar .action-buttons .danger:hover:not(:disabled) { background: var(--btn-danger-hover); }
+    .sidebar .action-buttons .gold { background: #fbbf24; color: #0f172a; }
+    .sidebar .action-buttons .gold:hover:not(:disabled) { background: #f59e0b; }
+
+    .sidebar .empty-state {
+      text-align: center;
+      padding: 20px 0;
+      color: var(--text-muted);
+      font-style: italic;
+    }
+
+    /* ─── Bottom Bar (Turn Controls) ─── */
+    .bottom-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      padding: 8px 16px;
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      border: 1px solid var(--card-border);
+    }
+    .bottom-bar .turn-info {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .bottom-bar .turn-info .year {
+      font-weight: 700;
+      font-size: 1.1rem;
+    }
+    .bottom-bar .turn-info .era {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+    .bottom-bar .end-turn-btn {
+      padding: 8px 24px;
+      background: var(--btn-success);
+      border: none;
+      border-radius: 30px;
+      color: white;
+      font-weight: 600;
+      font-family: var(--font-family);
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    .bottom-bar .end-turn-btn:hover { background: var(--btn-success-hover); }
+
+    /* ─── Battle Modal ─── */
+    .battle-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.8);
+      z-index: 9999;
+      justify-content: center;
+      align-items: center;
+      backdrop-filter: blur(4px);
+    }
+    .battle-box {
+      background: var(--card-bg);
+      border: 2px solid var(--accent);
+      border-radius: var(--radius);
+      padding: 30px 40px;
+      max-width: 450px;
+      width: 90%;
+      text-align: center;
+      box-shadow: var(--shadow);
+    }
+    .battle-box .dice {
+      font-size: 4rem;
+      margin: 16px 0;
+      display: flex;
+      justify-content: center;
+      gap: 40px;
+    }
+    .battle-box .result {
+      font-size: 1.4rem;
+      font-weight: 700;
+      margin: 12px 0;
+    }
+    .battle-box .victory { color: var(--btn-success); }
+    .battle-box .defeat { color: var(--btn-danger); }
+    .battle-box .close-btn {
+      margin-top: 16px;
+      padding: 8px 24px;
+      background: var(--accent);
+      border: none;
+      border-radius: 30px;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    /* ─── Tutorial Modal ─── */
+    .tutorial-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.7);
+      z-index: 10000;
+      justify-content: center;
+      align-items: center;
+      backdrop-filter: blur(4px);
+    }
+    .tutorial-box {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      padding: 30px;
+      max-width: 500px;
+      width: 90%;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--card-border);
+    }
+    .tutorial-box h2 { margin-bottom: 12px; }
+    .tutorial-box p { margin-bottom: 12px; color: var(--text-muted); line-height: 1.6; }
+    .tutorial-box .close-tutorial {
+      padding: 8px 24px;
+      background: var(--accent);
+      border: none;
+      border-radius: 30px;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+
+    /* ─── Toast ─── */
+    .toast-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 99999;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .toast {
+      padding: 12px 20px;
+      border-radius: var(--radius);
+      color: white;
+      font-weight: 500;
+      animation: slideIn 0.3s ease-out;
+      box-shadow: var(--shadow);
+      max-width: 400px;
+      word-wrap: break-word;
+    }
+    .toast.success { background: var(--btn-success); }
+    .toast.error { background: var(--btn-danger); }
+    .toast.info { background: var(--accent); }
+
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    /* ─── Responsive ─── */
+    @media (max-width: 900px) {
+      .main { flex-direction: column; }
+      .sidebar { width: 100%; max-height: 300px; }
+      .top-bar .right { width: 100%; justify-content: space-between; }
+      .empire-stats { font-size: 0.8rem; gap: 10px; }
+    }
+  </style>
 </head>
 <body>
-    <div id="battle-overlay">
-        <div>
-            <h2>⚔️ Battle ⚔️</h2>
-            <div class="dice-box">
-                <div id="attacker-dice">⚅</div>
-                <div id="defender-dice">⚅</div>
-            </div>
-            <p id="battle-message">Rolling...</p>
-        </div>
+
+<div class="toast-container" id="toast-container"></div>
+
+<!-- Battle Overlay -->
+<div class="battle-overlay" id="battleOverlay">
+  <div class="battle-box">
+    <h2>⚔️ Battle</h2>
+    <div class="dice">
+      <span id="attackerDice">⚅</span>
+      <span id="defenderDice">⚅</span>
     </div>
+    <p id="battleMessage">Rolling...</p>
+    <div id="battleResult" class="result"></div>
+    <button class="close-btn" id="battleCloseBtn" onclick="closeBattle()">Close</button>
+  </div>
+</div>
 
-    <div id="diplomacy-modal" class="modal">
-        <div class="modal-content">
-            <h2>📨 Diplomacy</h2>
-            <div id="diplomacy-content"></div>
-            <button onclick="document.getElementById('diplomacy-modal').style.display='none'" style="margin-top:10px;">Close</button>
-        </div>
+<!-- Tutorial Modal -->
+<div class="tutorial-overlay" id="tutorialOverlay">
+  <div class="tutorial-box">
+    <h2>🏰 Welcome to Conquest!</h2>
+    <p><strong>Goal:</strong> Conquer the world by taking over regions.</p>
+    <p><strong>How to play:</strong></p>
+    <ul style="color: var(--text-muted); line-height: 1.6; padding-left: 20px; margin-bottom: 12px;">
+      <li>Click any <strong>gray</strong> region to claim it (if unowned).</li>
+      <li>Click a <strong>green</strong> region (yours) to set it as your attack base.</li>
+      <li>Then click a <strong>red</strong> region (NPC) to conquer it.</li>
+      <li>Use the <strong>End Turn</strong> button to advance time and let NPCs grow.</li>
+    </ul>
+    <button class="close-tutorial" onclick="closeTutorial()">Start Playing</button>
+  </div>
+</div>
+
+<!-- Main Container -->
+<div class="container">
+  <!-- Top Bar -->
+  <div class="top-bar">
+    <div class="left">
+      <a href="dashboard.html">← Dashboard</a>
+      <span style="font-weight:600; font-size:1.1rem;">🌍 Conquest</span>
     </div>
-
-    <div id="history-modal" class="modal">
-        <div class="modal-content">
-            <h2>📜 Empire History</h2>
-            <div id="history-content"></div>
-            <button onclick="document.getElementById('history-modal').style.display='none'" style="margin-top:10px;">Close</button>
-        </div>
+    <div class="right">
+      <div class="empire-stats" id="empireStats">
+        <span class="gold">💰 <span id="playerGold">0</span></span>
+        <span class="army">⚔️ <span id="playerArmy">0</span></span>
+        <span class="regions">🏠 <span id="playerRegions">0</span></span>
+      </div>
+      <button class="theme-btn" onclick="toggleTheme()">🌙</button>
     </div>
+  </div>
 
-    <div id="map-container">
-        <div id="map"></div>
-        <div id="sidebar">
-            <button class="sidebar-close" onclick="document.getElementById('sidebar').style.display='none'">×</button>
-            <h3 id="region-name">Region</h3>
-            <p id="region-owner"></p>
-            <input type="hidden" id="diplomacy-target" value="">
-            <div id="region-stats"></div>
-            <div id="region-army"></div>
-            <div id="region-buildings"></div>
-            <button class="action-btn" id="btn-recruit" style="display:none;">🛡️ Recruit Army</button>
-            <button class="action-btn" id="btn-move" style="display:none;">🚚 Move Army</button>
-            <button class="action-btn" id="btn-set-base" style="display:none;">🎯 Set as Attack Base</button>
-            <button class="action-btn" id="btn-conquer" style="display:none;">⚔️ Conquer</button>
-            <button class="action-btn" id="btn-build" style="display:none;">🏗️ Build</button>
-            <button class="action-btn" id="btn-trade" style="display:none;">💰 Trade</button>
-            <button class="action-btn" id="btn-route" style="display:none;">🛤️ Manage Trade Routes</button>
-            <div id="route-management" style="display:none; margin-top:10px;">
-                <button class="action-btn" id="btn-create-route">Create New Route</button>
-                <div id="existing-routes"></div>
-            </div>
-            <button class="action-btn" id="btn-tech" style="display:none;">🧪 Tech Tree</button>
-            <div id="tech-tree" style="display:none; margin-top:10px;"></div>
-            <button class="action-btn" id="btn-diplomacy" style="display:none;">🤝 Diplomacy</button>
-            <div id="diplomacy-panel" style="display:none; margin-top:10px;"></div>
-            <button class="action-btn" id="btn-events" style="display:none;">📜 Events</button>
-            <p id="action-feedback" class="cooldown-text"></p>
-
-            <hr>
-            <h3>📦 Market</h3>
-            <div id="market-actions">
-                <button class="action-btn" id="btn-show-market">Show Offers</button>
-                <button class="action-btn" id="btn-create-offer">Create Offer</button>
-            </div>
-            <div id="market-view" style="display:none;">
-                <div id="trade-list"></div>
-                <button class="action-btn" id="btn-close-market" style="background:#666;">Close Market</button>
-            </div>
-        </div>
+  <!-- Main -->
+  <div class="main">
+    <div id="map"></div>
+    <div class="sidebar" id="sidebar">
+      <div id="sidebarContent">
+        <div class="empty-state">🌍 Click a region on the map to view details.</div>
+      </div>
     </div>
+  </div>
 
-    <div id="timeline-panel">
-        <div class="timeline-controls">
-            <span id="era-label">4000 BCE</span>
-            <input type="range" id="timeline-slider" min="0" max="80" value="0" step="1">
-            <button id="btn-empire-stats">📊 My Empire</button>
-            <button id="btn-npc-turn" class="ai-btn">⚙️ Run NPC Turn</button>
-            <button id="btn-open-diplomacy">📨 Diplomacy</button>
-            <button id="btn-open-history">📜 Empire History</button>
-            <button onclick="window.location.href='dashboard.html'">← Dashboard</button>
-        </div>
-        <div id="ticks-container" class="ticks-container"></div>
+  <!-- Bottom Bar -->
+  <div class="bottom-bar">
+    <div class="turn-info">
+      <span class="year" id="currentYear">0 CE</span>
+      <span class="era" id="currentEra">Era</span>
     </div>
+    <button class="end-turn-btn" onclick="endTurn()">⏩ End Turn</button>
+  </div>
+</div>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-    <script>
-        const SUPABASE_URL = 'https://mtiwodvsrwvrujbhmmrn.supabase.co';
-        const SUPABASE_ANON_KEY = 'sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp';
-        const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // SUPABASE CONFIG
+  const supabaseUrl = 'https://mtiwodvsrwvrujbhmmrn.supabase.co';
+  const supabaseKey = 'sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp';
+  const sb = supabase.createClient(supabaseUrl, supabaseKey);
 
-        const BASE_YEAR = -4000;
-        const TOTAL_STEPS = 80;
-        let currentTargetYear = BASE_YEAR;
-        let currentEraId = null;
-        let currentRegionId = null;
-        let player = null;
-        let attackBaseRegionId = null;
-        let allies = [];
+  // ─── State ──────────────────────────────────────────────
+  let currentPlayer = null;
+  let currentRegion = null;         // selected region object
+  let attackBaseId = null;          // region id of the base
+  let map = null;
+  let geoLayer = null;
+  let allRegions = [];
+  let allEras = [];
+  let currentYear = 0;
+  let step = 0;                     // timeline step (0-80)
+  let tutorialShown = false;
 
-        const map = L.map('map', { center: [20, 0], zoom: 2, maxZoom: 8, minZoom: 2, worldCopyJump: true, zoomControl: true });
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; OpenStreetMap contributors &copy; CARTO', subdomains: 'abcd', maxZoom: 19 }).addTo(map);
+  // ─── DOM refs ────────────────────────────────────────────
+  const sidebarContent = document.getElementById('sidebarContent');
 
-        let geoJSONLayer = L.geoJSON(null, {
-            style: feature => {
-                const isAlly = allies.includes(feature.properties.owner_id) && feature.properties.owner_type === 'player';
-                return {
-                    fillColor: feature.properties.fillColor || '#c8ad7f',
-                    weight: isAlly ? 3 : 2,
-                    opacity: 1,
-                    color: isAlly ? '#2196F3' : '#3e2723',
-                    fillOpacity: 0.6
-                };
-            },
-            onEachFeature: (feature, layer) => { layer.on('click', () => openSidebar(feature.properties)); }
-        }).addTo(map);
+  // ─── Toast ──────────────────────────────────────────────
+  function showToast(msg, type = 'info', duration = 3000) {
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = msg;
+    container.appendChild(toast);
+    setTimeout(() => toast.remove(), duration);
+  }
 
-        const tradeRouteLayer = L.layerGroup().addTo(map);
-        const buildingMarkersLayer = L.layerGroup().addTo(map);
+  // ─── Theme toggle ──────────────────────────────────────
+  function toggleTheme() {
+    const body = document.body;
+    const isDark = body.style.backgroundColor === '#0f172a' || !body.style.backgroundColor;
+    body.style.backgroundColor = isDark ? '#f1f5f9' : '#0f172a';
+    body.style.color = isDark ? '#0f172a' : '#f1f5f9';
+    document.querySelectorAll('.top-bar, .sidebar, .bottom-bar, .battle-box, .tutorial-box')
+      .forEach(el => {
+        el.style.backgroundColor = isDark ? '#ffffff' : '#1e293b';
+        el.style.color = isDark ? '#0f172a' : '#f1f5f9';
+        el.style.borderColor = isDark ? '#e2e8f0' : '#334155';
+      });
+    // toggle map background
+    const mapEl = document.getElementById('map');
+    mapEl.style.background = isDark ? '#e2e8f0' : '#1e293b';
+  }
 
-        function getCentroid(geojson) { const geo = L.geoJSON(geojson); return geo.getBounds().getCenter(); }
+  // ─── Auth & Player ─────────────────────────────────────
+  async function loadPlayer() {
+    const { data: { user } } = await sb.auth.getUser();
+    if (!user) { window.location.href = 'index.html'; return; }
+    const { data: player } = await sb.from('players').select('id, username').eq('auth_id', user.id).single();
+    if (!player) { showToast('Player not found', 'error'); return; }
+    currentPlayer = player;
+    await loadData();
+  }
 
-        async function init() {
-            const { data: { user } } = await sb.auth.getUser();
-            if (!user) { window.location.href = 'index.html'; return; }
-            const { data: playerData } = await sb.from('players').select('id, username, cash, energy').eq('auth_id', user.id).single();
-            if (!playerData) { alert('Player not found'); return; }
-            player = playerData;
+  // ─── Load Data ──────────────────────────────────────────
+  async function loadData() {
+    // Load eras
+    const { data: eras } = await sb.from('historical_eras').select('*').order('year_start');
+    allEras = eras || [];
 
-            const startStep = 50;
-            document.getElementById('timeline-slider').value = startStep;
-            currentTargetYear = BASE_YEAR + startStep * 100;
-            await loadAllies();
-            await loadYear(currentTargetYear);
-            setupRealtime();
-            drawTicks();
+    // Load regions for the current year
+    await loadRegions();
+    await updateEmpireStats();
+    // Check tutorial
+    const tutorialKey = 'rheoa_conquest_tutorial';
+    if (!localStorage.getItem(tutorialKey)) {
+      document.getElementById('tutorialOverlay').style.display = 'flex';
+      localStorage.setItem(tutorialKey, 'shown');
+    }
+  }
+
+  async function loadRegions() {
+    const { data, error } = await sb
+      .from('historical_regions')
+      .select('*')
+      .lte('start_year', currentYear)
+      .gte('end_year', currentYear);
+    if (error) { console.error(error); return; }
+    allRegions = data || [];
+    renderMap();
+    // If a region was selected, re-select it by id
+    if (currentRegion) {
+      const updated = allRegions.find(r => r.id === currentRegion.id);
+      if (updated) selectRegion(updated);
+      else {
+        currentRegion = null;
+        sidebarContent.innerHTML = `<div class="empty-state">🌍 Click a region on the map.</div>`;
+      }
+    }
+    updateEraDisplay();
+  }
+
+  function updateEraDisplay() {
+    const era = allEras.find(e => e.year_start <= currentYear && e.year_end >= currentYear);
+    document.getElementById('currentEra').textContent = era ? era.name : 'Unknown Era';
+    document.getElementById('currentYear').textContent = currentYear < 0 ? `${Math.abs(currentYear)} BCE` : `${currentYear} CE`;
+  }
+
+  // ─── Map ────────────────────────────────────────────────
+  function renderMap() {
+    if (!map) {
+      map = L.map('map', { center: [20, 0], zoom: 2, zoomControl: true });
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; OpenStreetMap & CARTO',
+        subdomains: 'abcd',
+        maxZoom: 19
+      }).addTo(map);
+    }
+
+    if (geoLayer) map.removeLayer(geoLayer);
+
+    const features = allRegions.map(r => {
+      const geo = typeof r.geojson === 'string' ? JSON.parse(r.geojson) : r.geojson;
+      let color = '#94a3b8'; // unclaimed
+      if (r.owner_type === 'player' && r.owner_id === currentPlayer.id) color = '#22c55e';
+      else if (r.owner_type === 'npc') color = '#ef4444';
+      return {
+        type: 'Feature',
+        geometry: geo,
+        properties: {
+          id: r.id,
+          name: r.name,
+          owner_type: r.owner_type,
+          owner_id: r.owner_id,
+          fillColor: color,
+          army: r.army,
+          population: r.population,
+          resources: r.resources
         }
+      };
+    });
 
-        async function loadAllies() {
-            const { data } = await sb.from('alliances').select('player1_id, player2_id').or(`player1_id.eq.${player.id},player2_id.eq.${player.id}`);
-            if (!data) { allies = []; return; }
-            allies = data.map(a => a.player1_id === player.id ? a.player2_id : a.player1_id);
-        }
-
-        function drawTicks() {
-            const container = document.getElementById('ticks-container');
-            container.innerHTML = '';
-            for (let step = 0; step <= TOTAL_STEPS; step++) {
-                const isMajor = (step % 10 === 0);
-                const year = BASE_YEAR + step * 100;
-                const tickDiv = document.createElement('div'); tickDiv.className = 'tick';
-                tickDiv.innerHTML = `<div class="tick-line" style="height:${isMajor ? 10 : 5}px;"></div>`;
-                if (isMajor) {
-                    const label = year < 0 ? `${Math.abs(year)} BCE` : `${year} CE`;
-                    tickDiv.innerHTML += `<span class="tick-label major" data-step="${step}">${label}</span>`;
-                }
-                container.appendChild(tickDiv);
-            }
-            document.querySelectorAll('.tick-label.major').forEach(span => {
-                span.addEventListener('click', (e) => {
-                    const step = parseInt(e.target.getAttribute('data-step'));
-                    document.getElementById('timeline-slider').value = step;
-                    currentTargetYear = BASE_YEAR + step * 100;
-                    loadYear(currentTargetYear);
-                });
-            });
-        }
-
-        document.getElementById('timeline-slider').addEventListener('input', async (e) => {
-            const step = parseInt(e.target.value);
-            currentTargetYear = BASE_YEAR + step * 100;
-            await loadYear(currentTargetYear);
-        });
-
-        function formatYear(y) { return y < 0 ? `${Math.abs(y)} BCE` : `${y} CE`; }
-
-        async function loadYear(targetYear) {
-            currentTargetYear = targetYear;
-            const { data: era } = await sb.from('historical_eras').select('*').lte('year_start', targetYear).gte('year_end', targetYear).single();
-            if (era) {
-                currentEraId = era.id;
-                document.getElementById('era-label').textContent = `${era.name} (${formatYear(era.year_start)}–${formatYear(era.year_end)})`;
-            } else document.getElementById('era-label').textContent = formatYear(targetYear);
-            await loadRegions(targetYear);
-            await loadTradeRoutes();
-            await loadBuildings();
-        }
-
-        async function loadRegions(targetYear) {
-            const { data: regions } = await sb.from('historical_regions')
-                .select('id, name, geojson, owner_type, owner_id, start_year, end_year, population, resources, army')
-                .lte('start_year', targetYear).gte('end_year', targetYear);
-            if (!regions || regions.length === 0) { geoJSONLayer.clearLayers(); return; }
-            const features = regions.map(r => {
-                const geo = typeof r.geojson === 'string' ? JSON.parse(r.geojson) : r.geojson;
-                let fillColor = '#c8ad7f'; if (r.owner_type === 'npc') fillColor = '#8d6e63'; else if (r.owner_type === 'player') fillColor = '#4caf50';
-                return { ...geo, properties: { id: r.id, name: r.name, owner_type: r.owner_type, owner_id: r.owner_id, fillColor, start_year: r.start_year, end_year: r.end_year, population: r.population, resources: r.resources, army: r.army } };
-            });
-            geoJSONLayer.clearLayers();
-            geoJSONLayer.addData({ type: 'FeatureCollection', features });
-        }
-
-        async function loadTradeRoutes() {
-            tradeRouteLayer.clearLayers();
-            if (!currentTargetYear) return;
-            const { data: routes } = await sb.from('trade_routes').select('*, from_region:from_region_id(*), to_region:to_region_id(*)').eq('active', true);
-            if (!routes) return;
-            for (const route of routes) {
-                const from = route.from_region, to = route.to_region;
-                if (!from || !to) continue;
-                if (from.start_year > currentTargetYear || from.end_year < currentTargetYear) continue;
-                if (to.start_year > currentTargetYear || to.end_year < currentTargetYear) continue;
-                const fromCentroid = getCentroid(from.geojson), toCentroid = getCentroid(to.geojson);
-                if (!fromCentroid || !toCentroid) continue;
-                L.polyline([fromCentroid, toCentroid], { color: '#8B0000', weight: 2, dashArray: '10 6', className: 'trade-route-line' }).addTo(tradeRouteLayer).bindTooltip(`${route.resource} route`, { permanent: false });
-            }
-        }
-
-        async function loadBuildings() {
-            buildingMarkersLayer.clearLayers();
-            if (!currentTargetYear) return;
-            const { data: buildings } = await sb
-                .from('era_buildings')
-                .select('*, region:region_id(*)')
-                .filter('region.start_year', 'lte', currentTargetYear)
-                .filter('region.end_year', 'gte', currentTargetYear);
-            if (!buildings) return;
-            const buildingIcons = { outpost: { emoji: '🛡️', color: '#2196F3' }, fortress: { emoji: '🏰', color: '#f44336' }, market: { emoji: '📦', color: '#4CAF50' } };
-            for (const b of buildings) {
-                if (!b.region || !b.region.geojson) continue;
-                const centroid = getCentroid(b.region.geojson);
-                if (!centroid) continue;
-                const iconDef = buildingIcons[b.building_type] || { emoji: '🏗️', color: '#888' };
-                L.marker(centroid, { icon: L.divIcon({ className: 'building-icon', html: `<div style="background:${iconDef.color}; color:white; border-radius:50%; width:24px; height:24px; display:flex; align-items:center; justify-content:center; font-size:14px;">${iconDef.emoji}</div>`, iconSize: [24,24], iconAnchor: [12,12] }) }).addTo(buildingMarkersLayer).bindTooltip(`${b.building_type} (Lvl ${b.level})`, { permanent: false });
-            }
-        }
-
-        function openSidebar(props) {
-            currentRegionId = props.id;
-            document.getElementById('sidebar').style.display = 'block';
-            document.getElementById('region-name').textContent = props.name + ` (${formatYear(props.start_year)}–${formatYear(props.end_year)})`;
-            const owner = props.owner_type === 'player' ? (props.owner_id === player.id ? 'You' : 'Another Player') : props.owner_type === 'npc' ? 'NPC Civilization' : 'Unclaimed';
-            document.getElementById('region-owner').textContent = `Controlled by: ${owner}`;
-            document.getElementById('diplomacy-target').value = props.owner_type === 'player' ? props.owner_id : '';
-
-            const pop = props.population ? props.population.toLocaleString() : '0';
-            const resources = props.resources || {};
-            const food = resources.food || 0, wood = resources.wood || 0, metal = resources.metal || 0;
-            document.getElementById('region-stats').innerHTML = `<p>👥 Population: <strong>${pop}</strong></p><p>🌾 Food: ${food} &nbsp; 🪵 Wood: ${wood} &nbsp; ⛏️ Metal: ${metal}</p>`;
-            document.getElementById('region-army').innerHTML = `<p>⚔️ Army: <strong>${props.army || 0}</strong></p>`;
-
-            const isMine = (props.owner_type === 'player' && props.owner_id === player.id);
-            const isOtherPlayer = props.owner_type === 'player' && props.owner_id !== player.id;
-            document.getElementById('btn-recruit').style.display = isMine ? 'block' : 'none';
-            document.getElementById('btn-move').style.display = isMine ? 'block' : 'none';
-            document.getElementById('btn-set-base').style.display = isMine ? 'block' : 'none';
-            document.getElementById('btn-build').style.display = isMine ? 'block' : 'none';
-            document.getElementById('btn-trade').style.display = isMine ? 'block' : 'none';
-            document.getElementById('btn-route').style.display = isMine ? 'block' : 'none';
-            document.getElementById('btn-tech').style.display = isMine ? 'block' : 'none';
-            document.getElementById('btn-diplomacy').style.display = isOtherPlayer ? 'block' : 'none';
-            document.getElementById('diplomacy-panel').style.display = 'none';
-
-            const canAttack = !isMine && attackBaseRegionId != null;
-            document.getElementById('btn-conquer').style.display = canAttack ? 'block' : 'none';
-            document.getElementById('btn-events').style.display = 'block';
-            document.getElementById('action-feedback').textContent = '';
-            document.getElementById('market-view').style.display = 'none'; document.getElementById('market-actions').style.display = 'block';
-            document.getElementById('route-management').style.display = 'none';
-            document.getElementById('tech-tree').style.display = 'none';
-
-            loadRegionBuildings(props.id);
-        }
-
-        async function loadRegionBuildings(regionId) {
-            const { data: buildings } = await sb.from('era_buildings').select('*').eq('region_id', regionId);
-            const div = document.getElementById('region-buildings');
-            if (!buildings || buildings.length === 0) { div.innerHTML = '<p>No buildings constructed.</p>'; }
-            else { div.innerHTML = '<strong>🏗️ Buildings:</strong><br>' + buildings.map(b => `<div class="building-item">${b.building_type} (Lvl ${b.level})</div>`).join(''); }
-        }
-
-        // ---- NPC AI ----
-        document.getElementById('btn-npc-turn').addEventListener('click', async () => {
-            const btn = document.getElementById('btn-npc-turn');
-            btn.disabled = true; btn.textContent = '⏳ Processing...';
-            const { data, error } = await sb.rpc('npc_ai_tick', { p_target_year: currentTargetYear });
-            btn.disabled = false; btn.textContent = '⚙️ Run NPC Turn';
-            if (error) { alert('AI Error: ' + error.message); return; }
-            if (data.success) { showFeedback(data.message); loadYear(currentTargetYear); }
-            else alert(data.error);
-        });
-
-        // ---- Tech Tree ----
-        document.getElementById('btn-tech').addEventListener('click', async () => {
-            const techDiv = document.getElementById('tech-tree');
-            if (techDiv.style.display === 'block') { techDiv.style.display = 'none'; return; }
-            techDiv.style.display = 'block';
-            if (!currentEraId) return;
-            const { data: techs } = await sb.from('technologies').select('*').eq('era_id', currentEraId);
-            const { data: researched } = await sb.from('player_technologies').select('technology_id').eq('player_id', player.id);
-            const researchedIds = researched ? researched.map(r => r.technology_id) : [];
-            if (!techs || techs.length === 0) { techDiv.innerHTML = '<p>No technologies available.</p>'; return; }
-            techDiv.innerHTML = techs.map(t => {
-                const researched = researchedIds.includes(t.id);
-                let costStr = [];
-                if (t.cost_food > 0) costStr.push(`${t.cost_food} food`);
-                if (t.cost_wood > 0) costStr.push(`${t.cost_wood} wood`);
-                if (t.cost_metal > 0) costStr.push(`${t.cost_metal} metal`);
-                if (t.cost_gold > 0) costStr.push(`${t.cost_gold} gold`);
-                return `<div class="tech-item"><strong>${t.name}</strong> ${researched ? '(✓ Researched)' : ''}<br>${t.description}<br>Bonus: ${t.bonus_type} +${t.bonus_value}x<br>Cost: ${costStr.join(', ') || 'None'}<br>${!researched ? `<button onclick="researchTech('${t.id}')">Research</button>` : ''}</div>`;
-            }).join('');
-        });
-
-        window.researchTech = async (techId) => {
-            const { data, error } = await sb.rpc('research_technology', { p_technology_id: techId });
-            if (error) { showFeedback(error.message); return; }
-            showFeedback(data.message || data.error);
-            document.getElementById('btn-tech').click(); document.getElementById('btn-tech').click();
-            loadYear(currentTargetYear);
+    geoLayer = L.geoJSON({
+      type: 'FeatureCollection',
+      features: features
+    }, {
+      style: function(feature) {
+        return {
+          fillColor: feature.properties.fillColor,
+          fillOpacity: 0.6,
+          color: '#fff',
+          weight: 2,
+          opacity: 0.8
         };
+      },
+      onEachFeature: function(feature, layer) {
+        layer.on('click', function() {
+          const region = allRegions.find(r => r.id === feature.properties.id);
+          if (region) selectRegion(region);
+        });
+        layer.bindTooltip(feature.properties.name, { permanent: false, direction: 'center' });
+      }
+    }).addTo(map);
 
-        // ---- Army ----
-        document.getElementById('btn-recruit').addEventListener('click', async () => {
-            const qty = prompt('How many troops to recruit? (10 food + 5 gold each)');
-            if (!qty) return;
-            const { data, error } = await sb.rpc('recruit_army', { p_region_id: currentRegionId, p_quantity: parseInt(qty) });
-            if (error) { showFeedback(error.message); return; }
-            showFeedback(data.message || data.error);
-            loadYear(currentTargetYear);
-        });
-        document.getElementById('btn-move').addEventListener('click', async () => {
-            const targetYear = currentTargetYear;
-            const { data: owned } = await sb.from('historical_regions').select('id, name, army').eq('owner_type', 'player').eq('owner_id', player.id).lte('start_year', targetYear).gte('end_year', targetYear).neq('id', currentRegionId);
-            if (!owned || owned.length === 0) { alert('No other regions to move to.'); return; }
-            let list = owned.map(r => `${r.name} (ID:${r.id.slice(0,4)}) - Army: ${r.army}`).join('\n');
-            const destId = prompt(`Choose destination:\n${list}\n\nRegion ID:`);
-            if (!destId) return;
-            const qty = prompt('How many troops?');
-            if (!qty) return;
-            const { data, error } = await sb.rpc('move_army', { p_from_region_id: currentRegionId, p_to_region_id: destId, p_quantity: parseInt(qty) });
-            if (error) { showFeedback(error.message); return; }
-            showFeedback(data.message || data.error);
-            loadYear(currentTargetYear);
-        });
-        document.getElementById('btn-set-base').addEventListener('click', () => {
-            attackBaseRegionId = currentRegionId;
-            document.getElementById('action-feedback').textContent = `Base set to: ${document.getElementById('region-name').textContent}`;
-        });
+    // If a region is selected, highlight it (we can add a border)
+    if (currentRegion) {
+      const layer = geoLayer.getLayers().find(l => l.feature.properties.id === currentRegion.id);
+      if (layer) {
+        layer.setStyle({ weight: 4, color: '#fbbf24' });
+      }
+    }
+    map.fitBounds(geoLayer.getBounds());
+  }
 
-        // ---- Conquer ----
-        document.getElementById('btn-conquer').addEventListener('click', async () => {
-            if (!attackBaseRegionId) { alert('Set an attack base first.'); return; }
-            const overlay = document.getElementById('battle-overlay');
-            const attDice = document.getElementById('attacker-dice'), defDice = document.getElementById('defender-dice');
-            const msg = document.getElementById('battle-message');
-            overlay.style.display = 'block'; msg.textContent = 'Rolling...';
-            let rollInterval = setInterval(() => {
-                attDice.textContent = ['⚀','⚁','⚂','⚃','⚄','⚅'][Math.floor(Math.random()*6)];
-                defDice.textContent = ['⚀','⚁','⚂','⚃','⚄','⚅'][Math.floor(Math.random()*6)];
-            }, 100);
-            const { data, error } = await sb.rpc('attack_region', { p_target_region_id: currentRegionId, p_source_region_id: attackBaseRegionId, p_target_year: currentTargetYear });
-            clearInterval(rollInterval);
-            if (error) msg.textContent = 'Error: ' + error.message;
-            else if (data.success) {
-                let victoryMsg = 'Victory! Region conquered!';
-                if (data.triggered_event) {
-                    victoryMsg += `\n📜 ${data.triggered_event.title}: ${data.triggered_event.description}`;
-                    const targetRegion = await sb.from('historical_regions').select('geojson').eq('id', currentRegionId).single();
-                    if (targetRegion) {
-                        const centroid = getCentroid(targetRegion.geojson);
-                        const marker = L.marker(centroid, { icon: L.divIcon({className:'event-marker', html:`<div style="background:#d4a017; color:white; padding:2px 6px; border-radius:12px; font-size:0.8rem;">📜</div>`, iconSize:[20,20], iconAnchor:[10,10]}) }).addTo(map);
-                        marker.bindTooltip(data.triggered_event.title, {permanent:true}).openTooltip();
-                        setTimeout(() => map.removeLayer(marker), 8000);
-                    }
-                }
-                msg.textContent = victoryMsg;
-                attDice.textContent = '⚅'; defDice.textContent = '⚁';
-            } else {
-                msg.textContent = 'Defeat! ' + (data.error || '');
-                attDice.textContent = '⚀'; defDice.textContent = '⚅';
-            }
-            setTimeout(() => { overlay.style.display = 'none'; loadYear(currentTargetYear); }, 3000);
-        });
+  // ─── Select Region ──────────────────────────────────────
+  function selectRegion(region) {
+    currentRegion = region;
+    // Update sidebar
+    const isOwned = region.owner_type === 'player' && region.owner_id === currentPlayer.id;
+    const isNPC = region.owner_type === 'npc';
+    const isUnowned = region.owner_type === 'unclaimed';
+    const isAttackBase = attackBaseId === region.id;
+    const canConquer = attackBaseId && isNPC && attackBaseId !== region.id;
 
-        document.getElementById('btn-build').addEventListener('click', async () => {
-            const building = prompt('What to build? (outpost/fortress/market)');
-            if (!building) return;
-            const { data, error } = await sb.rpc('build_structure', { p_region_id: currentRegionId, p_building_type: building });
-            if (error) { showFeedback(error.message); return; }
-            showFeedback(data.message || data.error);
-            loadYear(currentTargetYear);
-            loadRegionBuildings(currentRegionId);
-        });
+    let html = `
+      <div class="region-name">${region.name}</div>
+      <div class="region-owner">
+        ${isOwned ? '✅ Your territory' : isNPC ? '👹 NPC territory' : '🌍 Unclaimed'}
+      </div>
+      <div class="region-details">
+        <div><span class="label">Population</span><br><span class="value">${region.population}</span></div>
+        <div><span class="label">Army</span><br><span class="value">${region.army}</span></div>
+        <div><span class="label">Food</span><br><span class="value">${region.resources?.food || 0}</span></div>
+        <div><span class="label">Gold</span><br><span class="value">${region.resources?.gold || 0}</span></div>
+      </div>
+      <div class="action-buttons">
+    `;
 
-        // ---- Trade Offers ----
-        document.getElementById('btn-trade').addEventListener('click', async () => {
-            const resource = prompt('Resource (food/wood/metal):');
-            if (!resource) return;
-            const quantity = parseInt(prompt('Quantity:')), price = parseInt(prompt('Price per unit:'));
-            if (!resource || !quantity || !price) return;
-            const { data, error } = await sb.rpc('create_trade_offer', { p_region_id: currentRegionId, p_resource: resource, p_quantity: quantity, p_price: price });
-            if (error) { showFeedback(error.message); return; }
-            showFeedback('Trade offer listed!');
-            if (document.getElementById('market-view').style.display === 'block') loadMarket();
-        });
-        document.getElementById('btn-show-market').addEventListener('click', async () => {
-            document.getElementById('market-view').style.display = 'block'; document.getElementById('market-actions').style.display = 'none';
-            await loadMarket();
-        });
-        document.getElementById('btn-close-market').addEventListener('click', () => {
-            document.getElementById('market-view').style.display = 'none'; document.getElementById('market-actions').style.display = 'block';
-        });
-        document.getElementById('btn-create-offer').addEventListener('click', () => document.getElementById('btn-trade').click());
-        async function loadMarket() {
-            const { data: offers } = await sb.from('era_trade_offers').select('*, listing_player:players(username)').eq('active', true).order('created_at', { ascending: false }).limit(50);
-            const list = document.getElementById('trade-list');
-            if (!offers || offers.length === 0) { list.innerHTML = '<p>No offers yet.</p>'; return; }
-            list.innerHTML = offers.map(o => `<div class="market-offer"><strong>${o.resource}</strong> x${o.quantity} @ $${o.price_per_unit}<br>Seller: ${o.listing_player?.username || 'Unknown'}<br><button onclick="buyOffer('${o.id}')">Buy 1</button></div>`).join('');
-        }
-        window.buyOffer = async (offerId) => {
-            const { data, error } = await sb.rpc('buy_trade_offer', { p_offer_id: offerId });
-            if (error) { alert(error.message); return; }
-            if (data.success) { alert('Purchased!'); loadMarket(); }
-            else alert(data.error || 'Purchase failed');
-        };
+    if (isUnowned) {
+      html += `<button class="success" onclick="claimRegion('${region.id}')">🏴 Claim Region</button>`;
+    } else if (isOwned) {
+      html += `<button class="${isAttackBase ? 'gold' : 'primary'}" onclick="setAttackBase('${region.id}')">
+        ${isAttackBase ? '⭐ Attack Base (active)' : '⚔️ Set as Attack Base'}
+      </button>`;
+      html += `<button class="primary" onclick="recruitArmy('${region.id}')">🛡️ Recruit Army</button>`;
+      // Move army - we'll simplify: move to another owned region (we'll prompt)
+      html += `<button class="primary" onclick="moveArmy('${region.id}')">🚚 Move Army</button>`;
+      html += `<button class="gold" onclick="buildStructure('${region.id}')">🏗️ Build</button>`;
+    } else if (isNPC) {
+      if (canConquer) {
+        html += `<button class="danger" onclick="conquerRegion('${region.id}')">⚔️ Conquer</button>`;
+      } else {
+        html += `<button class="primary" disabled>⚔️ Set an attack base first</button>`;
+      }
+    }
 
-        // ---- Trade Routes ----
-        document.getElementById('btn-route').addEventListener('click', async () => {
-            const mgmt = document.getElementById('route-management');
-            if (mgmt.style.display === 'block') { mgmt.style.display = 'none'; return; }
-            mgmt.style.display = 'block';
-            await loadRoutesForRegion();
-        });
-        async function loadRoutesForRegion() {
-            const { data: routes } = await sb.from('trade_routes').select('*, from_region:from_region_id(name), to_region:to_region_id(name)').or(`from_region_id.eq.${currentRegionId},to_region_id.eq.${currentRegionId}`).eq('active', true);
-            const listDiv = document.getElementById('existing-routes');
-            if (!routes || routes.length === 0) { listDiv.innerHTML = '<p>No active routes.</p>'; return; }
-            listDiv.innerHTML = routes.map(r => `<div class="route-item">${r.from_region.name} ↔ ${r.to_region.name} (${r.resource}) <button onclick="deleteRoute('${r.id}')">Remove</button></div>`).join('');
-        }
-        window.deleteRoute = async (routeId) => {
-            if (!confirm('Remove route?')) return;
-            await sb.rpc('remove_trade_route', { p_route_id: routeId });
-            showFeedback('Route removed');
-            await loadRoutesForRegion();
-            await loadTradeRoutes();
-        };
-        document.getElementById('btn-create-route').addEventListener('click', async () => {
-            const targetYear = currentTargetYear;
-            const { data: owned } = await sb.from('historical_regions').select('id, name').eq('owner_type', 'player').eq('owner_id', player.id).lte('start_year', targetYear).gte('end_year', targetYear).neq('id', currentRegionId);
-            if (!owned || owned.length === 0) { alert('No other regions.'); return; }
-            let list = owned.map(r => `${r.name} (${r.id.slice(0,4)})`).join('\n');
-            const destId = prompt(`Destination:\n${list}\n\nRegion ID:`);
-            if (!destId) return;
-            const resource = prompt('Resource (food/wood/metal):');
-            if (!resource || !['food','wood','metal'].includes(resource)) { alert('Invalid'); return; }
-            const { data, error } = await sb.rpc('create_trade_route', { p_from_region_id: currentRegionId, p_to_region_id: destId, p_resource: resource });
-            if (error) { showFeedback(error.message); return; }
-            showFeedback(data.message || data.error);
-            await loadRoutesForRegion();
-            await loadTradeRoutes();
-        });
+    html += `</div>`;
+    sidebarContent.innerHTML = html;
+  }
 
-        // ---- Diplomacy ----
-        document.getElementById('btn-diplomacy').addEventListener('click', async () => {
-            const panel = document.getElementById('diplomacy-panel');
-            if (panel.style.display === 'block') { panel.style.display = 'none'; return; }
-            const targetPlayerId = document.getElementById('diplomacy-target').value;
-            if (!targetPlayerId) return;
-            panel.style.display = 'block';
-            const { data: alliance } = await sb.from('alliances').select('*').or(`and(player1_id.eq.${player.id},player2_id.eq.${targetPlayerId}),and(player1_id.eq.${targetPlayerId},player2_id.eq.${player.id})`).maybeSingle();
-            const { data: pending } = await sb.from('alliance_requests').select('*').eq('from_player_id', player.id).eq('to_player_id', targetPlayerId).eq('status', 'pending').maybeSingle();
-            let html = '';
-            if (alliance) html = '<p>Allied.</p><button onclick="cancelAlliance(\'' + targetPlayerId + '\')">Cancel Alliance</button>';
-            else if (pending) html = '<p>Request pending.</p>';
-            else html = '<button onclick="sendAllianceRequest(\'' + targetPlayerId + '\')">Send Alliance Request</button>';
-            panel.innerHTML = html;
-        });
-        window.sendAllianceRequest = async (toId) => {
-            const { data, error } = await sb.rpc('send_alliance_request', { p_to_player_id: toId });
-            if (error) { showFeedback(error.message); return; }
-            showFeedback(data.message);
-            document.getElementById('diplomacy-panel').style.display = 'none';
-        };
-        window.cancelAlliance = async (allyId) => {
-            if (!confirm('Cancel alliance?')) return;
-            const { data, error } = await sb.rpc('cancel_alliance', { p_ally_player_id: allyId });
-            if (error) { showFeedback(error.message); return; }
-            showFeedback(data.message);
-            await loadAllies();
-            loadYear(currentTargetYear);
-        };
-        document.getElementById('btn-open-diplomacy').addEventListener('click', async () => {
-            const modal = document.getElementById('diplomacy-modal');
-            modal.style.display = 'block';
-            const content = document.getElementById('diplomacy-content');
-            content.innerHTML = '<p>Loading...</p>';
-            const { data: requests } = await sb.from('alliance_requests').select('*, from_player:players!from_player_id(username)').eq('to_player_id', player.id).eq('status', 'pending');
-            const { data: alliances } = await sb.from('alliances').select('*, player1:players!player1_id(username), player2:players!player2_id(username)').or(`player1_id.eq.${player.id},player2_id.eq.${player.id}`);
-            let html = '<h3>Incoming Requests</h3>';
-            if (!requests || requests.length === 0) html += '<p>No pending requests.</p>';
-            else requests.forEach(r => html += `<p>${r.from_player.username} wants to ally. <button onclick="acceptRequest('${r.id}')">Accept</button> <button onclick="rejectRequest('${r.id}')">Reject</button></p>`);
-            html += '<h3>My Alliances</h3>';
-            if (!alliances || alliances.length === 0) html += '<p>No alliances.</p>';
-            else alliances.forEach(a => {
-                const allyName = a.player1_id === player.id ? a.player2.username : a.player1.username;
-                html += `<p>${allyName} <button onclick="cancelAlliance('${a.player1_id === player.id ? a.player2_id : a.player1_id}')">Cancel</button></p>`;
-            });
-            content.innerHTML = html;
-        });
-        window.acceptRequest = async (reqId) => { /* ... same as before ... */ };
-        window.rejectRequest = async (reqId) => { /* ... same as before ... */ };
+  // ─── Actions ─────────────────────────────────────────────
+  async function claimRegion(regionId) {
+    const { data, error } = await sb
+      .from('historical_regions')
+      .update({ owner_type: 'player', owner_id: currentPlayer.id })
+      .eq('id', regionId);
+    if (error) { showToast('Claim failed', 'error'); return; }
+    showToast('Region claimed!', 'success');
+    await loadRegions();
+  }
 
-        // ---- Empire History ----
-        document.getElementById('btn-open-history').addEventListener('click', async () => {
-            const modal = document.getElementById('history-modal');
-            modal.style.display = 'block';
-            const content = document.getElementById('history-content');
-            content.innerHTML = '<p>Loading history...</p>';
-            const { data: logs } = await sb.from('player_conquest_log')
-                .select('*, era:era_id(name, year_start, year_end)')
-                .eq('player_id', player.id)
-                .order('conquered_at', { ascending: false });
-            if (!logs || logs.length === 0) {
-                content.innerHTML = '<p>No conquests yet.</p>';
-                return;
-            }
-            content.innerHTML = logs.map(log => {
-                const eraName = log.era ? log.era.name : 'Unknown Era';
-                const date = new Date(log.conquered_at).toLocaleDateString();
-                const time = new Date(log.conquered_at).toLocaleTimeString();
-                return `<div class="history-item">
-                    <strong>${log.region_name}</strong> (${formatYear(log.target_year)})<br>
-                    <small>${eraName} – ${date} ${time}</small>
-                </div>`;
-            }).join('');
-        });
+  async function setAttackBase(regionId) {
+    attackBaseId = regionId;
+    showToast(`Attack base set to ${currentRegion.name}`, 'info');
+    selectRegion(currentRegion); // refresh
+  }
 
-        document.getElementById('btn-events').addEventListener('click', async () => {
-            const eventsDiv = document.getElementById('events-list');
-            if (!eventsDiv.classList.contains('hidden')) { eventsDiv.classList.add('hidden'); return; }
-            if (!currentEraId) return;
-            const { data: events } = await sb.from('historical_events').select('*').eq('era_id', currentEraId).order('created_at', { ascending: false });
-            eventsDiv.innerHTML = (!events || events.length === 0) ? '<p>No events recorded.</p>' : events.map(e => `<div class="event-item"><strong>${e.title}</strong> (${e.description})<br>Effect: ${JSON.stringify(e.effect)}</div>`).join('');
-            eventsDiv.classList.remove('hidden');
-        });
+  async function recruitArmy(regionId) {
+    const qty = prompt('How many troops to recruit? (cost: 10 food + 5 gold each)', '10');
+    if (!qty) return;
+    const { data, error } = await sb.rpc('recruit_army', { p_region_id: regionId, p_quantity: parseInt(qty) });
+    if (error) { showToast('Recruit failed', 'error'); return; }
+    if (data.success) {
+      showToast(data.message, 'success');
+      await loadRegions();
+    } else {
+      showToast(data.error, 'error');
+    }
+  }
 
-        function showFeedback(msg) {
-            document.getElementById('action-feedback').textContent = msg;
-            setTimeout(() => document.getElementById('action-feedback').textContent = '', 4000);
-        }
+  async function moveArmy(regionId) {
+    // Get owned regions to move to
+    const owned = allRegions.filter(r => r.owner_type === 'player' && r.owner_id === currentPlayer.id && r.id !== regionId);
+    if (!owned.length) { showToast('No other owned regions to move to', 'error'); return; }
+    const names = owned.map(r => `${r.name} (ID:${r.id.slice(0,6)})`).join('\n');
+    const destId = prompt(`Move to which region?\n${names}\n\nEnter region ID:`);
+    if (!destId) return;
+    const qty = prompt('How many troops?', '5');
+    if (!qty) return;
+    const { data, error } = await sb.rpc('move_army', { p_from_region_id: regionId, p_to_region_id: destId, p_quantity: parseInt(qty) });
+    if (error) { showToast('Move failed', 'error'); return; }
+    if (data.success) {
+      showToast(data.message, 'success');
+      await loadRegions();
+    } else {
+      showToast(data.error, 'error');
+    }
+  }
 
-        function setupRealtime() {
-            sb.channel('historical-regions').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'historical_regions' }, () => { if (currentTargetYear) loadYear(currentTargetYear); }).subscribe();
-        }
+  async function buildStructure(regionId) {
+    const type = prompt('What to build? (outpost, fortress, market)', 'outpost');
+    if (!type || !['outpost','fortress','market'].includes(type)) { showToast('Invalid type', 'error'); return; }
+    const { data, error } = await sb.rpc('build_structure', { p_region_id: regionId, p_building_type: type });
+    if (error) { showToast('Build failed', 'error'); return; }
+    if (data.success) {
+      showToast(data.message, 'success');
+      await loadRegions();
+    } else {
+      showToast(data.error, 'error');
+    }
+  }
 
-        document.getElementById('btn-empire-stats').addEventListener('click', async () => {
-            const { data } = await sb.rpc('get_empire_stats', { p_player_id: player.id });
-            alert(`Total Regions: ${data.total_regions}\nArmy: ${data.army}\nGold: ${data.gold}`);
-        });
+  async function conquerRegion(regionId) {
+    if (!attackBaseId) { showToast('Set an attack base first', 'error'); return; }
+    // Show battle overlay
+    const overlay = document.getElementById('battleOverlay');
+    overlay.style.display = 'flex';
+    const attDice = document.getElementById('attackerDice');
+    const defDice = document.getElementById('defenderDice');
+    const msg = document.getElementById('battleMessage');
+    const resultDiv = document.getElementById('battleResult');
+    resultDiv.textContent = '';
+    document.getElementById('battleCloseBtn').style.display = 'none';
 
-        init();
-    </script>
+    // Animate dice rolls
+    let rollInterval = setInterval(() => {
+      attDice.textContent = ['⚀','⚁','⚂','⚃','⚄','⚅'][Math.floor(Math.random()*6)];
+      defDice.textContent = ['⚀','⚁','⚂','⚃','⚄','⚅'][Math.floor(Math.random()*6)];
+    }, 100);
+
+    // Call RPC
+    const { data, error } = await sb.rpc('attack_region', {
+      p_target_region_id: regionId,
+      p_source_region_id: attackBaseId,
+      p_target_year: currentYear
+    });
+
+    clearInterval(rollInterval);
+    if (error) {
+      msg.textContent = 'Error: ' + error.message;
+      resultDiv.textContent = '❌';
+      resultDiv.className = 'result defeat';
+      document.getElementById('battleCloseBtn').style.display = 'block';
+      return;
+    }
+
+    if (data.success && data.victory) {
+      msg.textContent = 'Victory! You conquered the region!';
+      resultDiv.textContent = '🏆 WIN';
+      resultDiv.className = 'result victory';
+      attDice.textContent = '⚅';
+      defDice.textContent = '⚁';
+      showToast('Conquest successful!', 'success');
+      // If there's a triggered event, show it
+      if (data.triggered_event) {
+        setTimeout(() => {
+          showToast(`📜 ${data.triggered_event.title}: ${data.triggered_event.description}`, 'info', 5000);
+        }, 1500);
+      }
+    } else if (data.success && !data.victory) {
+      msg.textContent = 'Defeat! Your army lost troops.';
+      resultDiv.textContent = '💀 LOSS';
+      resultDiv.className = 'result defeat';
+      attDice.textContent = '⚀';
+      defDice.textContent = '⚅';
+      showToast('Conquest failed!', 'error');
+    } else {
+      msg.textContent = data.error || 'Conquest failed';
+      resultDiv.textContent = '❌';
+      resultDiv.className = 'result defeat';
+    }
+    document.getElementById('battleCloseBtn').style.display = 'block';
+    await loadRegions();
+  }
+
+  function closeBattle() {
+    document.getElementById('battleOverlay').style.display = 'none';
+  }
+
+  // ─── End Turn ─────────────────────────────────────────────
+  async function endTurn() {
+    // Advance year by 100
+    step = Math.min(step + 1, 80);
+    currentYear = -4000 + step * 100;
+    document.getElementById('currentYear').textContent = currentYear < 0 ? `${Math.abs(currentYear)} BCE` : `${currentYear} CE`;
+
+    // Run NPC AI
+    const { data, error } = await sb.rpc('npc_ai_tick', { p_target_year: currentYear });
+    if (error) { console.error(error); showToast('NPC AI error', 'error'); }
+    else {
+      showToast('Turn ended. NPCs have advanced.', 'info');
+    }
+
+    // Reload regions for the new year
+    await loadRegions();
+    // Keep selection if still valid
+    if (currentRegion) {
+      const updated = allRegions.find(r => r.id === currentRegion.id);
+      if (updated) selectRegion(updated);
+      else {
+        currentRegion = null;
+        sidebarContent.innerHTML = `<div class="empty-state">🌍 Click a region on the map.</div>`;
+      }
+    }
+  }
+
+  // ─── Empire Stats ─────────────────────────────────────────
+  async function updateEmpireStats() {
+    const { data, error } = await sb.rpc('get_empire_stats', { p_player_id: currentPlayer.id });
+    if (error) { console.error(error); return; }
+    document.getElementById('playerGold').textContent = data.gold || 0;
+    document.getElementById('playerArmy').textContent = data.army || 0;
+    document.getElementById('playerRegions').textContent = data.total_regions || 0;
+  }
+
+  // ─── Tutorial ─────────────────────────────────────────────
+  function closeTutorial() {
+    document.getElementById('tutorialOverlay').style.display = 'none';
+  }
+
+  // ─── Init ────────────────────────────────────────────────
+  loadPlayer();
+
+  // Clean up
+  window.addEventListener('beforeunload', () => {
+    if (map) map.remove();
+  });
+
+  // Expose functions to global scope for onclick
+  window.claimRegion = claimRegion;
+  window.setAttackBase = setAttackBase;
+  window.recruitArmy = recruitArmy;
+  window.moveArmy = moveArmy;
+  window.buildStructure = buildStructure;
+  window.conquerRegion = conquerRegion;
+  window.endTurn = endTurn;
+  window.closeBattle = closeBattle;
+  window.closeTutorial = closeTutorial;
+  window.toggleTheme = toggleTheme;
+</script>
 </body>
 </html>
