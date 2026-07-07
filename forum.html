@@ -523,6 +523,83 @@
       height: auto;
     }
 
+    /* Editable post styles */
+    .post-editor-wrapper {
+      margin: 12px 0;
+    }
+    .post-editor-wrapper .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-bottom: 8px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border-light);
+    }
+    .post-editor-wrapper .toolbar button {
+      background: transparent;
+      border: 1px solid var(--border-light);
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      color: var(--text-main);
+      transition: .15s;
+      font-family: var(--font-family);
+    }
+    .post-editor-wrapper .toolbar button:hover {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+    .post-editor-wrapper .editor {
+      width: 100%;
+      min-height: 120px;
+      padding: 12px 14px;
+      background: var(--card-bg);
+      border: 1px solid var(--border-light);
+      border-radius: 12px;
+      color: var(--text-main);
+      font-family: var(--font-family);
+      font-size: 1rem;
+      outline: none;
+      transition: border .2s;
+      word-wrap: break-word;
+      resize: vertical;
+    }
+    .post-editor-wrapper .editor:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(44,110,158,0.15);
+    }
+    .post-editor-wrapper .editor-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .post-editor-wrapper .editor-actions button {
+      padding: 6px 16px;
+      border: none;
+      border-radius: 30px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: var(--font-family);
+      transition: .2s;
+    }
+    .post-editor-wrapper .editor-actions .save-btn {
+      background: var(--btn-primary);
+      color: #fff;
+    }
+    .post-editor-wrapper .editor-actions .save-btn:hover {
+      background: var(--btn-primary-hover);
+    }
+    .post-editor-wrapper .editor-actions .cancel-btn {
+      background: var(--btn-ghost);
+      color: var(--text-main);
+    }
+    .post-editor-wrapper .editor-actions .cancel-btn:hover {
+      background: var(--btn-secondary);
+      color: #fff;
+    }
+
     .post-actions {
       display: flex;
       gap: 12px;
@@ -648,7 +725,57 @@
       text-decoration: underline;
     }
     .comment-time { font-size: 0.7rem; color: var(--text-muted); }
-    .comment-content { margin: 6px 0; word-wrap: break-word; }
+    .comment-content {
+      margin: 6px 0;
+      word-wrap: break-word;
+    }
+    .comment-content .comment-edit-textarea {
+      width: 100%;
+      padding: 8px 12px;
+      border-radius: 12px;
+      border: 1px solid var(--border-light);
+      font-family: var(--font-family);
+      resize: vertical;
+      min-height: 60px;
+      background: var(--card-bg);
+      color: var(--text-main);
+      font-size: 0.95rem;
+    }
+    .comment-content .comment-edit-textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(44,110,158,0.15);
+    }
+    .comment-edit-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 6px;
+    }
+    .comment-edit-actions button {
+      padding: 4px 16px;
+      border-radius: 30px;
+      font-size: 0.8rem;
+      border: none;
+      cursor: pointer;
+      font-family: var(--font-family);
+      transition: .2s;
+    }
+    .comment-edit-actions .save-btn {
+      background: var(--btn-primary);
+      color: #fff;
+    }
+    .comment-edit-actions .save-btn:hover {
+      background: var(--btn-primary-hover);
+    }
+    .comment-edit-actions .cancel-btn {
+      background: var(--btn-ghost);
+      color: var(--text-main);
+    }
+    .comment-edit-actions .cancel-btn:hover {
+      background: var(--btn-secondary);
+      color: #fff;
+    }
+
     .comment-actions {
       display: flex;
       gap: 12px;
@@ -906,8 +1033,12 @@ let currentPlayer = null;
 let currentCommunity = null;
 let currentPost = null;
 let communities = [];
-let followedCommunityIds = new Set(); // to quickly check if followed
+let followedCommunityIds = new Set();
 let forumChannel = null;
+
+// ── Editing state ──
+let editingPostId = null;
+let editingCommentId = null;
 
 // ─────────────────────────────────────────────
 // TOAST
@@ -1020,7 +1151,6 @@ async function loadCommunities() {
   communities = data || [];
   renderCommunitySidebar();
   renderFavoritesSidebar();
-  // Populate parent select in modal
   const select = document.getElementById('newCommunityParent');
   if (select) {
     select.innerHTML = '<option value="">None (Main Community)</option>' +
@@ -1120,7 +1250,6 @@ async function toggleFollowCommunity(communityId) {
   }
   renderCommunitySidebar();
   renderFavoritesSidebar();
-  // If we are on a community view, update the header button
   if (currentCommunity && currentCommunity.id === communityId) {
     updateCommunityFollowButton();
   }
@@ -1142,6 +1271,8 @@ async function selectCommunityById(id) {
 async function selectCommunity(community) {
   currentCommunity = community;
   currentPost = null;
+  editingPostId = null;
+  editingCommentId = null;
   window.history.pushState({}, '', `?c=${community.name}`);
   renderCommunitySidebar();
   renderFavoritesSidebar();
@@ -1262,6 +1393,8 @@ async function loadCommunityView() {
 async function loadFeed() {
   currentCommunity = null;
   currentPost = null;
+  editingPostId = null;
+  editingCommentId = null;
   window.history.pushState({}, '', window.location.pathname);
   renderCommunitySidebar();
   renderFavoritesSidebar();
@@ -1379,7 +1512,34 @@ async function loadPostView(postId) {
         <span class="stat-pill"><span class="icon">👁️</span> ${post.view_count || 0}</span>
         <span class="stat-pill"><span class="icon">📖</span> ${readTime}</span>
       </div>
-      <div class="post-detail-content">${sanitizedContent}</div>
+  `;
+
+  // ── POST CONTENT (view or edit) ──
+  if (editingPostId === post.id) {
+    // Render editor
+    html += `
+      <div class="post-editor-wrapper">
+        <div class="toolbar">
+          <button type="button" onclick="execCmdOnEditor('postEditEditor', 'bold')"><b>B</b></button>
+          <button type="button" onclick="execCmdOnEditor('postEditEditor', 'italic')"><i>I</i></button>
+          <button type="button" onclick="execCmdOnEditor('postEditEditor', 'insertUnorderedList')">• Bullet</button>
+          <button type="button" onclick="execCmdOnEditor('postEditEditor', 'formatBlock', 'h2')">H2</button>
+          <button type="button" onclick="insertLinkOnEditor('postEditEditor')">🔗 Link</button>
+          <button type="button" onclick="openEmojiPickerForEditor('postEditEditor')">😊 Emoji</button>
+        </div>
+        <div id="postEditEditor" class="editor" contenteditable="true">${sanitizedContent}</div>
+        <div class="editor-actions">
+          <button class="save-btn" onclick="savePostEdit('${post.id}')">Save</button>
+          <button class="cancel-btn" onclick="cancelPostEdit()">Cancel</button>
+        </div>
+      </div>
+    `;
+  } else {
+    html += `<div class="post-detail-content">${sanitizedContent}</div>`;
+  }
+
+  // ── REACTION BAR ──
+  html += `
       <div class="reaction-bar" id="reactionBar-${post.id}">
         ${['👍','👎','🤣','🤬','🎉','💝'].map(emoji => {
           const count = reactionCounts[emoji] || 0;
@@ -1389,7 +1549,7 @@ async function loadPostView(postId) {
       </div>
       <div class="post-actions">
         ${post.author_id === currentPlayer.id ? `
-          <button class="action-btn edit-btn" onclick="editPost('${post.id}')">✏️ Edit</button>
+          ${editingPostId === post.id ? '' : `<button class="action-btn edit-btn" onclick="startPostEdit('${post.id}')">✏️ Edit</button>`}
           <button class="action-btn delete-btn" onclick="deletePost('${post.id}')">🗑️ Delete</button>
         ` : ''}
       </div>
@@ -1403,6 +1563,121 @@ async function loadPostView(postId) {
   `;
 
   document.getElementById('mainContent').innerHTML = html;
+}
+
+// ─────────────────────────────────────────────
+// POST EDITING
+// ─────────────────────────────────────────────
+function startPostEdit(postId) {
+  if (editingCommentId) {
+    showToast('Please finish editing the comment first.', 'info');
+    return;
+  }
+  editingPostId = postId;
+  // Re‑render the post view to show the editor
+  loadPostView(postId);
+}
+
+function cancelPostEdit() {
+  editingPostId = null;
+  if (currentPost) loadPostView(currentPost.id);
+}
+
+async function savePostEdit(postId) {
+  const editor = document.getElementById('postEditEditor');
+  if (!editor) return;
+  let content = editor.innerHTML.trim();
+  if (!content || content === '<br>') {
+    showToast('Content cannot be empty', 'error');
+    return;
+  }
+  content = DOMPurify.sanitize(content);
+  const { error } = await sb.from('posts').update({ content }).eq('id', postId);
+  if (error) {
+    showToast('Error saving post: ' + error.message, 'error');
+    return;
+  }
+  showToast('Post updated!', 'success');
+  editingPostId = null;
+  await loadPostView(postId);
+}
+
+// ─────────────────────────────────────────────
+// COMMENT EDITING
+// ─────────────────────────────────────────────
+function startCommentEdit(commentId) {
+  if (editingPostId) {
+    showToast('Please finish editing the post first.', 'info');
+    return;
+  }
+  editingCommentId = commentId;
+  if (currentPost) loadPostView(currentPost.id);
+}
+
+function cancelCommentEdit() {
+  editingCommentId = null;
+  if (currentPost) loadPostView(currentPost.id);
+}
+
+async function saveCommentEdit(commentId) {
+  const textarea = document.getElementById('commentEditTextarea-' + commentId);
+  if (!textarea) return;
+  let content = textarea.value.trim();
+  if (!content) {
+    showToast('Comment cannot be empty', 'error');
+    return;
+  }
+  const { error } = await sb.from('comments').update({ content }).eq('id', commentId);
+  if (error) {
+    showToast('Error saving comment: ' + error.message, 'error');
+    return;
+  }
+  showToast('Comment updated!', 'success');
+  editingCommentId = null;
+  if (currentPost) loadPostView(currentPost.id);
+}
+
+// ─────────────────────────────────────────────
+// RICH TEXT HELPERS FOR EDITOR
+// ─────────────────────────────────────────────
+function execCmdOnEditor(editorId, cmd, value = null) {
+  const editor = document.getElementById(editorId);
+  if (!editor) return;
+  editor.focus();
+  document.execCommand(cmd, false, value);
+}
+
+function insertLinkOnEditor(editorId) {
+  const url = prompt('Enter URL:', 'https://');
+  if (url) execCmdOnEditor(editorId, 'createLink', url);
+}
+
+function openEmojiPickerForEditor(editorId) {
+  const emojis = ['😊', '😂', '🤔', '🔥', '💯', '✨', '🎉', '👏', '👍', '❤️'];
+  const picker = document.createElement('div');
+  picker.style.cssText = `
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    background: var(--card-bg); border: 1px solid var(--border-light);
+    border-radius: 16px; padding: 16px; z-index: 9999;
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  `;
+  emojis.forEach(emoji => {
+    const btn = document.createElement('button');
+    btn.textContent = emoji;
+    btn.style.cssText = 'font-size: 2rem; border: none; background: transparent; cursor: pointer; padding: 8px; border-radius: 8px;';
+    btn.onclick = () => {
+      document.execCommand('insertText', false, emoji);
+      document.body.removeChild(picker);
+    };
+    picker.appendChild(btn);
+  });
+  const close = document.createElement('button');
+  close.textContent = 'Close';
+  close.style.cssText = 'grid-column: span 5; padding: 8px; background: var(--btn-ghost); border: none; border-radius: 8px; cursor: pointer;';
+  close.onclick = () => document.body.removeChild(picker);
+  picker.appendChild(close);
+  document.body.appendChild(picker);
 }
 
 // ─────────────────────────────────────────────
@@ -1451,7 +1726,7 @@ async function loadComments(postId) {
 }
 
 // ─────────────────────────────────────────────
-// RENDER COMMENTS
+// RENDER COMMENTS (with inline edit support)
 // ─────────────────────────────────────────────
 function renderComments(comments, parentId = null) {
   if (!comments || comments.length === 0) return '';
@@ -1463,6 +1738,25 @@ function renderComments(comments, parentId = null) {
     const childrenHtml = renderComments(comments, c.id);
     const score = (c.upvotes || 0) - (c.downvotes || 0);
     const userVote = c.user_vote || 0;
+    const isEditing = (editingCommentId === c.id);
+
+    let commentContentHtml;
+    if (isEditing) {
+      // Render edit textarea
+      commentContentHtml = `
+        <div class="comment-content">
+          <textarea id="commentEditTextarea-${c.id}" class="comment-edit-textarea" rows="3">${escapeHtml(c.content || '')}</textarea>
+          <div class="comment-edit-actions">
+            <button class="save-btn" onclick="saveCommentEdit('${c.id}')">Save</button>
+            <button class="cancel-btn" onclick="cancelCommentEdit()">Cancel</button>
+          </div>
+        </div>
+      `;
+    } else {
+      commentContentHtml = `
+        <div class="comment-content">${escapeHtml(c.content || '').replace(/\n/g, '<br>')}</div>
+      `;
+    }
 
     return `
       <div class="comment" style="margin-left: ${(c.depth || 0) * 20}px;">
@@ -1470,14 +1764,14 @@ function renderComments(comments, parentId = null) {
           <span class="comment-author" onclick="viewProfile('${c.author_id}')">${escapeHtml(c.author_name || 'Unknown')}</span>
           <span class="comment-time">${new Date(c.created_at).toLocaleString()}</span>
         </div>
-        <div class="comment-content">${escapeHtml(c.content || '').replace(/\n/g, '<br>')}</div>
+        ${commentContentHtml}
         <div class="comment-actions">
           <button class="vote-btn ${userVote === 1 ? 'upvoted' : ''}" onclick="vote('comment', '${c.id}', 1)">▲</button>
           <span>${score}</span>
           <button class="vote-btn ${userVote === -1 ? 'downvoted' : ''}" onclick="vote('comment', '${c.id}', -1)">▼</button>
           <button class="reply-btn" onclick="showReplyForm('${c.id}')">Reply</button>
           ${c.author_id === currentPlayer?.id ? `
-            <button onclick="editComment('${c.id}')">Edit</button>
+            ${isEditing ? '' : `<button onclick="startCommentEdit('${c.id}')">Edit</button>`}
             <button onclick="deleteComment('${c.id}')">Delete</button>
           ` : ''}
         </div>
@@ -1568,7 +1862,7 @@ async function vote(targetType, targetId, value) {
 }
 
 // ─────────────────────────────────────────────
-// RICH TEXT HELPERS
+// RICH TEXT HELPERS (for post creation)
 // ─────────────────────────────────────────────
 function execCmd(cmd, value = null) {
   document.execCommand(cmd, false, value);
@@ -1691,17 +1985,8 @@ function hideReplyForm(commentId) {
 }
 
 // ─────────────────────────────────────────────
-// EDIT / DELETE POST
+// DELETE POST
 // ─────────────────────────────────────────────
-async function editPost(postId) {
-  const newContent = prompt('Edit your post content (HTML allowed):', currentPost.content);
-  if (newContent !== null) {
-    const sanitized = DOMPurify.sanitize(newContent);
-    await sb.from('posts').update({ content: sanitized }).eq('id', postId);
-    loadPostView(postId);
-  }
-}
-
 async function deletePost(postId) {
   if (!confirm('Delete this post? This action cannot be undone.')) return;
   try {
@@ -1726,13 +2011,6 @@ async function deletePost(postId) {
   }
 }
 
-async function editComment(commentId) {
-  const newContent = prompt('Edit your comment:');
-  if (newContent) {
-    await sb.from('comments').update({ content: newContent }).eq('id', commentId);
-    loadPostView(currentPost.id);
-  }
-}
 async function deleteComment(commentId) {
   if (confirm('Delete this comment?')) {
     await sb.from('comments').delete().eq('id', commentId);
@@ -1864,9 +2142,7 @@ window.showCreateCommunityModal = showCreateCommunityModal;
 window.createCommunity = createCommunity;
 window.joinCommunity = joinCommunity;
 window.viewPost = viewPost;
-window.editPost = editPost;
 window.deletePost = deletePost;
-window.editComment = editComment;
 window.deleteComment = deleteComment;
 window.closeModal = closeModal;
 window.toggleReaction = toggleReaction;
@@ -1877,6 +2153,17 @@ window.clearPostEditor = clearPostEditor;
 window.toggleFollowCommunity = toggleFollowCommunity;
 window.toggleSidebarSection = toggleSidebarSection;
 window.viewProfile = viewProfile;
+
+// ── NEW EDITING FUNCTIONS ──
+window.startPostEdit = startPostEdit;
+window.savePostEdit = savePostEdit;
+window.cancelPostEdit = cancelPostEdit;
+window.startCommentEdit = startCommentEdit;
+window.saveCommentEdit = saveCommentEdit;
+window.cancelCommentEdit = cancelCommentEdit;
+window.execCmdOnEditor = execCmdOnEditor;
+window.insertLinkOnEditor = insertLinkOnEditor;
+window.openEmojiPickerForEditor = openEmojiPickerForEditor;
 
 // ─────────────────────────────────────────────
 // START
