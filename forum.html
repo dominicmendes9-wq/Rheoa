@@ -1619,17 +1619,25 @@ function cancelCommentEdit() {
 }
 
 async function saveCommentEdit(commentId) {
+  // 1. Find the textarea
   const textarea = document.getElementById('commentEditTextarea-' + commentId);
   if (!textarea) {
     console.error('Textarea not found for comment', commentId);
-    showToast('Error: Could not find comment editor.', 'error');
+    showToast('Error: Could not find comment editor. Please try again.', 'error');
+    // Exit edit mode to avoid getting stuck
+    editingCommentId = null;
+    if (currentPost) loadPostView(currentPost.id);
     return;
   }
-  let content = textarea.value.trim();
+
+  // 2. Get content
+  const content = textarea.value.trim();
   if (!content) {
     showToast('Comment cannot be empty', 'error');
     return;
   }
+
+  // 3. Update in DB
   try {
     const { error } = await sb.from('comments').update({ content }).eq('id', commentId);
     if (error) {
@@ -1637,15 +1645,17 @@ async function saveCommentEdit(commentId) {
       showToast('Error saving comment: ' + error.message, 'error');
       return;
     }
+
+    // 4. Success – clear edit mode and reload
     showToast('Comment updated!', 'success');
     editingCommentId = null;
-    // Force reload the post view
-    if (currentPost) {
-      await loadPostView(currentPost.id);
-    }
+    await loadPostView(currentPost.id);
   } catch (err) {
     console.error('Unexpected error:', err);
     showToast('Error saving comment.', 'error');
+    // Reset edit mode
+    editingCommentId = null;
+    if (currentPost) loadPostView(currentPost.id);
   }
 }
 
@@ -1754,7 +1764,7 @@ function renderComments(comments, parentId = null) {
 
     let commentContentHtml;
     if (isEditing) {
-      // Render edit textarea
+      // Render edit textarea with unique ID
       commentContentHtml = `
         <div class="comment-content">
           <textarea id="commentEditTextarea-${c.id}" class="comment-edit-textarea" rows="3">${escapeHtml(c.content || '')}</textarea>
@@ -2166,7 +2176,7 @@ window.toggleFollowCommunity = toggleFollowCommunity;
 window.toggleSidebarSection = toggleSidebarSection;
 window.viewProfile = viewProfile;
 
-// ── NEW EDITING FUNCTIONS ──
+// ── EDITING FUNCTIONS ──
 window.startPostEdit = startPostEdit;
 window.savePostEdit = savePostEdit;
 window.cancelPostEdit = cancelPostEdit;
