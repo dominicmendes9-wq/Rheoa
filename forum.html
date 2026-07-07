@@ -725,6 +725,7 @@
       text-decoration: underline;
     }
     .comment-time { font-size: 0.7rem; color: var(--text-muted); }
+
     .comment-content {
       margin: 6px 0;
       word-wrap: break-word;
@@ -1602,7 +1603,7 @@ async function savePostEdit(postId) {
 }
 
 // ─────────────────────────────────────────────
-// COMMENT EDITING (FIXED)
+// COMMENT EDITING & DELETION (FIXED)
 // ─────────────────────────────────────────────
 function startCommentEdit(commentId) {
   if (editingPostId) {
@@ -1610,6 +1611,7 @@ function startCommentEdit(commentId) {
     return;
   }
   editingCommentId = commentId;
+  // Reload the post view to show the edit form for this comment
   if (currentPost) loadPostView(currentPost.id);
 }
 
@@ -1619,43 +1621,53 @@ function cancelCommentEdit() {
 }
 
 async function saveCommentEdit(commentId) {
-  // 1. Find the textarea
+  // Find the textarea
   const textarea = document.getElementById('commentEditTextarea-' + commentId);
   if (!textarea) {
-    console.error('Textarea not found for comment', commentId);
-    showToast('Error: Could not find comment editor. Please try again.', 'error');
-    // Exit edit mode to avoid getting stuck
+    showToast('Error: Could not find comment editor.', 'error');
     editingCommentId = null;
     if (currentPost) loadPostView(currentPost.id);
     return;
   }
 
-  // 2. Get content
   const content = textarea.value.trim();
   if (!content) {
     showToast('Comment cannot be empty', 'error');
     return;
   }
 
-  // 3. Update in DB
   try {
     const { error } = await sb.from('comments').update({ content }).eq('id', commentId);
     if (error) {
-      console.error('Update error:', error);
       showToast('Error saving comment: ' + error.message, 'error');
       return;
     }
-
-    // 4. Success – clear edit mode and reload
     showToast('Comment updated!', 'success');
     editingCommentId = null;
-    await loadPostView(currentPost.id);
+    // Reload to reflect changes
+    if (currentPost) await loadPostView(currentPost.id);
   } catch (err) {
     console.error('Unexpected error:', err);
     showToast('Error saving comment.', 'error');
-    // Reset edit mode
     editingCommentId = null;
     if (currentPost) loadPostView(currentPost.id);
+  }
+}
+
+async function deleteComment(commentId) {
+  if (!confirm('Delete this comment?')) return;
+  try {
+    const { error } = await sb.from('comments').delete().eq('id', commentId);
+    if (error) {
+      showToast('Error deleting comment: ' + error.message, 'error');
+      return;
+    }
+    showToast('Comment deleted.', 'success');
+    // Reload
+    if (currentPost) await loadPostView(currentPost.id);
+  } catch (err) {
+    console.error('Delete error:', err);
+    showToast('Error deleting comment.', 'error');
   }
 }
 
@@ -2030,13 +2042,6 @@ async function deletePost(postId) {
   } catch (err) {
     console.error('Delete exception:', err);
     showToast('Error deleting post.', 'error');
-  }
-}
-
-async function deleteComment(commentId) {
-  if (confirm('Delete this comment?')) {
-    await sb.from('comments').delete().eq('id', commentId);
-    loadPostView(currentPost.id);
   }
 }
 
