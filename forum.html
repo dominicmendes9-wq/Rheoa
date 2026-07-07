@@ -1161,7 +1161,9 @@
     return (data || []).map(c => ({
       ...c,
       author_name: c.author?.username || 'Unknown',
-      user_vote: userVotes[c.id] || 0
+      user_vote: userVotes[c.id] || 0,
+      upvotes: c.upvotes || 0,
+      downvotes: c.downvotes || 0
     }));
   }
 
@@ -1203,41 +1205,75 @@
     }).join('');
   }
 
+  // ─── Fixed Vote Function ──────────────────────────────────
   async function voteComment(commentId, value) {
     if (!currentPlayer) return showToast('Please log in', 'error');
-    // Use upsert or delete if same value
-    const { data: existing } = await sb
-      .from('votes')
-      .select('vote_value')
-      .eq('player_id', currentPlayer.id)
-      .eq('target_type', 'comment')
-      .eq('target_id', commentId)
-      .maybeSingle();
-    if (existing) {
-      if (existing.vote_value === value) {
-        // Remove vote
-        await sb.from('votes').delete()
-          .eq('player_id', currentPlayer.id)
-          .eq('target_type', 'comment')
-          .eq('target_id', commentId);
-      } else {
-        // Update vote
-        await sb.from('votes').update({ vote_value: value })
-          .eq('player_id', currentPlayer.id)
-          .eq('target_type', 'comment')
-          .eq('target_id', commentId);
+
+    try {
+      // 1. Get current comment to retrieve upvotes/downvotes
+      const { data: comment, error: fetchError } = await sb
+        .from('comments')
+        .select('upvotes, downvotes')
+        .eq('id', commentId)
+        .single();
+      if (fetchError) {
+        console.error('Error fetching comment:', fetchError);
+        showToast('Error loading comment', 'error');
+        return;
       }
-    } else {
-      // Insert
-      await sb.from('votes').insert({
-        player_id: currentPlayer.id,
-        target_type: 'comment',
-        target_id: commentId,
-        vote_value: value
-      });
+
+      let up = comment.upvotes || 0;
+      let down = comment.downvotes || 0;
+
+      // 2. Check existing vote
+      const { data: existing, error: existingError } = await sb
+        .from('votes')
+        .select('id, vote_value')
+        .eq('player_id', currentPlayer.id)
+        .eq('target_type', 'comment')
+        .eq('target_id', commentId)
+        .maybeSingle();
+
+      // 3. Handle logic
+      if (existing) {
+        if (existing.vote_value === value) {
+          // Remove vote
+          await sb.from('votes').delete().eq('id', existing.id);
+          if (value === 1) up = Math.max(up - 1, 0);
+          else down = Math.max(down - 1, 0);
+        } else {
+          // Change vote
+          await sb.from('votes').update({ vote_value: value }).eq('id', existing.id);
+          if (value === 1) {
+            down = Math.max(down - 1, 0);
+            up = up + 1;
+          } else {
+            up = Math.max(up - 1, 0);
+            down = down + 1;
+          }
+        }
+      } else {
+        // New vote
+        await sb.from('votes').insert({
+          player_id: currentPlayer.id,
+          target_type: 'comment',
+          target_id: commentId,
+          vote_value: value
+        });
+        if (value === 1) up = up + 1;
+        else down = down + 1;
+      }
+
+      // 4. Update comment
+      await sb.from('comments').update({ upvotes: up, downvotes: down }).eq('id', commentId);
+
+      // 5. Refresh post view
+      await loadPostView(currentPost.id);
+
+    } catch (error) {
+      console.error('Vote error:', error);
+      showToast('Error voting', 'error');
     }
-    // Refresh post view to update scores and user votes
-    await loadPostView(currentPost.id);
   }
 
   // ─── Submit Comment ────────────────────────────────────
