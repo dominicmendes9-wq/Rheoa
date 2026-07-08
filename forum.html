@@ -342,6 +342,11 @@
       background: var(--border-light);
       margin: 0 4px;
     }
+    .post-form .toolbar .affiliate-btn.active {
+      background: #fbbf24;
+      color: #0f172a;
+      border-color: #fbbf24;
+    }
 
     .post-form .editor {
       width: 100%;
@@ -522,6 +527,50 @@
       max-width: 100%;
       height: auto;
     }
+    /* Affiliate pill styles */
+    .affiliate-pill {
+      display: inline-block;
+      background: #fbbf24;
+      color: #0f172a;
+      padding: 2px 12px;
+      border-radius: 30px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 12px;
+      border: 1px solid #f59e0b;
+      transition: background 0.2s;
+    }
+    .affiliate-pill:hover {
+      background: #f59e0b;
+    }
+    .affiliate-bubble {
+      display: none;
+      background: var(--card-bg);
+      border: 1px solid var(--border-light);
+      border-radius: 12px;
+      padding: 12px 16px;
+      font-size: 0.8rem;
+      color: var(--text-main);
+      box-shadow: var(--card-shadow);
+      margin-top: 6px;
+      max-width: 400px;
+      line-height: 1.5;
+    }
+    .affiliate-bubble.show {
+      display: block;
+      animation: fadeIn 0.3s ease;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Image size classes */
+    .img-small { width: 300px; max-width: 100%; }
+    .img-medium { width: 500px; max-width: 100%; }
+    .img-large { width: 700px; max-width: 100%; }
+    .img-original { width: 100%; }
 
     /* Editable post styles */
     .post-editor-wrapper {
@@ -550,6 +599,11 @@
       background: var(--accent);
       color: #fff;
       border-color: var(--accent);
+    }
+    .post-editor-wrapper .toolbar .affiliate-btn.active {
+      background: #fbbf24;
+      color: #0f172a;
+      border-color: #fbbf24;
     }
     .post-editor-wrapper .editor {
       width: 100%;
@@ -944,6 +998,7 @@
       .reaction-btn { font-size: 0.9rem; padding: 2px 8px; }
       .community-follow-header-btn { padding: 4px 12px; font-size: 0.85rem; }
       .community-list { max-height: 200px; }
+      .img-small, .img-medium, .img-large { width: 100%; }
     }
   </style>
 </head>
@@ -1041,6 +1096,9 @@ let forumChannel = null;
 let editingPostId = null;
 let editingCommentId = null;
 
+// ── Affiliate toggle state for current post creation/editing ──
+let affiliateEnabled = false;
+
 // ─────────────────────────────────────────────
 // TOAST
 // ─────────────────────────────────────────────
@@ -1111,6 +1169,22 @@ function toggleSidebarSection(header) {
     list.style.display = list.style.display === 'none' ? '' : 'none';
     const icon = header.querySelector('.toggle-icon');
     if (icon) icon.textContent = list.style.display === 'none' ? '▶' : '▼';
+  }
+}
+
+// ─────────────────────────────────────────────
+// AFFILIATE TOGGLE
+// ─────────────────────────────────────────────
+function toggleAffiliate() {
+  affiliateEnabled = !affiliateEnabled;
+  // Update button styles
+  document.querySelectorAll('.affiliate-btn').forEach(btn => {
+    btn.classList.toggle('active', affiliateEnabled);
+  });
+  if (affiliateEnabled) {
+    showToast('Affiliate tag added to post.', 'info');
+  } else {
+    showToast('Affiliate tag removed.', 'info');
   }
 }
 
@@ -1274,6 +1348,7 @@ async function selectCommunity(community) {
   currentPost = null;
   editingPostId = null;
   editingCommentId = null;
+  affiliateEnabled = false;
   window.history.pushState({}, '', `?c=${community.name}`);
   renderCommunitySidebar();
   renderFavoritesSidebar();
@@ -1337,7 +1412,8 @@ async function loadCommunityView() {
           <button type="button" onclick="execCmd('formatBlock', 'p')">Text</button>
           <button type="button" onclick="insertLink()">🔗 Link</button>
           <button type="button" onclick="openEmojiPicker()">😊 Emoji</button>
-          <button type="button" onclick="insertImage('postEditor')">🖼️ Image</button>
+          <button type="button" class="affiliate-btn" onclick="toggleAffiliate()">🔗 Affiliate</button>
+          <button type="button" onclick="insertImageWithSize('postEditor')">🖼️ Image</button>
         </div>
         <div id="postEditor" class="editor" contenteditable="true" placeholder="What's on your mind?"></div>
       `;
@@ -1366,6 +1442,8 @@ async function loadCommunityView() {
   } else {
     posts.forEach(post => {
       const readTime = estimateReadTime(post.content || '');
+      // Check if post has affiliate pill
+      const hasAffiliate = post.content && post.content.includes('class="affiliate-pill"');
       html += `
         <div class="post-item" onclick="viewPost('${post.id}')">
           <div class="post-content">
@@ -1378,6 +1456,7 @@ async function loadCommunityView() {
               <span class="stat-pill"><span class="icon">👁️</span> ${post.view_count || 0}</span>
               <span class="stat-pill"><span class="icon">📖</span> ${readTime}</span>
               <span>💬 ${post.comment_count || 0} comments</span>
+              ${hasAffiliate ? '<span class="stat-pill" style="background:#fbbf24;color:#0f172a;">🔗 Affiliate</span>' : ''}
             </div>
           </div>
         </div>
@@ -1397,6 +1476,7 @@ async function loadFeed() {
   currentPost = null;
   editingPostId = null;
   editingCommentId = null;
+  affiliateEnabled = false;
   window.history.pushState({}, '', window.location.pathname);
   renderCommunitySidebar();
   renderFavoritesSidebar();
@@ -1423,6 +1503,7 @@ async function loadFeed() {
     html += `<div id="postsList">`;
     posts.forEach(post => {
       const readTime = estimateReadTime(post.content || '');
+      const hasAffiliate = post.content && post.content.includes('class="affiliate-pill"');
       html += `
         <div class="post-item" onclick="viewPost('${post.id}')">
           <div class="post-content">
@@ -1436,6 +1517,7 @@ async function loadFeed() {
               <span class="stat-pill"><span class="icon">👁️</span> ${post.view_count || 0}</span>
               <span class="stat-pill"><span class="icon">📖</span> ${readTime}</span>
               <span>💬 ${post.comment_count || 0} comments</span>
+              ${hasAffiliate ? '<span class="stat-pill" style="background:#fbbf24;color:#0f172a;">🔗 Affiliate</span>' : ''}
             </div>
           </div>
         </div>
@@ -1445,6 +1527,30 @@ async function loadFeed() {
   }
 
   document.getElementById('mainContent').innerHTML = html;
+}
+
+// ─────────────────────────────────────────────
+// IMAGE INSERTION WITH SIZE
+// ─────────────────────────────────────────────
+function insertImageWithSize(editorId) {
+  const url = prompt('Enter the direct image URL (e.g., https://i.postimg.cc/...):', '');
+  if (!url) return;
+  const size = prompt('Choose size:\n1 - Small (300px)\n2 - Medium (500px)\n3 - Large (700px)\n4 - Original (full width)', '2');
+  const editor = document.getElementById(editorId);
+  if (!editor) return;
+  editor.focus();
+
+  let sizeClass = 'img-original';
+  let widthStyle = '';
+  switch(size) {
+    case '1': sizeClass = 'img-small'; break;
+    case '2': sizeClass = 'img-medium'; break;
+    case '3': sizeClass = 'img-large'; break;
+    default: sizeClass = 'img-original'; break;
+  }
+  // Insert as <img> with class
+  const imgHtml = `<img src="${escapeHtml(url)}" class="${sizeClass}" alt="Image">`;
+  document.execCommand('insertHTML', false, imgHtml);
 }
 
 // ─────────────────────────────────────────────
@@ -1504,6 +1610,9 @@ async function loadPostView(postId) {
   const readTime = estimateReadTime(post.content || '');
   const sanitizedContent = DOMPurify.sanitize(post.content || '');
 
+  // Check if affiliate pill is present
+  const hasAffiliate = sanitizedContent.includes('class="affiliate-pill"');
+
   let html = `
     <div class="back-link" onclick="selectCommunityById('${post.community.id}')">← Back to ${escapeHtml(post.community.display_name)}</div>
     <div class="post-detail-card">
@@ -1530,14 +1639,31 @@ async function loadPostView(postId) {
         <button type="button" onclick="openEmojiPickerForEditor('postEditEditor')">😊 Emoji</button>
     `;
     if (isBlackOrFounder) {
-      toolbarHtml += `<button type="button" onclick="insertImageOnEditor('postEditEditor')">🖼️ Image</button>`;
+      toolbarHtml += `
+        <button type="button" class="affiliate-btn ${affiliateEnabled ? 'active' : ''}" onclick="toggleAffiliate()">🔗 Affiliate</button>
+        <button type="button" onclick="insertImageWithSize('postEditEditor')">🖼️ Image</button>
+      `;
     }
     toolbarHtml += `</div>`;
+
+    // Remove affiliate pill from content before editing (if present)
+    let cleanContent = sanitizedContent;
+    if (hasAffiliate) {
+      // Remove the affiliate pill div from the content
+      cleanContent = cleanContent.replace(/<div class="affiliate-pill".*?<\/div>/, '').trim();
+      affiliateEnabled = true;
+    } else {
+      affiliateEnabled = false;
+    }
+    // Update button state
+    document.querySelectorAll('.affiliate-btn').forEach(btn => {
+      btn.classList.toggle('active', affiliateEnabled);
+    });
 
     html += `
       <div class="post-editor-wrapper">
         ${toolbarHtml}
-        <div id="postEditEditor" class="editor" contenteditable="true">${sanitizedContent}</div>
+        <div id="postEditEditor" class="editor" contenteditable="true">${cleanContent}</div>
         <div class="editor-actions">
           <button class="save-btn" onclick="savePostEdit('${post.id}')">Save</button>
           <button class="cancel-btn" onclick="cancelPostEdit()">Cancel</button>
@@ -1545,7 +1671,16 @@ async function loadPostView(postId) {
       </div>
     `;
   } else {
-    html += `<div class="post-detail-content">${sanitizedContent}</div>`;
+    // Display post content
+    let contentHtml = sanitizedContent;
+    // If affiliate pill is present, wrap it with a clickable container that shows a bubble
+    if (hasAffiliate) {
+      // We'll add a bubble div after the pill
+      const pillHtml = `<div class="affiliate-pill" onclick="toggleAffiliateBubble(this)">🔗 Affiliate links included</div><div class="affiliate-bubble">This post contains affiliate links. As an Amazon Associate, I earn from qualifying purchases at no extra cost to you.</div>`;
+      // Replace the existing pill with our version (the old one might have no onclick)
+      contentHtml = contentHtml.replace(/<div class="affiliate-pill".*?<\/div>/, pillHtml);
+    }
+    html += `<div class="post-detail-content">${contentHtml}</div>`;
   }
 
   // ── REACTION BAR ──
@@ -1576,6 +1711,21 @@ async function loadPostView(postId) {
 }
 
 // ─────────────────────────────────────────────
+// AFFILIATE BUBBLE TOGGLE
+// ─────────────────────────────────────────────
+function toggleAffiliateBubble(element) {
+  const bubble = element.nextElementSibling;
+  if (!bubble) return;
+  // Show bubble
+  bubble.classList.add('show');
+  // Hide after 2 seconds
+  clearTimeout(bubble._hideTimer);
+  bubble._hideTimer = setTimeout(() => {
+    bubble.classList.remove('show');
+  }, 2000);
+}
+
+// ─────────────────────────────────────────────
 // POST EDITING
 // ─────────────────────────────────────────────
 function startPostEdit(postId) {
@@ -1584,11 +1734,13 @@ function startPostEdit(postId) {
     return;
   }
   editingPostId = postId;
+  affiliateEnabled = false; // will be set in loadPostView
   loadPostView(postId);
 }
 
 function cancelPostEdit() {
   editingPostId = null;
+  affiliateEnabled = false;
   if (currentPost) loadPostView(currentPost.id);
 }
 
@@ -1600,6 +1752,10 @@ async function savePostEdit(postId) {
     showToast('Content cannot be empty', 'error');
     return;
   }
+  // Append affiliate pill if enabled
+  if (affiliateEnabled) {
+    content += `<div class="affiliate-pill">🔗 Affiliate links included</div>`;
+  }
   content = DOMPurify.sanitize(content);
   const { error } = await sb.from('posts').update({ content }).eq('id', postId);
   if (error) {
@@ -1608,24 +1764,8 @@ async function savePostEdit(postId) {
   }
   showToast('Post updated!', 'success');
   editingPostId = null;
+  affiliateEnabled = false;
   await loadPostView(postId);
-}
-
-// ─────────────────────────────────────────────
-// IMAGE INSERTION HELPERS
-// ─────────────────────────────────────────────
-function insertImage(editorId) {
-  const url = prompt('Enter the direct image URL (from PostImages etc.):', 'https://i.postimg.cc/...');
-  if (!url) return;
-  const editor = document.getElementById(editorId);
-  if (!editor) return;
-  editor.focus();
-  // Insert image at cursor position
-  document.execCommand('insertImage', false, url);
-}
-
-function insertImageOnEditor(editorId) {
-  insertImage(editorId);
 }
 
 // ─────────────────────────────────────────────
@@ -1975,6 +2115,8 @@ function clearPostEditor() {
     editor.value = '';
   }
   document.getElementById('postTitle').value = '';
+  affiliateEnabled = false;
+  document.querySelectorAll('.affiliate-btn').forEach(btn => btn.classList.remove('active'));
 }
 
 // ─────────────────────────────────────────────
@@ -1988,11 +2130,16 @@ async function createPost() {
   if (editor.tagName === 'DIV') {
     content = editor.innerHTML.trim();
     if (!content || content === '<br>') return showToast('Content cannot be empty', 'error');
+    // Append affiliate pill if enabled
+    if (affiliateEnabled) {
+      content += `<div class="affiliate-pill">🔗 Affiliate links included</div>`;
+    }
     content = DOMPurify.sanitize(content);
   } else if (editor.tagName === 'TEXTAREA') {
     content = editor.value.trim();
     if (!content) return showToast('Content cannot be empty', 'error');
     content = escapeHtml(content);
+    // For textarea users, we can't add affiliate pill (they don't have the toolbar), so ignore
   }
 
   if (!title) return showToast('Title required', 'error');
@@ -2212,9 +2359,10 @@ window.toggleFollowCommunity = toggleFollowCommunity;
 window.toggleSidebarSection = toggleSidebarSection;
 window.viewProfile = viewProfile;
 
-// ── NEW IMAGE FUNCTIONS ──
-window.insertImage = insertImage;
-window.insertImageOnEditor = insertImageOnEditor;
+// ── NEW FUNCTIONS ──
+window.toggleAffiliate = toggleAffiliate;
+window.insertImageWithSize = insertImageWithSize;
+window.toggleAffiliateBubble = toggleAffiliateBubble;
 
 // ── EDITING FUNCTIONS ──
 window.startPostEdit = startPostEdit;
