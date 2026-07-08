@@ -6,7 +6,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
   <style>
-    /* ─── same CSS as before ─── */
+    /* ─── same CSS as before, with updates for affiliate meta pill ─── */
     :root {
       --bg-body: #f0f4fa;
       --card-bg: #fff;
@@ -518,6 +518,37 @@
       align-items: center;
       gap: 4px;
     }
+    .post-detail-meta .stat-pill.affiliate-pill {
+      cursor: pointer;
+      position: relative;
+    }
+    .affiliate-bubble {
+      display: none;
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--card-bg);
+      border: 1px solid var(--border-light);
+      border-radius: 12px;
+      padding: 12px 16px;
+      font-size: 0.8rem;
+      color: var(--text-main);
+      box-shadow: var(--card-shadow);
+      max-width: 300px;
+      line-height: 1.5;
+      white-space: normal;
+      z-index: 100;
+    }
+    .affiliate-bubble.show {
+      display: block;
+      animation: fadeIn 0.3s ease;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateX(-50%) translateY(-4px); }
+      to { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
+
     .post-detail-content {
       margin: 20px 0;
       line-height: 1.7;
@@ -527,45 +558,6 @@
       max-width: 100%;
       height: auto;
     }
-    /* Affiliate pill styles */
-    .affiliate-pill {
-      display: inline-block;
-      background: #fbbf24;
-      color: #0f172a;
-      padding: 2px 12px;
-      border-radius: 30px;
-      font-size: 0.7rem;
-      font-weight: 600;
-      cursor: pointer;
-      margin-top: 12px;
-      border: 1px solid #f59e0b;
-      transition: background 0.2s;
-    }
-    .affiliate-pill:hover {
-      background: #f59e0b;
-    }
-    .affiliate-bubble {
-      display: none;
-      background: var(--card-bg);
-      border: 1px solid var(--border-light);
-      border-radius: 12px;
-      padding: 12px 16px;
-      font-size: 0.8rem;
-      color: var(--text-main);
-      box-shadow: var(--card-shadow);
-      margin-top: 6px;
-      max-width: 400px;
-      line-height: 1.5;
-    }
-    .affiliate-bubble.show {
-      display: block;
-      animation: fadeIn 0.3s ease;
-    }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(-4px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
     /* Image size classes */
     .img-small { width: 300px; max-width: 100%; }
     .img-medium { width: 500px; max-width: 100%; }
@@ -1177,7 +1169,6 @@ function toggleSidebarSection(header) {
 // ─────────────────────────────────────────────
 function toggleAffiliate() {
   affiliateEnabled = !affiliateEnabled;
-  // Update button styles
   document.querySelectorAll('.affiliate-btn').forEach(btn => {
     btn.classList.toggle('active', affiliateEnabled);
   });
@@ -1186,6 +1177,20 @@ function toggleAffiliate() {
   } else {
     showToast('Affiliate tag removed.', 'info');
   }
+}
+
+// ─────────────────────────────────────────────
+// AFFILIATE BUBBLE (for meta pill)
+// ─────────────────────────────────────────────
+function showAffiliateBubble(event) {
+  const pill = event.currentTarget;
+  const bubble = pill.querySelector('.affiliate-bubble');
+  if (!bubble) return;
+  bubble.classList.add('show');
+  clearTimeout(bubble._hideTimer);
+  bubble._hideTimer = setTimeout(() => {
+    bubble.classList.remove('show');
+  }, 2000);
 }
 
 // ─────────────────────────────────────────────
@@ -1442,8 +1447,6 @@ async function loadCommunityView() {
   } else {
     posts.forEach(post => {
       const readTime = estimateReadTime(post.content || '');
-      // Check if post has affiliate pill
-      const hasAffiliate = post.content && post.content.includes('class="affiliate-pill"');
       html += `
         <div class="post-item" onclick="viewPost('${post.id}')">
           <div class="post-content">
@@ -1456,7 +1459,6 @@ async function loadCommunityView() {
               <span class="stat-pill"><span class="icon">👁️</span> ${post.view_count || 0}</span>
               <span class="stat-pill"><span class="icon">📖</span> ${readTime}</span>
               <span>💬 ${post.comment_count || 0} comments</span>
-              ${hasAffiliate ? '<span class="stat-pill" style="background:#fbbf24;color:#0f172a;">🔗 Affiliate</span>' : ''}
             </div>
           </div>
         </div>
@@ -1503,7 +1505,6 @@ async function loadFeed() {
     html += `<div id="postsList">`;
     posts.forEach(post => {
       const readTime = estimateReadTime(post.content || '');
-      const hasAffiliate = post.content && post.content.includes('class="affiliate-pill"');
       html += `
         <div class="post-item" onclick="viewPost('${post.id}')">
           <div class="post-content">
@@ -1517,7 +1518,6 @@ async function loadFeed() {
               <span class="stat-pill"><span class="icon">👁️</span> ${post.view_count || 0}</span>
               <span class="stat-pill"><span class="icon">📖</span> ${readTime}</span>
               <span>💬 ${post.comment_count || 0} comments</span>
-              ${hasAffiliate ? '<span class="stat-pill" style="background:#fbbf24;color:#0f172a;">🔗 Affiliate</span>' : ''}
             </div>
           </div>
         </div>
@@ -1541,14 +1541,12 @@ function insertImageWithSize(editorId) {
   editor.focus();
 
   let sizeClass = 'img-original';
-  let widthStyle = '';
   switch(size) {
     case '1': sizeClass = 'img-small'; break;
     case '2': sizeClass = 'img-medium'; break;
     case '3': sizeClass = 'img-large'; break;
     default: sizeClass = 'img-original'; break;
   }
-  // Insert as <img> with class
   const imgHtml = `<img src="${escapeHtml(url)}" class="${sizeClass}" alt="Image">`;
   document.execCommand('insertHTML', false, imgHtml);
 }
@@ -1608,10 +1606,14 @@ async function loadPostView(postId) {
   reactions.forEach(r => { reactionCounts[r.reaction_type] = (reactionCounts[r.reaction_type] || 0) + 1; });
 
   const readTime = estimateReadTime(post.content || '');
-  const sanitizedContent = DOMPurify.sanitize(post.content || '');
+  let sanitizedContent = DOMPurify.sanitize(post.content || '');
 
-  // Check if affiliate pill is present
+  // Check for affiliate pill in content (stored as div)
   const hasAffiliate = sanitizedContent.includes('class="affiliate-pill"');
+  if (hasAffiliate) {
+    // Remove the affiliate pill div from the content (we'll show it as a meta pill)
+    sanitizedContent = sanitizedContent.replace(/<div class="affiliate-pill".*?<\/div>/, '').trim();
+  }
 
   let html = `
     <div class="back-link" onclick="selectCommunityById('${post.community.id}')">← Back to ${escapeHtml(post.community.display_name)}</div>
@@ -1622,6 +1624,19 @@ async function loadPostView(postId) {
         <span>• ${new Date(post.created_at).toLocaleString()}</span>
         <span class="stat-pill"><span class="icon">👁️</span> ${post.view_count || 0}</span>
         <span class="stat-pill"><span class="icon">📖</span> ${readTime}</span>
+  `;
+
+  // Add affiliate meta pill if present
+  if (hasAffiliate) {
+    html += `
+        <span class="stat-pill affiliate-pill" onclick="showAffiliateBubble(event)">
+          🔗 Affiliate
+          <span class="affiliate-bubble">This post contains affiliate links. As an Amazon Associate, I earn from qualifying purchases at no extra cost to you.</span>
+        </span>
+    `;
+  }
+
+  html += `
       </div>
   `;
 
@@ -1646,16 +1661,12 @@ async function loadPostView(postId) {
     }
     toolbarHtml += `</div>`;
 
-    // Remove affiliate pill from content before editing (if present)
-    let cleanContent = sanitizedContent;
+    // If affiliate was present, keep the toggle active
     if (hasAffiliate) {
-      // Remove the affiliate pill div from the content
-      cleanContent = cleanContent.replace(/<div class="affiliate-pill".*?<\/div>/, '').trim();
       affiliateEnabled = true;
     } else {
       affiliateEnabled = false;
     }
-    // Update button state
     document.querySelectorAll('.affiliate-btn').forEach(btn => {
       btn.classList.toggle('active', affiliateEnabled);
     });
@@ -1663,7 +1674,7 @@ async function loadPostView(postId) {
     html += `
       <div class="post-editor-wrapper">
         ${toolbarHtml}
-        <div id="postEditEditor" class="editor" contenteditable="true">${cleanContent}</div>
+        <div id="postEditEditor" class="editor" contenteditable="true">${sanitizedContent}</div>
         <div class="editor-actions">
           <button class="save-btn" onclick="savePostEdit('${post.id}')">Save</button>
           <button class="cancel-btn" onclick="cancelPostEdit()">Cancel</button>
@@ -1671,16 +1682,7 @@ async function loadPostView(postId) {
       </div>
     `;
   } else {
-    // Display post content
-    let contentHtml = sanitizedContent;
-    // If affiliate pill is present, wrap it with a clickable container that shows a bubble
-    if (hasAffiliate) {
-      // We'll add a bubble div after the pill
-      const pillHtml = `<div class="affiliate-pill" onclick="toggleAffiliateBubble(this)">🔗 Affiliate links included</div><div class="affiliate-bubble">This post contains affiliate links. As an Amazon Associate, I earn from qualifying purchases at no extra cost to you.</div>`;
-      // Replace the existing pill with our version (the old one might have no onclick)
-      contentHtml = contentHtml.replace(/<div class="affiliate-pill".*?<\/div>/, pillHtml);
-    }
-    html += `<div class="post-detail-content">${contentHtml}</div>`;
+    html += `<div class="post-detail-content">${sanitizedContent}</div>`;
   }
 
   // ── REACTION BAR ──
@@ -1708,21 +1710,6 @@ async function loadPostView(postId) {
   `;
 
   document.getElementById('mainContent').innerHTML = html;
-}
-
-// ─────────────────────────────────────────────
-// AFFILIATE BUBBLE TOGGLE
-// ─────────────────────────────────────────────
-function toggleAffiliateBubble(element) {
-  const bubble = element.nextElementSibling;
-  if (!bubble) return;
-  // Show bubble
-  bubble.classList.add('show');
-  // Hide after 2 seconds
-  clearTimeout(bubble._hideTimer);
-  bubble._hideTimer = setTimeout(() => {
-    bubble.classList.remove('show');
-  }, 2000);
 }
 
 // ─────────────────────────────────────────────
@@ -2130,7 +2117,6 @@ async function createPost() {
   if (editor.tagName === 'DIV') {
     content = editor.innerHTML.trim();
     if (!content || content === '<br>') return showToast('Content cannot be empty', 'error');
-    // Append affiliate pill if enabled
     if (affiliateEnabled) {
       content += `<div class="affiliate-pill">🔗 Affiliate links included</div>`;
     }
@@ -2139,7 +2125,6 @@ async function createPost() {
     content = editor.value.trim();
     if (!content) return showToast('Content cannot be empty', 'error');
     content = escapeHtml(content);
-    // For textarea users, we can't add affiliate pill (they don't have the toolbar), so ignore
   }
 
   if (!title) return showToast('Title required', 'error');
@@ -2362,7 +2347,7 @@ window.viewProfile = viewProfile;
 // ── NEW FUNCTIONS ──
 window.toggleAffiliate = toggleAffiliate;
 window.insertImageWithSize = insertImageWithSize;
-window.toggleAffiliateBubble = toggleAffiliateBubble;
+window.showAffiliateBubble = showAffiliateBubble;
 
 // ── EDITING FUNCTIONS ──
 window.startPostEdit = startPostEdit;
