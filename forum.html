@@ -1603,7 +1603,7 @@ async function savePostEdit(postId) {
 }
 
 // ─────────────────────────────────────────────
-// COMMENT EDITING & DELETION (FIXED)
+// COMMENT EDITING & DELETION (FIXED with row checks)
 // ─────────────────────────────────────────────
 function startCommentEdit(commentId) {
   if (editingPostId) {
@@ -1620,7 +1620,6 @@ function cancelCommentEdit() {
 }
 
 async function saveCommentEdit(commentId) {
-  console.log('saveCommentEdit called for comment:', commentId);
   const textarea = document.getElementById('commentEditTextarea-' + commentId);
   if (!textarea) {
     showToast('Error: Could not find comment editor.', 'error');
@@ -1636,15 +1635,18 @@ async function saveCommentEdit(commentId) {
   }
 
   try {
-    const { error } = await sb.from('comments').update({ content }).eq('id', commentId);
+    const { data, error } = await sb.from('comments').update({ content }).eq('id', commentId).select();
     if (error) {
       console.error('Update error:', error);
       showToast('Error saving comment: ' + error.message, 'error');
       return;
     }
+    if (!data || data.length === 0) {
+      showToast('Comment not found or you do not have permission to edit it.', 'error');
+      return;
+    }
     showToast('Comment updated!', 'success');
     editingCommentId = null;
-    // Reload to reflect changes
     if (currentPost) await loadPostView(currentPost.id);
   } catch (err) {
     console.error('Unexpected error:', err);
@@ -1655,17 +1657,19 @@ async function saveCommentEdit(commentId) {
 }
 
 async function deleteComment(commentId) {
-  console.log('deleteComment called for comment:', commentId);
   if (!confirm('Delete this comment?')) return;
   try {
-    const { error } = await sb.from('comments').delete().eq('id', commentId);
+    const { data, error } = await sb.from('comments').delete().eq('id', commentId).select();
     if (error) {
       console.error('Delete error:', error);
       showToast('Error deleting comment: ' + error.message, 'error');
       return;
     }
+    if (!data || data.length === 0) {
+      showToast('Comment not found or you do not have permission to delete it.', 'error');
+      return;
+    }
     showToast('Comment deleted.', 'success');
-    // Reload
     if (currentPost) await loadPostView(currentPost.id);
   } catch (err) {
     console.error('Delete error:', err);
