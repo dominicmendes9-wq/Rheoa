@@ -1337,6 +1337,7 @@ async function loadCommunityView() {
           <button type="button" onclick="execCmd('formatBlock', 'p')">Text</button>
           <button type="button" onclick="insertLink()">🔗 Link</button>
           <button type="button" onclick="openEmojiPicker()">😊 Emoji</button>
+          <button type="button" onclick="insertImage('postEditor')">🖼️ Image</button>
         </div>
         <div id="postEditor" class="editor" contenteditable="true" placeholder="What's on your mind?"></div>
       `;
@@ -1518,16 +1519,24 @@ async function loadPostView(postId) {
   // ── POST CONTENT (view or edit) ──
   if (editingPostId === post.id) {
     // Render editor
+    const isBlackOrFounder = currentPlayer && ['black', 'founder'].includes(currentPlayer.subscription_tier?.toLowerCase());
+    let toolbarHtml = `
+      <div class="toolbar">
+        <button type="button" onclick="execCmdOnEditor('postEditEditor', 'bold')"><b>B</b></button>
+        <button type="button" onclick="execCmdOnEditor('postEditEditor', 'italic')"><i>I</i></button>
+        <button type="button" onclick="execCmdOnEditor('postEditEditor', 'insertUnorderedList')">• Bullet</button>
+        <button type="button" onclick="execCmdOnEditor('postEditEditor', 'formatBlock', 'h2')">H2</button>
+        <button type="button" onclick="insertLinkOnEditor('postEditEditor')">🔗 Link</button>
+        <button type="button" onclick="openEmojiPickerForEditor('postEditEditor')">😊 Emoji</button>
+    `;
+    if (isBlackOrFounder) {
+      toolbarHtml += `<button type="button" onclick="insertImageOnEditor('postEditEditor')">🖼️ Image</button>`;
+    }
+    toolbarHtml += `</div>`;
+
     html += `
       <div class="post-editor-wrapper">
-        <div class="toolbar">
-          <button type="button" onclick="execCmdOnEditor('postEditEditor', 'bold')"><b>B</b></button>
-          <button type="button" onclick="execCmdOnEditor('postEditEditor', 'italic')"><i>I</i></button>
-          <button type="button" onclick="execCmdOnEditor('postEditEditor', 'insertUnorderedList')">• Bullet</button>
-          <button type="button" onclick="execCmdOnEditor('postEditEditor', 'formatBlock', 'h2')">H2</button>
-          <button type="button" onclick="insertLinkOnEditor('postEditEditor')">🔗 Link</button>
-          <button type="button" onclick="openEmojiPickerForEditor('postEditEditor')">😊 Emoji</button>
-        </div>
+        ${toolbarHtml}
         <div id="postEditEditor" class="editor" contenteditable="true">${sanitizedContent}</div>
         <div class="editor-actions">
           <button class="save-btn" onclick="savePostEdit('${post.id}')">Save</button>
@@ -1603,7 +1612,24 @@ async function savePostEdit(postId) {
 }
 
 // ─────────────────────────────────────────────
-// COMMENT EDITING & DELETION (FIXED with row checks)
+// IMAGE INSERTION HELPERS
+// ─────────────────────────────────────────────
+function insertImage(editorId) {
+  const url = prompt('Enter the direct image URL (from PostImages etc.):', 'https://i.postimg.cc/...');
+  if (!url) return;
+  const editor = document.getElementById(editorId);
+  if (!editor) return;
+  editor.focus();
+  // Insert image at cursor position
+  document.execCommand('insertImage', false, url);
+}
+
+function insertImageOnEditor(editorId) {
+  insertImage(editorId);
+}
+
+// ─────────────────────────────────────────────
+// COMMENT EDITING & DELETION
 // ─────────────────────────────────────────────
 function startCommentEdit(commentId) {
   if (editingPostId) {
@@ -2185,6 +2211,10 @@ window.clearPostEditor = clearPostEditor;
 window.toggleFollowCommunity = toggleFollowCommunity;
 window.toggleSidebarSection = toggleSidebarSection;
 window.viewProfile = viewProfile;
+
+// ── NEW IMAGE FUNCTIONS ──
+window.insertImage = insertImage;
+window.insertImageOnEditor = insertImageOnEditor;
 
 // ── EDITING FUNCTIONS ──
 window.startPostEdit = startPostEdit;
