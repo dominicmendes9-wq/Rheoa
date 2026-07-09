@@ -4,6 +4,7 @@
   <title>Rheoa RPG - Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
+    /* ─── same styles as before ─── */
     * {
       box-sizing: border-box;
       margin: 0;
@@ -440,19 +441,21 @@
   <button onclick="goTo('freelancer-dashboard.html')" style="background:#ff9800; color:white; border-color:#f57c00;">👤 Freelancer Dashboard</button>
   <button onclick="goTo('employer-dashboard.html')" style="background:#8B4513; color:white; border-color:#654321;">👔 Employer Dashboard</button>
   
-  <!-- User Information (Founder only) – visible to all, but page checks permissions -->
+  <!-- User Information (Founder only) -->
   <button onclick="goTo('user-info.html')" style="background:#0f172a; color:white; border-color:#334155;">👥 User Info</button>
   
   <button onclick="logout()" style="background:#f44336; color:white; border-color:#d32f2f;">🚪 Logout</button>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<script src="https://cdn.jsdelivr.net/npm/ua-parser-js@1.0.37/dist/ua-parser.min.js"></script>
 <script>
 const sb = window.supabase.createClient(
   "https://mtiwodvsrwvrujbhmmrn.supabase.co",
   "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
 );
-// XSS protection – turns dangerous characters into safe text
+
+// XSS protection
 function escapeHtml(str) {
     if (!str) return '';
     return str
@@ -462,6 +465,7 @@ function escapeHtml(str) {
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
 }
+
 let player = null;
 let confettiAnimation = null;
 let playerChannel = null;
@@ -475,15 +479,11 @@ function showToast(message, type = 'info', duration = 3000) {
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
   toast.textContent = message;
-  
   container.appendChild(toast);
-  
   setTimeout(() => {
     toast.classList.add('fade-out');
     setTimeout(() => {
-      if (toast.parentNode) {
-        container.removeChild(toast);
-      }
+      if (toast.parentNode) container.removeChild(toast);
     }, 300);
   }, duration);
 }
@@ -492,18 +492,14 @@ function showToast(message, type = 'info', duration = 3000) {
 function startConfetti() {
   const canvas = document.getElementById('confetti-canvas');
   const ctx = canvas.getContext('2d');
-  
   function resizeCanvas() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
   }
-  
   resizeCanvas();
   window.addEventListener('resize', resizeCanvas);
-  
   const particles = [];
   const colors = ['#f44336', '#4CAF50', '#2196F3', '#FFC107', '#9C27B0', '#FF9800'];
-  
   for (let i = 0; i < 100; i++) {
     particles.push({
       x: Math.random() * canvas.width,
@@ -515,18 +511,14 @@ function startConfetti() {
       rotation: Math.random() * 360
     });
   }
-  
   function animate() {
     if (!ctx) return;
-    
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
     let anyVisible = false;
     particles.forEach(p => {
       p.y += p.speed;
       p.x += Math.sin(p.angle) * 0.5;
       p.rotation += 2;
-      
       if (p.y < canvas.height + 50) {
         anyVisible = true;
         ctx.save();
@@ -537,12 +529,10 @@ function startConfetti() {
         ctx.restore();
       }
     });
-    
     if (anyVisible) {
       confettiAnimation = requestAnimationFrame(animate);
     }
   }
-  
   animate();
 }
 
@@ -556,27 +546,16 @@ function stopConfetti() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 }
 
-// ACHIEVEMENT FUNCTIONS
+// Achievement functions
 async function checkAchievementNotifications() {
   if (!player) return;
-  
   try {
-    const { data: unviewed, error } = await sb.rpc('get_unviewed_achievements', {
-      p_player_id: player.id
-    });
-    
+    const { data: unviewed, error } = await sb.rpc('get_unviewed_achievements', { p_player_id: player.id });
     if (error) throw error;
-    
     const notificationDot = document.getElementById('achievementNotification');
-    
     if (unviewed && unviewed.length > 0) {
-      // Show notification dot
       notificationDot.style.display = 'block';
-      
-      // Show toast for first achievement
       showToast(`🏆 New Achievement: ${unviewed[0].name}!`, 'achievement', 5000);
-      
-      // If multiple, show count
       if (unviewed.length > 1) {
         setTimeout(() => {
           showToast(`...and ${unviewed.length - 1} more achievement(s) unlocked!`, 'info', 3000);
@@ -590,54 +569,39 @@ async function checkAchievementNotifications() {
   }
 }
 
-// STAT DECAY FUNCTIONS
+// Stat decay
 async function applyStatDecay() {
   if (!player) return;
-  
   try {
     const { data, error } = await sb.rpc('decay_player_stats');
-    
     if (error) throw error;
-    
     if (data.success && data.decay_applied) {
-      // Update local player data
       player.hunger = data.new_hunger;
       player.happiness = data.new_happiness;
-      
-      // Show warnings based on stat levels
       if (data.new_hunger < 30 && data.new_hunger > 10) {
         showToast('⚠️ You are getting hungry! Time to eat something!', 'warning');
       } else if (data.new_hunger <= 10) {
         showToast('🔴 CRITICAL: You are starving! Eat immediately!', 'error');
       }
-      
       if (data.new_happiness < 30 && data.new_happiness > 10) {
         showToast('😔 Your happiness is low! Have some fun!', 'warning');
       } else if (data.new_happiness <= 10) {
         showToast('🔴 CRITICAL: You are depressed! Cheer up!', 'error');
       }
-      
-      // Update the display
       renderStats();
-      
-      console.log(`Stat decay applied: ${data.hours_passed.toFixed(1)} hours passed`);
     }
   } catch (error) {
     console.error('Error applying stat decay:', error);
   }
 }
 
-// Regenerate energy function
+// Energy regeneration
 async function regenerateEnergy() {
   if (!player) return;
-  
   try {
     const { data, error } = await sb.rpc('regenerate_energy');
-    
     if (error) throw error;
-    
     if (data.success && data.energy_added > 0) {
-      // Update local player data
       player.energy = data.new_energy;
       renderStats();
       showToast(`⚡ +${data.energy_added} energy regenerated!`, 'info', 2000);
@@ -647,15 +611,11 @@ async function regenerateEnergy() {
   }
 }
 
-// Get energy regen info
 async function updateRegenInfo() {
   if (!player) return;
-  
   try {
     const { data, error } = await sb.rpc('get_energy_regen_info');
-    
     if (error) throw error;
-    
     if (data.success) {
       const timerEl = document.getElementById('regenTimer');
       if (data.energy_to_regenerate > 0) {
@@ -671,13 +631,8 @@ async function updateRegenInfo() {
   }
 }
 
-// Get stat warning class
 function getStatWarningClass(value, type) {
-  if (type === 'hunger') {
-    if (value <= 10) return 'danger';
-    if (value <= 30) return 'warning';
-  }
-  if (type === 'happiness') {
+  if (type === 'hunger' || type === 'happiness') {
     if (value <= 10) return 'danger';
     if (value <= 30) return 'warning';
   }
@@ -688,7 +643,6 @@ function getStatWarningClass(value, type) {
   return '';
 }
 
-// Get warning emoji
 function getWarningEmoji(value, type) {
   if (type === 'hunger') {
     if (value <= 10) return '🔴';
@@ -705,42 +659,28 @@ function getWarningEmoji(value, type) {
   return '';
 }
 
-// Set up realtime subscription
+// Setup realtime subscription
 function setupRealtimeSubscription() {
   if (!player) return;
-  
-  // Unsubscribe from old channel if exists
-  if (playerChannel) {
-    playerChannel.unsubscribe();
-  }
-  
-  // Subscribe to player changes
+  if (playerChannel) playerChannel.unsubscribe();
   playerChannel = sb
     .channel('player-changes')
-    .on(
-      'postgres_changes',
-      {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'players',
-        filter: `id=eq.${player.id}`
-      },
-      (payload) => {
-        const oldLevel = player.level;
-        player = payload.new;
-        renderStats();
-        
-        // Check for level up
-        if (player.level > oldLevel) {
-          showToast(`🎉 LEVEL UP! You are now level ${player.level}!`, 'success', 4000);
-          startConfetti();
-          setTimeout(stopConfetti, 3000);
-        }
-        
-        // Check achievements after any update
-        checkAchievementNotifications();
+    .on('postgres_changes', {
+      event: 'UPDATE',
+      schema: 'public',
+      table: 'players',
+      filter: `id=eq.${player.id}`
+    }, (payload) => {
+      const oldLevel = player.level;
+      player = payload.new;
+      renderStats();
+      if (player.level > oldLevel) {
+        showToast(`🎉 LEVEL UP! You are now level ${player.level}!`, 'success', 4000);
+        startConfetti();
+        setTimeout(stopConfetti, 3000);
       }
-    )
+      checkAchievementNotifications();
+    })
     .subscribe((status) => {
       if (status === 'SUBSCRIBED') {
         document.getElementById('realtimeStatus').style.opacity = '1';
@@ -759,41 +699,41 @@ async function loadPlayer() {
   }
   player = playerData;
   
-  // Apply stat decay on load (this will reduce hunger/happiness based on time away)
   await applyStatDecay();
-  
-  // Regenerate energy on load
   await regenerateEnergy();
-  
-  // Check for new achievements
   await checkAchievementNotifications();
-  
-  // Setup realtime after player is loaded
   setupRealtimeSubscription();
   renderStats();
 
-  // ─── Section B: Device Info Tracking ──────────────────
+  // ─── DEVICE INFO TRACKING (Extended) ──────────────────
   await trackDeviceInfo();
 }
 
-// ─── DEVICE INFO TRACKING (Section B) ─────────────────────
+// ─── ENHANCED TRACKING FUNCTION ──────────────────────────
 async function trackDeviceInfo() {
-  if (!player) {
-    console.warn('No player loaded – skipping device info tracking.');
-    return;
-  }
+  if (!player) return;
 
-  // 1. Get IP from ipinfo.io
-  let ip = '0.0.0.0';
+  // 1. Get IP and location from ipinfo.io
+  let ip = '0.0.0.0', city = '', region = '', isp = '';
   try {
     const ipRes = await fetch('https://ipinfo.io/json');
     const ipData = await ipRes.json();
     ip = ipData.ip || '0.0.0.0';
+    city = ipData.city || '';
+    region = ipData.region || '';
+    isp = ipData.org || '';
   } catch (e) {
     console.warn('Failed to fetch IP from ipinfo.io', e);
   }
 
-  // 2. Collect device info
+  // 2. Parse User-Agent
+  const parser = new UAParser();
+  const uaResult = parser.getResult();
+  const browser = (uaResult.browser.name || '') + (uaResult.browser.version ? ' ' + uaResult.browser.version : '');
+  const os = (uaResult.os.name || '') + (uaResult.os.version ? ' ' + uaResult.os.version : '');
+  const deviceType = uaResult.device.type || 'desktop';
+
+  // 3. Collect other info
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'unknown';
   const language = navigator.language || 'unknown';
   const userAgent = navigator.userAgent || 'unknown';
@@ -804,69 +744,84 @@ async function trackDeviceInfo() {
 
   const currentInfo = {
     ip,
+    city,
+    region,
+    isp,
     timezone,
     language,
     user_agent: userAgent,
+    browser,
+    os,
+    device_type: deviceType,
     screen_resolution: screenResolution,
     viewport,
     referrer,
     network_connection: networkConnection
   };
 
-  // 3. Compare with stored device_info
+  // 4. Compare with stored info
   const storedInfo = player.device_info || {};
   const hasChanged = JSON.stringify(storedInfo) !== JSON.stringify(currentInfo);
 
-  if (!hasChanged) {
-    console.log('ℹ️ Device info unchanged – no update needed.');
-    return;
+  // 5. Update players table
+  const updateData = {
+    device_info: currentInfo,
+    device_info_updated_at: new Date().toISOString(),
+    current_page: window.location.pathname.split('/').pop() || 'dashboard.html',
+    total_visits: (player.total_visits || 0) + 1
+  };
+
+  // Only update if changed (or always? We'll always update total_visits and current_page, but device_info only if changed)
+  // We'll do a single update; device_info will be set regardless, but we can conditionally set it.
+  // To avoid unnecessary writes, we'll only update device_info if changed.
+  const updatePayload = {
+    current_page: updateData.current_page,
+    total_visits: updateData.total_visits,
+    device_info_updated_at: updateData.device_info_updated_at
+  };
+  if (hasChanged) {
+    updatePayload.device_info = currentInfo;
   }
 
-  // 4. Update players table
   const { error } = await sb
     .from('players')
-    .update({
-      device_info: currentInfo,
-      device_info_updated_at: new Date().toISOString()
-    })
+    .update(updatePayload)
     .eq('id', player.id);
 
   if (error) {
     console.error('Failed to update device info:', error);
   } else {
-    console.log('✅ Device info updated successfully.');
-    // Update local player object
-    player.device_info = currentInfo;
-    player.device_info_updated_at = new Date().toISOString();
+    if (hasChanged) {
+      console.log('✅ Device info updated.');
+      player.device_info = currentInfo;
+    }
+    player.total_visits = updateData.total_visits;
+    player.device_info_updated_at = updateData.device_info_updated_at;
+    player.current_page = updateData.current_page;
   }
 }
 
 function renderStats() {
   const statsDiv = document.getElementById("stats");
   
-  // Update XP Bar
   const nextLevelXP = Math.pow(player.level, 2) * 100;
   const prevLevelXP = Math.pow(player.level - 1, 2) * 100;
   const xpProgress = ((player.xp - prevLevelXP) / (nextLevelXP - prevLevelXP)) * 100;
   document.getElementById("xpBar").style.width = Math.min(100, Math.max(0, xpProgress)) + '%';
   document.getElementById("levelDisplay").textContent = `Level ${player.level}`;
   
-  // Update Energy Bar
   const energyPercent = (player.energy / 100) * 100;
   const energyBar = document.getElementById("energyBar");
   energyBar.style.width = Math.min(100, Math.max(0, energyPercent)) + '%';
   document.getElementById("energyDisplay").textContent = `${player.energy}/100`;
   
-  // Color energy bar based on level
   if (player.energy < 20) energyBar.style.background = '#f44336';
   else if (player.energy < 50) energyBar.style.background = '#ff9800';
   else energyBar.style.background = '#4CAF50';
 
-  // Get warning classes and emojis for stats
   const hungerWarning = getStatWarningClass(player.hunger || 100, 'hunger');
   const happinessWarning = getStatWarningClass(player.happiness || 100, 'happiness');
   const healthWarning = getStatWarningClass(player.health || 100, 'health');
-  
   const hungerEmoji = getWarningEmoji(player.hunger || 100, 'hunger');
   const happinessEmoji = getWarningEmoji(player.happiness || 100, 'happiness');
   const healthEmoji = getWarningEmoji(player.health || 100, 'health');
@@ -912,23 +867,16 @@ function renderStats() {
     </div>
   `;
   
-  // Update decay info with time
   const lastDecay = player.last_decay ? new Date(player.last_decay) : new Date();
   const hoursSinceDecay = Math.floor((new Date() - lastDecay) / (1000 * 60 * 60));
   if (hoursSinceDecay > 0) {
     document.getElementById('decayInfo').innerHTML = `⏰ Last login: ${hoursSinceDecay} hour${hoursSinceDecay > 1 ? 's' : ''} ago - Stats have decayed`;
   }
-  
-  // Update regen info
   updateRegenInfo();
 }
 
 async function logout() {
-  // Clean up realtime subscription
-  if (playerChannel) {
-    playerChannel.unsubscribe();
-  }
-  
+  if (playerChannel) playerChannel.unsubscribe();
   await sb.auth.signOut();
   showToast('Logged out successfully', 'info');
   setTimeout(() => {
@@ -940,48 +888,32 @@ function goTo(page) {
   window.location.href = page; 
 }
 
-// Clean up on page unload
 window.addEventListener('beforeunload', () => {
-  if (playerChannel) {
-    playerChannel.unsubscribe();
-  }
-  if (regenInterval) {
-    clearInterval(regenInterval);
-  }
-  if (decayCheckInterval) {
-    clearInterval(decayCheckInterval);
-  }
-  if (achievementCheckInterval) {
-    clearInterval(achievementCheckInterval);
-  }
+  if (playerChannel) playerChannel.unsubscribe();
+  if (regenInterval) clearInterval(regenInterval);
+  if (decayCheckInterval) clearInterval(decayCheckInterval);
+  if (achievementCheckInterval) clearInterval(achievementCheckInterval);
 });
 
-// Start energy regeneration timer (check every 10 seconds)
 function startRegenTimer() {
   regenInterval = setInterval(async () => {
     if (player && player.energy < 100) {
       await regenerateEnergy();
     }
     updateRegenInfo();
-  }, 10000); // Check every 10 seconds
+  }, 10000);
 }
 
-// Check for stat decay every 5 minutes (while player is active)
 function startDecayChecker() {
   decayCheckInterval = setInterval(async () => {
-    if (player) {
-      await applyStatDecay();
-    }
-  }, 300000); // Check every 5 minutes
+    if (player) await applyStatDecay();
+  }, 300000);
 }
 
-// Check for new achievements every 30 seconds
 function startAchievementChecker() {
   achievementCheckInterval = setInterval(async () => {
-    if (player) {
-      await checkAchievementNotifications();
-    }
-  }, 30000); // Check every 30 seconds
+    if (player) await checkAchievementNotifications();
+  }, 30000);
 }
 
 loadPlayer();
@@ -989,13 +921,11 @@ startRegenTimer();
 startDecayChecker();
 startAchievementChecker();
 
-// Welcome toast
 setTimeout(() => {
   if (player) {
     showToast(`Welcome back, ${player.username}! Stats decay over time - keep them balanced! ⚖️`, 'info', 5000);
   }
 }, 1000);
 </script>
-
 </body>
 </html>
