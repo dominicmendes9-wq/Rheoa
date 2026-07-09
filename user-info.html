@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Rheoa RPG - User Information</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: #f1f5f9;
+      padding: 20px;
+      min-height: 100vh;
+    }
+    .container { max-width: 1400px; margin:0 auto; }
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 28px;
+      padding: 12px 20px;
+      background: #fff;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+    }
+    .top-bar .left a {
+      color: #2c6e9e;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .top-bar .left a:hover { text-decoration:underline; }
+    .top-bar .left h1 { font-size:1.4rem; font-weight:700; }
+    .top-bar .right {
+      display: flex;
+      gap: 12px;
+    }
+    .top-bar .right .badge {
+      background: #fbbf24;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-weight: 600;
+      font-size:0.8rem;
+    }
+    .table-container {
+      background: #fff;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+      overflow-x: auto;
+      padding: 16px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+    th {
+      background: #f8fafc;
+      padding: 12px 8px;
+      text-align: left;
+      font-weight: 600;
+      border-bottom: 2px solid #e2e8f0;
+      white-space: nowrap;
+    }
+    td {
+      padding: 10px 8px;
+      border-bottom: 1px solid #f1f5f9;
+      vertical-align: middle;
+    }
+    tr:hover { background: #f8fafc; }
+    .country-code {
+      background: #e2e8f0;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      display: inline-block;
+    }
+    .no-data { color: #94a3b8; font-style: italic; }
+    .loading { text-align:center; padding:40px; color:#64748b; }
+    .error { text-align:center; padding:40px; color:#ef4444; }
+    .back-btn {
+      display: inline-block;
+      padding: 6px 16px;
+      background: #f1f5f9;
+      border-radius: 30px;
+      border: 1px solid #e2e8f0;
+      color: #0f172a;
+      text-decoration: none;
+      font-size:0.9rem;
+      transition:0.2s;
+    }
+    .back-btn:hover { background:#e2e8f0; }
+    @media (max-width:600px) {
+      body { padding:12px; }
+      .top-bar { flex-direction:column; align-items:stretch; }
+      table { font-size:0.75rem; }
+      th, td { padding:6px 4px; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="top-bar">
+    <div class="left">
+      <a href="dashboard.html">← Dashboard</a>
+      <h1>👥 User Information</h1>
+    </div>
+    <div class="right">
+      <span class="badge">🔒 Founder Only</span>
+      <a href="dashboard.html" class="back-btn">Back</a>
+    </div>
+  </div>
+  <div class="table-container" id="userTableContainer">
+    <div class="loading">Loading user data...</div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  const sb = window.supabase.createClient(
+    "https://mtiwodvsrwvrujbhmmrn.supabase.co",
+    "sb_publishable_noi80_djvhHDAuQ14hJKQQ_NppeGehp"
+  );
+
+  let currentPlayer = null;
+
+  async function init() {
+    const { data: { user } } = await sb.auth.getUser();
+    if (!user) { window.location.href = 'index.html'; return; }
+
+    // Get player details
+    const { data: player, error } = await sb
+      .from('players')
+      .select('id, username, subscription_tier')
+      .eq('auth_id', user.id)
+      .single();
+
+    if (error || !player) {
+      document.getElementById('userTableContainer').innerHTML = '<div class="error">Player not found.</div>';
+      return;
+    }
+    currentPlayer = player;
+
+    // Check if founder
+    if (currentPlayer.subscription_tier.toLowerCase() !== 'founder') {
+      document.getElementById('userTableContainer').innerHTML = `
+        <div class="error">
+          <p style="font-size:1.2rem; font-weight:600;">⛔ Access Denied</p>
+          <p>This page is only available to Founder subscribers.</p>
+          <a href="dashboard.html" style="display:inline-block; margin-top:12px; padding:8px 20px; background:#2c6e9e; color:#fff; border-radius:30px; text-decoration:none;">Go to Dashboard</a>
+        </div>
+      `;
+      return;
+    }
+
+    // Load user data
+    await loadUserData();
+  }
+
+  async function loadUserData() {
+    const container = document.getElementById('userTableContainer');
+    container.innerHTML = '<div class="loading">Loading...</div>';
+
+    try {
+      // Query user_info_view (or direct join)
+      const { data, error } = await sb
+        .from('user_info_view')
+        .select('*')
+        .order('join_date', { ascending: false });
+
+      if (error) throw error;
+
+      if (!data || data.length === 0) {
+        container.innerHTML = '<div class="no-data">No user data available.</div>';
+        return;
+      }
+
+      // Build table
+      let html = `
+        <table>
+          <thead>
+            <tr>
+              <th>Username</th>
+              <th>Email</th>
+              <th>Join Date</th>
+              <th>Subscription</th>
+              <th>IP</th>
+              <th>Country</th>
+              <th>User Agent</th>
+              <th>Last Updated</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      data.forEach(row => {
+        const device = row.device_info || {};
+        const ip = device.ip || '—';
+        const userAgent = device.user_agent || '—';
+        // Simple browser/OS parse (just show first 40 chars)
+        const shortUA = userAgent.length > 40 ? userAgent.substring(0, 40) + '…' : userAgent;
+        const joinDate = row.join_date ? new Date(row.join_date).toLocaleDateString() : '—';
+        const updatedAt = row.device_info_updated_at ? new Date(row.device_info_updated_at).toLocaleString() : '—';
+
+        html += `
+          <tr>
+            <td><strong>${escapeHtml(row.username)}</strong></td>
+            <td>${escapeHtml(row.email || '—')}</td>
+            <td>${joinDate}</td>
+            <td><span style="text-transform:capitalize;">${escapeHtml(row.subscription_tier || 'basic')}</span></td>
+            <td><code>${escapeHtml(ip)}</code></td>
+            <td><span class="country-code">${escapeHtml(row.ip_country_code || 'ZZ')}</span></td>
+            <td title="${escapeHtml(userAgent)}">${escapeHtml(shortUA)}</td>
+            <td>${updatedAt}</td>
+          </tr>
+        `;
+      });
+
+      html += `</tbody></table>`;
+      container.innerHTML = html;
+
+    } catch (err) {
+      console.error(err);
+      container.innerHTML = `<div class="error">Error loading data: ${err.message}</div>`;
+    }
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'})[m]);
+  }
+
+  init();
+</script>
+</body>
+</html>
