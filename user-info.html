@@ -12,7 +12,7 @@
       padding: 20px;
       min-height: 100vh;
     }
-    .container { max-width: 1400px; margin:0 auto; }
+    .container { max-width: 1600px; margin:0 auto; }
     .top-bar {
       display: flex;
       justify-content: space-between;
@@ -36,6 +36,7 @@
     .top-bar .right {
       display: flex;
       gap: 12px;
+      align-items:center;
     }
     .top-bar .right .badge {
       background: #fbbf24;
@@ -55,18 +56,21 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 0.9rem;
+      font-size: 0.85rem;
     }
     th {
       background: #f8fafc;
-      padding: 12px 8px;
+      padding: 10px 8px;
       text-align: left;
       font-weight: 600;
       border-bottom: 2px solid #e2e8f0;
       white-space: nowrap;
+      position: sticky;
+      top: 0;
+      z-index: 10;
     }
     td {
-      padding: 10px 8px;
+      padding: 8px 8px;
       border-bottom: 1px solid #f1f5f9;
       vertical-align: middle;
     }
@@ -79,6 +83,15 @@
       font-weight: 600;
       display: inline-block;
     }
+    .online-dot {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 6px;
+    }
+    .online-dot.online { background: #22c55e; }
+    .online-dot.offline { background: #94a3b8; }
     .no-data { color: #94a3b8; font-style: italic; }
     .loading { text-align:center; padding:40px; color:#64748b; }
     .error { text-align:center; padding:40px; color:#ef4444; }
@@ -94,11 +107,20 @@
       transition:0.2s;
     }
     .back-btn:hover { background:#e2e8f0; }
-    @media (max-width:600px) {
+    .banned {
+      color: #ef4444;
+      font-weight: 600;
+    }
+    .ban-reason {
+      font-size: 0.75rem;
+      color: #64748b;
+    }
+    @media (max-width: 768px) {
       body { padding:12px; }
       .top-bar { flex-direction:column; align-items:stretch; }
-      table { font-size:0.75rem; }
-      th, td { padding:6px 4px; }
+      table { font-size:0.7rem; }
+      th, td { padding:4px 4px; }
+      .table-container { padding:8px; }
     }
   </style>
 </head>
@@ -132,7 +154,6 @@
     const { data: { user } } = await sb.auth.getUser();
     if (!user) { window.location.href = 'index.html'; return; }
 
-    // Get player details
     const { data: player, error } = await sb
       .from('players')
       .select('id, username, subscription_tier')
@@ -145,7 +166,6 @@
     }
     currentPlayer = player;
 
-    // Check if founder
     if (currentPlayer.subscription_tier.toLowerCase() !== 'founder') {
       document.getElementById('userTableContainer').innerHTML = `
         <div class="error">
@@ -157,7 +177,6 @@
       return;
     }
 
-    // Load user data
     await loadUserData();
   }
 
@@ -166,7 +185,6 @@
     container.innerHTML = '<div class="loading">Loading...</div>';
 
     try {
-      // Query user_info_view (or direct join)
       const { data, error } = await sb
         .from('user_info_view')
         .select('*')
@@ -179,19 +197,28 @@
         return;
       }
 
-      // Build table
+      const now = new Date();
+
       let html = `
         <table>
           <thead>
             <tr>
               <th>Username</th>
               <th>Email</th>
-              <th>Join Date</th>
+              <th>Joined</th>
               <th>Subscription</th>
+              <th>Last Seen</th>
+              <th>Online</th>
+              <th>Visits</th>
               <th>IP</th>
               <th>Country</th>
-              <th>User Agent</th>
-              <th>Last Updated</th>
+              <th>City / Region</th>
+              <th>ISP</th>
+              <th>Device</th>
+              <th>Browser / OS</th>
+              <th>Page</th>
+              <th>Banned</th>
+              <th>Email Verified</th>
             </tr>
           </thead>
           <tbody>
@@ -199,12 +226,24 @@
 
       data.forEach(row => {
         const device = row.device_info || {};
-        const ip = device.ip || '—';
-        const userAgent = device.user_agent || '—';
-        // Simple browser/OS parse (just show first 40 chars)
-        const shortUA = userAgent.length > 40 ? userAgent.substring(0, 40) + '…' : userAgent;
+        const lastSeen = row.last_seen ? new Date(row.last_seen) : null;
+        const isOnline = lastSeen && (now - lastSeen) < 5 * 60 * 1000;
         const joinDate = row.join_date ? new Date(row.join_date).toLocaleDateString() : '—';
-        const updatedAt = row.device_info_updated_at ? new Date(row.device_info_updated_at).toLocaleString() : '—';
+        const lastSeenStr = lastSeen ? lastSeen.toLocaleString() : '—';
+        const onlineDot = isOnline ? 'online' : 'offline';
+
+        const ip = device.ip || '—';
+        const city = device.city || '—';
+        const region = device.region || '—';
+        const isp = device.isp || '—';
+        const deviceType = device.device_type || '—';
+        const browser = device.browser || '—';
+        const os = device.os || '—';
+
+        const isBanned = row.banned_until && new Date(row.banned_until) > new Date();
+        const banReason = row.ban_reason || '';
+
+        const countryCode = row.ip_country_code || 'ZZ';
 
         html += `
           <tr>
@@ -212,10 +251,20 @@
             <td>${escapeHtml(row.email || '—')}</td>
             <td>${joinDate}</td>
             <td><span style="text-transform:capitalize;">${escapeHtml(row.subscription_tier || 'basic')}</span></td>
+            <td>${lastSeenStr}</td>
+            <td><span class="online-dot ${onlineDot}"></span> ${isOnline ? 'Online' : 'Offline'}</td>
+            <td>${row.total_visits || 0}</td>
             <td><code>${escapeHtml(ip)}</code></td>
-            <td><span class="country-code">${escapeHtml(row.ip_country_code || 'ZZ')}</span></td>
-            <td title="${escapeHtml(userAgent)}">${escapeHtml(shortUA)}</td>
-            <td>${updatedAt}</td>
+            <td><span class="country-code">${escapeHtml(countryCode)}</span></td>
+            <td>${escapeHtml(city)}${city && region ? ', ' : ''}${escapeHtml(region)}</td>
+            <td>${escapeHtml(isp)}</td>
+            <td>${escapeHtml(deviceType)}</td>
+            <td>${escapeHtml(browser)}<br><span style="font-size:0.75rem;color:#64748b;">${escapeHtml(os)}</span></td>
+            <td>${escapeHtml(row.current_page || '—')}</td>
+            <td>
+              ${isBanned ? `<span class="banned">🔴 Banned</span><br><span class="ban-reason">${escapeHtml(banReason)}</span>` : '—'}
+            </td>
+            <td>${row.email_verified ? '✅ Yes' : '❌ No'}</td>
           </tr>
         `;
       });
