@@ -6,7 +6,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
   <style>
-    /* ─── same CSS as before, with updates for affiliate meta pill ─── */
+    /* ─── same CSS as before ─── */
     :root {
       --bg-body: #f0f4fa;
       --card-bg: #fff;
@@ -1064,6 +1064,7 @@
 <div class="toast-container" id="toastContainer"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<script src="https://cdn.jsdelivr.net/npm/ua-parser-js@1.0.37/dist/ua-parser.min.js"></script>
 <script>
 // ─────────────────────────────────────────────
 // SUPABASE INIT
@@ -1194,6 +1195,95 @@ function showAffiliateBubble(event) {
 }
 
 // ─────────────────────────────────────────────
+// DEVICE INFO TRACKING
+// ─────────────────────────────────────────────
+async function trackDeviceInfo() {
+  if (!currentPlayer) return;
+
+  // 1. Get IP and location from ipinfo.io
+  let ip = '0.0.0.0', city = '', region = '', isp = '';
+  try {
+    const ipRes = await fetch('https://ipinfo.io/json');
+    const ipData = await ipRes.json();
+    ip = ipData.ip || '0.0.0.0';
+    city = ipData.city || '';
+    region = ipData.region || '';
+    isp = ipData.org || '';
+  } catch (e) {
+    console.warn('Failed to fetch IP from ipinfo.io', e);
+  }
+
+  // 2. Parse User-Agent
+  const parser = new UAParser();
+  const uaResult = parser.getResult();
+  const browser = (uaResult.browser.name || '') + (uaResult.browser.version ? ' ' + uaResult.browser.version : '');
+  const os = (uaResult.os.name || '') + (uaResult.os.version ? ' ' + uaResult.os.version : '');
+  const deviceType = uaResult.device.type || 'desktop';
+
+  // 3. Collect other info
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'unknown';
+  const language = navigator.language || 'unknown';
+  const userAgent = navigator.userAgent || 'unknown';
+  const screenResolution = `${window.screen.width}x${window.screen.height}`;
+  const viewport = `${window.innerWidth}x${window.innerHeight}`;
+  const referrer = document.referrer || '';
+  const networkConnection = navigator.connection?.effectiveType || 'unknown';
+
+  const currentInfo = {
+    ip,
+    city,
+    region,
+    isp,
+    timezone,
+    language,
+    user_agent: userAgent,
+    browser,
+    os,
+    device_type: deviceType,
+    screen_resolution: screenResolution,
+    viewport,
+    referrer,
+    network_connection: networkConnection
+  };
+
+  // 4. Compare with stored info
+  const storedInfo = currentPlayer.device_info || {};
+  const hasChanged = JSON.stringify(storedInfo) !== JSON.stringify(currentInfo);
+
+  // 5. Build update payload – always update last_seen, current_page, total_visits
+  const now = new Date().toISOString();
+  const updatePayload = {
+    last_seen: now,
+    current_page: window.location.pathname.split('/').pop() || 'forum.html',
+    total_visits: (currentPlayer.total_visits || 0) + 1,
+    device_info_updated_at: now
+  };
+
+  if (hasChanged) {
+    updatePayload.device_info = currentInfo;
+  }
+
+  const { error } = await sb
+    .from('players')
+    .update(updatePayload)
+    .eq('id', currentPlayer.id);
+
+  if (error) {
+    console.error('Failed to update device info:', error);
+  } else {
+    if (hasChanged) {
+      console.log('✅ Device info updated.');
+      currentPlayer.device_info = currentInfo;
+    }
+    currentPlayer.last_seen = now;
+    currentPlayer.total_visits = updatePayload.total_visits;
+    currentPlayer.device_info_updated_at = now;
+    currentPlayer.current_page = updatePayload.current_page;
+    console.log('✅ last_seen updated to:', now);
+  }
+}
+
+// ─────────────────────────────────────────────
 // AUTH & INIT
 // ─────────────────────────────────────────────
 async function init() {
@@ -1208,6 +1298,9 @@ async function init() {
 
   await loadCommunities();
   await loadFollowedCommunities();
+
+  // ─── Track device info after player is loaded ──
+  await trackDeviceInfo();
 
   const params = new URLSearchParams(window.location.search);
   const communityName = params.get('c');
