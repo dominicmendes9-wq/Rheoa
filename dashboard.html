@@ -709,7 +709,7 @@ async function loadPlayer() {
   await trackDeviceInfo();
 }
 
-// ─── ENHANCED TRACKING FUNCTION ──────────────────────────
+// ─── ENHANCED TRACKING FUNCTION (with last_seen) ────────
 async function trackDeviceInfo() {
   if (!player) return;
 
@@ -763,22 +763,16 @@ async function trackDeviceInfo() {
   const storedInfo = player.device_info || {};
   const hasChanged = JSON.stringify(storedInfo) !== JSON.stringify(currentInfo);
 
-  // 5. Update players table
-  const updateData = {
-    device_info: currentInfo,
-    device_info_updated_at: new Date().toISOString(),
+  // 5. Build update payload – always update last_seen, current_page, total_visits
+  const now = new Date().toISOString();
+  const updatePayload = {
+    last_seen: now,                       // ← CRITICAL: update last_seen on every visit
     current_page: window.location.pathname.split('/').pop() || 'dashboard.html',
-    total_visits: (player.total_visits || 0) + 1
+    total_visits: (player.total_visits || 0) + 1,
+    device_info_updated_at: now
   };
 
-  // Only update if changed (or always? We'll always update total_visits and current_page, but device_info only if changed)
-  // We'll do a single update; device_info will be set regardless, but we can conditionally set it.
-  // To avoid unnecessary writes, we'll only update device_info if changed.
-  const updatePayload = {
-    current_page: updateData.current_page,
-    total_visits: updateData.total_visits,
-    device_info_updated_at: updateData.device_info_updated_at
-  };
+  // Only update device_info if changed
   if (hasChanged) {
     updatePayload.device_info = currentInfo;
   }
@@ -795,9 +789,11 @@ async function trackDeviceInfo() {
       console.log('✅ Device info updated.');
       player.device_info = currentInfo;
     }
-    player.total_visits = updateData.total_visits;
-    player.device_info_updated_at = updateData.device_info_updated_at;
-    player.current_page = updateData.current_page;
+    player.last_seen = now;
+    player.total_visits = updatePayload.total_visits;
+    player.device_info_updated_at = now;
+    player.current_page = updatePayload.current_page;
+    console.log('✅ last_seen updated to:', now);
   }
 }
 
