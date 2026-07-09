@@ -440,6 +440,9 @@
   <button onclick="goTo('freelancer-dashboard.html')" style="background:#ff9800; color:white; border-color:#f57c00;">👤 Freelancer Dashboard</button>
   <button onclick="goTo('employer-dashboard.html')" style="background:#8B4513; color:white; border-color:#654321;">👔 Employer Dashboard</button>
   
+  <!-- User Information (Founder only) – visible to all, but page checks permissions -->
+  <button onclick="goTo('user-info.html')" style="background:#0f172a; color:white; border-color:#334155;">👥 User Info</button>
+  
   <button onclick="logout()" style="background:#f44336; color:white; border-color:#d32f2f;">🚪 Logout</button>
 </div>
 
@@ -768,6 +771,74 @@ async function loadPlayer() {
   // Setup realtime after player is loaded
   setupRealtimeSubscription();
   renderStats();
+
+  // ─── Section B: Device Info Tracking ──────────────────
+  await trackDeviceInfo();
+}
+
+// ─── DEVICE INFO TRACKING (Section B) ─────────────────────
+async function trackDeviceInfo() {
+  if (!player) {
+    console.warn('No player loaded – skipping device info tracking.');
+    return;
+  }
+
+  // 1. Get IP from ipinfo.io
+  let ip = '0.0.0.0';
+  try {
+    const ipRes = await fetch('https://ipinfo.io/json');
+    const ipData = await ipRes.json();
+    ip = ipData.ip || '0.0.0.0';
+  } catch (e) {
+    console.warn('Failed to fetch IP from ipinfo.io', e);
+  }
+
+  // 2. Collect device info
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'unknown';
+  const language = navigator.language || 'unknown';
+  const userAgent = navigator.userAgent || 'unknown';
+  const screenResolution = `${window.screen.width}x${window.screen.height}`;
+  const viewport = `${window.innerWidth}x${window.innerHeight}`;
+  const referrer = document.referrer || '';
+  const networkConnection = navigator.connection?.effectiveType || 'unknown';
+
+  const currentInfo = {
+    ip,
+    timezone,
+    language,
+    user_agent: userAgent,
+    screen_resolution: screenResolution,
+    viewport,
+    referrer,
+    network_connection: networkConnection
+  };
+
+  // 3. Compare with stored device_info
+  const storedInfo = player.device_info || {};
+  const hasChanged = JSON.stringify(storedInfo) !== JSON.stringify(currentInfo);
+
+  if (!hasChanged) {
+    console.log('ℹ️ Device info unchanged – no update needed.');
+    return;
+  }
+
+  // 4. Update players table
+  const { error } = await sb
+    .from('players')
+    .update({
+      device_info: currentInfo,
+      device_info_updated_at: new Date().toISOString()
+    })
+    .eq('id', player.id);
+
+  if (error) {
+    console.error('Failed to update device info:', error);
+  } else {
+    console.log('✅ Device info updated successfully.');
+    // Update local player object
+    player.device_info = currentInfo;
+    player.device_info_updated_at = new Date().toISOString();
+  }
 }
 
 function renderStats() {
