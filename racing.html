@@ -253,9 +253,9 @@
       box-shadow: 0 2px 6px rgba(0,0,0,0.02);
     }
     .card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.06); }
-    .card.finished {
-      background: var(--btn-ghost);
-      opacity: 0.8;
+    .card.participated {
+      opacity: 0.7;
+      filter: grayscale(0.4);
       border-color: var(--text-muted);
     }
     .card img { width: 100%; height: 150px; object-fit: cover; border-radius: 12px; margin-bottom: 12px; background: #eee; }
@@ -329,6 +329,17 @@
       padding: 8px 0;
       border-bottom: 1px solid var(--border-light);
       font-size: 0.9rem;
+    }
+
+    .badge-participated {
+      background: var(--color-success);
+      color: white;
+      padding: 2px 10px;
+      border-radius: 12px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      display: inline-block;
+      margin-left: 8px;
     }
 
     /* ─── Racers / Chat ─── */
@@ -1158,14 +1169,20 @@
     grid.innerHTML = races.map(race => {
       const entries = race.entries || [];
       const hasJoined = entries.some(e => e.player_id === currentPlayer.id);
-      const isFull = entries.length >= race.max_participants;
       const isFinished = race.status === 'finished';
       const isRunning = race.status === 'running';
       const isOpen = race.status === 'open';
       const isCreator = race.created_by === currentPlayer.id;
       const canStart = isCreator && isOpen && entries.length >= 2;
+      const isFull = entries.length >= race.max_participants;
 
-      const cardClass = isFinished ? 'card finished' : 'card';
+      // Determine if this race should be grayed out for the current player
+      const isParticipated = hasJoined && isFinished; // only gray out if finished AND they participated
+
+      let cardClass = 'card';
+      if (isParticipated) {
+        cardClass += ' participated';
+      }
 
       return `
         <div class="${cardClass}">
@@ -1190,19 +1207,12 @@
               </div>
             `).join('')}
           </div>
-          ${!isFinished && !hasJoined && isOpen && !isFull ? `
-            <button class="btn btn-primary" onclick="joinRace('${race.id}')">Join Race</button>
-          ` : ''}
-          ${hasJoined && isOpen ? `
-            <button class="btn btn-danger" onclick="leaveRace('${race.id}')">Leave Race</button>
-          ` : ''}
-          ${canStart ? `
-            <button class="btn btn-warning" onclick="startRaceManually('${race.id}')">▶ Start Race</button>
-          ` : ''}
+          ${hasJoined && isFinished ? `<div style="text-align:center; margin:10px 0;"><span class="badge-participated">✅ You raced</span></div>` : ''}
+          ${!isFinished && !hasJoined && isOpen && !isFull ? `<button class="btn btn-primary" onclick="joinRace('${race.id}')">Join Race</button>` : ''}
+          ${hasJoined && isOpen ? `<button class="btn btn-danger" onclick="leaveRace('${race.id}')">Leave Race</button>` : ''}
+          ${canStart ? `<button class="btn btn-warning" onclick="startRaceManually('${race.id}')">▶ Start Race</button>` : ''}
           ${isRunning ? '<div style="text-align:center; color:var(--color-warning); font-weight:bold;">🏁 Race in progress...</div>' : ''}
-          ${isFinished ? `
-            <button class="btn btn-secondary" onclick="raceAgain('${race.id}')">🔄 Race Again</button>
-          ` : ''}
+          ${isFinished ? `<button class="btn btn-secondary" onclick="raceAgain('${race.id}')">🔄 Race Again</button>` : ''}
         </div>
       `;
     }).join('');
