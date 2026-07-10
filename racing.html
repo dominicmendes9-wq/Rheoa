@@ -542,7 +542,6 @@
         return;
       }
       console.log('RPC response:', data);
-      // data is an array of rows
       if (data && data.length > 0 && data[0].success) {
         showToast(data[0].message, 'success');
         await loadVehicles();
@@ -673,7 +672,6 @@
           title.textContent = `🏁 Winner: ${result[0].winner_username}`;
           progressFill.style.width = '100%';
           const cars = track.querySelectorAll('.car-on-track');
-          // result[0].results is the JSON array
           const results = result[0].results || [];
           results.forEach((r, idx) => {
             const car = track.querySelector(`[data-player-id="${r.player_id}"]`);
@@ -713,7 +711,10 @@
   // ─── Sell / Rename ──────────────────────────────────────
   async function sellVehicle(vehicleId) {
     if (!confirm('Sell this vehicle for 85% of its value?')) return;
-    const { data, error } = await sb.rpc('sell_vehicle', { p_vehicle_id: vehicleId });
+    const { data, error } = await sb.rpc('sell_vehicle', {
+      p_vehicle_id: vehicleId,
+      p_player_id: currentPlayer.id   // <-- added
+    });
     if (error) {
       showToast('Error: ' + error.message, 'error');
       return;
