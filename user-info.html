@@ -429,7 +429,6 @@
       const topCountry = Object.keys(countryCounts).sort((a,b) => countryCounts[b] - countryCounts[a])[0] || '—';
 
       // 2. Top Links (now using link_text from clicks)
-      // We want the most recent link_text for each link, and total counts
       const { data: linkData, error: linkError } = await sb
         .from('affiliate_clicks')
         .select('link_id, link_text, affiliate_links(name, base_url), player_id, clicked_at')
@@ -457,7 +456,6 @@
         linkStats[id].total++;
         if (row.player_id) linkStats[id].unique.add(row.player_id);
         if (new Date(row.clicked_at) >= sevenDaysAgo) linkStats[id].last7++;
-        // Update latest_text if this click is newer (we already ordered by clicked_at desc)
         if (row.link_text) {
           linkStats[id].latest_text = row.link_text;
         }
@@ -473,7 +471,7 @@
         count: countryCounts[code]
       })).sort((a,b) => b.count - a.count);
 
-      // 4. Recent clicks (last 20) – now using link_text and players join
+      // 4. Recent clicks (last 20)
       const { data: recentData, error: recentError } = await sb
         .from('affiliate_clicks')
         .select('clicked_at, link_text, affiliate_links(name), players!affiliate_clicks_player_id_fkey(username), country_code, referrer_page')
@@ -481,6 +479,12 @@
         .limit(20);
 
       if (recentError) throw recentError;
+
+      // ─── NEW: Top Clickers (by count) ────────────────────────────
+      const { data: topClickersData, error: topClickersError } = await sb.rpc('get_top_affiliate_clickers');
+      if (topClickersError) {
+        console.warn('Could not load top clickers:', topClickersError);
+      }
 
       // ── Render ──
       let html = '';
@@ -509,7 +513,7 @@
         </div>
       `;
 
-      // Top Links & Regional Distribution
+      // Top Links, Top Clickers, Regional Distribution
       html += `
         <div class="analytics-grid">
           <div class="card">
@@ -538,6 +542,35 @@
             ` : `<div class="no-data">No links clicked yet.</div>`}
           </div>
           <div class="card">
+            <h3>🏆 Top Clickers (by count)</h3>
+            ${topClickersData && topClickersData.length > 0 ? `
+              <table>
+                <thead>
+                  <tr>
+                    <th>Rank</th>
+                    <th>User</th>
+                    <th style="text-align:center;">Clicks</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${topClickersData.map((item, index) => `
+                    <tr>
+                      <td>${index + 1}</td>
+                      <td>${escapeHtml(item.username)}</td>
+                      <td style="text-align:center;">${item.click_count}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            ` : `<div class="no-data">No click data available.</div>`}
+          </div>
+        </div>
+      `;
+
+      // Regional Distribution (moved to a separate row)
+      html += `
+        <div class="analytics-grid" style="grid-template-columns:1fr 1fr;">
+          <div class="card">
             <h3>🌍 Regional Distribution</h3>
             ${regionData.length > 0 ? `
               ${regionData.slice(0, 10).map(item => {
@@ -556,37 +589,33 @@
               ${regionData.length > 10 ? `<div style="margin-top:4px; font-size:0.8rem; color:#64748b;">+ ${regionData.length - 10} more</div>` : ''}
             ` : `<div class="no-data">No regional data.</div>`}
           </div>
-        </div>
-      `;
-
-      // Recent Clicks
-      html += `
-        <div class="recent-clicks">
-          <h3 style="margin-bottom:8px; font-size:1rem; font-weight:600;">🕒 Recent Clicks</h3>
-          ${recentData && recentData.length > 0 ? `
-            <table>
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>User</th>
-                  <th>Link Text</th>
-                  <th>Country</th>
-                  <th>Page</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${recentData.map(row => `
-                  <tr>
-                    <td>${new Date(row.clicked_at).toLocaleString()}</td>
-                    <td>${row.players ? escapeHtml(row.players.username) : 'Guest'}</td>
-                    <td>${escapeHtml(row.link_text || row.affiliate_links?.name || 'Unknown')}</td>
-                    <td><span class="country-code">${escapeHtml(row.country_code || 'ZZ')}</span></td>
-                    <td>${escapeHtml(row.referrer_page || '—')}</td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          ` : `<div class="no-data">No recent clicks.</div>`}
+          <div class="card">
+            <h3>🕒 Recent Clicks</h3>
+            ${recentData && recentData.length > 0 ? `
+              <div style="max-height:300px; overflow-y:auto;">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>User</th>
+                      <th>Link Text</th>
+                      <th>Country</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${recentData.map(row => `
+                      <tr>
+                        <td>${new Date(row.clicked_at).toLocaleString()}</td>
+                        <td>${row.players ? escapeHtml(row.players.username) : 'Guest'}</td>
+                        <td>${escapeHtml(row.link_text || row.affiliate_links?.name || 'Unknown')}</td>
+                        <td><span class="country-code">${escapeHtml(row.country_code || 'ZZ')}</span></td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+            ` : `<div class="no-data">No recent clicks.</div>`}
+          </div>
         </div>
       `;
 
