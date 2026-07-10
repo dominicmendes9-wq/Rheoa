@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
   <style>
-    /* ─── Full CSS (same as before) ─── */
+    /* ─── CSS Variables & Themes (unchanged) ─── */
     :root {
       --bg-body: #f0f4fa;
       --card-bg: #fff;
@@ -936,7 +936,7 @@
   let raceDuration = 10;
   const MAX_CHAT_MESSAGES = 100;
   let isChannelReady = false;
-  let autoStartAttempted = {}; // track races we've already auto-started
+  let autoStartAttempted = {};
 
   // ─── Auth & Player ──────────────────────────────────────
   async function loadPlayerData() {
@@ -1020,7 +1020,6 @@
       }
       races = racesWithEntries;
       renderRaces();
-      // After rendering, check for auto-start
       await checkAndAutoStartRaces();
     } catch (error) {
       console.error('Error loading races:', error);
@@ -1031,13 +1030,11 @@
   // ─── Auto‑start logic ────────────────────────────────────
   async function checkAndAutoStartRaces() {
     for (const race of races) {
-      // Only start if open, auto_start true, participants >= max, and not already attempted
       if (race.status === 'open' && race.auto_start === true) {
         const entryCount = (race.entries || []).length;
         if (entryCount >= race.max_participants && !autoStartAttempted[race.id]) {
           autoStartAttempted[race.id] = true;
           console.log(`Auto-starting race ${race.name}`);
-          // Call startRaceManually
           await startRaceManually(race.id);
         }
       }
@@ -1276,7 +1273,6 @@
     }
     racingRoomId = FIXED_ROOM_ID;
 
-    // ─── 1. Presence channel ──────────────────────────────
     racingChannel = sb.channel(`racing-presence:${racingRoomId}`);
 
     racingChannel.on('broadcast', { event: 'message' }, (payload) => {
@@ -1333,7 +1329,6 @@
       }
     });
 
-    // ─── 2. Chat DB subscription ──────────────────────────
     chatDbSubscription = sb
       .channel('racing-chat-db')
       .on('postgres_changes', {
@@ -1351,7 +1346,6 @@
         else console.warn('⚠️ Chat DB subscription status:', status);
       });
 
-    // ─── 3. Race entries Realtime subscription ────────────
     raceEntriesSubscription = sb
       .channel('race-entries-changes')
       .on('postgres_changes', {
@@ -1371,7 +1365,6 @@
         else console.warn('⚠️ Race entries Realtime subscription status:', status);
       });
 
-    // ─── 4. Challenges subscription ────────────────────────
     challengeSubscription = sb.channel('challenges');
     challengeSubscription.on('postgres_changes', {
       event: 'INSERT',
@@ -1807,102 +1800,105 @@
   // ─── Race actions ─────────────────────────────────────────
   async function buyVehicle(modelId) {
     const nickname = prompt('Give your vehicle a nickname (optional):', '');
-    const { data, error } = await sb.rpc('buy_vehicle', {
-      p_model_id: modelId,
-      p_nickname: nickname || null
-    });
-    if (error) { showToast(error.message, 'error'); return; }
-    if (data.success) {
-      showToast(data.message, 'success');
-      await loadVehicles();
-      await loadPlayerData();
-      if (!document.getElementById('garage').classList.contains('active')) switchTab('garage');
-    } else {
-      showToast(data.error || 'Failed to buy vehicle', 'error');
+    try {
+      const { data, error } = await sb.rpc('buy_vehicle', {
+        p_model_id: modelId,
+        p_nickname: nickname || null,
+        p_player_id: currentPlayer.id
+      });
+      if (error) {
+        console.error('RPC error:', error);
+        showToast('Error: ' + (error.message || JSON.stringify(error)), 'error');
+        return;
+      }
+      if (data && data.length > 0 && data[0].success) {
+        showToast(data[0].message, 'success');
+        await loadVehicles();
+        await loadPlayerData();
+        if (!document.getElementById('garage').classList.contains('active')) switchTab('garage');
+      } else {
+        const msg = data && data.length > 0 ? data[0].message : 'Failed to buy';
+        showToast(msg, 'error');
+      }
+    } catch (err) {
+      console.error('Exception:', err);
+      showToast('Exception: ' + err.message, 'error');
     }
   }
 
   async function joinRace(raceId) {
     if (!vehicles.length) { showToast('You need a vehicle to join!', 'error'); return; }
     const vehicleId = vehicles[0].id;
-    const { data, error } = await sb.rpc('join_race', {
-      p_race_id: raceId,
-      p_vehicle_id: vehicleId
-    });
-    if (error) {
-      console.error('Join race RPC error:', error);
-      showToast('Error joining race: ' + JSON.stringify(error), 'error');
-      return;
-    }
-    if (!data.success) {
-      showToast('Failed to join: ' + data.error, 'error');
-      return;
-    }
-
-    showToast('Joined race!', 'success');
-    loadRaces();
-    if (data.status === 'running') {
-      startRaceAnimation(raceId, data.duration_seconds || 10);
-      if (racingChannel && isChannelReady) {
-        await racingChannel.send({
-          type: 'broadcast',
-          event: 'race_update',
-          payload: { action: 'start', race_id: raceId }
-        });
+    try {
+      const { data, error } = await sb.rpc('join_race', {
+        p_race_id: raceId,
+        p_vehicle_id: vehicleId,
+        p_player_id: currentPlayer.id
+      });
+      if (error) {
+        console.error('Join race RPC error:', error);
+        showToast('Error: ' + (error.message || JSON.stringify(error)), 'error');
+        return;
       }
+      if (data && data.length > 0 && data[0].success) {
+        showToast(data[0].message, 'success');
+        loadRaces();
+      } else {
+        const msg = data && data.length > 0 ? data[0].message : 'Failed to join';
+        showToast(msg, 'error');
+      }
+    } catch (err) {
+      console.error('Exception:', err);
+      showToast('Exception: ' + err.message, 'error');
     }
   }
 
   async function leaveRace(raceId) {
     if (!confirm('Leave this race?')) return;
-    const { data, error } = await sb.rpc('leave_race', { p_race_id: raceId });
-    if (error) {
-      showToast(error.message, 'error');
-      return;
-    }
-    if (data.success) {
-      showToast(data.message, 'success');
-      if (racingChannel && isChannelReady) {
-        await racingChannel.send({
-          type: 'broadcast',
-          event: 'race_update',
-          payload: { action: 'leave', race_id: raceId, player_id: currentPlayer.id }
-        });
+    try {
+      const { data, error } = await sb.rpc('leave_race', { p_race_id: raceId });
+      if (error) {
+        showToast('Error: ' + error.message, 'error');
+        return;
       }
-      await loadRaces();
-      await loadPlayerData();
-    } else {
-      showToast(data.error || 'Failed to leave', 'error');
+      if (data && data.length > 0 && data[0].success) {
+        showToast(data[0].message, 'success');
+        loadRaces();
+      } else {
+        const msg = data && data.length > 0 ? data[0].message : 'Failed to leave';
+        showToast(msg, 'error');
+      }
+    } catch (err) {
+      console.error('Exception:', err);
+      showToast('Exception: ' + err.message, 'error');
     }
   }
 
   async function startRaceManually(raceId) {
-    const { data, error } = await sb.rpc('start_race', { p_race_id: raceId });
-    if (error || !data.success) {
-      showToast(error?.message || data?.error, 'error');
-      return;
-    }
-    showToast('Race started!', 'success');
-    const race = races.find(r => r.id === raceId);
-    if (race) startRaceAnimation(raceId, race.duration_seconds || 10);
-    loadRaces();
-    if (racingChannel && isChannelReady) {
-      await racingChannel.send({
-        type: 'broadcast',
-        event: 'race_update',
-        payload: { action: 'start', race_id: raceId }
-      });
+    try {
+      const { data, error } = await sb.rpc('start_race', { p_race_id: raceId });
+      if (error) {
+        showToast('Error: ' + error.message, 'error');
+        return;
+      }
+      if (data && data.length > 0 && data[0].success) {
+        showToast(data[0].message, 'success');
+        const race = races.find(r => r.id === raceId);
+        if (race) startRaceAnimation(raceId, race.duration_seconds || 10);
+        loadRaces();
+      } else {
+        const msg = data && data.length > 0 ? data[0].message : 'Failed to start';
+        showToast(msg, 'error');
+      }
+    } catch (err) {
+      console.error('Exception:', err);
+      showToast('Exception: ' + err.message, 'error');
     }
   }
 
   // ─── Race Again ──────────────────────────────────────────
   async function raceAgain(raceId) {
-    const race = races.find(r => r.id === raceId);
-    if (!race) return;
-    // Remove create race modal, just show a message that admin creates races.
-    showToast('Races are created by admins only. New race created.', 'info');
-    // Actually we could create a new race with same settings via RPC, but we removed the modal.
-    // So just inform.
+    showToast('Races are created by admins only.', 'info');
   }
 
   // ─── Race Animation ──────────────────────────────────────
@@ -1958,7 +1954,7 @@
         const base = (idx + 1) / cars.length;
         const jitter = Math.sin(elapsed * 2 + idx) * 0.05 + 0.05 * Math.random();
         const pos = Math.min(progress * 0.9 + jitter, 0.95) * 100;
-        car.style.left = pos + '%();
+        car.style.left = pos + '%';  // <-- fixed: removed stray '('
       });
     }, 100);
 
@@ -1976,20 +1972,21 @@
           loadRaces();
           return;
         }
-        if (!result.success) {
+        if (!result || !result[0] || !result[0].success) {
           console.error('finish_race returned error:', result);
-          showToast('Race finish error: ' + JSON.stringify(result), 'error');
-          title.textContent = '⚠️ ' + (result.error || 'Unknown error');
+          showToast('Race finish error: ' + (result?.[0]?.message || 'Unknown error'), 'error');
+          title.textContent = '⚠️ ' + (result?.[0]?.message || 'Unknown error');
           closeBtn.style.display = 'block';
           await sb.from('races').update({ status: 'open' }).eq('id', raceId);
           loadRaces();
           return;
         }
         // Success
-        title.textContent = `🏁 Winner: ${result.winner_username}`;
+        title.textContent = `🏁 Winner: ${result[0].winner_username}`;
         progressFill.style.width = '100%';
         const cars = track.querySelectorAll('.car-on-track');
-        result.results.forEach((r, idx) => {
+        const results = result[0].results || [];
+        results.forEach((r, idx) => {
           const car = track.querySelector(`[data-player-id="${r.player_id}"]`);
           if (car) {
             car.style.left = (idx === 0 ? 95 : (95 - idx * 10)) + '%';
@@ -1998,13 +1995,13 @@
           }
         });
         closeBtn.style.display = 'block';
-        showToast(`Race finished! Winner: ${result.winner_username}`, 'success');
+        showToast(`Race finished! Winner: ${result[0].winner_username}`, 'success');
 
         if (racingChannel && isChannelReady) {
           await racingChannel.send({
             type: 'broadcast',
             event: 'race_update',
-            payload: { action: 'finish', result: result }
+            payload: { action: 'finish', result: result[0] }
           });
         }
 
@@ -2136,15 +2133,26 @@
   // ─── Sell / Rename ──────────────────────────────────────
   async function sellVehicle(vehicleId) {
     if (!confirm('Sell this vehicle? You will get 85% of its value back.')) return;
-    const { data, error } = await sb.rpc('sell_vehicle', { p_vehicle_id: vehicleId });
-    if (error) {
-      showToast(error.message, 'error');
-    } else if (data.success) {
-      showToast(data.message, 'success');
-      await loadVehicles();
-      await loadPlayerData();
-    } else {
-      showToast(data.error || 'Failed to sell', 'error');
+    try {
+      const { data, error } = await sb.rpc('sell_vehicle', {
+        p_vehicle_id: vehicleId,
+        p_player_id: currentPlayer.id
+      });
+      if (error) {
+        showToast('Error: ' + error.message, 'error');
+        return;
+      }
+      if (data && data.length > 0 && data[0].success) {
+        showToast(data[0].message, 'success');
+        await loadVehicles();
+        await loadPlayerData();
+      } else {
+        const msg = data && data.length > 0 ? data[0].message : 'Failed to sell';
+        showToast(msg, 'error');
+      }
+    } catch (err) {
+      console.error('Exception:', err);
+      showToast('Exception: ' + err.message, 'error');
     }
   }
 
@@ -2172,7 +2180,7 @@
     if (activeTab && activeTab.textContent.includes('Races')) loadRaces();
   }, 30000);
 
-  // ─── Globals ──────────────────────────────────────────────
+  // ─── Expose globals ──────────────────────────────────────
   window.switchTab = switchTab;
   window.buyVehicle = buyVehicle;
   window.joinRace = joinRace;
