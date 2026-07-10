@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
   <style>
-    /* ─── Minimal CSS (same as before) ─── */
+    /* ─── Minimal CSS (unchanged) ─── */
     :root {
       --bg-body: #f0f4fa;
       --card-bg: #fff;
@@ -30,8 +30,8 @@
       --color-success: #16a34a;
       --color-warning: #f59e0b;
     }
-    body.theme-dusk { /* ... same as earlier */ }
-    body.theme-meadow { /* ... same as earlier */ }
+    body.theme-dusk { /* ... same as before */ }
+    body.theme-meadow { /* ... same as before */ }
     * { margin:0; padding:0; box-sizing:border-box; }
     body {
       background: var(--bg-body);
@@ -542,13 +542,15 @@
         return;
       }
       console.log('RPC response:', data);
-      if (data.success) {
-        showToast(data.message, 'success');
+      // data is an array of rows
+      if (data && data.length > 0 && data[0].success) {
+        showToast(data[0].message, 'success');
         await loadVehicles();
         await loadPlayerData();
         if (!document.getElementById('garage').classList.contains('active')) switchTab('garage');
       } else {
-        showToast(data.message || 'Failed to buy', 'error');
+        const msg = data && data.length > 0 ? data[0].message : 'Failed to buy';
+        showToast(msg, 'error');
       }
     } catch (err) {
       console.error('Exception:', err);
@@ -564,36 +566,40 @@
       p_vehicle_id: vehicleId
     });
     if (error) { showToast('Error: ' + error.message, 'error'); return; }
-    if (data.success) {
-      showToast('Joined race!', 'success');
+    if (data && data.length > 0 && data[0].success) {
+      showToast(data[0].message, 'success');
       loadRaces();
     } else {
-      showToast(data.message || 'Failed to join', 'error');
+      const msg = data && data.length > 0 ? data[0].message : 'Failed to join';
+      showToast(msg, 'error');
     }
   }
 
   async function leaveRace(raceId) {
     if (!confirm('Leave this race?')) return;
     const { data, error } = await sb.rpc('leave_race', { p_race_id: raceId });
-    if (error) { showToast(error.message, 'error'); return; }
-    if (data.success) {
-      showToast(data.message, 'success');
+    if (error) { showToast('Error: ' + error.message, 'error'); return; }
+    if (data && data.length > 0 && data[0].success) {
+      showToast(data[0].message, 'success');
       loadRaces();
     } else {
-      showToast(data.message || 'Failed to leave', 'error');
+      const msg = data && data.length > 0 ? data[0].message : 'Failed to leave';
+      showToast(msg, 'error');
     }
   }
 
   async function startRaceManually(raceId) {
     const { data, error } = await sb.rpc('start_race', { p_race_id: raceId });
-    if (error || !data.success) {
-      showToast(error?.message || data?.message || 'Failed to start', 'error');
-      return;
+    if (error) { showToast('Error: ' + error.message, 'error'); return; }
+    if (data && data.length > 0 && data[0].success) {
+      showToast(data[0].message, 'success');
+      const race = races.find(r => r.id === raceId);
+      if (race) startRaceAnimation(raceId, race.duration_seconds || 10);
+      loadRaces();
+    } else {
+      const msg = data && data.length > 0 ? data[0].message : 'Failed to start';
+      showToast(msg, 'error');
     }
-    showToast('Race started!', 'success');
-    const race = races.find(r => r.id === raceId);
-    if (race) startRaceAnimation(raceId, race.duration_seconds || 10);
-    loadRaces();
   }
 
   async function raceAgain(raceId) {
@@ -657,28 +663,37 @@
       raceInterval = null;
       try {
         const { data: result, error } = await sb.rpc('finish_race', { p_race_id: raceId });
-        if (error || !result.success) {
-          showToast('Error finishing race', 'error');
+        if (error) {
+          showToast('Error: ' + error.message, 'error');
           title.textContent = '⚠️ Error';
           closeBtn.style.display = 'block';
           return;
         }
-        title.textContent = `🏁 Winner: ${result.winner_username}`;
-        progressFill.style.width = '100%';
-        const cars = track.querySelectorAll('.car-on-track');
-        result.results.forEach((r, idx) => {
-          const car = track.querySelector(`[data-player-id="${r.player_id}"]`);
-          if (car) {
-            car.style.left = (idx === 0 ? 95 : (95 - idx * 10)) + '%';
-            car.style.backgroundColor = idx === 0 ? '#FFD700' : '#4CAF50';
-            car.textContent += ` #${r.position} +₹${r.earnings}`;
-          }
-        });
-        closeBtn.style.display = 'block';
-        showToast(`Race finished! Winner: ${result.winner_username}`, 'success');
-        await loadRaces();
-        await loadLeaderboard();
-        await loadHistory();
+        if (result && result.length > 0 && result[0].success) {
+          title.textContent = `🏁 Winner: ${result[0].winner_username}`;
+          progressFill.style.width = '100%';
+          const cars = track.querySelectorAll('.car-on-track');
+          // result[0].results is the JSON array
+          const results = result[0].results || [];
+          results.forEach((r, idx) => {
+            const car = track.querySelector(`[data-player-id="${r.player_id}"]`);
+            if (car) {
+              car.style.left = (idx === 0 ? 95 : (95 - idx * 10)) + '%';
+              car.style.backgroundColor = idx === 0 ? '#FFD700' : '#4CAF50';
+              car.textContent += ` #${r.position} +₹${r.earnings}`;
+            }
+          });
+          closeBtn.style.display = 'block';
+          showToast(`Race finished! Winner: ${result[0].winner_username}`, 'success');
+          await loadRaces();
+          await loadLeaderboard();
+          await loadHistory();
+        } else {
+          const msg = result && result.length > 0 ? result[0].message : 'Race finish failed';
+          showToast(msg, 'error');
+          title.textContent = '⚠️ Error';
+          closeBtn.style.display = 'block';
+        }
       } catch (err) {
         console.error(err);
         showToast('Error finishing race', 'error');
@@ -699,13 +714,17 @@
   async function sellVehicle(vehicleId) {
     if (!confirm('Sell this vehicle for 85% of its value?')) return;
     const { data, error } = await sb.rpc('sell_vehicle', { p_vehicle_id: vehicleId });
-    if (error) { showToast(error.message, 'error'); return; }
-    if (data.success) {
-      showToast(data.message, 'success');
+    if (error) {
+      showToast('Error: ' + error.message, 'error');
+      return;
+    }
+    if (data && data.length > 0 && data[0].success) {
+      showToast(data[0].message, 'success');
       await loadVehicles();
       await loadPlayerData();
     } else {
-      showToast(data.message || 'Failed to sell', 'error');
+      const msg = data && data.length > 0 ? data[0].message : 'Failed to sell';
+      showToast(msg, 'error');
     }
   }
 
