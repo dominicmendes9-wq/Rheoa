@@ -562,7 +562,8 @@
     const vehicleId = vehicles[0].id;
     const { data, error } = await sb.rpc('join_race', {
       p_race_id: raceId,
-      p_vehicle_id: vehicleId
+      p_vehicle_id: vehicleId,
+      p_player_id: currentPlayer.id   // <-- added
     });
     if (error) { showToast('Error: ' + error.message, 'error'); return; }
     if (data && data.length > 0 && data[0].success) {
@@ -713,7 +714,7 @@
     if (!confirm('Sell this vehicle for 85% of its value?')) return;
     const { data, error } = await sb.rpc('sell_vehicle', {
       p_vehicle_id: vehicleId,
-      p_player_id: currentPlayer.id   // <-- added
+      p_player_id: currentPlayer.id
     });
     if (error) {
       showToast('Error: ' + error.message, 'error');
