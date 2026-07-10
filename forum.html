@@ -1284,44 +1284,6 @@ async function trackDeviceInfo() {
 }
 
 // ─────────────────────────────────────────────
-// AFFILIATE LINK TRACKING
-// ─────────────────────────────────────────────
-function addAffiliateAttributeToLinks(html) {
-  if (!html) return html;
-  const temp = document.createElement('div');
-  temp.innerHTML = html;
-  temp.querySelectorAll('a').forEach(a => a.setAttribute('data-affiliate', 'true'));
-  return temp.innerHTML;
-}
-
-async function logAffiliateClick(linkElement) {
-  if (!currentPlayer) return;
-  const url = linkElement.href;
-  const referrer = window.location.pathname;
-  const userAgent = navigator.userAgent;
-
-  try {
-    // Get IP from ipinfo.io (optional, can be derived server-side)
-    let ip = '0.0.0.0';
-    try {
-      const ipRes = await fetch('https://ipinfo.io/json');
-      const ipData = await ipRes.json();
-      ip = ipData.ip || '0.0.0.0';
-    } catch (e) { /* ignore */ }
-
-    const { error } = await sb.rpc('log_affiliate_click', {
-      p_url: url,
-      p_referrer: referrer,
-      p_user_agent: userAgent,
-      p_ip_address: ip
-    });
-    if (error) console.error('Affiliate click logging failed:', error);
-  } catch (err) {
-    console.error('Affiliate click logging failed:', err);
-  }
-}
-
-// ─────────────────────────────────────────────
 // AUTH & INIT
 // ─────────────────────────────────────────────
 async function init() {
@@ -1339,16 +1301,6 @@ async function init() {
 
   // ─── Track device info after player is loaded ──
   await trackDeviceInfo();
-
-  // ─── Set up affiliate link click tracking ──
-  document.addEventListener('click', function(e) {
-    const link = e.target.closest('a[data-affiliate="true"]');
-    if (link) {
-      // Fire-and-forget logging
-      logAffiliateClick(link);
-      // Do not prevent default – let the link navigate normally
-    }
-  });
 
   const params = new URLSearchParams(window.location.search);
   const communityName = params.get('c');
@@ -1693,35 +1645,6 @@ function insertImageWithSize(editorId) {
 }
 
 // ─────────────────────────────────────────────
-// INSERT LINK WITH AFFILIATE ATTRIBUTE
-// ─────────────────────────────────────────────
-function insertLink() {
-  const url = prompt('Enter URL:', 'https://');
-  if (!url) return;
-  const editor = document.getElementById('postEditor');
-  if (!editor) return;
-  editor.focus();
-  // Use execCommand to insert a link, then we'll add the attribute
-  document.execCommand('createLink', false, url);
-  // The link is now selected; we can add the attribute to the selected link
-  const selection = window.getSelection();
-  if (selection.rangeCount > 0) {
-    const range = selection.getRangeAt(0);
-    const container = range.commonAncestorContainer;
-    const link = container.closest ? container.closest('a') : null;
-    if (link) {
-      link.setAttribute('data-affiliate', 'true');
-    } else {
-      // If the selection is not inside a link, maybe the link is the selected node itself
-      const selectedNode = selection.anchorNode.parentNode;
-      if (selectedNode.tagName === 'A') {
-        selectedNode.setAttribute('data-affiliate', 'true');
-      }
-    }
-  }
-}
-
-// ─────────────────────────────────────────────
 // VIEW SINGLE POST
 // ─────────────────────────────────────────────
 async function viewPost(postId) {
@@ -1777,9 +1700,6 @@ async function loadPostView(postId) {
 
   const readTime = estimateReadTime(post.content || '');
   let sanitizedContent = DOMPurify.sanitize(post.content || '');
-
-  // Add data-affiliate="true" to all links in the content
-  sanitizedContent = addAffiliateAttributeToLinks(sanitizedContent);
 
   // Check for affiliate pill in content (stored as div)
   const hasAffiliate = sanitizedContent.includes('class="affiliate-pill"');
@@ -2015,21 +1935,7 @@ function execCmdOnEditor(editorId, cmd, value = null) {
 
 function insertLinkOnEditor(editorId) {
   const url = prompt('Enter URL:', 'https://');
-  if (!url) return;
-  const editor = document.getElementById(editorId);
-  if (!editor) return;
-  editor.focus();
-  document.execCommand('createLink', false, url);
-  // Add affiliate attribute to the inserted link
-  const selection = window.getSelection();
-  if (selection.rangeCount > 0) {
-    const range = selection.getRangeAt(0);
-    const container = range.commonAncestorContainer;
-    const link = container.closest ? container.closest('a') : null;
-    if (link) {
-      link.setAttribute('data-affiliate', 'true');
-    }
-  }
+  if (url) execCmdOnEditor(editorId, 'createLink', url);
 }
 
 function openEmojiPickerForEditor(editorId) {
@@ -2241,9 +2147,17 @@ async function vote(targetType, targetId, value) {
 }
 
 // ─────────────────────────────────────────────
-// RICH TEXT HELPERS (for post creation) – overwritten above
+// RICH TEXT HELPERS (for post creation)
 // ─────────────────────────────────────────────
-// The original execCmd and insertLink are replaced with the versions above that add affiliate attributes.
+function execCmd(cmd, value = null) {
+  document.execCommand(cmd, false, value);
+  document.getElementById('postEditor').focus();
+}
+
+function insertLink() {
+  const url = prompt('Enter URL:', 'https://');
+  if (url) execCmd('createLink', url);
+}
 
 function openEmojiPicker() {
   const emojis = ['😊', '😂', '🤔', '🔥', '💯', '✨', '🎉', '👏', '👍', '❤️'];
