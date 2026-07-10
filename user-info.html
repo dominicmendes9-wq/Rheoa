@@ -428,10 +428,11 @@
       summaryData.forEach(c => { if (c.country_code) countryCounts[c.country_code] = (countryCounts[c.country_code] || 0) + 1; });
       const topCountry = Object.keys(countryCounts).sort((a,b) => countryCounts[b] - countryCounts[a])[0] || '—';
 
-      // 2. Top Links
+      // 2. Top Links (now using link_text from clicks)
+      // We want the most recent link_text for each link, and total counts
       const { data: linkData, error: linkError } = await sb
         .from('affiliate_clicks')
-        .select('link_id, affiliate_links(name, base_url), player_id, clicked_at')
+        .select('link_id, link_text, affiliate_links(name, base_url), player_id, clicked_at')
         .order('clicked_at', { ascending: false });
 
       if (linkError) throw linkError;
@@ -449,12 +450,17 @@
             url: row.affiliate_links.base_url,
             total: 0,
             unique: new Set(),
-            last7: 0
+            last7: 0,
+            latest_text: row.link_text || row.affiliate_links.name || row.affiliate_links.base_url
           };
         }
         linkStats[id].total++;
         if (row.player_id) linkStats[id].unique.add(row.player_id);
         if (new Date(row.clicked_at) >= sevenDaysAgo) linkStats[id].last7++;
+        // Update latest_text if this click is newer (we already ordered by clicked_at desc)
+        if (row.link_text) {
+          linkStats[id].latest_text = row.link_text;
+        }
       });
 
       const topLinks = Object.values(linkStats)
@@ -467,10 +473,10 @@
         count: countryCounts[code]
       })).sort((a,b) => b.count - a.count);
 
-      // 4. Recent clicks (last 20)
+      // 4. Recent clicks (last 20) – now using link_text and players join
       const { data: recentData, error: recentError } = await sb
         .from('affiliate_clicks')
-        .select('clicked_at, affiliate_links(name), players!affiliate_clicks_player_id_fkey(username), country_code, referrer_page')
+        .select('clicked_at, link_text, affiliate_links(name), players!affiliate_clicks_player_id_fkey(username), country_code, referrer_page')
         .order('clicked_at', { ascending: false })
         .limit(20);
 
@@ -492,7 +498,7 @@
           </div>
           <div class="summary-card">
             <div class="label">Top Link</div>
-            <div class="value" style="font-size:1.2rem;">${topLinks.length > 0 ? escapeHtml(topLinks[0].name) : '—'}</div>
+            <div class="value" style="font-size:1.2rem;">${topLinks.length > 0 ? escapeHtml(topLinks[0].latest_text) : '—'}</div>
             <div class="sub">${topLinks.length > 0 ? topLinks[0].total + ' clicks' : ''}</div>
           </div>
           <div class="summary-card">
@@ -512,7 +518,7 @@
               <table>
                 <thead>
                   <tr>
-                    <th>Link</th>
+                    <th>Link (most recent text)</th>
                     <th style="text-align:center;">Total</th>
                     <th style="text-align:center;">Unique</th>
                     <th style="text-align:center;">7d</th>
@@ -521,7 +527,7 @@
                 <tbody>
                   ${topLinks.map(link => `
                     <tr>
-                      <td>${escapeHtml(link.name)}</td>
+                      <td>${escapeHtml(link.latest_text)}</td>
                       <td style="text-align:center;">${link.total}</td>
                       <td style="text-align:center;">${link.unique.size}</td>
                       <td style="text-align:center;">${link.last7}</td>
@@ -563,7 +569,7 @@
                 <tr>
                   <th>Date</th>
                   <th>User</th>
-                  <th>Link</th>
+                  <th>Link Text</th>
                   <th>Country</th>
                   <th>Page</th>
                 </tr>
@@ -573,7 +579,7 @@
                   <tr>
                     <td>${new Date(row.clicked_at).toLocaleString()}</td>
                     <td>${row.players ? escapeHtml(row.players.username) : 'Guest'}</td>
-                    <td>${row.affiliate_links ? escapeHtml(row.affiliate_links.name) : 'Unknown'}</td>
+                    <td>${escapeHtml(row.link_text || row.affiliate_links?.name || 'Unknown')}</td>
                     <td><span class="country-code">${escapeHtml(row.country_code || 'ZZ')}</span></td>
                     <td>${escapeHtml(row.referrer_page || '—')}</td>
                   </tr>
