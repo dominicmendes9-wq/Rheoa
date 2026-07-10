@@ -1302,8 +1302,10 @@ async function logAffiliateClick(linkElement) {
   const url = linkElement.href;
   const referrer = window.location.pathname;
   const userAgent = navigator.userAgent;
+  // Get the visible text of the link (trimmed)
+  const linkText = linkElement.textContent.trim() || '';
 
-  console.log('🔗 Affiliate click detected:', url);
+  console.log('🔗 Affiliate click detected:', url, 'text:', linkText);
 
   try {
     let ip = '0.0.0.0';
@@ -1320,7 +1322,8 @@ async function logAffiliateClick(linkElement) {
       p_url: url,
       p_referrer: referrer,
       p_user_agent: userAgent,
-      p_ip_address: ip
+      p_ip_address: ip,
+      p_link_text: linkText
     });
 
     if (error) {
@@ -2136,7 +2139,9 @@ function renderComments(comments, parentId = null) {
     let commentContent = c.content || '';
     // Add affiliate attributes to comment content when displayed
     if (!isEditing) {
-      commentContent = addAffiliateAttributes(escapeHtml(commentContent).replace(/\n/g, '<br>'));
+      // Escape HTML and convert newlines, then add affiliate attributes
+      commentContent = escapeHtml(commentContent).replace(/\n/g, '<br>');
+      commentContent = addAffiliateAttributes(commentContent);
     }
 
     if (isEditing) {
