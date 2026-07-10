@@ -1691,22 +1691,37 @@ function insertImageWithSize(editorId) {
 }
 
 // ─────────────────────────────────────────────
-// INSERT LINK WITH AFFILIATE ATTRIBUTE
+// INSERT LINK WITH AFFILIATE ATTRIBUTE (using execCmd)
 // ─────────────────────────────────────────────
 function insertLink() {
   const url = prompt('Enter URL:', 'https://');
   if (!url) return;
+  // Use execCmd to create the link, then add the attribute
   const editor = document.getElementById('postEditor');
   if (!editor) return;
   editor.focus();
-
+  // Insert the link using execCommand
+  document.execCommand('createLink', false, url);
+  // Now find the newly created link and add data-affiliate
   const selection = window.getSelection();
-  let selectedText = 'link';
   if (selection.rangeCount > 0) {
-    selectedText = selection.toString() || 'link';
+    const range = selection.getRangeAt(0);
+    const container = range.commonAncestorContainer;
+    // Traverse up to find the <a> tag
+    let node = container;
+    while (node && node.nodeName !== 'A') {
+      node = node.parentNode;
+    }
+    if (node && node.nodeName === 'A') {
+      node.setAttribute('data-affiliate', 'true');
+    } else {
+      // If the selection is not inside a link, maybe the link is the selected node itself
+      const selectedNode = selection.anchorNode.parentNode;
+      if (selectedNode && selectedNode.nodeName === 'A') {
+        selectedNode.setAttribute('data-affiliate', 'true');
+      }
+    }
   }
-  const linkHtml = `<a href="${escapeHtml(url)}" data-affiliate="true">${escapeHtml(selectedText)}</a>`;
-  document.execCommand('insertHTML', false, linkHtml);
 }
 
 // ─────────────────────────────────────────────
@@ -1764,9 +1779,9 @@ async function loadPostView(postId) {
   reactions.forEach(r => { reactionCounts[r.reaction_type] = (reactionCounts[r.reaction_type] || 0) + 1; });
 
   const readTime = estimateReadTime(post.content || '');
-  let sanitizedContent = DOMPurify.sanitize(post.content || '');
+  let sanitizedContent = DOMPurify.sanitize(post.content || '', { ADD_ATTR: ['data-affiliate'] });
 
-  // Add affiliate attributes to all links
+  // Add affiliate attributes to all links (in case DOMPurify removed them)
   sanitizedContent = addAffiliateAttributes(sanitizedContent);
 
   // Check for affiliate pill in content (stored as div)
@@ -1904,7 +1919,7 @@ async function savePostEdit(postId) {
   if (affiliateEnabled) {
     content += `<div class="affiliate-pill">🔗 Affiliate links included</div>`;
   }
-  content = DOMPurify.sanitize(content);
+  content = DOMPurify.sanitize(content, { ADD_ATTR: ['data-affiliate'] });
   const { error } = await sb.from('posts').update({ content }).eq('id', postId);
   if (error) {
     showToast('Error saving post: ' + error.message, 'error');
@@ -2007,14 +2022,20 @@ function insertLinkOnEditor(editorId) {
   const editor = document.getElementById(editorId);
   if (!editor) return;
   editor.focus();
-
+  document.execCommand('createLink', false, url);
+  // Add affiliate attribute to the inserted link
   const selection = window.getSelection();
-  let selectedText = 'link';
   if (selection.rangeCount > 0) {
-    selectedText = selection.toString() || 'link';
+    const range = selection.getRangeAt(0);
+    const container = range.commonAncestorContainer;
+    let node = container;
+    while (node && node.nodeName !== 'A') {
+      node = node.parentNode;
+    }
+    if (node && node.nodeName === 'A') {
+      node.setAttribute('data-affiliate', 'true');
+    }
   }
-  const linkHtml = `<a href="${escapeHtml(url)}" data-affiliate="true">${escapeHtml(selectedText)}</a>`;
-  document.execCommand('insertHTML', false, linkHtml);
 }
 
 function openEmojiPickerForEditor(editorId) {
@@ -2228,6 +2249,12 @@ async function vote(targetType, targetId, value) {
 // ─────────────────────────────────────────────
 // RICH TEXT HELPERS (for post creation) – overwritten above
 // ─────────────────────────────────────────────
+function execCmd(cmd, value = null) {
+  document.execCommand(cmd, false, value);
+  document.getElementById('postEditor').focus();
+}
+
+// openEmojiPicker is already defined
 function openEmojiPicker() {
   const emojis = ['😊', '😂', '🤔', '🔥', '💯', '✨', '🎉', '👏', '👍', '❤️'];
   const picker = document.createElement('div');
@@ -2282,7 +2309,7 @@ async function createPost() {
     if (affiliateEnabled) {
       content += `<div class="affiliate-pill">🔗 Affiliate links included</div>`;
     }
-    content = DOMPurify.sanitize(content);
+    content = DOMPurify.sanitize(content, { ADD_ATTR: ['data-affiliate'] });
   } else if (editor.tagName === 'TEXTAREA') {
     content = editor.value.trim();
     if (!content) return showToast('Content cannot be empty', 'error');
