@@ -1137,36 +1137,24 @@
     }).join('');
   }
 
-  function renderShop() {
-    const grid = document.getElementById('shopGrid');
-    if (!vehicleModels.length) {
-      grid.innerHTML = '<div class="empty-message">No vehicles available</div>';
-      return;
+  // ─── Updated buyVehicle ─────────────────────────────────────
+  async function buyVehicle(modelId) {
+    const nickname = prompt('Give your vehicle a nickname (optional):', '');
+    // Explicitly pass currentPlayer.id to avoid foreign key issues
+    const { data, error } = await sb.rpc('buy_vehicle', {
+      p_model_id: modelId,
+      p_nickname: nickname || null,
+      p_player_id: currentPlayer.id   // <-- added this line
+    });
+    if (error) { showToast(error.message, 'error'); return; }
+    if (data.success) {
+      showToast(data.message, 'success');
+      await loadVehicles();
+      await loadPlayerData();
+      if (!document.getElementById('garage').classList.contains('active')) switchTab('garage');
+    } else {
+      showToast(data.error || 'Failed to buy vehicle', 'error');
     }
-    grid.innerHTML = vehicleModels.map(m => {
-      const image = m.image_url || 'https://placehold.co/400x300/1e293b/ffffff?text=No+Image';
-      const thumb = m.image_url || 'https://placehold.co/100/1e293b/ffffff?text=?';
-      return `
-        <div class="card">
-          <img src="${escapeHtml(image)}" alt="${escapeHtml(m.name)}">
-          <div class="vehicle-header">
-            <img class="thumb" src="${escapeHtml(thumb)}" alt="${escapeHtml(m.name)}">
-            <span class="vehicle-name">${escapeHtml(m.name)}</span>
-          </div>
-          <div class="stat-bars">
-            <div><div>Speed: ${m.top_speed}</div><div class="stat-bar"><div class="fill" style="width:${m.top_speed}%"></div></div></div>
-            <div><div>Accel: ${m.acceleration}</div><div class="stat-bar"><div class="fill" style="width:${m.acceleration}%"></div></div></div>
-            <div><div>Handling: ${m.handling}</div><div class="stat-bar"><div class="fill" style="width:${m.handling}%"></div></div></div>
-            <div><div>Grip: ${m.grip}</div><div class="stat-bar"><div class="fill" style="width:${m.grip}%"></div></div></div>
-          </div>
-          <div style="margin:10px 0;">Price: ₹${m.price.toLocaleString()}</div>
-          <div>Required Level: ${m.min_level}</div>
-          <button class="btn btn-primary" onclick="buyVehicle('${m.id}')" ${currentPlayer.level < m.min_level ? 'disabled' : ''}>
-            ${currentPlayer.level < m.min_level ? 'Level '+m.min_level+' Required' : 'Buy Now'}
-          </button>
-        </div>
-      `;
-    }).join('');
   }
 
   // ─── Reset & Join Race (new RPC wrapper) ──────────────
@@ -1858,22 +1846,7 @@
   }
 
   // ─── Race actions ─────────────────────────────────────────
-  async function buyVehicle(modelId) {
-    const nickname = prompt('Give your vehicle a nickname (optional):', '');
-    const { data, error } = await sb.rpc('buy_vehicle', {
-      p_model_id: modelId,
-      p_nickname: nickname || null
-    });
-    if (error) { showToast(error.message, 'error'); return; }
-    if (data.success) {
-      showToast(data.message, 'success');
-      await loadVehicles();
-      await loadPlayerData();
-      if (!document.getElementById('garage').classList.contains('active')) switchTab('garage');
-    } else {
-      showToast(data.error || 'Failed to buy vehicle', 'error');
-    }
-  }
+  // buyVehicle already defined above (updated)
 
   async function joinRace(raceId) {
     if (!vehicles.length) { showToast('You need a vehicle to join!', 'error'); return; }
