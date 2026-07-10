@@ -52,6 +52,7 @@
       box-shadow: 0 4px 12px rgba(0,0,0,0.04);
       overflow-x: auto;
       padding: 16px;
+      margin-bottom: 30px;
     }
     table {
       width: 100%;
@@ -115,12 +116,132 @@
       font-size: 0.75rem;
       color: #64748b;
     }
-    @media (max-width: 768px) {
-      body { padding:12px; }
-      .top-bar { flex-direction:column; align-items:stretch; }
-      table { font-size:0.7rem; }
-      th, td { padding:4px 4px; }
-      .table-container { padding:8px; }
+
+    /* ─── Affiliate Analytics Styles ─── */
+    .analytics-section {
+      background: #fff;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+      padding: 20px;
+      margin-top: 30px;
+    }
+    .analytics-section h2 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .analytics-summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .summary-card {
+      background: #f8fafc;
+      border-radius: 10px;
+      padding: 16px;
+      text-align: center;
+      border: 1px solid #e2e8f0;
+    }
+    .summary-card .label {
+      font-size: 0.8rem;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    .summary-card .value {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: #0f172a;
+      margin-top: 4px;
+    }
+    .summary-card .sub {
+      font-size: 0.8rem;
+      color: #64748b;
+      margin-top: 2px;
+    }
+    .analytics-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+    .analytics-grid .card {
+      background: #f8fafc;
+      border-radius: 10px;
+      padding: 16px;
+      border: 1px solid #e2e8f0;
+    }
+    .analytics-grid .card h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+    .analytics-grid .card table {
+      font-size: 0.8rem;
+    }
+    .analytics-grid .card table th {
+      background: transparent;
+      border-bottom: 1px solid #e2e8f0;
+      padding: 6px 4px;
+    }
+    .analytics-grid .card table td {
+      padding: 6px 4px;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .region-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 4px 0;
+    }
+    .region-bar .country {
+      min-width: 40px;
+      font-weight: 600;
+    }
+    .region-bar .bar-bg {
+      flex: 1;
+      height: 8px;
+      background: #e2e8f0;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .region-bar .bar-fill {
+      height: 100%;
+      background: #3b82f6;
+      border-radius: 4px;
+      transition: width 0.3s;
+    }
+    .region-bar .count {
+      min-width: 30px;
+      text-align: right;
+      font-size: 0.8rem;
+      color: #64748b;
+    }
+    .recent-clicks {
+      margin-top: 20px;
+      overflow-x: auto;
+    }
+    .recent-clicks table {
+      font-size: 0.8rem;
+    }
+    .recent-clicks table th {
+      background: transparent;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    @media (max-width: 900px) {
+      .analytics-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    @media (max-width: 600px) {
+      .analytics-summary {
+        grid-template-columns: 1fr 1fr;
+      }
     }
   </style>
 </head>
@@ -136,8 +257,17 @@
       <a href="dashboard.html" class="back-btn">Back</a>
     </div>
   </div>
+
   <div class="table-container" id="userTableContainer">
     <div class="loading">Loading user data...</div>
+  </div>
+
+  <!-- Affiliate Analytics Section -->
+  <div class="analytics-section" id="affiliateAnalytics" style="display:none;">
+    <h2>📈 Affiliate Link Analytics</h2>
+    <div id="analyticsContent">
+      <div class="loading">Loading analytics...</div>
+    </div>
   </div>
 </div>
 
@@ -178,6 +308,7 @@
     }
 
     await loadUserData();
+    await loadAffiliateAnalytics();
   }
 
   async function loadUserData() {
@@ -275,6 +406,191 @@
     } catch (err) {
       console.error(err);
       container.innerHTML = `<div class="error">Error loading data: ${err.message}</div>`;
+    }
+  }
+
+  // ─── Affiliate Analytics ──────────────────────────────────
+  async function loadAffiliateAnalytics() {
+    const container = document.getElementById('analyticsContent');
+    const section = document.getElementById('affiliateAnalytics');
+
+    try {
+      // 1. Summary
+      const { data: summaryData, error: summaryError } = await sb
+        .from('affiliate_clicks')
+        .select('id, player_id, country_code');
+
+      if (summaryError) throw summaryError;
+
+      const totalClicks = summaryData.length;
+      const uniqueClickers = new Set(summaryData.map(c => c.player_id).filter(id => id !== null)).size;
+      const countryCounts = {};
+      summaryData.forEach(c => { if (c.country_code) countryCounts[c.country_code] = (countryCounts[c.country_code] || 0) + 1; });
+      const topCountry = Object.keys(countryCounts).sort((a,b) => countryCounts[b] - countryCounts[a])[0] || '—';
+
+      // 2. Top Links
+      const { data: linkData, error: linkError } = await sb
+        .from('affiliate_clicks')
+        .select('link_id, affiliate_links(name, base_url), player_id, clicked_at')
+        .order('clicked_at', { ascending: false });
+
+      if (linkError) throw linkError;
+
+      const linkStats = {};
+      const now = new Date();
+      const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+      linkData.forEach(row => {
+        if (!row.affiliate_links) return;
+        const id = row.link_id;
+        if (!linkStats[id]) {
+          linkStats[id] = {
+            name: row.affiliate_links.name || row.affiliate_links.base_url,
+            url: row.affiliate_links.base_url,
+            total: 0,
+            unique: new Set(),
+            last7: 0
+          };
+        }
+        linkStats[id].total++;
+        if (row.player_id) linkStats[id].unique.add(row.player_id);
+        if (new Date(row.clicked_at) >= sevenDaysAgo) linkStats[id].last7++;
+      });
+
+      const topLinks = Object.values(linkStats)
+        .sort((a,b) => b.total - a.total)
+        .slice(0, 10);
+
+      // 3. Regional distribution
+      const regionData = Object.keys(countryCounts).map(code => ({
+        country: code,
+        count: countryCounts[code]
+      })).sort((a,b) => b.count - a.count);
+
+      // 4. Recent clicks (last 20)
+      const { data: recentData, error: recentError } = await sb
+        .from('affiliate_clicks')
+        .select('clicked_at, affiliate_links(name), players!affiliate_clicks_player_id_fkey(username), country_code, referrer_page')
+        .order('clicked_at', { ascending: false })
+        .limit(20);
+
+      if (recentError) throw recentError;
+
+      // ── Render ──
+      let html = '';
+
+      // Summary Cards
+      html += `
+        <div class="analytics-summary">
+          <div class="summary-card">
+            <div class="label">Total Clicks</div>
+            <div class="value">${totalClicks}</div>
+          </div>
+          <div class="summary-card">
+            <div class="label">Unique Clickers</div>
+            <div class="value">${uniqueClickers}</div>
+          </div>
+          <div class="summary-card">
+            <div class="label">Top Link</div>
+            <div class="value" style="font-size:1.2rem;">${topLinks.length > 0 ? escapeHtml(topLinks[0].name) : '—'}</div>
+            <div class="sub">${topLinks.length > 0 ? topLinks[0].total + ' clicks' : ''}</div>
+          </div>
+          <div class="summary-card">
+            <div class="label">Top Country</div>
+            <div class="value">${topCountry !== '—' ? escapeHtml(topCountry) : '—'}</div>
+            <div class="sub">${topCountry !== '—' ? countryCounts[topCountry] + ' clicks' : ''}</div>
+          </div>
+        </div>
+      `;
+
+      // Top Links & Regional Distribution
+      html += `
+        <div class="analytics-grid">
+          <div class="card">
+            <h3>🔗 Top Links</h3>
+            ${topLinks.length > 0 ? `
+              <table>
+                <thead>
+                  <tr>
+                    <th>Link</th>
+                    <th style="text-align:center;">Total</th>
+                    <th style="text-align:center;">Unique</th>
+                    <th style="text-align:center;">7d</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${topLinks.map(link => `
+                    <tr>
+                      <td>${escapeHtml(link.name)}</td>
+                      <td style="text-align:center;">${link.total}</td>
+                      <td style="text-align:center;">${link.unique.size}</td>
+                      <td style="text-align:center;">${link.last7}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            ` : `<div class="no-data">No links clicked yet.</div>`}
+          </div>
+          <div class="card">
+            <h3>🌍 Regional Distribution</h3>
+            ${regionData.length > 0 ? `
+              ${regionData.slice(0, 10).map(item => {
+                const max = regionData[0].count;
+                const pct = max > 0 ? (item.count / max) * 100 : 0;
+                return `
+                  <div class="region-bar">
+                    <span class="country">${escapeHtml(item.country)}</span>
+                    <div class="bar-bg">
+                      <div class="bar-fill" style="width:${pct}%;"></div>
+                    </div>
+                    <span class="count">${item.count}</span>
+                  </div>
+                `;
+              }).join('')}
+              ${regionData.length > 10 ? `<div style="margin-top:4px; font-size:0.8rem; color:#64748b;">+ ${regionData.length - 10} more</div>` : ''}
+            ` : `<div class="no-data">No regional data.</div>`}
+          </div>
+        </div>
+      `;
+
+      // Recent Clicks
+      html += `
+        <div class="recent-clicks">
+          <h3 style="margin-bottom:8px; font-size:1rem; font-weight:600;">🕒 Recent Clicks</h3>
+          ${recentData && recentData.length > 0 ? `
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>User</th>
+                  <th>Link</th>
+                  <th>Country</th>
+                  <th>Page</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${recentData.map(row => `
+                  <tr>
+                    <td>${new Date(row.clicked_at).toLocaleString()}</td>
+                    <td>${row.players ? escapeHtml(row.players.username) : 'Guest'}</td>
+                    <td>${row.affiliate_links ? escapeHtml(row.affiliate_links.name) : 'Unknown'}</td>
+                    <td><span class="country-code">${escapeHtml(row.country_code || 'ZZ')}</span></td>
+                    <td>${escapeHtml(row.referrer_page || '—')}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          ` : `<div class="no-data">No recent clicks.</div>`}
+        </div>
+      `;
+
+      container.innerHTML = html;
+      section.style.display = 'block';
+
+    } catch (err) {
+      console.error('Error loading affiliate analytics:', err);
+      container.innerHTML = `<div class="error">Error loading analytics: ${err.message}</div>`;
+      section.style.display = 'block';
     }
   }
 
