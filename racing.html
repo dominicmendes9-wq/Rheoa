@@ -312,6 +312,8 @@
     .btn-warning:hover:not(:disabled) { background: #d97706; }
     .btn-secondary { background: var(--btn-secondary); color: white; }
     .btn-secondary:hover { background: #1e293b; }
+    .btn-reset { background: #8b5cf6; color: white; }
+    .btn-reset:hover:not(:disabled) { background: #7c3aed; }
     .btn:disabled { background: #94a3b8; cursor: not-allowed; opacity: 0.6; }
     .btn-sm { padding: 6px 12px; font-size: 0.8rem; width: auto; margin-top: 0; }
 
@@ -340,6 +342,13 @@
       font-weight: 600;
       display: inline-block;
       margin-left: 8px;
+    }
+
+    .min-players-note {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 6px;
+      text-align: center;
     }
 
     /* ─── Racers / Chat ─── */
@@ -1160,6 +1169,32 @@
     }).join('');
   }
 
+  // ─── Reset & Join Race (new RPC wrapper) ──────────────
+  async function resetAndJoinRace(raceId) {
+    if (!vehicles.length) {
+      showToast('You need a vehicle to race!', 'error');
+      return;
+    }
+    try {
+      const { data, error } = await sb.rpc('reset_and_join_race', { p_race_id: raceId });
+      if (error) {
+        console.error('RPC error:', error);
+        showToast('Error: ' + error.message, 'error');
+        return;
+      }
+      if (data && data.success) {
+        showToast(data.message || 'You have joined the race!', 'success');
+        await loadRaces();
+      } else {
+        showToast(data?.message || 'Failed to join race', 'error');
+      }
+    } catch (err) {
+      console.error('Exception:', err);
+      showToast('Error joining race', 'error');
+    }
+  }
+
+  // ─── Render races ──────────────────────────────────────
   function renderRaces() {
     const grid = document.getElementById('racesGrid');
     if (!races.length) {
@@ -1176,18 +1211,12 @@
       const canStart = isCreator && isOpen && entries.length >= 2;
       const isFull = entries.length >= race.max_participants;
 
-      // Determine participation status
-      const isParticipated = hasJoined && isFinished; // only gray out if finished AND they participated
+      const isParticipated = hasJoined && isFinished;
 
-      // Determine button label and state
+      let statusText = isFinished ? (isParticipated ? '✅ Finished' : '🏁 Completed by Others') : (isRunning ? '🏁 Running' : '🟢 Open');
+
       let buttonHtml = '';
-      if (isFinished) {
-        if (isParticipated) {
-          buttonHtml = `<button class="btn btn-secondary" onclick="raceAgain('${race.id}')">🔄 Race Again</button>`;
-        } else {
-          buttonHtml = `<button class="btn btn-secondary" disabled style="opacity:0.6;cursor:not-allowed;">🚫 Join Race (Completed)</button>`;
-        }
-      } else if (isRunning) {
+      if (isRunning) {
         buttonHtml = '<div style="text-align:center; color:var(--color-warning); font-weight:bold;">🏁 Race in progress...</div>';
       } else if (isOpen) {
         if (hasJoined) {
@@ -1200,15 +1229,19 @@
         if (canStart) {
           buttonHtml += `<button class="btn btn-warning" onclick="startRaceManually('${race.id}')" style="margin-top:5px;">▶ Start Race</button>`;
         }
+      } else if (isFinished) {
+        // Finished race – new or repeat player
+        if (isParticipated) {
+          buttonHtml = `<button class="btn btn-reset" onclick="resetAndJoinRace('${race.id}')">🔄 Race Again</button>`;
+        } else {
+          buttonHtml = `<button class="btn btn-reset" onclick="resetAndJoinRace('${race.id}')">🏁 I want to race too</button>`;
+        }
       }
 
-      // Determine status label
-      let statusText = isFinished ? (isParticipated ? '✅ Finished' : '🏁 Completed by Others') : (isRunning ? '🏁 Running' : '🟢 Open');
-
-      // Determine if we show participants list
+      // Participants display
       let participantsHtml = '';
       if (isFinished && !isParticipated) {
-        participantsHtml = `<div style="color:var(--text-muted); font-size:0.9rem; padding:8px 0; text-align:center;">This race has been completed by other players.</div>`;
+        participantsHtml = `<div style="color:var(--text-muted); font-size:0.9rem; padding:8px 0; text-align:center;">This race has been completed by other players. Join to race again!</div>`;
       } else if (entries.length > 0) {
         participantsHtml = `
           <div class="participants">
@@ -1225,7 +1258,9 @@
         participantsHtml = `<div style="color:var(--text-muted); font-size:0.9rem; padding:8px 0; text-align:center;">No participants yet.</div>`;
       }
 
-      // Apply card class
+      const minPlayers = 2;
+      const minNote = `<div class="min-players-note">👥 Minimum ${minPlayers} players needed to start</div>`;
+
       let cardClass = 'card';
       if (isParticipated) {
         cardClass += ' participated';
@@ -1245,6 +1280,7 @@
             <div>Status: ${statusText}</div>
             ${race.duration_seconds ? `<div>⏱️ ${race.duration_seconds}s</div>` : ''}
           </div>
+          ${minNote}
           ${participantsHtml}
           ${hasJoined && isFinished ? `<div style="text-align:center; margin:10px 0;"><span class="badge-participated">✅ You raced</span></div>` : ''}
           ${buttonHtml}
@@ -1302,7 +1338,6 @@
     }
     racingRoomId = FIXED_ROOM_ID;
 
-    // ─── 1. Presence channel ──────────────────────────────
     racingChannel = sb.channel(`racing-presence:${racingRoomId}`);
 
     racingChannel.on('broadcast', { event: 'message' }, (payload) => {
@@ -1359,7 +1394,6 @@
       }
     });
 
-    // ─── 2. Chat DB subscription ──────────────────────────
     chatDbSubscription = sb
       .channel('racing-chat-db')
       .on('postgres_changes', {
@@ -1377,7 +1411,6 @@
         else console.warn('⚠️ Chat DB subscription status:', status);
       });
 
-    // ─── 3. Race entries Realtime subscription ────────────
     raceEntriesSubscription = sb
       .channel('race-entries-changes')
       .on('postgres_changes', {
@@ -1397,7 +1430,6 @@
         else console.warn('⚠️ Race entries Realtime subscription status:', status);
       });
 
-    // ─── 4. Challenges subscription ────────────────────────
     challengeSubscription = sb.channel('challenges');
     challengeSubscription.on('postgres_changes', {
       event: 'INSERT',
@@ -1706,7 +1738,6 @@
     selectedRaceId = null;
   }
 
-  // Show incoming challenge popup
   function showIncomingChallenge(payload) {
     const challengerId = payload.challenger_id;
     const raceId = payload.race_id;
@@ -1739,7 +1770,6 @@
     }
   }
 
-  // Accept from popup
   async function acceptIncomingChallenge() {
     if (!incomingChallengeId) return;
     const { data, error } = await sb.rpc('accept_challenge', { p_challenge_id: incomingChallengeId });
@@ -1775,7 +1805,6 @@
     }
   }
 
-  // Accept from chat
   async function acceptIncomingChallengeFromChat(challengeId) {
     const { data, error } = await sb.rpc('accept_challenge', { p_challenge_id: challengeId });
     if (error || !data.success) {
@@ -1807,7 +1836,6 @@
     loadRaces();
   }
 
-  // Reject from popup
   async function rejectIncomingChallenge() {
     if (!incomingChallengeId) return;
     const { data, error } = await sb.rpc('reject_challenge', { p_challenge_id: incomingChallengeId });
@@ -1820,7 +1848,6 @@
     }
   }
 
-  // Reject from chat
   async function rejectIncomingChallengeFromChat(challengeId) {
     const { data, error } = await sb.rpc('reject_challenge', { p_challenge_id: challengeId });
     if (error || !data.success) {
@@ -1921,14 +1948,11 @@
     }
   }
 
-  // ─── Race Again ──────────────────────────────────────────
+  // ─── Race Again (legacy – kept for compatibility) ──────
   async function raceAgain(raceId) {
     const race = races.find(r => r.id === raceId);
     if (!race) return;
-    // Remove create race modal, just show a message that admin creates races.
     showToast('Races are created by admins only. New race created.', 'info');
-    // Actually we could create a new race with same settings via RPC, but we removed the modal.
-    // So just inform.
   }
 
   // ─── Race Animation ──────────────────────────────────────
@@ -2011,7 +2035,6 @@
           loadRaces();
           return;
         }
-        // Success
         title.textContent = `🏁 Winner: ${result.winner_username}`;
         progressFill.style.width = '100%';
         const cars = track.querySelectorAll('.car-on-track');
@@ -2223,6 +2246,7 @@
   window.openModal = openModal;
   window.closeRaceOverlay = closeRaceOverlay;
   window.goToDashboard = goToDashboard;
+  window.resetAndJoinRace = resetAndJoinRace;
 </script>
 </body>
 </html>
