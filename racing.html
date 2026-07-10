@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
   <style>
-    /* ─── Minimal CSS ─── */
+    /* ─── Minimal CSS (same as before) ─── */
     :root {
       --bg-body: #f0f4fa;
       --card-bg: #fff;
@@ -30,8 +30,8 @@
       --color-success: #16a34a;
       --color-warning: #f59e0b;
     }
-    body.theme-dusk { /* same as before – omitted for brevity */ }
-    body.theme-meadow { /* same as before – omitted for brevity */ }
+    body.theme-dusk { /* ... same as earlier */ }
+    body.theme-meadow { /* ... same as earlier */ }
     * { margin:0; padding:0; box-sizing:border-box; }
     body {
       background: var(--bg-body);
@@ -532,7 +532,8 @@
     const nickname = prompt('Give your vehicle a nickname (optional):', '');
     const { data, error } = await sb.rpc('buy_vehicle', {
       p_model_id: modelId,
-      p_nickname: nickname || null
+      p_nickname: nickname || null,
+      p_player_id: currentPlayer.id   // <-- added this line
     });
     if (error) { showToast(error.message, 'error'); return; }
     if (data.success) {
