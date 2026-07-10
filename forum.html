@@ -1295,10 +1295,15 @@ function addAffiliateAttributes(html) {
 }
 
 async function logAffiliateClick(linkElement) {
-  if (!currentPlayer) return;
+  if (!currentPlayer) {
+    console.warn('Affiliate click not logged – user not authenticated.');
+    return;
+  }
   const url = linkElement.href;
   const referrer = window.location.pathname;
   const userAgent = navigator.userAgent;
+
+  console.log('🔗 Affiliate click detected:', url);
 
   try {
     let ip = '0.0.0.0';
@@ -1306,17 +1311,27 @@ async function logAffiliateClick(linkElement) {
       const ipRes = await fetch('https://ipinfo.io/json');
       const ipData = await ipRes.json();
       ip = ipData.ip || '0.0.0.0';
-    } catch (e) { /* ignore */ }
+    } catch (e) {
+      console.warn('Could not fetch IP for affiliate click, using default.');
+    }
 
-    const { error } = await sb.rpc('log_affiliate_click', {
+    console.log('📡 Sending affiliate click to RPC...');
+    const { data, error } = await sb.rpc('log_affiliate_click', {
       p_url: url,
       p_referrer: referrer,
       p_user_agent: userAgent,
       p_ip_address: ip
     });
-    if (error) console.error('Affiliate click logging failed:', error);
+
+    if (error) {
+      console.error('❌ Affiliate click logging failed (RPC error):', error);
+    } else if (data && data.success) {
+      console.log('✅ Affiliate click logged successfully. Link ID:', data.link_id);
+    } else {
+      console.warn('⚠️ Affiliate click RPC returned unexpected response:', data);
+    }
   } catch (err) {
-    console.error('Affiliate click logging failed:', err);
+    console.error('❌ Affiliate click logging failed (exception):', err);
   }
 }
 
@@ -1696,30 +1711,21 @@ function insertImageWithSize(editorId) {
 function insertLink() {
   const url = prompt('Enter URL:', 'https://');
   if (!url) return;
-  // Use execCmd to create the link, then add the attribute
   const editor = document.getElementById('postEditor');
   if (!editor) return;
   editor.focus();
-  // Insert the link using execCommand
   document.execCommand('createLink', false, url);
-  // Now find the newly created link and add data-affiliate
+  // Add affiliate attribute to the link
   const selection = window.getSelection();
   if (selection.rangeCount > 0) {
     const range = selection.getRangeAt(0);
     const container = range.commonAncestorContainer;
-    // Traverse up to find the <a> tag
     let node = container;
     while (node && node.nodeName !== 'A') {
       node = node.parentNode;
     }
     if (node && node.nodeName === 'A') {
       node.setAttribute('data-affiliate', 'true');
-    } else {
-      // If the selection is not inside a link, maybe the link is the selected node itself
-      const selectedNode = selection.anchorNode.parentNode;
-      if (selectedNode && selectedNode.nodeName === 'A') {
-        selectedNode.setAttribute('data-affiliate', 'true');
-      }
     }
   }
 }
@@ -2023,7 +2029,7 @@ function insertLinkOnEditor(editorId) {
   if (!editor) return;
   editor.focus();
   document.execCommand('createLink', false, url);
-  // Add affiliate attribute to the inserted link
+  // Add affiliate attribute
   const selection = window.getSelection();
   if (selection.rangeCount > 0) {
     const range = selection.getRangeAt(0);
@@ -2112,7 +2118,7 @@ async function loadComments(postId) {
 }
 
 // ─────────────────────────────────────────────
-// RENDER COMMENTS (with inline edit support)
+// RENDER COMMENTS (with inline edit support + affiliate attributes)
 // ─────────────────────────────────────────────
 function renderComments(comments, parentId = null) {
   if (!comments || comments.length === 0) return '';
@@ -2127,6 +2133,12 @@ function renderComments(comments, parentId = null) {
     const isEditing = (editingCommentId === c.id);
 
     let commentContentHtml;
+    let commentContent = c.content || '';
+    // Add affiliate attributes to comment content when displayed
+    if (!isEditing) {
+      commentContent = addAffiliateAttributes(escapeHtml(commentContent).replace(/\n/g, '<br>'));
+    }
+
     if (isEditing) {
       commentContentHtml = `
         <div class="comment-content">
@@ -2139,7 +2151,7 @@ function renderComments(comments, parentId = null) {
       `;
     } else {
       commentContentHtml = `
-        <div class="comment-content">${escapeHtml(c.content || '').replace(/\n/g, '<br>')}</div>
+        <div class="comment-content">${commentContent}</div>
       `;
     }
 
@@ -2247,14 +2259,13 @@ async function vote(targetType, targetId, value) {
 }
 
 // ─────────────────────────────────────────────
-// RICH TEXT HELPERS (for post creation) – overwritten above
+// RICH TEXT HELPERS (for post creation)
 // ─────────────────────────────────────────────
 function execCmd(cmd, value = null) {
   document.execCommand(cmd, false, value);
   document.getElementById('postEditor').focus();
 }
 
-// openEmojiPicker is already defined
 function openEmojiPicker() {
   const emojis = ['😊', '😂', '🤔', '🔥', '💯', '✨', '🎉', '👏', '👍', '❤️'];
   const picker = document.createElement('div');
