@@ -973,8 +973,8 @@
 
       await Promise.all([
         loadVehicles(),
-        loadRaces(),
         loadVehicleModels(),
+        loadRaces(),
         loadLeaderboard(),
         loadHistory()
       ]);
@@ -1137,14 +1137,46 @@
     }).join('');
   }
 
-  // ─── Updated buyVehicle ─────────────────────────────────────
+  // ─── renderShop is defined here ───────────────────────────
+  function renderShop() {
+    const grid = document.getElementById('shopGrid');
+    if (!vehicleModels.length) {
+      grid.innerHTML = '<div class="empty-message">No vehicles available</div>';
+      return;
+    }
+    grid.innerHTML = vehicleModels.map(m => {
+      const image = m.image_url || 'https://placehold.co/400x300/1e293b/ffffff?text=No+Image';
+      const thumb = m.image_url || 'https://placehold.co/100/1e293b/ffffff?text=?';
+      return `
+        <div class="card">
+          <img src="${escapeHtml(image)}" alt="${escapeHtml(m.name)}">
+          <div class="vehicle-header">
+            <img class="thumb" src="${escapeHtml(thumb)}" alt="${escapeHtml(m.name)}">
+            <span class="vehicle-name">${escapeHtml(m.name)}</span>
+          </div>
+          <div class="stat-bars">
+            <div><div>Speed: ${m.top_speed}</div><div class="stat-bar"><div class="fill" style="width:${m.top_speed}%"></div></div></div>
+            <div><div>Accel: ${m.acceleration}</div><div class="stat-bar"><div class="fill" style="width:${m.acceleration}%"></div></div></div>
+            <div><div>Handling: ${m.handling}</div><div class="stat-bar"><div class="fill" style="width:${m.handling}%"></div></div></div>
+            <div><div>Grip: ${m.grip}</div><div class="stat-bar"><div class="fill" style="width:${m.grip}%"></div></div></div>
+          </div>
+          <div style="margin:10px 0;">Price: ₹${m.price.toLocaleString()}</div>
+          <div>Required Level: ${m.min_level}</div>
+          <button class="btn btn-primary" onclick="buyVehicle('${m.id}')" ${currentPlayer.level < m.min_level ? 'disabled' : ''}>
+            ${currentPlayer.level < m.min_level ? 'Level '+m.min_level+' Required' : 'Buy Now'}
+          </button>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // ─── buyVehicle (updated with p_player_id) ────────────────
   async function buyVehicle(modelId) {
     const nickname = prompt('Give your vehicle a nickname (optional):', '');
-    // Explicitly pass currentPlayer.id to avoid foreign key issues
     const { data, error } = await sb.rpc('buy_vehicle', {
       p_model_id: modelId,
       p_nickname: nickname || null,
-      p_player_id: currentPlayer.id   // <-- added this line
+      p_player_id: currentPlayer.id   // <-- added
     });
     if (error) { showToast(error.message, 'error'); return; }
     if (data.success) {
@@ -1157,7 +1189,7 @@
     }
   }
 
-  // ─── Reset & Join Race (new RPC wrapper) ──────────────
+  // ─── Reset & Join Race ─────────────────────────────────
   async function resetAndJoinRace(raceId) {
     if (!vehicles.length) {
       showToast('You need a vehicle to race!', 'error');
@@ -1218,7 +1250,6 @@
           buttonHtml += `<button class="btn btn-warning" onclick="startRaceManually('${race.id}')" style="margin-top:5px;">▶ Start Race</button>`;
         }
       } else if (isFinished) {
-        // Finished race – new or repeat player
         if (isParticipated) {
           buttonHtml = `<button class="btn btn-reset" onclick="resetAndJoinRace('${race.id}')">🔄 Race Again</button>`;
         } else {
@@ -1226,7 +1257,6 @@
         }
       }
 
-      // Participants display
       let participantsHtml = '';
       if (isFinished && !isParticipated) {
         participantsHtml = `<div style="color:var(--text-muted); font-size:0.9rem; padding:8px 0; text-align:center;">This race has been completed by other players. Join to race again!</div>`;
@@ -1846,8 +1876,6 @@
   }
 
   // ─── Race actions ─────────────────────────────────────────
-  // buyVehicle already defined above (updated)
-
   async function joinRace(raceId) {
     if (!vehicles.length) { showToast('You need a vehicle to join!', 'error'); return; }
     const vehicleId = vehicles[0].id;
@@ -1921,7 +1949,7 @@
     }
   }
 
-  // ─── Race Again (legacy – kept for compatibility) ──────
+  // ─── Race Again (legacy) ──────────────────────────────
   async function raceAgain(raceId) {
     const race = races.find(r => r.id === raceId);
     if (!race) return;
