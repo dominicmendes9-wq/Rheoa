@@ -530,19 +530,29 @@
   // ─── Race actions ─────────────────────────────────────────
   async function buyVehicle(modelId) {
     const nickname = prompt('Give your vehicle a nickname (optional):', '');
-    const { data, error } = await sb.rpc('buy_vehicle', {
-      p_model_id: modelId,
-      p_nickname: nickname || null,
-      p_player_id: currentPlayer.id   // <-- added this line
-    });
-    if (error) { showToast(error.message, 'error'); return; }
-    if (data.success) {
-      showToast(data.message, 'success');
-      await loadVehicles();
-      await loadPlayerData();
-      if (!document.getElementById('garage').classList.contains('active')) switchTab('garage');
-    } else {
-      showToast(data.error || 'Failed to buy', 'error');
+    try {
+      const { data, error } = await sb.rpc('buy_vehicle', {
+        p_model_id: modelId,
+        p_nickname: nickname || null,
+        p_player_id: currentPlayer.id
+      });
+      if (error) {
+        console.error('RPC error:', error);
+        showToast('Error: ' + (error.message || JSON.stringify(error)), 'error');
+        return;
+      }
+      console.log('RPC response:', data);
+      if (data.success) {
+        showToast(data.message, 'success');
+        await loadVehicles();
+        await loadPlayerData();
+        if (!document.getElementById('garage').classList.contains('active')) switchTab('garage');
+      } else {
+        showToast(data.message || 'Failed to buy', 'error');
+      }
+    } catch (err) {
+      console.error('Exception:', err);
+      showToast('Exception: ' + err.message, 'error');
     }
   }
 
