@@ -2073,19 +2073,35 @@
   }
 
   async function upgradeStat(vehicleId, statName, cost) {
+  try {
     const { data, error } = await sb.rpc('upgrade_vehicle_stat', {
       p_vehicle_id: vehicleId,
       p_stat_name: statName,
       p_cost: cost
     });
-    if (error || !data.success) {
-      showToast(error?.message || data?.error, 'error');
+    if (error) {
+      console.error('RPC error:', error);
+      showToast('Error: ' + error.message, 'error');
       return;
     }
-    showToast(data.message, 'success');
-    await loadVehicles();
-    showTuneModal(vehicleId);
+    // data is an array; we need data[0]
+    if (data && data.length > 0 && data[0].success) {
+      showToast(data[0].message, 'success');
+      await loadVehicles();
+      // Refresh the tuning modal to show updated stats
+      const modal = document.getElementById('tuneModal');
+      if (modal.style.display === 'flex') {
+        showTuneModal(vehicleId);
+      }
+    } else {
+      const msg = data && data.length > 0 ? data[0].message : 'Upgrade failed';
+      showToast(msg, 'error');
+    }
+  } catch (err) {
+    console.error('Exception:', err);
+    showToast('Exception: ' + err.message, 'error');
   }
+}
 
   // ─── General ──────────────────────────────────────────────
   function showResultsModal(results, winnerName) {
