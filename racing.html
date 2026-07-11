@@ -2072,7 +2072,7 @@
     openModal('tuneModal');
   }
 
-  async function upgradeStat(vehicleId, statName, cost) {
+async function upgradeStat(vehicleId, statName, cost) {
   try {
     const { data, error } = await sb.rpc('upgrade_vehicle_stat', {
       p_vehicle_id: vehicleId,
