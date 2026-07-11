@@ -6,7 +6,7 @@
   <title>RHEOA Racing</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
   <style>
-    /* --- Reset & Variables --- */
+    /* --- Reset & Variables (same dark theme as forum/profile) --- */
     * { margin:0; padding:0; box-sizing:border-box; }
     :root {
       --bg-body: #0f172a;
@@ -60,15 +60,7 @@
       gap: 12px;
     }
 
-    /* --- Dashboard Grid --- */
-    .dashboard-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 24px;
-      margin-bottom: 30px;
-    }
-    @media (max-width: 900px) { .dashboard-grid { grid-template-columns: 1fr; } }
-
+    /* --- Cards --- */
     .card {
       background: var(--card-bg);
       border: 1px solid var(--card-border);
@@ -76,6 +68,7 @@
       padding: 20px;
       backdrop-filter: blur(8px);
       transition: transform 0.2s, box-shadow 0.2s;
+      margin-bottom: 24px;
     }
     .card:hover {
       transform: translateY(-2px);
@@ -135,7 +128,7 @@
       font-weight: 600;
     }
 
-    /* --- Vehicle Cards --- */
+    /* --- Vehicle Cards (Shop & Garage) --- */
     .vehicle-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -178,29 +171,6 @@
     .vehicle-card .btn:hover:not(:disabled) { background: var(--accent-hover); }
     .vehicle-card .btn:disabled { opacity: 0.5; cursor: not-allowed; }
     .vehicle-card .btn.out-of-stock { background: var(--danger); }
-
-    /* --- Performance Bars --- */
-    .stat-bar {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin: 4px 0;
-      font-size: 0.8rem;
-    }
-    .stat-bar .label { width: 80px; color: var(--text-muted); }
-    .stat-bar .bar-bg {
-      flex: 1;
-      height: 6px;
-      background: #334155;
-      border-radius: 4px;
-      overflow: hidden;
-    }
-    .stat-bar .bar-fill {
-      height: 100%;
-      background: var(--accent);
-      border-radius: 4px;
-    }
-    .stat-bar .value { min-width: 30px; text-align: right; color: var(--text-main); }
 
     /* --- Race Cards --- */
     .race-grid {
@@ -282,7 +252,7 @@
     .history-item .xp { color: var(--accent); }
     .history-item .date { color: var(--text-muted); font-size: 0.7rem; }
 
-    /* --- Modals --- */
+    /* --- Modal (simple confirmation) --- */
     .modal-overlay {
       display: none;
       position: fixed;
@@ -369,12 +339,12 @@
   </div>
 
   <!-- Racer Summary -->
-  <section class="card" id="racerSummary">
+  <section class="card">
     <div class="card-header">
       <span>🏎️ Racer Summary</span>
       <span class="badge" id="summaryBadge">Online</span>
     </div>
-    <div class="racer-summary" id="summaryContent">
+    <div class="racer-summary">
       <div class="racer-avatar" id="avatarPreview">👤</div>
       <div class="racer-info">
         <h2 id="usernameDisplay">Loading...</h2>
@@ -394,7 +364,7 @@
   </section>
 
   <!-- Vehicle Shop -->
-  <section class="card" style="margin-top:24px;">
+  <section class="card">
     <div class="card-header">
       <span>🏪 Vehicle Shop</span>
       <span class="badge" id="shopCount">0 vehicles</span>
@@ -405,7 +375,7 @@
   </section>
 
   <!-- Garage -->
-  <section class="card" style="margin-top:24px;">
+  <section class="card">
     <div class="card-header">
       <span>🔧 Garage</span>
       <span class="badge" id="garageCount">0 vehicles</span>
@@ -416,7 +386,7 @@
   </section>
 
   <!-- Race Center -->
-  <section class="card" style="margin-top:24px;">
+  <section class="card">
     <div class="card-header">
       <span>🏁 Race Center</span>
       <span class="badge" id="raceCount">0 active</span>
@@ -427,7 +397,7 @@
   </section>
 
   <!-- Leaderboard -->
-  <section class="card" style="margin-top:24px;">
+  <section class="card">
     <div class="card-header">
       <span>🏆 Leaderboard</span>
       <span class="badge">Global</span>
@@ -445,7 +415,7 @@
   </section>
 
   <!-- My Race History -->
-  <section class="card" style="margin-top:24px;">
+  <section class="card">
     <div class="card-header">
       <span>📜 My Race History</span>
       <span class="badge">Recent</span>
@@ -462,7 +432,7 @@
 <!-- Toast Container -->
 <div class="toast-container" id="toastContainer"></div>
 
-<!-- Modal -->
+<!-- Modal (simple, for confirmation if needed) -->
 <div class="modal-overlay" id="modalOverlay">
   <div class="modal-content">
     <button class="close-btn" onclick="closeModal()">&times;</button>
@@ -470,9 +440,6 @@
   </div>
 </div>
 
-<!-- ============================================================ -->
-<!-- JAVASCRIPT -->
-<!-- ============================================================ -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 <script>
   // ─── Supabase Config ──────────────────────────────────────────
@@ -487,7 +454,6 @@
   let races = [];
   let leaderboard = [];
   let history = [];
-  let subscribedChannels = [];
 
   // ─── DOM refs ──────────────────────────────────────────────
   const $ = (id) => document.getElementById(id);
@@ -552,7 +518,6 @@
 
   // ─── Claim Starter Vehicle ────────────────────────────────
   async function claimStarterVehicle() {
-    // Find the cheapest purchasable vehicle that the player can afford & level
     const { data: cheapest, error } = await sb
       .from('vehicles')
       .select('*')
@@ -562,13 +527,11 @@
       .lte('required_level', currentPlayer.level)
       .order('purchase_price', { ascending: true })
       .limit(1);
-
     if (error || !cheapest || cheapest.length === 0) {
       showToast('No starter vehicle available.', 'error');
       return;
     }
     const vehicle = cheapest[0];
-    // Check if player can afford (if price > 0)
     if (vehicle.purchase_price > currentPlayer.cash) {
       showToast('You need more cash to buy a starter vehicle.', 'error');
       return;
@@ -669,9 +632,6 @@
         <div class="price">₹${v.purchase_price.toLocaleString()}</div>
         <div class="level">Level ${v.required_level}</div>
         <div class="stock">Stock: ${v.current_stock}</div>
-        <div style="margin:6px 0;">
-          <div class="stat-bar"><span class="label">Performance</span><div class="bar-bg"><div class="bar-fill" style="width:${Math.min(100, (v.performance_score || 0) / 10)}%"></div></div><span class="value">${v.performance_score || 0}</span></div>
-        </div>
         <button class="btn ${v.current_stock <= 0 ? 'out-of-stock' : ''}" 
                 onclick="buyVehicle('${v.id}')" 
                 ${v.current_stock <= 0 || currentPlayer.level < v.required_level ? 'disabled' : ''}>
@@ -743,7 +703,7 @@
         .select(`
           *,
           vehicles!inner (
-            name, manufacturer, image_url, performance_score
+            name, manufacturer, image_url
           )
         `)
         .eq('player_id', currentPlayer.id);
@@ -780,7 +740,6 @@
         <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;">
           ${v.active ? '<span style="background:var(--success);color:white;padding:2px 8px;border-radius:12px;font-size:0.7rem;">Active</span>' : `<button class="btn" style="flex:1; background:var(--accent);" onclick="activateVehicle('${v.id}')">Activate</button>`}
           <button class="btn" style="flex:1; background:var(--danger);" onclick="sellVehicle('${v.id}')">Sell</button>
-          <button class="btn" style="flex:1; background:var(--warning);" onclick="showUpgradeModal('${v.id}')">Upgrade</button>
         </div>
       </div>
     `}).join('');
@@ -789,7 +748,7 @@
   // ─── Activate Vehicle ─────────────────────────────────────
   async function activateVehicle(vehicleId) {
     try {
-      // Deactivate all others for this player
+      // Deactivate all others
       await sb
         .from('player_vehicles')
         .update({ active: false })
@@ -810,7 +769,6 @@
   async function sellVehicle(vehicleId) {
     if (!confirm('Sell this vehicle for 70% of its value?')) return;
     try {
-      // Get vehicle current value
       const { data: veh, error: getError } = await sb
         .from('player_vehicles')
         .select('current_value')
@@ -818,14 +776,12 @@
         .single();
       if (getError) throw getError;
       const amount = Math.floor(veh.current_value * 0.7);
-      // Add cash to player
       await sb
         .from('players')
         .update({ cash: currentPlayer.cash + amount })
         .eq('id', currentPlayer.id);
       currentPlayer.cash += amount;
       $('cashDisplay').textContent = currentPlayer.cash.toLocaleString();
-      // Delete vehicle
       await sb
         .from('player_vehicles')
         .delete()
@@ -837,112 +793,9 @@
     }
   }
 
-  // ─── Show Upgrade Modal ───────────────────────────────────
-  async function showUpgradeModal(vehicleId) {
-    const { data: upgrades, error } = await sb
-      .from('vehicle_upgrades')
-      .select('*')
-      .order('name');
-    if (error) {
-      showToast('Error loading upgrades', 'error');
-      return;
-    }
-    const { data: applied, error: appError } = await sb
-      .from('player_vehicle_upgrades')
-      .select('upgrade_id, level')
-      .eq('player_vehicle_id', vehicleId);
-    if (appError) {
-      showToast('Error loading applied upgrades', 'error');
-      return;
-    }
-    const appliedMap = {};
-    applied.forEach(a => appliedMap[a.upgrade_id] = a.level);
-
-    let html = `<h3 style="margin-bottom:16px;">Upgrade Vehicle</h3>`;
-    upgrades.forEach(u => {
-      const level = appliedMap[u.id] || 0;
-      const maxed = level >= u.max_level;
-      const cost = u.base_price + (u.price_increment * level);
-      html += `
-        <div style="border-bottom:1px solid var(--card-border); padding:12px 0;">
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <div>
-              <strong>${u.name}</strong>
-              <span style="color:var(--text-muted); font-size:0.8rem;">Level ${level}/${u.max_level}</span>
-            </div>
-            ${!maxed ? `<button onclick="applyUpgrade('${vehicleId}','${u.id}')" class="btn" style="width:auto;padding:4px 12px;background:var(--accent);">Upgrade (₹${cost.toLocaleString()})</button>` : '<span style="color:var(--success);">MAX</span>'}
-          </div>
-          <div style="font-size:0.8rem; color:var(--text-muted);">${u.description}</div>
-        </div>
-      `;
-    });
-    openModal(html);
-  }
-
-  // ─── Apply Upgrade ────────────────────────────────────────
-  async function applyUpgrade(vehicleId, upgradeId) {
-    try {
-      // Check if already maxed
-      const { data: existing } = await sb
-        .from('player_vehicle_upgrades')
-        .select('level')
-        .eq('player_vehicle_id', vehicleId)
-        .eq('upgrade_id', upgradeId)
-        .single();
-      let level = existing ? existing.level : 0;
-      const upgrade = (await sb.from('vehicle_upgrades').select('*').eq('id', upgradeId).single()).data;
-      if (level >= upgrade.max_level) {
-        showToast('Already maxed', 'error');
-        return;
-      }
-      const cost = upgrade.base_price + (upgrade.price_increment * level);
-      if (currentPlayer.cash < cost) {
-        showToast('Not enough cash.', 'error');
-        return;
-      }
-      // Deduct cash
-      await sb
-        .from('players')
-        .update({ cash: currentPlayer.cash - cost })
-        .eq('id', currentPlayer.id);
-      currentPlayer.cash -= cost;
-      $('cashDisplay').textContent = currentPlayer.cash.toLocaleString();
-
-      // Insert/update player_vehicle_upgrades
-      if (existing) {
-        await sb
-          .from('player_vehicle_upgrades')
-          .update({ level: level + 1 })
-          .eq('player_vehicle_id', vehicleId)
-          .eq('upgrade_id', upgradeId);
-      } else {
-        await sb
-          .from('player_vehicle_upgrades')
-          .insert({ player_vehicle_id: vehicleId, upgrade_id: upgradeId, level: 1 });
-      }
-      // Optionally increase vehicle performance score
-      const { data: veh } = await sb
-        .from('player_vehicles')
-        .select('*')
-        .eq('id', vehicleId)
-        .single();
-      const newPerf = (veh.performance_score || 0) + upgrade.performance_gain;
-      await sb
-        .from('player_vehicles')
-        .update({ performance_score: newPerf })
-        .eq('id', vehicleId);
-      showToast('Upgrade applied!', 'success');
-      closeModal();
-      await refreshAll();
-    } catch (err) {
-      showToast('Error: ' + err.message, 'error');
-    }
-  }
-
   // ─── Load Races ────────────────────────────────────────────
   async function loadRaces() {
     try {
-      // Get race sessions with participants count and race type details
       const { data, error } = await sb
         .from('race_sessions')
         .select(`
@@ -953,7 +806,6 @@
         .in('status', ['waiting', 'running']);
       if (error) throw error;
       races = data || [];
-      // For each race, check if current player joined
       if (currentPlayer) {
         for (let r of races) {
           const joined = r.participants.some(p => p.player_id === currentPlayer.id);
@@ -1003,7 +855,6 @@
   // ─── Join Race ─────────────────────────────────────────────
   async function joinRace(sessionId) {
     try {
-      // Check entry fee
       const { data: session } = await sb
         .from('race_sessions')
         .select('race_types!inner (entry_fee, max_participants)')
@@ -1086,7 +937,6 @@
   // ─── Load Leaderboard ──────────────────────────────────────
   async function loadLeaderboard() {
     try {
-      // Join leaderboard with players and race_types
       const { data, error } = await sb
         .from('leaderboard')
         .select(`
@@ -1206,8 +1056,6 @@
         showToast(payload.new.message, payload.new.type || 'info');
       }).subscribe();
     }
-
-    subscribedChannels = [raceChannel, sessionChannel];
   }
 
   // ─── Init ──────────────────────────────────────────────────
@@ -1222,8 +1070,6 @@
   window.buyVehicle = buyVehicle;
   window.activateVehicle = activateVehicle;
   window.sellVehicle = sellVehicle;
-  window.showUpgradeModal = showUpgradeModal;
-  window.applyUpgrade = applyUpgrade;
   window.joinRace = joinRace;
   window.leaveRace = leaveRace;
   window.closeModal = closeModal;
