@@ -1852,27 +1852,30 @@
       showToast('Exception: ' + err.message, 'error');
     }
   }
-
-  async function leaveRace(raceId) {
-    if (!confirm('Leave this race?')) return;
-    try {
-      const { data, error } = await sb.rpc('leave_race', { p_race_id: raceId });
-      if (error) {
-        showToast('Error: ' + error.message, 'error');
-        return;
-      }
-      if (data && data.length > 0 && data[0].success) {
-        showToast(data[0].message, 'success');
-        loadRaces();
-      } else {
-        const msg = data && data.length > 0 ? data[0].message : 'Failed to leave';
-        showToast(msg, 'error');
-      }
-    } catch (err) {
-      console.error('Exception:', err);
-      showToast('Exception: ' + err.message, 'error');
+   async function leaveRace(raceId) {
+  if (!confirm('Leave this race?')) return;
+  try {
+    const { data, error } = await sb.rpc('leave_race', {
+      p_race_id: raceId,
+      p_player_id: currentPlayer.id   // <-- added
+    });
+    if (error) {
+      showToast('Error: ' + error.message, 'error');
+      return;
     }
+    if (data && data.length > 0 && data[0].success) {
+      showToast(data[0].message, 'success');
+      loadRaces();
+    } else {
+      const msg = data && data.length > 0 ? data[0].message : 'Failed to leave';
+      showToast(msg, 'error');
+    }
+  } catch (err) {
+    console.error('Exception:', err);
+    showToast('Exception: ' + err.message, 'error');
   }
+}
+ 
 
   async function startRaceManually(raceId) {
     try {
