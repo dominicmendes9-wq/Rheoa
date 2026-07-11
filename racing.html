@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
   <style>
-    /* ─── CSS Variables & Themes ─── */
+    /* ─── CSS Variables & Themes (unchanged) ─── */
     :root {
       --bg-body: #f0f4fa;
       --card-bg: #fff;
@@ -83,96 +83,576 @@
     }
     .container { max-width: 1400px; margin: 0 auto; }
 
-    .top-bar { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; margin-bottom:28px; padding:0 8px; }
-    .back-link { background:var(--card-bg); padding:8px 18px; border-radius:60px; text-decoration:none; font-weight:500; color:var(--accent); border:1px solid var(--border-light); transition:var(--transition); font-size:.9rem; display:inline-flex; align-items:center; gap:6px; backdrop-filter:blur(2px); }
-    .back-link:hover { background:var(--accent); color:#fff; border-color:var(--accent); }
-    .controls { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
-    .theme-switcher, .font-switcher { display:flex; gap:6px; background:var(--card-bg); padding:4px 8px; border-radius:60px; border:1px solid var(--border-light); backdrop-filter:blur(4px); align-items:center; }
-    .theme-btn, .font-btn { background:transparent; border:none; padding:6px 14px; border-radius:40px; font-weight:500; font-size:.8rem; cursor:pointer; transition:.2s; color:var(--text-muted); font-family:var(--font-family); }
-    .theme-btn.active, .font-btn.active { background:var(--accent); color:#fff; box-shadow:0 2px 8px rgba(0,0,0,0.1); }
-    .theme-btn:hover:not(.active), .font-btn:hover:not(.active) { background:var(--btn-ghost); color:var(--text-main); }
-    .font-btn { font-size:.75rem; padding:4px 12px; }
+    /* ─── Top Bar ─── */
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 28px;
+      padding: 0 8px;
+    }
+    .back-link {
+      background: var(--card-bg);
+      padding: 8px 18px;
+      border-radius: 60px;
+      text-decoration: none;
+      font-weight: 500;
+      color: var(--accent);
+      border: 1px solid var(--border-light);
+      transition: var(--transition);
+      font-size: .9rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      backdrop-filter: blur(2px);
+    }
+    .back-link:hover {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .theme-switcher, .font-switcher {
+      display: flex;
+      gap: 6px;
+      background: var(--card-bg);
+      padding: 4px 8px;
+      border-radius: 60px;
+      border: 1px solid var(--border-light);
+      backdrop-filter: blur(4px);
+      align-items: center;
+    }
+    .theme-btn, .font-btn {
+      background: transparent;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 40px;
+      font-weight: 500;
+      font-size: .8rem;
+      cursor: pointer;
+      transition: .2s;
+      color: var(--text-muted);
+      font-family: var(--font-family);
+    }
+    .theme-btn.active, .font-btn.active {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .theme-btn:hover:not(.active), .font-btn:hover:not(.active) {
+      background: var(--btn-ghost);
+      color: var(--text-main);
+    }
+    .font-btn {
+      font-size: .75rem;
+      padding: 4px 12px;
+    }
 
-    .player-stats { display:flex; justify-content:space-between; align-items:center; background:var(--header-bg); color:var(--header-text); padding:15px 25px; border-radius:var(--border-radius-card); margin-bottom:30px; flex-wrap:wrap; gap:15px; }
-    .stat-group { display:flex; gap:30px; flex-wrap:wrap; }
-    .stat { text-align:center; }
-    .stat-label { font-size:0.8rem; opacity:0.9; }
-    .stat-value { font-size:1.3rem; font-weight:bold; }
+    /* ─── Player Stats ─── */
+    .player-stats {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--header-bg);
+      color: var(--header-text);
+      padding: 15px 25px;
+      border-radius: var(--border-radius-card);
+      margin-bottom: 30px;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+    .stat-group { display: flex; gap: 30px; flex-wrap: wrap; }
+    .stat { text-align: center; }
+    .stat-label { font-size: 0.8rem; opacity: 0.9; }
+    .stat-value { font-size: 1.3rem; font-weight: bold; }
 
-    .racing-tabs { display:flex; justify-content:center; gap:10px; margin-bottom:30px; flex-wrap:wrap; border-bottom:2px solid var(--border-light); padding-bottom:12px; }
-    .tab-btn { padding:10px 22px; font-family:var(--font-family); font-weight:600; border:none; border-radius:30px; background:transparent; color:var(--text-muted); cursor:pointer; transition:var(--transition); font-size:0.95rem; position:relative; }
-    .tab-btn:hover { color:var(--text-main); background:var(--btn-ghost); }
-    .tab-btn.active { color:var(--accent); background:rgba(44,110,158,0.08); }
-    .tab-btn.active::after { content:''; position:absolute; bottom:-14px; left:50%; transform:translateX(-50%); width:30px; height:3px; background:var(--accent); border-radius:3px; }
-    .tab-content { display:none; }
-    .tab-content.active { display:block; }
+    /* ─── Tabs ─── */
+    .racing-tabs {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 30px;
+      flex-wrap: wrap;
+      border-bottom: 2px solid var(--border-light);
+      padding-bottom: 12px;
+    }
+    .tab-btn {
+      padding: 10px 22px;
+      font-family: var(--font-family);
+      font-weight: 600;
+      border: none;
+      border-radius: 30px;
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: var(--transition);
+      font-size: 0.95rem;
+      position: relative;
+    }
+    .tab-btn:hover { color: var(--text-main); background: var(--btn-ghost); }
+    .tab-btn.active {
+      color: var(--accent);
+      background: rgba(44,110,158,0.08);
+    }
+    .tab-btn.active::after {
+      content: '';
+      position: absolute;
+      bottom: -14px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 30px;
+      height: 3px;
+      background: var(--accent);
+      border-radius: 3px;
+    }
 
-    .section-card { background:var(--card-bg); border:1px solid var(--card-border); border-radius:var(--border-radius-card); box-shadow:var(--card-shadow); padding:24px; margin-bottom:30px; transition:var(--transition); }
-    .section-card:hover { box-shadow:0 16px 40px rgba(0,0,0,0.07); }
-    .section-title { font-size:1.5rem; font-weight:700; margin-bottom:20px; color:var(--text-main); display:flex; align-items:center; gap:8px; }
-    .section-title .emoji { font-size:1.6rem; }
-    .grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(300px,1fr)); gap:20px; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
 
-    .card { background:var(--card-bg); border:1px solid var(--border-light); border-radius:16px; padding:18px; transition:var(--transition); box-shadow:0 2px 6px rgba(0,0,0,0.02); }
-    .card:hover { transform:translateY(-2px); box-shadow:0 8px 20px rgba(0,0,0,0.06); }
-    .card.finished { background:var(--btn-ghost); opacity:0.8; border-color:var(--text-muted); }
-    .card img { width:100%; height:150px; object-fit:cover; border-radius:12px; margin-bottom:12px; background:#eee; }
-    .vehicle-header { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
-    .vehicle-header .thumb { width:40px; height:40px; object-fit:cover; border-radius:50%; border:2px solid var(--accent); background:#eee; }
-    .vehicle-name { font-size:1.2rem; font-weight:600; flex:1; }
-    .vehicle-type { background:var(--accent); color:white; padding:3px 10px; border-radius:15px; font-size:0.7rem; text-transform:uppercase; letter-spacing:0.3px; white-space:nowrap; }
-    .stat-bars { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:15px 0; }
-    .stat-bar { height:6px; background:#e2e8f0; border-radius:4px; overflow:hidden; margin-top:3px; }
-    .stat-bar .fill { height:100%; background:var(--accent); border-radius:4px; }
-    .condition { margin:10px 0; padding:8px; background:var(--card-header-bg); border-radius:8px; text-align:center; font-weight:500; }
-    .condition-good { color:var(--color-success); }
-    .condition-warning { color:var(--color-warning); }
-    .condition-critical { color:var(--color-danger); }
+    /* ─── Cards ─── */
+    .section-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--border-radius-card);
+      box-shadow: var(--card-shadow);
+      padding: 24px;
+      margin-bottom: 30px;
+      transition: var(--transition);
+    }
+    .section-card:hover { box-shadow: 0 16px 40px rgba(0,0,0,0.07); }
+    .section-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 20px;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .section-title .emoji { font-size: 1.6rem; }
 
-    .btn { display:inline-block; width:100%; padding:12px; border:none; border-radius:40px; font-weight:600; cursor:pointer; font-family:var(--font-family); margin-top:10px; transition:var(--transition); text-align:center; font-size:0.9rem; }
-    .btn-primary { background:var(--btn-primary); color:white; }
-    .btn-primary:hover:not(:disabled) { background:var(--btn-primary-hover); transform:translateY(-1px); }
-    .btn-danger { background:var(--color-danger); color:white; }
-    .btn-danger:hover { background:#b91c1c; }
-    .btn-warning { background:var(--color-warning); color:white; }
-    .btn-warning:hover:not(:disabled) { background:#d97706; }
-    .btn-secondary { background:var(--btn-secondary); color:white; }
-    .btn-secondary:hover { background:#1e293b; }
-    .btn:disabled { background:#94a3b8; cursor:not-allowed; opacity:0.6; }
-    .btn-sm { padding:6px 12px; font-size:0.8rem; width:auto; margin-top:0; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+    }
 
-    .race-details { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:15px 0; font-size:0.9rem; }
-    .participants { margin:15px 0; max-height:150px; overflow-y:auto; }
-    .participant-item { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border-light); font-size:0.9rem; }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-light);
+      border-radius: 16px;
+      padding: 18px;
+      transition: var(--transition);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+    }
+    .card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.06); }
+    .card.finished {
+      background: var(--btn-ghost);
+      opacity: 0.8;
+      border-color: var(--text-muted);
+    }
+    .card img { width: 100%; height: 150px; object-fit: cover; border-radius: 12px; margin-bottom: 12px; background: #eee; }
+    .vehicle-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .vehicle-header .thumb { width: 40px; height: 40px; object-fit: cover; border-radius: 50%; border: 2px solid var(--accent); background: #eee; }
+    .vehicle-name { font-size: 1.2rem; font-weight: 600; flex: 1; }
+    .vehicle-type {
+      background: var(--accent);
+      color: white;
+      padding: 3px 10px;
+      border-radius: 15px;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      white-space: nowrap;
+    }
+    .stat-bars {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin: 15px 0;
+    }
+    .stat-bar { height: 6px; background: #e2e8f0; border-radius: 4px; overflow: hidden; margin-top: 3px; }
+    .stat-bar .fill { height: 100%; background: var(--accent); border-radius: 4px; }
+    .condition { margin: 10px 0; padding: 8px; background: var(--card-header-bg); border-radius: 8px; text-align: center; font-weight: 500; }
+    .condition-good { color: var(--color-success); }
+    .condition-warning { color: var(--color-warning); }
+    .condition-critical { color: var(--color-danger); }
 
-    #raceOverlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:9999; color:white; padding:20px; justify-content:center; align-items:center; }
-    .race-overlay-box { max-width:800px; width:100%; text-align:center; }
-    #raceCountdown { font-size:5rem; margin:30px 0; font-weight:bold; }
-    #raceTrack { position:relative; height:300px; background:#222; border-radius:16px; overflow:hidden; padding:10px; margin:20px 0; }
-    .car-on-track { position:absolute; bottom:10px; left:0%; transition:left 0.2s linear; background:#f44336; color:white; padding:4px 12px; border-radius:20px; font-size:0.8rem; white-space:nowrap; border:2px solid #fff; transform:translateY(-50%); }
-    #raceTimeline { height:20px; background:#555; border-radius:10px; overflow:hidden; margin-top:20px; }
-    #raceProgressFill { height:100%; width:0%; background:var(--color-success); transition:width 0.3s; }
-    #raceCloseBtn { margin-top:20px; }
+    .btn {
+      display: inline-block;
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 40px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: var(--font-family);
+      margin-top: 10px;
+      transition: var(--transition);
+      text-align: center;
+      font-size: 0.9rem;
+    }
+    .btn-primary { background: var(--btn-primary); color: white; }
+    .btn-primary:hover:not(:disabled) { background: var(--btn-primary-hover); transform: translateY(-1px); }
+    .btn-danger { background: var(--color-danger); color: white; }
+    .btn-danger:hover { background: #b91c1c; }
+    .btn-warning { background: var(--color-warning); color: white; }
+    .btn-warning:hover:not(:disabled) { background: #d97706; }
+    .btn-secondary { background: var(--btn-secondary); color: white; }
+    .btn-secondary:hover { background: #1e293b; }
+    .btn:disabled { background: #94a3b8; cursor: not-allowed; opacity: 0.6; }
+    .btn-sm { padding: 6px 12px; font-size: 0.8rem; width: auto; margin-top: 0; }
 
-    .toast-container { position:fixed; top:20px; right:20px; z-index:99999; display:flex; flex-direction:column; gap:8px; }
-    .toast { padding:12px 20px; border-radius:12px; color:white; font-weight:500; animation:slideIn 0.3s ease-out; box-shadow:0 8px 20px rgba(0,0,0,0.15); max-width:400px; word-wrap:break-word; backdrop-filter:blur(4px); }
-    .toast.success { background:var(--color-success); }
-    .toast.error { background:var(--color-danger); }
-    .toast.info { background:var(--btn-primary); }
-    .toast.warning { background:var(--color-warning); }
-    @keyframes slideIn { from { transform:translateX(100%); opacity:0; } to { transform:translateX(0); opacity:1; } }
-    .spinner { display:inline-block; width:30px; height:30px; border:3px solid #e2e8f0; border-top:3px solid var(--accent); border-radius:50%; animation:spin 1s linear infinite; }
-    @keyframes spin { 0% { transform:rotate(0deg); } 100% { transform:rotate(360deg); } }
-    .empty-message { text-align:center; padding:40px; color:var(--text-muted); font-size:1.1rem; }
+    .race-details {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin: 15px 0;
+      font-size: 0.9rem;
+    }
+    .participants { margin: 15px 0; max-height: 150px; overflow-y: auto; }
+    .participant-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border-light);
+      font-size: 0.9rem;
+    }
 
-    .back-button { display:block; width:200px; margin:40px auto; padding:12px 24px; font-family:var(--font-family); font-weight:600; border:none; border-radius:60px; background:var(--btn-secondary); color:white; cursor:pointer; transition:var(--transition); text-align:center; }
-    .back-button:hover { background:#1e293b; transform:scale(1.02); }
-    @media (max-width:600px) { body { padding:16px; } .player-stats { flex-direction:column; text-align:center; } .stat-group { justify-content:center; } .racing-tabs { flex-direction:column; align-items:stretch; } .tab-btn { width:100%; text-align:center; } .tab-btn.active::after { display:none; } .grid { grid-template-columns:1fr; } .race-overlay-box { padding:10px; } #raceTrack { height:200px; } }
+    /* ─── Racers / Chat ─── */
+    .racers-container {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    .racers-sidebar {
+      flex: 1;
+      min-width: 250px;
+      max-height: 500px;
+      overflow-y: auto;
+      background: var(--card-bg);
+      border: 1px solid var(--border-light);
+      border-radius: 16px;
+      padding: 16px;
+    }
+    .racer-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      background: var(--card-header-bg);
+      margin-bottom: 6px;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    .racer-item:hover { background: var(--btn-ghost); }
+    .racer-item .dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+    .racer-item .dot.available { background: var(--color-success); }
+    .racer-item .dot.busy { background: var(--color-danger); }
+    .racer-name { flex: 1; font-weight: 500; }
+
+    .racers-chat {
+      flex: 2;
+      min-width: 300px;
+      background: var(--card-bg);
+      border: 1px solid var(--border-light);
+      border-radius: 16px;
+      display: flex;
+      flex-direction: column;
+      height: 500px;
+    }
+    .racers-chat .chat-messages {
+      flex: 1;
+      padding: 16px;
+      overflow-y: auto;
+      background: var(--card-header-bg);
+      border-radius: 16px 16px 0 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .chat-message {
+      display: flex;
+      flex-direction: column;
+      max-width: 80%;
+      animation: fadeIn 0.2s ease;
+    }
+    .chat-message.own { align-self: flex-end; }
+    .chat-message-header {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      display: flex;
+      gap: 8px;
+      align-items: baseline;
+    }
+    .chat-message-username { font-weight: 600; color: var(--accent); }
+    .chat-message-time { font-size: 0.65rem; }
+    .chat-message-content {
+      background: var(--card-bg);
+      padding: 6px 14px;
+      border-radius: 16px;
+      margin-top: 2px;
+      word-wrap: break-word;
+      border: 1px solid var(--border-light);
+    }
+    .chat-message.own .chat-message-content {
+      background: var(--accent);
+      color: white;
+      border-color: var(--accent);
+    }
+    .chat-message-content .challenge-actions {
+      margin-top: 6px;
+      display: flex;
+      gap: 10px;
+    }
+    .chat-message-content .challenge-actions button {
+      padding: 4px 12px;
+      border: none;
+      border-radius: 20px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .chat-message-content .challenge-actions .accept-btn { background: var(--color-success); color: white; }
+    .chat-message-content .challenge-actions .reject-btn { background: var(--color-danger); color: white; }
+    .chat-message-content .challenge-actions .disabled-btn { background: #94a3b8; color: #fff; cursor: default; }
+
+    .racers-chat .chat-input {
+      display: flex;
+      gap: 10px;
+      padding: 12px 16px;
+      border-top: 1px solid var(--border-light);
+      background: var(--card-bg);
+      border-radius: 0 0 16px 16px;
+    }
+    .racers-chat .chat-input input {
+      flex: 1;
+      padding: 10px 14px;
+      border: 1px solid var(--border-light);
+      border-radius: 40px;
+      font-family: var(--font-family);
+      background: var(--card-header-bg);
+      color: var(--text-main);
+      font-size: 0.9rem;
+    }
+    .racers-chat .chat-input button {
+      padding: 8px 20px;
+      background: var(--btn-primary);
+      color: white;
+      border: none;
+      border-radius: 40px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: var(--transition);
+    }
+    .racers-chat .chat-input button:hover { background: var(--btn-primary-hover); }
+
+    /* ─── Modals ─── */
+    .modal, .challenge-modal, .incoming-challenge-modal, .result-modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 10000;
+      justify-content: center;
+      align-items: center;
+      backdrop-filter: blur(4px);
+    }
+    .modal-content, .challenge-modal-content, .incoming-challenge-modal-content, .result-modal-content {
+      background: var(--card-bg);
+      border-radius: var(--border-radius-card);
+      padding: 30px;
+      max-width: 500px;
+      width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: var(--card-shadow);
+      border: 1px solid var(--card-border);
+    }
+    .modal-content h2, .challenge-modal-content h2, .incoming-challenge-modal-content h2, .result-modal-content h2 {
+      margin-bottom: 16px;
+      color: var(--text-main);
+      font-weight: 700;
+    }
+    .modal-content .actions, .challenge-modal-content .actions, .incoming-challenge-modal-content .actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+      justify-content: flex-end;
+    }
+    .modal-content .actions button, .challenge-modal-content .actions button, .incoming-challenge-modal-content .actions button {
+      padding: 8px 20px;
+      border: none;
+      border-radius: 40px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: var(--font-family);
+    }
+    .modal-content .actions .send { background: var(--btn-primary); color: white; }
+    .modal-content .actions .cancel { background: var(--btn-ghost); color: var(--text-main); }
+
+    .incoming-challenge-modal-content .actions .accept { background: var(--color-success); color: white; }
+    .incoming-challenge-modal-content .actions .reject { background: var(--color-danger); color: white; }
+
+    .race-option {
+      padding: 10px 14px;
+      margin: 8px 0;
+      border: 2px solid var(--border-light);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: var(--transition);
+      font-weight: 500;
+    }
+    .race-option:hover { border-color: var(--accent); background: var(--card-header-bg); }
+    .race-option.selected { border-color: var(--accent); background: rgba(44,110,158,0.08); }
+
+    /* ─── Race Overlay ─── */
+    #raceOverlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.85);
+      z-index: 9999;
+      color: white;
+      padding: 20px;
+      justify-content: center;
+      align-items: center;
+    }
+    .race-overlay-box {
+      max-width: 800px;
+      width: 100%;
+      text-align: center;
+    }
+    #raceCountdown { font-size: 5rem; margin: 30px 0; font-weight: bold; }
+    #raceTrack {
+      position: relative;
+      height: 300px;
+      background: #222;
+      border-radius: 16px;
+      overflow: hidden;
+      padding: 10px;
+      margin: 20px 0;
+    }
+    .car-on-track {
+      position: absolute;
+      bottom: 10px;
+      left: 0%;
+      transition: left 0.2s linear;
+      background: #f44336;
+      color: white;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      white-space: nowrap;
+      border: 2px solid #fff;
+      transform: translateY(-50%);
+    }
+    #raceTimeline {
+      height: 20px;
+      background: #555;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-top: 20px;
+    }
+    #raceProgressFill {
+      height: 100%;
+      width: 0%;
+      background: var(--color-success);
+      transition: width 0.3s;
+    }
+    #raceCloseBtn { margin-top: 20px; }
+
+    /* ─── Toast ─── */
+    .toast-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 99999;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .toast {
+      padding: 12px 20px;
+      border-radius: 12px;
+      color: white;
+      font-weight: 500;
+      animation: slideIn 0.3s ease-out;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+      max-width: 400px;
+      word-wrap: break-word;
+      backdrop-filter: blur(4px);
+    }
+    .toast.success { background: var(--color-success); }
+    .toast.error { background: var(--color-danger); }
+    .toast.info { background: var(--btn-primary); }
+    .toast.warning { background: var(--color-warning); }
+    .toast.challenge { background: #7c3aed; }
+
+    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    .spinner {
+      display: inline-block;
+      width: 30px;
+      height: 30px;
+      border: 3px solid #e2e8f0;
+      border-top: 3px solid var(--accent);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .empty-message { text-align: center; padding: 40px; color: var(--text-muted); font-size: 1.1rem; }
+
+    .back-button {
+      display: block;
+      width: 200px;
+      margin: 40px auto;
+      padding: 12px 24px;
+      font-family: var(--font-family);
+      font-weight: 600;
+      border: none;
+      border-radius: 60px;
+      background: var(--btn-secondary);
+      color: white;
+      cursor: pointer;
+      transition: var(--transition);
+      text-align: center;
+    }
+    .back-button:hover { background: #1e293b; transform: scale(1.02); }
+
+    /* ─── Responsive ─── */
+    @media (max-width: 600px) {
+      body { padding: 16px; }
+      .player-stats { flex-direction: column; text-align: center; }
+      .stat-group { justify-content: center; }
+      .racing-tabs { flex-direction: column; align-items: stretch; }
+      .tab-btn { width: 100%; text-align: center; }
+      .tab-btn.active::after { display: none; }
+      .racers-container { flex-direction: column; }
+      .racers-chat { height: 400px; }
+      .grid { grid-template-columns: 1fr; }
+      .race-overlay-box { padding: 10px; }
+      #raceTrack { height: 200px; }
+    }
   </style>
 </head>
 <body>
+
 <div class="toast-container" id="toast-container"></div>
+
 <div class="container">
+  <!-- Top Bar -->
   <div class="top-bar">
     <a href="dashboard.html" class="back-link">← Dashboard</a>
     <div class="controls">
@@ -189,10 +669,11 @@
     </div>
   </div>
 
-  <h1 style="text-align:center; font-size:2.2rem; font-weight:700; margin-bottom:10px; color:var(--text-main);">🏁 Racing</h1>
-  <p class="subtitle" style="text-align:center; color:var(--text-muted); margin-bottom:30px; font-style:italic;">Compete for glory and cash!</p>
+  <h1 style="text-align:center; font-size: 2.2rem; font-weight:700; margin-bottom: 10px; color: var(--text-main);">🏁 Racing &amp; Competitions</h1>
+  <p class="subtitle" style="text-align:center; color: var(--text-muted); margin-bottom: 30px; font-style:italic;">Speed, skill, and high stakes!</p>
 
-  <div class="player-stats" id="playerStats" style="display:none;">
+  <!-- Player Stats -->
+  <div class="player-stats" id="playerStats" style="display: none;">
     <div class="stat-group">
       <div class="stat"><div class="stat-label">💰 Cash</div><div class="stat-value" id="playerCash">₹0</div></div>
       <div class="stat"><div class="stat-label">⭐ Level</div><div class="stat-value" id="playerLevel">1</div></div>
@@ -200,6 +681,7 @@
     </div>
   </div>
 
+  <!-- Tabs -->
   <div class="racing-tabs">
     <button class="tab-btn active" onclick="switchTab('races', event)">🏁 Races</button>
     <button class="tab-btn" onclick="switchTab('garage', event)">🔧 Garage</button>
@@ -209,50 +691,69 @@
     <button class="tab-btn" onclick="switchTab('racers', event)">👥 Racers</button>
   </div>
 
-  <!-- Races -->
+  <!-- Races Tab -->
   <div id="races" class="tab-content active">
     <div class="section-card">
       <div class="section-title"><span class="emoji">🏁</span> Public Races</div>
-      <div class="grid" id="racesGrid"><div class="empty-message"><div class="spinner"></div><p>Loading races...</p></div></div>
+      <div class="grid" id="racesGrid">
+        <div class="empty-message"><div class="spinner"></div><p>Loading races...</p></div>
+      </div>
     </div>
   </div>
 
-  <!-- Garage -->
+  <!-- Garage Tab -->
   <div id="garage" class="tab-content">
     <div class="section-card">
       <div class="section-title"><span class="emoji">🔧</span> My Vehicles</div>
-      <div class="grid" id="vehiclesGrid"><div class="empty-message"><div class="spinner"></div><p>Loading vehicles...</p></div></div>
+      <div class="grid" id="vehiclesGrid">
+        <div class="empty-message"><div class="spinner"></div><p>Loading vehicles...</p></div>
+      </div>
     </div>
   </div>
 
-  <!-- Shop -->
+  <!-- Shop Tab -->
   <div id="shop" class="tab-content">
     <div class="section-card">
       <div class="section-title"><span class="emoji">🏪</span> Vehicle Shop</div>
-      <div class="grid" id="shopGrid"><div class="empty-message"><div class="spinner"></div><p>Loading vehicles...</p></div></div>
+      <div class="grid" id="shopGrid">
+        <div class="empty-message"><div class="spinner"></div><p>Loading vehicles...</p></div>
+      </div>
     </div>
   </div>
 
-  <!-- Leaderboard -->
+  <!-- Leaderboard Tab -->
   <div id="leaderboard" class="tab-content">
     <div class="section-card">
       <div class="section-title"><span class="emoji">🏆</span> Racing Champions</div>
-      <table style="width:100%; border-collapse:collapse;">
-        <thead><tr style="background:var(--card-header-bg); border-bottom:2px solid var(--border-light);"><th style="padding:12px; text-align:left;">Rank</th><th style="padding:12px; text-align:left;">Player</th><th style="padding:12px; text-align:center;">Races</th><th style="padding:12px; text-align:center;">Wins</th><th style="padding:12px; text-align:right;">Earnings</th></tr></thead>
-        <tbody id="leaderboardBody"><tr><td colspan="5" class="empty-message"><div class="spinner"></div><p>Loading...</p></td></tr></tbody>
+      <table style="width:100%; border-collapse: collapse;">
+        <thead>
+          <tr style="background: var(--card-header-bg); border-bottom: 2px solid var(--border-light);">
+            <th style="padding:12px; text-align:left;">Rank</th>
+            <th style="padding:12px; text-align:left;">Player</th>
+            <th style="padding:12px; text-align:center;">Races</th>
+            <th style="padding:12px; text-align:center;">Wins</th>
+            <th style="padding:12px; text-align:center;">Win Rate</th>
+            <th style="padding:12px; text-align:right;">Earnings</th>
+          </tr>
+        </thead>
+        <tbody id="leaderboardBody">
+          <tr><td colspan="6" class="empty-message"><div class="spinner"></div><p>Loading leaderboard...</p></td></tr>
+        </tbody>
       </table>
     </div>
   </div>
 
-  <!-- History -->
+  <!-- History Tab -->
   <div id="history" class="tab-content">
     <div class="section-card">
       <div class="section-title"><span class="emoji">📜</span> Race History</div>
-      <div id="historyList"><div class="empty-message"><div class="spinner"></div><p>Loading...</p></div></div>
+      <div id="historyList">
+        <div class="empty-message"><div class="spinner"></div><p>Loading history...</p></div>
+      </div>
     </div>
   </div>
 
-  <!-- Racers -->
+  <!-- Racers Tab -->
   <div id="racers" class="tab-content">
     <div class="section-card">
       <div class="racers-container">
@@ -317,7 +818,9 @@
       <h2 id="raceOverlayTitle">🏁 Race Starting...</h2>
       <div id="raceCountdown">3</div>
       <div id="raceTrack"></div>
-      <div id="raceTimeline"><div id="raceProgressFill"></div></div>
+      <div id="raceTimeline">
+        <div id="raceProgressFill"></div>
+      </div>
       <button id="raceCloseBtn" style="display:none;" class="btn btn-primary" onclick="closeRaceOverlay()">Close</button>
     </div>
   </div>
@@ -349,18 +852,25 @@
     if (!str) return '';
     return str.replace(/[&<>]/g, m => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;' }[m]));
   }
+
   function showToast(message, type = 'info', duration = 5000) {
     const container = document.getElementById('toast-container');
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
     toast.textContent = message;
     container.appendChild(toast);
-    setTimeout(() => toast.remove(), duration);
+    setTimeout(() => {
+      toast.classList.add('fade-out');
+      setTimeout(() => {
+        if (toast.parentNode) container.removeChild(toast);
+      }, 300);
+    }, duration);
   }
 
   function closeModal(id) {
     document.getElementById(id).style.display = 'none';
   }
+
   function openModal(id) {
     document.getElementById(id).style.display = 'flex';
   }
@@ -376,6 +886,7 @@
       btn.classList.toggle('active', btn.getAttribute('data-theme') === themeName);
     });
   }
+
   function setFont(fontName) {
     const root = document.documentElement;
     if (fontName === 'inter') root.style.setProperty('--font-family', "'Inter', system-ui, sans-serif");
@@ -386,6 +897,7 @@
       btn.classList.toggle('active', btn.getAttribute('data-font') === fontName);
     });
   }
+
   function initThemeAndFont() {
     const savedTheme = localStorage.getItem('racing_theme') || 'default';
     setTheme(savedTheme);
@@ -439,6 +951,7 @@
       if (error) throw error;
       currentPlayer = player;
       updatePlayerStats();
+
       await Promise.all([
         loadVehicles(),
         loadRaces(),
@@ -446,6 +959,7 @@
         loadLeaderboard(),
         loadHistory()
       ]);
+
       if (!realtimeInit) {
         realtimeInit = true;
         await initRealtime();
@@ -543,13 +1057,18 @@
     data.forEach(r => {
       const pid = r.player_id;
       if (!statsMap[pid]) {
-        statsMap[pid] = { username: r.players.username, races: 0, wins: 0, earnings: 0 };
+        statsMap[pid] = {
+          username: r.players.username,
+          races: 0,
+          wins: 0,
+          earnings: 0
+        };
       }
       statsMap[pid].races++;
       if (r.position === 1) statsMap[pid].wins++;
       statsMap[pid].earnings += r.earnings || 0;
     });
-    const sorted = Object.values(statsMap).sort((a,b) => b.earnings - a.earnings);
+    const sorted = Object.values(statsMap).sort((a, b) => b.earnings - a.earnings);
     const tbody = document.getElementById('leaderboardBody');
     tbody.innerHTML = sorted.map((entry, index) => {
       const winRate = entry.races > 0 ? ((entry.wins / entry.races) * 100).toFixed(1) : 0;
@@ -580,26 +1099,35 @@
   function renderVehicles() {
     const grid = document.getElementById('vehiclesGrid');
     if (!vehicles.length) {
-      grid.innerHTML = '<div class="empty-message">No vehicles. Buy one from the shop!</div>';
+      grid.innerHTML = '<div class="empty-message">No vehicles yet. Buy one from the shop!</div>';
       return;
     }
     grid.innerHTML = vehicles.map(v => {
       const model = v.model;
+      if (!model) return '';
       const condClass = v.condition > 70 ? 'condition-good' : v.condition > 30 ? 'condition-warning' : 'condition-critical';
+      const image = model.image_url || 'https://placehold.co/400x300/1e293b/ffffff?text=No+Image';
+      const thumb = model.image_url || 'https://placehold.co/100/1e293b/ffffff?text=?';
       return `
         <div class="card">
-          <img src="${model.image_url || 'https://placehold.co/400x300/1e293b/ffffff?text=No+Image'}" alt="${escapeHtml(model.name)}">
+          <img src="${escapeHtml(image)}" alt="${escapeHtml(model.name)}">
           <div class="vehicle-header">
+            <img class="thumb" src="${escapeHtml(thumb)}" alt="${escapeHtml(model.name)}">
             <span class="vehicle-name">${escapeHtml(v.nickname || model.name)}</span>
             <span class="vehicle-type">${model.name}</span>
           </div>
           <div class="stat-bars">
             <div><div>Speed: ${v.top_speed}</div><div class="stat-bar"><div class="fill" style="width:${v.top_speed}%"></div></div></div>
             <div><div>Accel: ${v.acceleration}</div><div class="stat-bar"><div class="fill" style="width:${v.acceleration}%"></div></div></div>
+            <div><div>Handling: ${v.handling}</div><div class="stat-bar"><div class="fill" style="width:${v.handling}%"></div></div></div>
+            <div><div>Grip: ${v.grip}</div><div class="stat-bar"><div class="fill" style="width:${v.grip}%"></div></div></div>
           </div>
-          <div class="condition ${condClass}">Condition: ${v.condition}%</div>
-          <button class="btn btn-secondary" onclick="sellVehicle('${v.id}')">Sell</button>
-          <button class="btn btn-warning" onclick="renameVehicle('${v.id}')">Rename</button>
+          <div class="condition ${condClass}">Condition: ${v.condition}% ${v.condition < 50 ? '⚠️' : ''}</div>
+          <div style="display:flex; gap:5px; flex-wrap:wrap; margin-top:10px;">
+            <button class="btn btn-primary btn-sm" onclick="sellVehicle('${v.id}')">Sell</button>
+            <button class="btn btn-secondary btn-sm" onclick="renameVehicle('${v.id}')">Rename</button>
+            <button class="btn btn-warning btn-sm" onclick="showTuneModal('${v.id}')">🔧 Tune</button>
+          </div>
         </div>
       `;
     }).join('');
@@ -611,21 +1139,30 @@
       grid.innerHTML = '<div class="empty-message">No vehicles available</div>';
       return;
     }
-    grid.innerHTML = vehicleModels.map(m => `
-      <div class="card">
-        <img src="${m.image_url || 'https://placehold.co/400x300/1e293b/ffffff?text=No+Image'}" alt="${escapeHtml(m.name)}">
-        <div class="vehicle-header"><span class="vehicle-name">${escapeHtml(m.name)}</span></div>
-        <div class="stat-bars">
-          <div><div>Speed: ${m.top_speed}</div><div class="stat-bar"><div class="fill" style="width:${m.top_speed}%"></div></div></div>
-          <div><div>Accel: ${m.acceleration}</div><div class="stat-bar"><div class="fill" style="width:${m.acceleration}%"></div></div></div>
+    grid.innerHTML = vehicleModels.map(m => {
+      const image = m.image_url || 'https://placehold.co/400x300/1e293b/ffffff?text=No+Image';
+      const thumb = m.image_url || 'https://placehold.co/100/1e293b/ffffff?text=?';
+      return `
+        <div class="card">
+          <img src="${escapeHtml(image)}" alt="${escapeHtml(m.name)}">
+          <div class="vehicle-header">
+            <img class="thumb" src="${escapeHtml(thumb)}" alt="${escapeHtml(m.name)}">
+            <span class="vehicle-name">${escapeHtml(m.name)}</span>
+          </div>
+          <div class="stat-bars">
+            <div><div>Speed: ${m.top_speed}</div><div class="stat-bar"><div class="fill" style="width:${m.top_speed}%"></div></div></div>
+            <div><div>Accel: ${m.acceleration}</div><div class="stat-bar"><div class="fill" style="width:${m.acceleration}%"></div></div></div>
+            <div><div>Handling: ${m.handling}</div><div class="stat-bar"><div class="fill" style="width:${m.handling}%"></div></div></div>
+            <div><div>Grip: ${m.grip}</div><div class="stat-bar"><div class="fill" style="width:${m.grip}%"></div></div></div>
+          </div>
+          <div style="margin:10px 0;">Price: ₹${m.price.toLocaleString()}</div>
+          <div>Required Level: ${m.min_level}</div>
+          <button class="btn btn-primary" onclick="buyVehicle('${m.id}')" ${currentPlayer.level < m.min_level ? 'disabled' : ''}>
+            ${currentPlayer.level < m.min_level ? 'Level '+m.min_level+' Required' : 'Buy Now'}
+          </button>
         </div>
-        <div style="margin:10px 0;">Price: ₹${m.price.toLocaleString()}</div>
-        <div>Required Level: ${m.min_level}</div>
-        <button class="btn btn-primary" onclick="buyVehicle('${m.id}')" ${currentPlayer.level < m.min_level ? 'disabled' : ''}>
-          ${currentPlayer.level < m.min_level ? 'Level '+m.min_level+' Required' : 'Buy Now'}
-        </button>
-      </div>
-    `).join('');
+      `;
+    }).join('');
   }
 
   function renderRaces() {
@@ -643,12 +1180,14 @@
       const isOpen = race.status === 'open';
       const isCreator = race.created_by === currentPlayer.id;
       const canStart = isCreator && isOpen && entries.length >= 2;
+
       const cardClass = isFinished ? 'card finished' : 'card';
+
       return `
         <div class="${cardClass}">
-          <div style="display:flex; justify-content:space-between;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
             <span style="font-weight:600;font-size:1.2rem;">${escapeHtml(race.name)}</span>
-            <span style="background:var(--accent);color:white;padding:2px 10px;border-radius:20px;font-size:0.7rem;">${race.race_type}</span>
+            <span style="background:var(--accent);color:white;padding:2px 10px;border-radius:20px;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.3px;">${race.race_type}</span>
           </div>
           <p style="color:var(--text-muted);margin:8px 0;">${escapeHtml(race.description || '')}</p>
           <div class="race-details">
@@ -656,6 +1195,7 @@
             <div>Prize Pool: ₹${race.prize_pool}</div>
             <div>Min Level: ${race.min_level}</div>
             <div>Status: ${isFinished ? '✅ Finished' : isRunning ? '🏁 Running' : '🟢 Open'}</div>
+            ${race.duration_seconds ? `<div>⏱️ ${race.duration_seconds}s</div>` : ''}
           </div>
           <div class="participants">
             <strong>Participants (${entries.length}/${race.max_participants})</strong>
@@ -666,11 +1206,19 @@
               </div>
             `).join('')}
           </div>
-          ${!isFinished && !hasJoined && isOpen ? `<button class="btn btn-primary" onclick="joinRace('${race.id}')">Join Race</button>` : ''}
-          ${hasJoined && isOpen ? `<button class="btn btn-danger" onclick="leaveRace('${race.id}')">Leave Race</button>` : ''}
-          ${canStart ? `<button class="btn btn-warning" onclick="startRaceManually('${race.id}')">▶ Start Race</button>` : ''}
-          ${isRunning ? '<div style="text-align:center;color:var(--color-warning);font-weight:bold;">🏁 Race in progress...</div>' : ''}
-          ${isFinished ? `<button class="btn btn-secondary" onclick="raceAgain('${race.id}')">🔄 Race Again</button>` : ''}
+          ${!isFinished && !hasJoined && isOpen && !isFull ? `
+            <button class="btn btn-primary" onclick="joinRace('${race.id}')">Join Race</button>
+          ` : ''}
+          ${hasJoined && isOpen ? `
+            <button class="btn btn-danger" onclick="leaveRace('${race.id}')">Leave Race</button>
+          ` : ''}
+          ${canStart ? `
+            <button class="btn btn-warning" onclick="startRaceManually('${race.id}')">▶ Start Race</button>
+          ` : ''}
+          ${isRunning ? '<div style="text-align:center; color:var(--color-warning); font-weight:bold;">🏁 Race in progress...</div>' : ''}
+          ${isFinished ? `
+            <button class="btn btn-secondary" onclick="raceAgain('${race.id}')">🔄 Race Again</button>
+          ` : ''}
         </div>
       `;
     }).join('');
@@ -686,7 +1234,7 @@
       <div style="border-bottom:1px solid var(--border-light); padding:12px 0;">
         <div><strong>${escapeHtml(h.races?.name || 'Unknown Race')}</strong></div>
         <div>Position: ${h.position} | Earnings: ₹${h.earnings}</div>
-        <div style="font-size:0.8rem;color:var(--text-muted);">${new Date(h.created_at).toLocaleString()}</div>
+        <div style="font-size:0.8rem; color:var(--text-muted);">${new Date(h.created_at).toLocaleString()}</div>
       </div>
     `).join('');
   }
@@ -726,10 +1274,14 @@
     racingRoomId = FIXED_ROOM_ID;
 
     racingChannel = sb.channel(`racing-presence:${racingRoomId}`);
+
     racingChannel.on('broadcast', { event: 'message' }, (payload) => {
+      console.log('📨 Broadcast (message) received:', payload);
       appendChatMessage(payload.payload);
     });
+
     racingChannel.on('broadcast', { event: 'race_update' }, (payload) => {
+      console.log('📡 Race update broadcast received:', payload);
       if (payload.action === 'finish' && payload.result) {
         showResultsModal(payload.result.results, payload.result.winner_username);
         loadRaces();
@@ -740,14 +1292,17 @@
       raceUpdateTimeout = setTimeout(() => {
         loadRaces();
         raceUpdateTimeout = null;
-      }, 100);
+      }, 200);
     });
+
     racingChannel.on('broadcast', { event: 'challenge' }, (payload) => {
+      console.log('📨 Challenge broadcast received:', payload);
       appendChallengeMessage(payload.payload);
       if (payload.payload.challengee_id === currentPlayer.id) {
         showIncomingChallenge(payload.payload);
       }
     });
+
     racingChannel.on('presence', { event: 'sync' }, () => {
       const state = racingChannel.presenceState();
       const racers = [];
@@ -755,8 +1310,10 @@
       onlineRacers = racers;
       renderRacers();
     });
+
     await racingChannel.subscribe(async (status) => {
       if (status === 'SUBSCRIBED') {
+        console.log('✅ Racing presence channel subscribed');
         isChannelReady = true;
         await racingChannel.track({
           user_id: currentPlayer.id,
@@ -767,6 +1324,7 @@
         await loadChatMessages();
         await trimChatIfNeeded();
       } else {
+        console.warn('⚠️ Racing presence channel subscription status:', status);
         isChannelReady = false;
       }
     });
@@ -779,10 +1337,14 @@
         table: 'race_chat_messages',
         filter: `room_id=eq.${racingRoomId}`
       }, (payload) => {
+        console.log('📩 DB insert received:', payload);
         appendChatMessage(payload.new);
         trimChatIfNeeded();
       })
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') console.log('✅ Racing chat DB subscription active');
+        else console.warn('⚠️ Chat DB subscription status:', status);
+      });
 
     raceEntriesSubscription = sb
       .channel('race-entries-changes')
@@ -791,13 +1353,17 @@
         schema: 'public',
         table: 'race_entries'
       }, (payload) => {
+        console.log('📢 Race entries change detected:', payload);
         if (raceUpdateTimeout) clearTimeout(raceUpdateTimeout);
         raceUpdateTimeout = setTimeout(() => {
           loadRaces();
           raceUpdateTimeout = null;
-        }, 100);
+        }, 300);
       })
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') console.log('✅ Race entries Realtime subscription active');
+        else console.warn('⚠️ Race entries Realtime subscription status:', status);
+      });
 
     challengeSubscription = sb.channel('challenges');
     challengeSubscription.on('postgres_changes', {
@@ -806,9 +1372,20 @@
       table: 'pvp_challenges',
       filter: `challengee_id=eq.${currentPlayer.id}`
     }, (payload) => {
-      showIncomingChallenge(payload.new);
+      const challenge = payload.new;
+      console.log('📩 New challenge for you (DB):', challenge);
+      showIncomingChallenge(challenge);
     });
-    challengeSubscription.subscribe();
+    challengeSubscription.on('postgres_changes', {
+      event: 'UPDATE',
+      schema: 'public',
+      table: 'pvp_challenges',
+      filter: `challengee_id=eq.${currentPlayer.id}`
+    }, () => {});
+    await challengeSubscription.subscribe((status) => {
+      if (status === 'SUBSCRIBED') console.log('✅ Challenges subscription active');
+      else console.warn('⚠️ Challenges subscription status:', status);
+    });
   }
 
   // ─── Chat functions ──────────────────────────────────────
@@ -834,16 +1411,20 @@
         </div>
       `;
     }).join('');
-    container.scrollTop = container.scrollHeight;
+    setTimeout(() => {
+      container.scrollTop = container.scrollHeight;
+    }, 100);
   }
 
   function appendChatMessage(msg) {
     const container = document.getElementById('racingChatMessages');
     const existing = container.querySelector(`[data-msg-id="${msg.id}"]`);
     if (existing) return;
+
     const username = msg.username || msg.players?.username || 'Unknown';
     const isOwn = msg.user_id === currentPlayer.id;
     const time = new Date(msg.created_at).toLocaleTimeString();
+
     const div = document.createElement('div');
     div.className = `chat-message ${isOwn ? 'own' : ''}`;
     div.setAttribute('data-msg-id', msg.id);
@@ -862,13 +1443,16 @@
     const container = document.getElementById('racingChatMessages');
     const existing = container.querySelector(`[data-msg-id="challenge-${payload.challenge_id}"]`);
     if (existing) return;
+
     const isForMe = payload.challengee_id === currentPlayer.id;
     const isExpired = new Date(payload.expires_at) < new Date();
+
     const div = document.createElement('div');
     div.className = 'chat-message';
     div.setAttribute('data-msg-id', 'challenge-' + payload.challenge_id);
     const username = payload.challenger_name || 'Unknown';
     const raceName = payload.race_name || 'a race';
+
     let actionsHtml = '';
     if (isForMe && !isExpired) {
       actionsHtml = `
@@ -878,10 +1462,19 @@
         </div>
       `;
     } else if (isForMe && isExpired) {
-      actionsHtml = `<div class="challenge-actions"><span class="disabled-btn">Expired</span></div>`;
+      actionsHtml = `
+        <div class="challenge-actions">
+          <span class="disabled-btn">Expired</span>
+        </div>
+      `;
     } else {
-      actionsHtml = `<div class="challenge-actions"><span class="disabled-btn">Challenge sent</span></div>`;
+      actionsHtml = `
+        <div class="challenge-actions">
+          <span class="disabled-btn">Challenge sent</span>
+        </div>
+      `;
     }
+
     div.innerHTML = `
       <div class="chat-message-header">
         <span class="chat-message-username">System</span>
@@ -905,6 +1498,7 @@
       return;
     }
     input.value = '';
+
     const tempId = 'temp-' + Date.now();
     const newMsg = {
       id: tempId,
@@ -913,7 +1507,9 @@
       content: text,
       created_at: new Date().toISOString()
     };
+
     appendChatMessage(newMsg);
+
     const { data, error } = await sb
       .from('race_chat_messages')
       .insert({
@@ -924,18 +1520,23 @@
       })
       .select()
       .single();
+
     if (error) {
+      console.error('❌ Failed to insert message:', error);
       showToast('Failed to send message', 'error');
       const el = document.querySelector(`[data-msg-id="${tempId}"]`);
       if (el) el.remove();
       return;
     }
+
     const finalMsg = { ...newMsg, id: data.id };
     const tempEl = document.querySelector(`[data-msg-id="${tempId}"]`);
     if (tempEl) tempEl.setAttribute('data-msg-id', finalMsg.id);
+
     try {
       await racingChannel.send({ type: 'broadcast', event: 'message', payload: finalMsg });
     } catch (err) {
+      console.error('❌ Broadcast send error:', err);
       showToast('Failed to broadcast message', 'error');
     }
   }
@@ -969,6 +1570,7 @@
     document.getElementById('challengeTargetName').textContent = `Challenge ${targetName}`;
     const container = document.getElementById('raceOptions');
     container.innerHTML = '<div class="empty-message">Loading races...</div>';
+
     loadRaces().then(() => {
       const openRaces = races.filter(race => {
         if (race.status !== 'open') return false;
@@ -1009,10 +1611,12 @@
       showToast('Chat is not ready yet, please wait.', 'warning');
       return;
     }
+
     const targetId = selectedTarget.id;
     const targetName = selectedTarget.name;
     const raceId = selectedRaceId;
     closeChallengeModal();
+
     const { data, error } = await sb.rpc('send_challenge', {
       p_challengee_id: targetId,
       p_race_id: raceId
@@ -1025,10 +1629,12 @@
       showToast(data?.error || 'Failed to send challenge', 'error');
       return;
     }
+
     showToast('Challenge sent!', 'success');
+
     let challengeId = data.challenge_id;
     if (!challengeId) {
-      const { data: challengesData } = await sb
+      const { data: challengesData, error: challengesError } = await sb
         .from('pvp_challenges')
         .select('id')
         .eq('challenger_id', currentPlayer.id)
@@ -1036,12 +1642,13 @@
         .eq('status', 'pending')
         .order('created_at', { ascending: false })
         .limit(1);
-      if (challengesData && challengesData.length > 0) {
+      if (!challengesError && challengesData && challengesData.length > 0) {
         challengeId = challengesData[0].id;
       } else {
         return;
       }
     }
+
     const raceName = races.find(r => r.id === raceId)?.name || 'a race';
     const challengePayload = {
       challenge_id: challengeId,
@@ -1055,6 +1662,7 @@
     try {
       await racingChannel.send({ type: 'broadcast', event: 'challenge', payload: challengePayload });
     } catch (err) {
+      console.error('❌ Broadcast challenge error:', err);
       showToast('Failed to broadcast challenge', 'error');
     }
   }
@@ -1065,11 +1673,13 @@
     selectedRaceId = null;
   }
 
+  // Show incoming challenge popup
   function showIncomingChallenge(payload) {
     const challengerId = payload.challenger_id;
     const raceId = payload.race_id;
     let challengerName = payload.challenger_name || 'Unknown';
     let raceName = payload.race_name || 'a race';
+
     if (!payload.challenger_name || !payload.race_name) {
       Promise.all([
         sb.from('players').select('username').eq('id', challengerId).single(),
@@ -1077,19 +1687,26 @@
       ]).then(([playerRes, raceRes]) => {
         const cName = playerRes.data?.username || 'Unknown';
         const rName = raceRes.data?.name || 'a race';
-        document.getElementById('incomingChallengeText').textContent = `${cName} challenged you to join the race "${rName}"!`;
+        document.getElementById('incomingChallengeText').textContent =
+          `${cName} challenged you to join the race "${rName}"!`;
         incomingChallengeId = payload.id || payload.challenge_id;
         document.getElementById('incomingChallengeModal').style.display = 'flex';
         showToast(`🏁 ${cName} challenged you!`, 'challenge', 5000);
+      }).catch(() => {
+        document.getElementById('incomingChallengeText').textContent = 'You have a new challenge!';
+        incomingChallengeId = payload.id || payload.challenge_id;
+        document.getElementById('incomingChallengeModal').style.display = 'flex';
       });
     } else {
-      document.getElementById('incomingChallengeText').textContent = `${challengerName} challenged you to join the race "${raceName}"!`;
+      document.getElementById('incomingChallengeText').textContent =
+        `${challengerName} challenged you to join the race "${raceName}"!`;
       incomingChallengeId = payload.challenge_id || payload.id;
       document.getElementById('incomingChallengeModal').style.display = 'flex';
       showToast(`🏁 ${challengerName} challenged you!`, 'challenge', 5000);
     }
   }
 
+  // Accept from popup
   async function acceptIncomingChallenge() {
     if (!incomingChallengeId) return;
     const { data, error } = await sb.rpc('accept_challenge', { p_challenge_id: incomingChallengeId });
@@ -1100,6 +1717,7 @@
     showToast(data.message || 'Challenge accepted!', 'success');
     document.getElementById('incomingChallengeModal').style.display = 'none';
     incomingChallengeId = null;
+
     await loadRaces();
     const { data: challengesData } = await sb
       .from('pvp_challenges')
@@ -1124,6 +1742,7 @@
     }
   }
 
+  // Accept from chat
   async function acceptIncomingChallengeFromChat(challengeId) {
     const { data, error } = await sb.rpc('accept_challenge', { p_challenge_id: challengeId });
     if (error || !data.success) {
@@ -1131,6 +1750,7 @@
       return;
     }
     showToast(data.message || 'Challenge accepted!', 'success');
+
     const { data: challengeData } = await sb
       .from('pvp_challenges')
       .select('race_id')
@@ -1154,25 +1774,27 @@
     loadRaces();
   }
 
+  // Reject from popup
   async function rejectIncomingChallenge() {
     if (!incomingChallengeId) return;
     const { data, error } = await sb.rpc('reject_challenge', { p_challenge_id: incomingChallengeId });
     if (error || !data.success) {
       showToast(error?.message || data?.error || 'Failed to reject', 'error');
-      return;
+    } else {
+      showToast('Challenge rejected', 'info');
+      document.getElementById('incomingChallengeModal').style.display = 'none';
+      incomingChallengeId = null;
     }
-    showToast('Challenge rejected', 'info');
-    document.getElementById('incomingChallengeModal').style.display = 'none';
-    incomingChallengeId = null;
   }
 
+  // Reject from chat
   async function rejectIncomingChallengeFromChat(challengeId) {
     const { data, error } = await sb.rpc('reject_challenge', { p_challenge_id: challengeId });
     if (error || !data.success) {
       showToast(error?.message || data?.error || 'Failed to reject', 'error');
-      return;
+    } else {
+      showToast('Challenge rejected', 'info');
     }
-    showToast('Challenge rejected', 'info');
   }
 
   // ─── Race actions ─────────────────────────────────────────
@@ -1185,7 +1807,8 @@
         p_player_id: currentPlayer.id
       });
       if (error) {
-        showToast('Error: ' + error.message, 'error');
+        console.error('RPC error:', error);
+        showToast('Error: ' + (error.message || JSON.stringify(error)), 'error');
         return;
       }
       if (data && data.length > 0 && data[0].success) {
@@ -1198,6 +1821,7 @@
         showToast(msg, 'error');
       }
     } catch (err) {
+      console.error('Exception:', err);
       showToast('Exception: ' + err.message, 'error');
     }
   }
@@ -1212,7 +1836,8 @@
         p_player_id: currentPlayer.id
       });
       if (error) {
-        showToast('Error: ' + error.message, 'error');
+        console.error('Join race RPC error:', error);
+        showToast('Error: ' + (error.message || JSON.stringify(error)), 'error');
         return;
       }
       if (data && data.length > 0 && data[0].success) {
@@ -1223,6 +1848,7 @@
         showToast(msg, 'error');
       }
     } catch (err) {
+      console.error('Exception:', err);
       showToast('Exception: ' + err.message, 'error');
     }
   }
@@ -1243,6 +1869,7 @@
         showToast(msg, 'error');
       }
     } catch (err) {
+      console.error('Exception:', err);
       showToast('Exception: ' + err.message, 'error');
     }
   }
@@ -1264,6 +1891,7 @@
         showToast(msg, 'error');
       }
     } catch (err) {
+      console.error('Exception:', err);
       showToast('Exception: ' + err.message, 'error');
     }
   }
@@ -1295,6 +1923,7 @@
     title.textContent = '🏁 Racing...';
 
     track.innerHTML = '';
+
     const race = races.find(r => r.id === raceId);
     const entries = race?.entries || [];
     entries.forEach((entry, index) => {
@@ -1309,7 +1938,11 @@
     });
 
     progressFill.style.width = '0%';
+
     const startTime = Date.now();
+    raceStartTime = startTime;
+    raceDuration = duration;
+
     let elapsed = 0;
     clearInterval(raceInterval);
     raceInterval = setInterval(() => {
@@ -1331,6 +1964,7 @@
       try {
         const { data: result, error } = await sb.rpc('finish_race', { p_race_id: raceId });
         if (error) {
+          console.error('RPC error in finish_race:', error);
           showToast('RPC error: ' + JSON.stringify(error), 'error');
           title.textContent = '⚠️ Error';
           closeBtn.style.display = 'block';
@@ -1339,6 +1973,7 @@
           return;
         }
         if (!result || !result[0] || !result[0].success) {
+          console.error('finish_race returned error:', result);
           showToast('Race finish error: ' + (result?.[0]?.message || 'Unknown error'), 'error');
           title.textContent = '⚠️ ' + (result?.[0]?.message || 'Unknown error');
           closeBtn.style.display = 'block';
@@ -1346,6 +1981,7 @@
           loadRaces();
           return;
         }
+        // Success
         title.textContent = `🏁 Winner: ${result[0].winner_username}`;
         progressFill.style.width = '100%';
         const cars = track.querySelectorAll('.car-on-track');
@@ -1360,6 +1996,7 @@
         });
         closeBtn.style.display = 'block';
         showToast(`Race finished! Winner: ${result[0].winner_username}`, 'success');
+
         if (racingChannel && isChannelReady) {
           await racingChannel.send({
             type: 'broadcast',
@@ -1367,11 +2004,13 @@
             payload: { action: 'finish', result: result[0] }
           });
         }
+
         await loadRaces();
         await loadLeaderboard();
         await loadHistory();
       } catch (err) {
-        showToast('Error finishing race: ' + err.message, 'error');
+        console.error('Exception in finish_race:', err);
+        showToast('Error finishing race: ' + JSON.stringify(err), 'error');
         title.textContent = '⚠️ Error';
         closeBtn.style.display = 'block';
         await sb.from('races').update({ status: 'open' }).eq('id', raceId);
@@ -1387,7 +2026,7 @@
     loadRaces();
   }
 
-  // ─── Vehicle Tuning (FIXED) ─────────────────────────────
+  // ─── Vehicle Tuning ──────────────────────────────────────
   async function showTuneModal(vehicleId) {
     const { data: vehicle, error } = await sb
       .from('racer_vehicles')
@@ -1395,19 +2034,24 @@
       .eq('id', vehicleId)
       .single();
     if (error) { showToast('Error loading vehicle', 'error'); return; }
+
     const { data: upgrades } = await sb
       .from('vehicle_upgrades')
       .select('stat_name, level')
       .eq('vehicle_id', vehicleId);
+
     const upgradeMap = {};
     (upgrades || []).forEach(u => upgradeMap[u.stat_name] = u.level);
+
     const statNames = ['top_speed','acceleration','handling','grip','nitro'];
     const statLabels = {'top_speed':'Speed','acceleration':'Accel','handling':'Handling','grip':'Grip','nitro':'Nitro'};
     const baseCost = 500;
+
     document.getElementById('tuneVehicleInfo').innerHTML = `
       <h3>${escapeHtml(vehicle.nickname || vehicle.model.name)}</h3>
       <p>Base: ${escapeHtml(vehicle.model.name)}</p>
     `;
+
     const statsDiv = document.getElementById('tuneStats');
     statsDiv.innerHTML = statNames.map(stat => {
       const level = upgradeMap[stat] || 0;
@@ -1424,45 +2068,41 @@
         </div>
       `;
     }).join('');
+
     openModal('tuneModal');
   }
 
-  // ─── Fixed upgradeStat ──────────────────────────────────
   async function upgradeStat(vehicleId, statName, cost) {
-    try {
-      const { data, error } = await sb.rpc('upgrade_vehicle_stat', {
-        p_vehicle_id: vehicleId,
-        p_stat_name: statName,
-        p_cost: cost
-      });
-      if (error) {
-        showToast('Error: ' + error.message, 'error');
-        return;
-      }
-      if (data && data.length > 0 && data[0].success) {
-        showToast(data[0].message, 'success');
-        await loadVehicles();
-        showTuneModal(vehicleId);
-      } else {
-        const msg = data && data.length > 0 ? data[0].message : 'Upgrade failed';
-        showToast(msg, 'error');
-      }
-    } catch (err) {
-      showToast('Exception: ' + err.message, 'error');
+    const { data, error } = await sb.rpc('upgrade_vehicle_stat', {
+      p_vehicle_id: vehicleId,
+      p_stat_name: statName,
+      p_cost: cost
+    });
+    if (error || !data.success) {
+      showToast(error?.message || data?.error, 'error');
+      return;
     }
+    showToast(data.message, 'success');
+    await loadVehicles();
+    showTuneModal(vehicleId);
   }
 
   // ─── General ──────────────────────────────────────────────
   function showResultsModal(results, winnerName) {
     const modal = document.getElementById('resultModal');
-    document.getElementById('resultTitle').textContent = `🏁 Race Finished - Winner: ${escapeHtml(winnerName)}`;
-    document.getElementById('resultList').innerHTML = results.map((r, index) => `
+    const title = document.getElementById('resultTitle');
+    const list = document.getElementById('resultList');
+
+    title.textContent = `🏁 Race Finished - Winner: ${escapeHtml(winnerName)}`;
+
+    list.innerHTML = results.map((r, index) => `
       <div class="result-item" style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border-light);">
         <span style="font-weight:bold;">#${r.position}</span>
         <span style="flex:1; margin-left:10px;">${escapeHtml(r.username || 'Unknown')}</span>
         <span style="color:var(--color-success); font-weight:bold;">+₹${r.earnings}</span>
       </div>
     `).join('');
+
     modal.style.display = 'flex';
   }
 
@@ -1492,7 +2132,7 @@
 
   // ─── Sell / Rename ──────────────────────────────────────
   async function sellVehicle(vehicleId) {
-    if (!confirm('Sell this vehicle for 85% of its value?')) return;
+    if (!confirm('Sell this vehicle? You will get 85% of its value back.')) return;
     try {
       const { data, error } = await sb.rpc('sell_vehicle', {
         p_vehicle_id: vehicleId,
@@ -1511,6 +2151,7 @@
         showToast(msg, 'error');
       }
     } catch (err) {
+      console.error('Exception:', err);
       showToast('Exception: ' + err.message, 'error');
     }
   }
@@ -1522,9 +2163,12 @@
       .from('racer_vehicles')
       .update({ nickname: newName })
       .eq('id', vehicleId);
-    if (error) { showToast(error.message, 'error'); return; }
-    showToast('Vehicle renamed', 'success');
-    await loadVehicles();
+    if (error) {
+      showToast(error.message, 'error');
+    } else {
+      showToast('Vehicle renamed', 'success');
+      await loadVehicles();
+    }
   }
 
   // ─── Init ────────────────────────────────────────────────
@@ -1536,7 +2180,7 @@
     if (activeTab && activeTab.textContent.includes('Races')) loadRaces();
   }, 30000);
 
-  // ─── Globals ──────────────────────────────────────────────
+  // ─── Expose globals ──────────────────────────────────────
   window.switchTab = switchTab;
   window.buyVehicle = buyVehicle;
   window.joinRace = joinRace;
