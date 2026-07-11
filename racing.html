@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
   <style>
-    /* ─── CSS (same as before) ─── */
+    /* ─── CSS Variables & Themes ─── */
     :root {
       --bg-body: #f0f4fa;
       --card-bg: #fff;
@@ -366,9 +366,40 @@
   }
 
   // ─── Theme & Font ──────────────────────────────────────
-  function setTheme(themeName) { /* same as before */ }
-  function setFont(fontName) { /* same as before */ }
-  function initThemeAndFont() { /* same as before */ }
+  function setTheme(themeName) {
+    const body = document.body;
+    body.classList.remove('theme-dusk', 'theme-meadow');
+    if (themeName === 'dusk') body.classList.add('theme-dusk');
+    else if (themeName === 'meadow') body.classList.add('theme-meadow');
+    localStorage.setItem('racing_theme', themeName);
+    document.querySelectorAll('.theme-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.getAttribute('data-theme') === themeName);
+    });
+  }
+  function setFont(fontName) {
+    const root = document.documentElement;
+    if (fontName === 'inter') root.style.setProperty('--font-family', "'Inter', system-ui, sans-serif");
+    else if (fontName === 'monospace') root.style.setProperty('--font-family', "'Courier New', monospace");
+    else if (fontName === 'serif') root.style.setProperty('--font-family', "'Georgia', serif");
+    localStorage.setItem('racing_font', fontName);
+    document.querySelectorAll('.font-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.getAttribute('data-font') === fontName);
+    });
+  }
+  function initThemeAndFont() {
+    const savedTheme = localStorage.getItem('racing_theme') || 'default';
+    setTheme(savedTheme);
+    const savedFont = localStorage.getItem('racing_font') || 'inter';
+    setFont(savedFont);
+    document.getElementById('themeSwitcher').addEventListener('click', (e) => {
+      const btn = e.target.closest('.theme-btn');
+      if (btn) setTheme(btn.getAttribute('data-theme'));
+    });
+    document.getElementById('fontSwitcher').addEventListener('click', (e) => {
+      const btn = e.target.closest('.font-btn');
+      if (btn) setFont(btn.getAttribute('data-font'));
+    });
+  }
 
   // ─── State ────────────────────────────────────────────────
   let currentPlayer = null;
@@ -499,7 +530,10 @@
     const { data, error } = await sb
       .from('race_results')
       .select('player_id, players!inner (username), position, earnings');
-    if (error) { document.getElementById('leaderboardBody').innerHTML = '<tr><td colspan="5" class="empty-message">Error loading</td></tr>'; return; }
+    if (error) {
+      document.getElementById('leaderboardBody').innerHTML = '<tr><td colspan="5" class="empty-message">Error loading</td></tr>';
+      return;
+    }
     if (!data || data.length === 0) {
       document.getElementById('leaderboardBody').innerHTML = '<tr><td colspan="5" class="empty-message">No race data yet</td></tr>';
       return;
