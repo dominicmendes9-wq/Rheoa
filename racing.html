@@ -1292,7 +1292,7 @@
       raceUpdateTimeout = setTimeout(() => {
         loadRaces();
         raceUpdateTimeout = null;
-      }, 200);
+      }, 100);
     });
 
     racingChannel.on('broadcast', { event: 'challenge' }, (payload) => {
@@ -2181,7 +2181,7 @@
   setInterval(() => {
     const activeTab = document.querySelector('.tab-btn.active');
     if (activeTab && activeTab.textContent.includes('Races')) loadRaces();
-  }, 30000);
+  }, 10000);
 
   // ─── Expose globals ──────────────────────────────────────
   window.switchTab = switchTab;
