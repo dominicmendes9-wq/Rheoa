@@ -503,68 +503,9 @@
     $('levelDisplay').textContent = player.level;
     $('avatarPreview').textContent = player.avatar_url || '👤';
 
-    // Check if player has any vehicle; if not, claim starter
-    const { data: pv } = await sb
-      .from('player_vehicles')
-      .select('id')
-      .eq('player_id', player.id)
-      .limit(1);
-    if (!pv || pv.length === 0) {
-      await claimStarterVehicle();
-    }
+    // ❌ No automatic starter claim – user must buy from shop
     await refreshAll();
     await setupRealtime();
-  }
-
-  // ─── Claim Starter Vehicle ────────────────────────────────
-  async function claimStarterVehicle() {
-    const { data: cheapest, error } = await sb
-      .from('vehicles')
-      .select('*')
-      .eq('is_purchasable', true)
-      .eq('is_active', true)
-      .gt('current_stock', 0)
-      .lte('required_level', currentPlayer.level)
-      .order('purchase_price', { ascending: true })
-      .limit(1);
-    if (error || !cheapest || cheapest.length === 0) {
-      showToast('No starter vehicle available.', 'error');
-      return;
-    }
-    const vehicle = cheapest[0];
-    if (vehicle.purchase_price > currentPlayer.cash) {
-      showToast('You need more cash to buy a starter vehicle.', 'error');
-      return;
-    }
-    // Deduct cash
-    await sb
-      .from('players')
-      .update({ cash: currentPlayer.cash - vehicle.purchase_price })
-      .eq('id', currentPlayer.id);
-    currentPlayer.cash -= vehicle.purchase_price;
-    $('cashDisplay').textContent = currentPlayer.cash.toLocaleString();
-
-    // Insert into player_vehicles
-    const { error: insertError } = await sb
-      .from('player_vehicles')
-      .insert({
-        player_id: currentPlayer.id,
-        vehicle_id: vehicle.id,
-        active: true,
-        condition: 100,
-        current_value: vehicle.purchase_price * 0.8,
-        resale_value: vehicle.purchase_price * 0.7,
-      });
-    if (insertError) {
-      showToast('Error claiming starter: ' + insertError.message, 'error');
-      return;
-    }
-    // Decrease stock
-    await sb
-      .from('vehicles')
-      .update({ current_stock: vehicle.current_stock - 1 })
-      .eq('id', vehicle.id);
-    showToast('Starter vehicle claimed!', 'success');
   }
 
   // ─── Refresh All Data ──────────────────────────────────────
@@ -719,7 +660,7 @@
   function renderGarage() {
     const grid = $('garageGrid');
     if (!playerVehicles.length) {
-      grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text-muted);">No vehicles in garage. Buy one!</div>';
+      grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text-muted);">No vehicles – buy one from the shop!</div>';
       return;
     }
     grid.innerHTML = playerVehicles.map(v => {
@@ -855,6 +796,29 @@
   // ─── Join Race ─────────────────────────────────────────────
   async function joinRace(sessionId) {
     try {
+      // 1. Check if player has any vehicle
+      const { data: allVehicles } = await sb
+        .from('player_vehicles')
+        .select('id')
+        .eq('player_id', currentPlayer.id);
+      if (!allVehicles || allVehicles.length === 0) {
+        showToast('You need to buy a vehicle first.', 'error');
+        return;
+      }
+
+      // 2. Check for active vehicle
+      const { data: activeVeh } = await sb
+        .from('player_vehicles')
+        .select('id')
+        .eq('player_id', currentPlayer.id)
+        .eq('active', true)
+        .single();
+      if (!activeVeh) {
+        showToast('Set an active vehicle in your garage.', 'error');
+        return;
+      }
+
+      // 3. Get race details
       const { data: session } = await sb
         .from('race_sessions')
         .select('race_types!inner (entry_fee, max_participants)')
@@ -866,7 +830,8 @@
         showToast('Not enough cash for entry fee.', 'error');
         return;
       }
-      // Check if already joined
+
+      // 4. Check if already joined
       const { data: existing } = await sb
         .from('race_participants')
         .select('id')
@@ -876,18 +841,8 @@
         showToast('Already joined.', 'info');
         return;
       }
-      // Get active vehicle
-      const { data: activeVeh } = await sb
-        .from('player_vehicles')
-        .select('id')
-        .eq('player_id', currentPlayer.id)
-        .eq('active', true)
-        .single();
-      if (!activeVeh) {
-        showToast('You need an active vehicle to race.', 'error');
-        return;
-      }
-      // Deduct entry fee
+
+      // 5. Deduct entry fee
       await sb
         .from('players')
         .update({ cash: currentPlayer.cash - entryFee })
@@ -895,13 +850,13 @@
       currentPlayer.cash -= entryFee;
       $('cashDisplay').textContent = currentPlayer.cash.toLocaleString();
 
-      // Add to prize pool (update race_sessions)
+      // 6. Add to prize pool
       await sb
         .from('race_sessions')
         .update({ prize_pool: session.prize_pool + entryFee })
         .eq('id', sessionId);
 
-      // Insert participant
+      // 7. Insert participant
       const attemptNumber = (existing ? existing.length : 0) + 1;
       await sb
         .from('race_participants')
