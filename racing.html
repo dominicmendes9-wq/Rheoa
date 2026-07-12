@@ -851,6 +851,43 @@
     btn.addEventListener('click', () => switchTab(btn.dataset.tab));
   });
 
+  // ─── Affiliate Click Logging (for Collectibles) ──────────────
+  async function logAffiliateClick(url, linkText) {
+    if (!url) return;
+    try {
+      let ip = '0.0.0.0';
+      try {
+        const ipRes = await fetch('https://ipinfo.io/json');
+        const ipData = await ipRes.json();
+        ip = ipData.ip || '0.0.0.0';
+      } catch (e) { /* ignore IP fetch errors */ }
+
+      const referrer = window.location.href;
+      const userAgent = navigator.userAgent;
+
+      await sb.rpc('log_affiliate_click', {
+        p_url: url,
+        p_referrer: referrer,
+        p_user_agent: userAgent,
+        p_ip_address: ip,
+        p_link_text: linkText
+      });
+    } catch (err) {
+      // Silently fail – never block user navigation
+      console.warn('Affiliate click logging failed:', err);
+    }
+  }
+
+  // ─── Global click listener for affiliate links ──────────────
+  document.addEventListener('click', function(e) {
+    const link = e.target.closest('a[data-affiliate="true"]');
+    if (link) {
+      const linkText = link.dataset.linkText || link.textContent.trim() || 'Collectible';
+      // Fire-and-forget – navigation proceeds immediately
+      logAffiliateClick(link.href, linkText).catch(console.warn);
+    }
+  });
+
   // ─── State ──────────────────────────────────────────────────
   let currentPlayer = null;
   let vehicles = [];
@@ -860,7 +897,6 @@
   let history = [];
   let activeRaceModal = null;
   let collectibles = [];
-  let allBrands = [];
 
   // ─── DOM refs ──────────────────────────────────────────────
   const $ = (id) => document.getElementById(id);
@@ -1485,7 +1521,6 @@
           opt.textContent = b;
           filterSelect.appendChild(opt);
         });
-        // Restore selected value if possible
         if ([...filterSelect.options].some(o => o.value === currentVal)) {
           filterSelect.value = currentVal;
         }
@@ -1516,7 +1551,7 @@
         <img src="${p.image_url || 'https://via.placeholder.com/400x300/1e293b/ffffff?text=No+Image'}" alt="${p.name}">
         <div class="name">${p.name}</div>
         <div class="brand">${p.brand}</div>
-        <a href="${p.affiliate_url}" target="_blank" rel="noopener noreferrer" class="btn-collect">Collect Now</a>
+        <a href="${p.affiliate_url}" target="_blank" rel="noopener noreferrer" class="btn-collect" data-affiliate="true" data-link-text="${p.name}">Collect Now</a>
       </div>
     `).join('');
   }
