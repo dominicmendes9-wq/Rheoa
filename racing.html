@@ -498,6 +498,31 @@
       .tabs { flex-wrap: wrap; gap: 4px; }
       .tab-btn { padding: 6px 12px; font-size: 0.8rem; }
     }
+    /* --- Button color fixes --- */
+.vehicle-card .btn.out-of-stock {
+  background: var(--danger) !important;
+  color: #fff;
+}
+.vehicle-card .btn.out-of-stock:hover:not(:disabled) {
+  background: #dc2626 !important;
+}
+
+/* Garage action buttons – keep their inline colors,
+   but ensure they are not overridden */
+.garage-activate {
+  background: var(--accent) !important;
+  color: #fff;
+}
+.garage-activate:hover:not(:disabled) {
+  background: var(--accent-hover) !important;
+}
+.garage-sell {
+  background: var(--danger) !important;
+  color: #fff;
+}
+.garage-sell:hover:not(:disabled) {
+  background: #dc2626 !important;
+}
   </style>
 </head>
 <body>
@@ -926,8 +951,8 @@
           <div class="stat-bar"><span class="label">Condition</span><div class="bar-bg"><div class="bar-fill" style="width:${v.condition}%; background: ${v.condition > 70 ? 'var(--success)' : v.condition > 40 ? 'var(--warning)' : 'var(--danger)'}"></div></div><span class="value">${v.condition}%</span></div>
         </div>
         <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;">
-          ${v.active ? '<span style="background:var(--success);color:white;padding:2px 8px;border-radius:12px;font-size:0.7rem;">Active</span>' : `<button class="btn" style="flex:1; background:var(--accent);" onclick="activateVehicle('${v.id}')">Activate</button>`}
-          <button class="btn" style="flex:1; background:var(--danger);" onclick="sellVehicle('${v.id}')">Sell</button>
+          ${v.active ? '<span style="background:var(--success);color:white;padding:2px 8px;border-radius:12px;font-size:0.7rem;">Active</span>' : `<button class="btn garage-activate" onclick="activateVehicle('${v.id}')">Activate</button>`}
+          <button class="btn garage-sell" onclick="sellVehicle('${v.id}')">Sell</button>
         </div>
       </div>
     `}).join('');
