@@ -851,8 +851,8 @@
     btn.addEventListener('click', () => switchTab(btn.dataset.tab));
   });
 
-  // ─── Affiliate Click Logging (for Collectibles) ──────────────
-  async function logAffiliateClick(url, linkText) {
+ // ─── Affiliate Click Logging (for Collectibles) ──────────────
+async function logAffiliateClick(url, linkText) {
   if (!url) return;
   try {
     let ip = '0.0.0.0';
@@ -867,7 +867,8 @@
 
     console.log('🔍 Logging affiliate click:', { url, linkText, ip, referrer, userAgent });
 
-    const { data, error } = await sb.rpc('log_affiliate_click', {
+    // *** Use the new function name ***
+    const { data, error } = await sb.rpc('log_affiliate_click_with_ip', {
       p_url: url,
       p_referrer: referrer,
       p_user_agent: userAgent,
@@ -884,7 +885,6 @@
     console.error('❌ Affiliate click logging failed:', err);
   }
 }
-
 // ─── Global click listener for affiliate links ──────────────
 document.addEventListener('click', function(e) {
   const link = e.target.closest('a[data-affiliate="true"]');
