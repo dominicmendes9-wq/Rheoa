@@ -862,7 +862,7 @@
         ip = ipData.ip || '0.0.0.0';
       } catch (e) { /* ignore IP fetch errors */ }
 
-      const referrer = window.location.href;
+      const referrer = window.location.pathname;
       const userAgent = navigator.userAgent;
 
       const { data, error } = await sb.rpc('log_affiliate_click', {
