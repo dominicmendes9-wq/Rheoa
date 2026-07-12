@@ -6,30 +6,80 @@
   <title>RHEOA Racing</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
   <style>
-    /* --- Reset & Variables (same dark theme as forum/profile) --- */
-    * { margin:0; padding:0; box-sizing:border-box; }
+    /* --- Theme Variables (exactly like profile.html) --- */
     :root {
-      --bg-body: #0f172a;
-      --card-bg: rgba(30, 41, 59, 0.85);
-      --card-border: rgba(51, 65, 85, 0.5);
-      --text-main: #f1f5f9;
-      --text-muted: #94a3b8;
-      --accent: #3b82f6;
-      --accent-hover: #2563eb;
-      --danger: #ef4444;
-      --success: #22c55e;
-      --warning: #f59e0b;
+      --bg-body: #f0f4fa;
+      --card-bg: #fff;
+      --card-border: rgba(148,163,184,0.2);
+      --card-shadow: 0 12px 30px rgba(0,0,0,0.05);
+      --header-bg: linear-gradient(135deg,#1e2f5e 0%,#1a4b7a 100%);
+      --header-text: #fff;
+      --accent: #2c6e9e;
+      --accent-hover: #1f5480;
+      --btn-primary: #2c6e9e;
+      --btn-primary-hover: #1f5480;
+      --btn-secondary: #475569;
+      --btn-ghost: #e2e8f0;
+      --text-main: #0f172a;
+      --text-muted: #334155;
+      --border-light: #e2e8f0;
+      --card-header-bg: #f8fafc;
+      --avatar-bg: #e0f2fe;
       --font-family: 'Inter', system-ui, sans-serif;
       --radius: 16px;
-      --shadow: 0 8px 24px rgba(0,0,0,0.3);
+      --shadow: 0 8px 24px rgba(0,0,0,0.05);
       --transition: 0.2s ease;
     }
+
+    body.theme-dusk {
+      --bg-body: #0f1722;
+      --card-bg: #1e293b;
+      --card-border: rgba(51,65,85,0.6);
+      --card-shadow: 0 15px 35px rgba(0,0,0,0.3);
+      --header-bg: linear-gradient(135deg,#0f172a 0%,#1e293b 100%);
+      --header-text: #e2e8f0;
+      --accent: #60a5fa;
+      --accent-hover: #3b82f6;
+      --btn-primary: #3b82f6;
+      --btn-primary-hover: #2563eb;
+      --btn-secondary: #334155;
+      --btn-ghost: #334155;
+      --text-main: #f1f5f9;
+      --text-muted: #cbd5e1;
+      --border-light: #334155;
+      --card-header-bg: #0f172a;
+      --avatar-bg: #334155;
+    }
+
+    body.theme-meadow {
+      --bg-body: #eef4e6;
+      --card-bg: #ffffffea;
+      --card-border: #cbd5b0;
+      --card-shadow: 0 12px 24px rgba(60,70,40,0.08);
+      --header-bg: linear-gradient(135deg,#2b5e3b 0%,#4a7c59 100%);
+      --header-text: #fef9e6;
+      --accent: #4b6b3e;
+      --accent-hover: #3a5530;
+      --btn-primary: #4b6b3e;
+      --btn-primary-hover: #3a5530;
+      --btn-secondary: #7f6b4a;
+      --btn-ghost: #e9e1c7;
+      --text-main: #2c2b26;
+      --text-muted: #5b5a4c;
+      --border-light: #d9d2b0;
+      --card-header-bg: #fef6e0;
+      --avatar-bg: #e2e9cf;
+    }
+
+    /* --- Reset & Base --- */
+    * { margin:0; padding:0; box-sizing:border-box; }
     body {
       background: var(--bg-body);
       color: var(--text-main);
       font-family: var(--font-family);
       padding: 20px;
       min-height: 100vh;
+      transition: background .25s, color .2s;
     }
     .container { max-width: 1400px; margin: 0 auto; }
 
@@ -46,6 +96,7 @@
       border-radius: var(--radius);
       border: 1px solid var(--card-border);
       backdrop-filter: blur(8px);
+      box-shadow: var(--shadow);
     }
     .top-bar .left {
       display: flex;
@@ -70,7 +121,7 @@
       background: var(--bg-body);
       padding: 4px 8px;
       border-radius: 60px;
-      border: 1px solid var(--card-border);
+      border: 1px solid var(--border-light);
       backdrop-filter: blur(4px);
       align-items: center;
     }
@@ -92,7 +143,7 @@
       box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
     .theme-btn:hover:not(.active), .font-btn:hover:not(.active) {
-      background: var(--card-border);
+      background: var(--btn-ghost);
       color: var(--text-main);
     }
     .font-btn {
@@ -106,13 +157,13 @@
       border: 1px solid var(--card-border);
       border-radius: var(--radius);
       padding: 20px;
-      backdrop-filter: blur(8px);
+      box-shadow: var(--shadow);
       transition: transform 0.2s, box-shadow 0.2s;
       margin-bottom: 24px;
     }
     .card:hover {
       transform: translateY(-2px);
-      box-shadow: var(--shadow);
+      box-shadow: 0 12px 30px rgba(0,0,0,0.08);
     }
     .card-header {
       display: flex;
@@ -142,12 +193,13 @@
       width: 80px;
       height: 80px;
       border-radius: 50%;
-      background: var(--accent);
+      background: var(--avatar-bg);
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 2.5rem;
       border: 3px solid var(--accent);
+      color: var(--text-main);
     }
     .racer-info h2 { font-size: 1.6rem; margin-bottom: 4px; }
     .racer-info .stats {
@@ -174,7 +226,7 @@
       flex-wrap: wrap;
       gap: 8px;
       margin-bottom: 20px;
-      border-bottom: 1px solid var(--card-border);
+      border-bottom: 1px solid var(--border-light);
       padding-bottom: 8px;
     }
     .tab-btn {
@@ -190,7 +242,7 @@
       font-family: var(--font-family);
     }
     .tab-btn:hover {
-      background: var(--card-border);
+      background: var(--btn-ghost);
       color: var(--text-main);
     }
     .tab-btn.active {
@@ -211,10 +263,10 @@
       gap: 16px;
     }
     .vehicle-card {
-      background: rgba(0,0,0,0.3);
+      background: var(--card-header-bg);
       border-radius: 12px;
       padding: 16px;
-      border: 1px solid var(--card-border);
+      border: 1px solid var(--border-light);
       transition: 0.2s;
       position: relative;
     }
@@ -229,7 +281,7 @@
     }
     .vehicle-card .name { font-weight: 600; font-size: 1.05rem; }
     .vehicle-card .manufacturer { color: var(--text-muted); font-size: 0.8rem; }
-    .vehicle-card .price { color: var(--success); font-weight: 600; margin: 6px 0; }
+    .vehicle-card .price { color: var(--btn-primary); font-weight: 600; margin: 6px 0; }
     .vehicle-card .level { color: var(--warning); font-size: 0.8rem; }
     .vehicle-card .stock { font-size: 0.8rem; color: var(--text-muted); }
     .vehicle-card .btn {
@@ -241,10 +293,10 @@
       cursor: pointer;
       transition: 0.2s;
       margin-top: 10px;
-      background: var(--accent);
+      background: var(--btn-primary);
       color: white;
     }
-    .vehicle-card .btn:hover:not(:disabled) { background: var(--accent-hover); }
+    .vehicle-card .btn:hover:not(:disabled) { background: var(--btn-primary-hover); }
     .vehicle-card .btn:disabled { opacity: 0.5; cursor: not-allowed; }
     .vehicle-card .btn.out-of-stock { background: var(--danger); }
 
@@ -255,10 +307,10 @@
       gap: 20px;
     }
     .race-card {
-      background: rgba(0,0,0,0.3);
+      background: var(--card-header-bg);
       border-radius: 12px;
       padding: 16px;
-      border: 1px solid var(--card-border);
+      border: 1px solid var(--border-light);
       transition: 0.2s;
       position: relative;
     }
@@ -294,10 +346,10 @@
       cursor: pointer;
       transition: 0.2s;
       margin-top: 10px;
-      background: var(--accent);
+      background: var(--btn-primary);
       color: white;
     }
-    .race-card .btn:hover:not(:disabled) { background: var(--accent-hover); }
+    .race-card .btn:hover:not(:disabled) { background: var(--btn-primary-hover); }
     .race-card .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
     /* --- Leaderboard --- */
@@ -310,11 +362,11 @@
       text-align: left;
       padding: 8px 4px;
       color: var(--text-muted);
-      border-bottom: 1px solid var(--card-border);
+      border-bottom: 1px solid var(--border-light);
     }
     .leaderboard-table td {
       padding: 8px 4px;
-      border-bottom: 1px solid rgba(255,255,255,0.05);
+      border-bottom: 1px solid rgba(0,0,0,0.05);
     }
     .leaderboard-table .rank { font-weight: 600; color: var(--accent); }
     .leaderboard-table .player { font-weight: 500; }
@@ -330,7 +382,7 @@
       display: flex;
       justify-content: space-between;
       padding: 8px 0;
-      border-bottom: 1px solid rgba(255,255,255,0.05);
+      border-bottom: 1px solid rgba(0,0,0,0.05);
       font-size: 0.9rem;
     }
     .history-item .race { font-weight: 500; }
@@ -353,7 +405,7 @@
     .modal-overlay.active { display: flex; }
     .modal-content {
       background: var(--card-bg);
-      border: 1px solid var(--card-border);
+      border: 1px solid var(--border-light);
       border-radius: var(--radius);
       padding: 30px;
       max-width: 600px;
@@ -361,6 +413,7 @@
       max-height: 90vh;
       overflow-y: auto;
       position: relative;
+      box-shadow: var(--shadow);
     }
     .modal-content .close-btn {
       position: absolute;
@@ -382,12 +435,12 @@
     .race-results-table th {
       text-align: left;
       padding: 8px 4px;
-      border-bottom: 1px solid var(--card-border);
+      border-bottom: 1px solid var(--border-light);
       color: var(--text-muted);
     }
     .race-results-table td {
       padding: 6px 4px;
-      border-bottom: 1px solid rgba(255,255,255,0.05);
+      border-bottom: 1px solid rgba(0,0,0,0.05);
     }
     .race-results-table .pos { font-weight: 600; }
     .pos-1 { color: var(--success); }
@@ -420,7 +473,7 @@
       padding: 12px 20px;
       border-radius: 8px;
       background: var(--card-bg);
-      border: 1px solid var(--card-border);
+      border: 1px solid var(--border-light);
       backdrop-filter: blur(8px);
       color: var(--text-main);
       font-weight: 500;
@@ -450,11 +503,11 @@
 <body>
 
 <div class="container">
-  <!-- Top Bar with Theme & Font switcher -->
+  <!-- Top Bar -->
   <div class="top-bar">
     <div class="left">
       <a href="dashboard.html" class="back-link">← Dashboard</a>
-      <h1 style="display:inline-block; margin-left:12px;">🏁 Racing</h1>
+      <h1>🏁 Racing</h1>
     </div>
     <div class="right">
       <div class="theme-switcher" id="themeSwitcher">
@@ -860,7 +913,7 @@
     grid.innerHTML = playerVehicles.map(v => {
       const veh = v.vehicles;
       return `
-      <div class="vehicle-card" style="border-color: ${v.active ? 'var(--success)' : 'var(--card-border)'};">
+      <div class="vehicle-card" style="border-color: ${v.active ? 'var(--success)' : 'var(--border-light)'};">
         <img src="${veh.image_url || 'https://via.placeholder.com/400x200/1e293b/ffffff?text=No+Image'}" alt="${veh.name}">
         <div class="name">${v.nickname || veh.name}</div>
         <div class="manufacturer">${veh.manufacturer}</div>
