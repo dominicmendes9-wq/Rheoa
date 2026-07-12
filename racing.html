@@ -665,7 +665,6 @@
       if (error) throw error;
       if (data.success) {
         showToast(data.message || 'Vehicle purchased!', 'success');
-        // Refresh player cash and all data
         await refreshAll();
       } else {
         showToast(data.error || 'Purchase failed', 'error');
