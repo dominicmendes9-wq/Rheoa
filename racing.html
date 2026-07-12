@@ -128,7 +128,7 @@
       font-weight: 600;
     }
 
-    /* --- Vehicle Cards (Shop & Garage) --- */
+    /* --- Vehicle Cards --- */
     .vehicle-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -196,8 +196,19 @@
     }
     .race-card .race-name { font-weight: 600; font-size: 1.1rem; }
     .race-card .race-meta { color: var(--text-muted); font-size: 0.85rem; }
-    .race-card .participants { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
-    .race-card .participant-avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 0.7rem; }
+    .race-card .participants {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px 10px;
+      margin: 8px 0;
+      font-size: 0.8rem;
+    }
+    .race-card .participant-tag {
+      background: var(--accent);
+      color: white;
+      padding: 2px 8px;
+      border-radius: 12px;
+    }
     .race-card .btn {
       width: 100%;
       padding: 8px;
@@ -252,7 +263,7 @@
     .history-item .xp { color: var(--accent); }
     .history-item .date { color: var(--text-muted); font-size: 0.7rem; }
 
-    /* --- Modal (simple confirmation) --- */
+    /* --- Race Modal --- */
     .modal-overlay {
       display: none;
       position: fixed;
@@ -269,7 +280,7 @@
       border: 1px solid var(--card-border);
       border-radius: var(--radius);
       padding: 30px;
-      max-width: 500px;
+      max-width: 600px;
       width: 90%;
       max-height: 90vh;
       overflow-y: auto;
@@ -286,6 +297,38 @@
       cursor: pointer;
     }
     .modal-content .close-btn:hover { color: var(--text-main); }
+    .race-results-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0;
+      font-size: 0.9rem;
+    }
+    .race-results-table th {
+      text-align: left;
+      padding: 8px 4px;
+      border-bottom: 1px solid var(--card-border);
+      color: var(--text-muted);
+    }
+    .race-results-table td {
+      padding: 6px 4px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .race-results-table .pos { font-weight: 600; }
+    .pos-1 { color: var(--success); }
+    .pos-2 { color: var(--accent); }
+    .pos-3 { color: var(--warning); }
+    .countdown {
+      font-size: 3rem;
+      text-align: center;
+      margin: 20px 0;
+      color: var(--accent);
+      animation: pulse 1s infinite;
+    }
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.5; }
+      100% { opacity: 1; }
+    }
 
     /* --- Toast --- */
     .toast-container {
@@ -432,11 +475,14 @@
 <!-- Toast Container -->
 <div class="toast-container" id="toastContainer"></div>
 
-<!-- Modal (simple, for confirmation if needed) -->
-<div class="modal-overlay" id="modalOverlay">
+<!-- Race Modal -->
+<div class="modal-overlay" id="raceModal">
   <div class="modal-content">
-    <button class="close-btn" onclick="closeModal()">&times;</button>
-    <div id="modalBody"></div>
+    <button class="close-btn" id="raceModalClose" onclick="closeRaceModal()">&times;</button>
+    <div id="raceModalBody">
+      <h2 id="raceModalTitle">🏁 Race Starting!</h2>
+      <div id="raceModalContent"></div>
+    </div>
   </div>
 </div>
 
@@ -454,6 +500,7 @@
   let races = [];
   let leaderboard = [];
   let history = [];
+  let activeRaceModal = null; // track if modal is open for a race
 
   // ─── DOM refs ──────────────────────────────────────────────
   const $ = (id) => document.getElementById(id);
@@ -472,17 +519,17 @@
     }, duration);
   }
 
-  // ─── Modal ──────────────────────────────────────────────────
-  function openModal(html) {
-    $('modalBody').innerHTML = html;
-    $('modalOverlay').classList.add('active');
+  // ─── Race Modal ─────────────────────────────────────────────
+  function openRaceModal(title, content) {
+    $('raceModalTitle').innerHTML = title;
+    $('raceModalContent').innerHTML = content;
+    $('raceModal').classList.add('active');
   }
-  function closeModal() {
-    $('modalOverlay').classList.remove('active');
+
+  function closeRaceModal() {
+    $('raceModal').classList.remove('active');
+    activeRaceModal = null;
   }
-  $('modalOverlay').addEventListener('click', (e) => {
-    if (e.target === e.currentTarget) closeModal();
-  });
 
   // ─── Auth & Player ──────────────────────────────────────────
   async function loadPlayer() {
@@ -503,7 +550,6 @@
     $('levelDisplay').textContent = player.level;
     $('avatarPreview').textContent = player.avatar_url || '👤';
 
-    // ❌ No automatic starter claim – user must buy from shop
     await refreshAll();
     await setupRealtime();
   }
@@ -689,12 +735,10 @@
   // ─── Activate Vehicle ─────────────────────────────────────
   async function activateVehicle(vehicleId) {
     try {
-      // Deactivate all others
       await sb
         .from('player_vehicles')
         .update({ active: false })
         .eq('player_id', currentPlayer.id);
-      // Activate selected
       await sb
         .from('player_vehicles')
         .update({ active: true })
@@ -734,27 +778,40 @@
     }
   }
 
-  // ─── Load Races ────────────────────────────────────────────
+  // ─── Load Races (with participant names) ──────────────────
   async function loadRaces() {
     try {
+      // Fetch sessions with participants and player usernames
       const { data, error } = await sb
         .from('race_sessions')
         .select(`
           *,
           race_types!inner (*),
-          participants:race_participants (player_id)
+          participants:race_participants (
+            player_id,
+            players (username)
+          )
         `)
-        .in('status', ['waiting', 'running']);
+        .in('status', ['waiting', 'running', 'finished'])
+        .order('created_at', { ascending: false });
       if (error) throw error;
       races = data || [];
+      // Mark if current player joined
       if (currentPlayer) {
         for (let r of races) {
-          const joined = r.participants.some(p => p.player_id === currentPlayer.id);
+          const joined = r.participants?.some(p => p.player_id === currentPlayer.id) || false;
           r.joined = joined;
         }
       }
-      $('raceCount').textContent = races.length + ' active';
+      $('raceCount').textContent = races.filter(r => r.status !== 'finished').length + ' active';
       renderRaces();
+
+      // If any race is running, open modal for participants
+      const runningRace = races.find(r => r.status === 'running' && r.joined);
+      if (runningRace && !activeRaceModal) {
+        // Show countdown and then complete
+        showRaceCountdown(runningRace);
+      }
     } catch (err) {
       showToast('Error loading races: ' + err.message, 'error');
     }
@@ -762,15 +819,18 @@
 
   function renderRaces() {
     const grid = $('raceGrid');
-    if (!races.length) {
-      grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text-muted);">No active races. Join one!</div>';
+    const activeRaces = races.filter(r => r.status !== 'finished');
+    if (!activeRaces.length) {
+      grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text-muted);">No active races. Check back later!</div>';
       return;
     }
-    grid.innerHTML = races.map(r => {
+    grid.innerHTML = activeRaces.map(r => {
       const joined = r.joined || false;
       const participants = r.participants || [];
       const canJoin = !joined && r.status === 'waiting' && currentPlayer.level >= r.race_types.min_level;
       const statusText = r.status === 'waiting' ? '⏳ Waiting' : r.status === 'running' ? '🏁 Running' : '✅ Finished';
+      // Build participant list with usernames
+      const participantNames = participants.map(p => p.players?.username || 'Unknown').join(', ');
       return `
         <div class="race-card">
           <img src="${r.race_types.track_image_url || 'https://via.placeholder.com/400x200/1e293b/ffffff?text=Race'}" class="race-image" alt="${r.race_types.name}">
@@ -779,8 +839,7 @@
           <div class="race-meta">Entry: ₹${r.race_types.entry_fee.toLocaleString()} • Prize: ₹${r.prize_pool.toLocaleString()}</div>
           <div class="race-meta">Level ${r.race_types.min_level} • ${participants.length}/${r.race_types.max_participants}</div>
           <div class="participants">
-            ${participants.slice(0,5).map((_, i) => `<div class="participant-avatar">P${i+1}</div>`).join('')}
-            ${participants.length > 5 ? `<div class="participant-avatar" style="background:var(--text-muted);">+${participants.length-5}</div>` : ''}
+            ${participantNames ? '👥 ' + participantNames : 'No participants yet'}
           </div>
           <div style="font-size:0.8rem; color:${r.status === 'running' ? 'var(--warning)' : 'var(--text-muted)'};">${statusText}</div>
           <button class="btn" onclick="joinRace('${r.id}')" 
@@ -791,6 +850,81 @@
         </div>
       `;
     }).join('');
+  }
+
+  // ─── Race Countdown & Completion ──────────────────────────
+  let countdownTimer = null;
+
+  function showRaceCountdown(race) {
+    if (activeRaceModal) return; // already showing
+    activeRaceModal = race.id;
+    const raceName = race.race_types.name;
+    let countdown = 10;
+    openRaceModal(
+      `🏁 ${raceName}`,
+      `<div class="countdown" id="countdownDisplay">${countdown}</div>
+       <p style="text-align:center;">Race is starting! Get ready...</p>`
+    );
+    // Disable close button during countdown
+    $('raceModalClose').style.display = 'none';
+
+    countdownTimer = setInterval(() => {
+      countdown--;
+      const cd = document.getElementById('countdownDisplay');
+      if (cd) cd.textContent = countdown;
+      if (countdown <= 0) {
+        clearInterval(countdownTimer);
+        countdownTimer = null;
+        // Call complete_race
+        completeRace(race.id);
+      }
+    }, 1000);
+  }
+
+  async function completeRace(sessionId) {
+    try {
+      const { data, error } = await sb.rpc('complete_race', { p_session_id: sessionId });
+      if (error) throw error;
+      if (data.success) {
+        showToast('Race finished!', 'success');
+        // Show results in modal
+        const results = data.results;
+        let tableHtml = `
+          <h3>🏆 Results</h3>
+          <table class="race-results-table">
+            <thead><tr><th>Pos</th><th>Player</th><th>Vehicle</th><th>Time</th><th>Cash</th><th>XP</th></tr></thead>
+            <tbody>
+        `;
+        results.forEach((r, idx) => {
+          const posClass = idx === 0 ? 'pos-1' : idx === 1 ? 'pos-2' : idx === 2 ? 'pos-3' : '';
+          tableHtml += `
+            <tr>
+              <td class="pos ${posClass}">#${r.finish_position}</td>
+              <td>${r.username}</td>
+              <td>${r.nickname || 'Car'}</td>
+              <td>${r.finish_time ? r.finish_time.toFixed(2) + 's' : '-'}</td>
+              <td>+₹${r.cash_won.toLocaleString()}</td>
+              <td>+${r.xp_won} XP</td>
+            </tr>
+          `;
+        });
+        tableHtml += `</tbody></table>`;
+        // Update modal content
+        $('raceModalTitle').innerHTML = '🏁 Race Complete!';
+        $('raceModalContent').innerHTML = tableHtml;
+        // Show close button
+        $('raceModalClose').style.display = 'block';
+        // Refresh all data to update leaderboard, history, etc.
+        await refreshAll();
+        activeRaceModal = null;
+      } else {
+        showToast('Error completing race: ' + data.error, 'error');
+        closeRaceModal();
+      }
+    } catch (err) {
+      showToast('Error completing race: ' + err.message, 'error');
+      closeRaceModal();
+    }
   }
 
   // ─── Join Race ─────────────────────────────────────────────
@@ -979,27 +1113,34 @@
 
   // ─── Realtime Setup ────────────────────────────────────────
   async function setupRealtime() {
-    const raceChannel = sb.channel('racing-participants');
-    raceChannel.on('postgres_changes', {
-      event: '*',
-      schema: 'public',
-      table: 'race_participants'
-    }, () => {
-      loadRaces();
-    }).subscribe();
+    // Listen to changes on race_sessions and race_participants
+    const channel = sb.channel('racing-updates');
+    channel
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'race_sessions'
+      }, (payload) => {
+        // When status changes to 'running', we need to show modal for participants
+        if (payload.new && payload.new.status === 'running') {
+          // Check if current player is a participant
+          const race = races.find(r => r.id === payload.new.id);
+          if (race && race.joined && !activeRaceModal) {
+            showRaceCountdown(payload.new);
+          }
+        }
+        loadRaces(); // refresh list
+      })
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'race_participants'
+      }, () => {
+        loadRaces();
+      })
+      .subscribe();
 
-    const sessionChannel = sb.channel('racing-sessions');
-    sessionChannel.on('postgres_changes', {
-      event: 'UPDATE',
-      schema: 'public',
-      table: 'race_sessions'
-    }, (payload) => {
-      if (payload.new.status === 'running') {
-        showToast(`🏁 Race starting!`, 'warning');
-      }
-      loadRaces();
-    }).subscribe();
-
+    // Also listen to notifications
     if (currentPlayer) {
       const notifChannel = sb.channel(`notifications-${currentPlayer.id}`);
       notifChannel.on('postgres_changes', {
@@ -1027,7 +1168,7 @@
   window.sellVehicle = sellVehicle;
   window.joinRace = joinRace;
   window.leaveRace = leaveRace;
-  window.closeModal = closeModal;
+  window.closeRaceModal = closeRaceModal;
 </script>
 </body>
 </html>
