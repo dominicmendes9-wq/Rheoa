@@ -559,13 +559,23 @@
     await Promise.all([loadShop(), loadGarage(), loadRaces(), loadLeaderboard(), loadHistory(), updateSummary()]);
   }
 
-  // ─── Update Summary ──────────────────────────────────────
+  // ─── Update Summary (with vehicle names) ──────────────────
   async function updateSummary() {
     if (!currentPlayer) return;
-    const { data: pv } = await sb
+    // Join with vehicles to get the name
+    const { data: pv, error } = await sb
       .from('player_vehicles')
-      .select('id, active, wins, losses, vehicle_id, current_value, nickname')
+      .select(`
+        id, active, wins, losses, vehicle_id, current_value, nickname,
+        vehicles!inner (name)
+      `)
       .eq('player_id', currentPlayer.id);
+
+    if (error) {
+      console.error('Error loading player vehicles for summary:', error);
+      return;
+    }
+
     const count = pv ? pv.length : 0;
     const active = pv ? pv.find(v => v.active) : null;
     const totalWins = pv ? pv.reduce((s, v) => s + (v.wins || 0), 0) : 0;
@@ -574,15 +584,22 @@
     const garageValue = pv ? pv.reduce((s, v) => s + (v.current_value || 0), 0) : 0;
 
     $('vehicleCount').textContent = count;
-    $('activeVehicle').textContent = active ? (active.nickname || 'Vehicle ' + active.vehicle_id) : 'None';
+    // Show nickname if set, otherwise vehicle name
+    $('activeVehicle').textContent = active
+      ? (active.nickname || active.vehicles.name)
+      : 'None';
+
     $('totalWins').textContent = totalWins;
     $('totalLosses').textContent = totalLosses;
     $('totalRaces').textContent = totalRaces;
     $('garageValue').textContent = garageValue.toLocaleString();
 
+    // Favorite vehicle: most wins (or most usage if tie)
     if (pv && pv.length) {
       const favorite = pv.reduce((a, b) => (a.wins || 0) > (b.wins || 0) ? a : b);
-      $('favoriteVehicle').textContent = favorite ? 'Vehicle ' + favorite.vehicle_id : '-';
+      $('favoriteVehicle').textContent = favorite
+        ? (favorite.nickname || favorite.vehicles.name)
+        : '-';
     } else {
       $('favoriteVehicle').textContent = '-';
     }
@@ -647,6 +664,7 @@
     }
 
     try {
+      // Deduct cash
       await sb
         .from('players')
         .update({ cash: currentPlayer.cash - vehicle.purchase_price })
@@ -654,6 +672,7 @@
       currentPlayer.cash -= vehicle.purchase_price;
       $('cashDisplay').textContent = currentPlayer.cash.toLocaleString();
 
+      // Insert into player_vehicles
       const { error: insertError } = await sb
         .from('player_vehicles')
         .insert({
@@ -666,12 +685,15 @@
         });
       if (insertError) throw insertError;
 
-      await sb
+      // Decrease stock
+      const { error: updateError } = await sb
         .from('vehicles')
         .update({ current_stock: vehicle.current_stock - 1 })
         .eq('id', vehicle.id);
+      if (updateError) throw updateError;
 
       showToast('Vehicle purchased!', 'success');
+      // Refresh all data to reflect new stock and garage
       await refreshAll();
     } catch (err) {
       showToast('Error: ' + err.message, 'error');
@@ -801,7 +823,6 @@
       $('raceCount').textContent = races.filter(r => r.status !== 'finished').length + ' active';
       renderRaces();
 
-      // If any race is running, open modal for participants
       const runningRace = races.find(r => r.status === 'running' && r.joined);
       if (runningRace && !activeRaceModal) {
         showRaceCountdown(runningRace);
@@ -981,8 +1002,6 @@
           attempt_number: attemptNumber,
         });
       showToast('Joined race!', 'success');
-
-      // Immediately refresh races to catch status change
       await loadRaces();
     } catch (err) {
       showToast('Error: ' + err.message, 'error');
