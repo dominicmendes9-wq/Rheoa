@@ -562,7 +562,6 @@
   // ─── Update Summary (with vehicle names) ──────────────────
   async function updateSummary() {
     if (!currentPlayer) return;
-    // Join with vehicles to get the name
     const { data: pv, error } = await sb
       .from('player_vehicles')
       .select(`
@@ -584,7 +583,6 @@
     const garageValue = pv ? pv.reduce((s, v) => s + (v.current_value || 0), 0) : 0;
 
     $('vehicleCount').textContent = count;
-    // Show nickname if set, otherwise vehicle name
     $('activeVehicle').textContent = active
       ? (active.nickname || active.vehicles.name)
       : 'None';
@@ -594,7 +592,6 @@
     $('totalRaces').textContent = totalRaces;
     $('garageValue').textContent = garageValue.toLocaleString();
 
-    // Favorite vehicle: most wins (or most usage if tie)
     if (pv && pv.length) {
       const favorite = pv.reduce((a, b) => (a.wins || 0) > (b.wins || 0) ? a : b);
       $('favoriteVehicle').textContent = favorite
@@ -645,7 +642,7 @@
     `).join('');
   }
 
-  // ─── Buy Vehicle ──────────────────────────────────────────
+  // ─── Buy Vehicle (RPC) ──────────────────────────────────────
   async function buyVehicle(vehicleId) {
     if (!currentPlayer) return;
     const vehicle = vehicles.find(v => v.id === vehicleId);
@@ -664,37 +661,15 @@
     }
 
     try {
-      // Deduct cash
-      await sb
-        .from('players')
-        .update({ cash: currentPlayer.cash - vehicle.purchase_price })
-        .eq('id', currentPlayer.id);
-      currentPlayer.cash -= vehicle.purchase_price;
-      $('cashDisplay').textContent = currentPlayer.cash.toLocaleString();
-
-      // Insert into player_vehicles
-      const { error: insertError } = await sb
-        .from('player_vehicles')
-        .insert({
-          player_id: currentPlayer.id,
-          vehicle_id: vehicle.id,
-          active: false,
-          condition: 100,
-          current_value: vehicle.purchase_price * 0.8,
-          resale_value: vehicle.purchase_price * 0.7,
-        });
-      if (insertError) throw insertError;
-
-      // Decrease stock
-      const { error: updateError } = await sb
-        .from('vehicles')
-        .update({ current_stock: vehicle.current_stock - 1 })
-        .eq('id', vehicle.id);
-      if (updateError) throw updateError;
-
-      showToast('Vehicle purchased!', 'success');
-      // Refresh all data to reflect new stock and garage
-      await refreshAll();
+      const { data, error } = await sb.rpc('purchase_vehicle', { p_vehicle_id: vehicleId });
+      if (error) throw error;
+      if (data.success) {
+        showToast(data.message || 'Vehicle purchased!', 'success');
+        // Refresh player cash and all data
+        await refreshAll();
+      } else {
+        showToast(data.error || 'Purchase failed', 'error');
+      }
     } catch (err) {
       showToast('Error: ' + err.message, 'error');
     }
