@@ -851,49 +851,47 @@
     btn.addEventListener('click', () => switchTab(btn.dataset.tab));
   });
 
- // ─── Affiliate Click Logging (for Collectibles) ──────────────
-async function logAffiliateClick(url, linkText) {
-  if (!url) return;
-  try {
-    let ip = '0.0.0.0';
+  // ─── Affiliate Click Logging (for Collectibles) ──────────────
+  async function logAffiliateClick(url, linkText) {
+    if (!url) return;
     try {
-      const ipRes = await fetch('https://ipinfo.io/json');
-      const ipData = await ipRes.json();
-      ip = ipData.ip || '0.0.0.0';
-    } catch (e) { /* ignore IP fetch errors */ }
+      let ip = '0.0.0.0';
+      try {
+        const ipRes = await fetch('https://ipinfo.io/json');
+        const ipData = await ipRes.json();
+        ip = ipData.ip || '0.0.0.0';
+      } catch (e) { /* ignore IP fetch errors */ }
 
-    const referrer = window.location.href;
-    const userAgent = navigator.userAgent;
+      const referrer = window.location.href;
+      const userAgent = navigator.userAgent;
 
-    console.log('🔍 Logging affiliate click:', { url, linkText, ip, referrer, userAgent });
+      const { data, error } = await sb.rpc('log_affiliate_click', {
+        p_url: url,
+        p_referrer: referrer,
+        p_user_agent: userAgent,
+        p_ip_address: ip,
+        p_link_text: linkText
+      });
 
-    // *** Use the new function name ***
-    const { data, error } = await sb.rpc('log_affiliate_click_with_ip', {
-      p_url: url,
-      p_referrer: referrer,
-      p_user_agent: userAgent,
-      p_ip_address: ip,
-      p_link_text: linkText
-    });
-
-    if (error) {
-      console.error('❌ Affiliate click RPC error:', error);
-    } else {
-      console.log('✅ Affiliate click logged:', data);
+      if (error) {
+        console.error('❌ Affiliate click RPC error:', error);
+      } else {
+        console.log('✅ Affiliate click logged:', data);
+      }
+    } catch (err) {
+      console.error('❌ Affiliate click logging failed:', err);
     }
-  } catch (err) {
-    console.error('❌ Affiliate click logging failed:', err);
   }
-}
-// ─── Global click listener for affiliate links ──────────────
-document.addEventListener('click', function(e) {
-  const link = e.target.closest('a[data-affiliate="true"]');
-  if (link) {
-    const linkText = link.dataset.linkText || link.textContent.trim() || 'Collectible';
-    // Fire-and-forget – navigation proceeds immediately
-    logAffiliateClick(link.href, linkText);
-  }
-});
+
+  // ─── Global click listener for affiliate links ──────────────
+  document.addEventListener('click', function(e) {
+    const link = e.target.closest('a[data-affiliate="true"]');
+    if (link) {
+      const linkText = link.dataset.linkText || link.textContent.trim() || 'Collectible';
+      // Fire-and-forget – navigation proceeds immediately
+      logAffiliateClick(link.href, linkText);
+    }
+  });
 
   // ─── State ──────────────────────────────────────────────────
   let currentPlayer = null;
