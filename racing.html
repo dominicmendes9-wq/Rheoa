@@ -29,6 +29,9 @@
       --radius: 16px;
       --shadow: 0 8px 24px rgba(0,0,0,0.05);
       --transition: 0.2s ease;
+      --danger: #ef4444;
+      --success: #22c55e;
+      --warning: #f59e0b;
     }
 
     body.theme-dusk {
@@ -298,7 +301,14 @@
     }
     .vehicle-card .btn:hover:not(:disabled) { background: var(--btn-primary-hover); }
     .vehicle-card .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .vehicle-card .btn.out-of-stock { background: var(--danger); }
+    /* --- FIX: Out of Stock button (red background) --- */
+    .vehicle-card .btn.out-of-stock {
+      background: var(--danger) !important;
+      color: #fff;
+    }
+    .vehicle-card .btn.out-of-stock:hover:not(:disabled) {
+      background: #dc2626 !important;
+    }
 
     /* --- Race Cards --- */
     .race-grid {
@@ -498,31 +508,6 @@
       .tabs { flex-wrap: wrap; gap: 4px; }
       .tab-btn { padding: 6px 12px; font-size: 0.8rem; }
     }
-    /* --- Button color fixes --- */
-.vehicle-card .btn.out-of-stock {
-  background: var(--danger) !important;
-  color: #fff;
-}
-.vehicle-card .btn.out-of-stock:hover:not(:disabled) {
-  background: #dc2626 !important;
-}
-
-/* Garage action buttons – keep their inline colors,
-   but ensure they are not overridden */
-.garage-activate {
-  background: var(--accent) !important;
-  color: #fff;
-}
-.garage-activate:hover:not(:disabled) {
-  background: var(--accent-hover) !important;
-}
-.garage-sell {
-  background: var(--danger) !important;
-  color: #fff;
-}
-.garage-sell:hover:not(:disabled) {
-  background: #dc2626 !important;
-}
   </style>
 </head>
 <body>
@@ -858,21 +843,26 @@
       grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text-muted);">No vehicles available</div>';
       return;
     }
-    grid.innerHTML = vehicles.map(v => `
-      <div class="vehicle-card">
-        <img src="${v.image_url || 'https://via.placeholder.com/400x200/1e293b/ffffff?text=No+Image'}" alt="${v.name}">
-        <div class="name">${v.name}</div>
-        <div class="manufacturer">${v.manufacturer}</div>
-        <div class="price">₹${v.purchase_price.toLocaleString()}</div>
-        <div class="level">Level ${v.required_level}</div>
-        <div class="stock">Stock: ${v.current_stock}</div>
-        <button class="btn ${v.current_stock <= 0 ? 'out-of-stock' : ''}" 
-                onclick="buyVehicle('${v.id}')" 
-                ${v.current_stock <= 0 || currentPlayer.level < v.required_level ? 'disabled' : ''}>
-          ${v.current_stock <= 0 ? 'Out of Stock' : 'Buy'}
-        </button>
-      </div>
-    `).join('');
+    grid.innerHTML = vehicles.map(v => {
+      const isOutOfStock = v.current_stock <= 0;
+      const isDisabled = isOutOfStock || currentPlayer.level < v.required_level;
+      let btnClass = 'btn';
+      if (isOutOfStock) btnClass += ' out-of-stock';
+      let btnText = isOutOfStock ? 'Out of Stock' : 'Buy';
+      return `
+        <div class="vehicle-card">
+          <img src="${v.image_url || 'https://via.placeholder.com/400x200/1e293b/ffffff?text=No+Image'}" alt="${v.name}">
+          <div class="name">${v.name}</div>
+          <div class="manufacturer">${v.manufacturer}</div>
+          <div class="price">₹${v.purchase_price.toLocaleString()}</div>
+          <div class="level">Level ${v.required_level}</div>
+          <div class="stock">Stock: ${v.current_stock}</div>
+          <button class="${btnClass}" onclick="buyVehicle('${v.id}')" ${isDisabled ? 'disabled' : ''}>
+            ${btnText}
+          </button>
+        </div>
+      `;
+    }).join('');
   }
 
   // ─── Buy Vehicle (RPC) ──────────────────────────────────────
@@ -937,6 +927,9 @@
     }
     grid.innerHTML = playerVehicles.map(v => {
       const veh = v.vehicles;
+      // Use inline styles for direct color control
+      const activateStyle = v.active ? '' : 'background: var(--accent); color: white;';
+      const sellStyle = 'background: var(--danger); color: white;';
       return `
       <div class="vehicle-card" style="border-color: ${v.active ? 'var(--success)' : 'var(--border-light)'};">
         <img src="${veh.image_url || 'https://via.placeholder.com/400x200/1e293b/ffffff?text=No+Image'}" alt="${veh.name}">
@@ -951,8 +944,11 @@
           <div class="stat-bar"><span class="label">Condition</span><div class="bar-bg"><div class="bar-fill" style="width:${v.condition}%; background: ${v.condition > 70 ? 'var(--success)' : v.condition > 40 ? 'var(--warning)' : 'var(--danger)'}"></div></div><span class="value">${v.condition}%</span></div>
         </div>
         <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;">
-          ${v.active ? '<span style="background:var(--success);color:white;padding:2px 8px;border-radius:12px;font-size:0.7rem;">Active</span>' : `<button class="btn garage-activate" onclick="activateVehicle('${v.id}')">Activate</button>`}
-          <button class="btn garage-sell" onclick="sellVehicle('${v.id}')">Sell</button>
+          ${v.active
+            ? '<span style="background:var(--success);color:white;padding:2px 8px;border-radius:12px;font-size:0.7rem;">Active</span>'
+            : `<button class="btn" style="${activateStyle} flex:1;" onclick="activateVehicle('${v.id}')">Activate</button>`
+          }
+          <button class="btn" style="${sellStyle} flex:1;" onclick="sellVehicle('${v.id}')">Sell</button>
         </div>
       </div>
     `}).join('');
