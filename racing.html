@@ -32,6 +32,10 @@
       --danger: #ef4444;
       --success: #22c55e;
       --warning: #f59e0b;
+      /* Hot Wheels accent colors */
+      --hw-accent: #e85d04;
+      --hw-accent-hover: #dc2f02;
+      --hw-bg: #fff3e0;
     }
 
     body.theme-dusk {
@@ -52,6 +56,9 @@
       --border-light: #334155;
       --card-header-bg: #0f172a;
       --avatar-bg: #334155;
+      --hw-bg: #1e293b;
+      --hw-accent: #f48c06;
+      --hw-accent-hover: #e85d04;
     }
 
     body.theme-meadow {
@@ -72,6 +79,9 @@
       --border-light: #d9d2b0;
       --card-header-bg: #fef6e0;
       --avatar-bg: #e2e9cf;
+      --hw-bg: #fef6e0;
+      --hw-accent: #d97706;
+      --hw-accent-hover: #b45309;
     }
 
     /* --- Reset & Base --- */
@@ -252,6 +262,22 @@
       background: var(--accent);
       color: #fff;
     }
+    /* --- Distinct style for Collectibles tab --- */
+    .tab-btn[data-tab="collectibles"] {
+      background: var(--hw-bg);
+      color: var(--hw-accent);
+      border: 1px solid var(--hw-accent);
+    }
+    .tab-btn[data-tab="collectibles"]:hover {
+      background: var(--hw-accent);
+      color: #fff;
+    }
+    .tab-btn[data-tab="collectibles"].active {
+      background: var(--hw-accent);
+      color: #fff;
+      border-color: var(--hw-accent);
+    }
+
     .tab-content {
       display: none;
     }
@@ -259,7 +285,7 @@
       display: block;
     }
 
-    /* --- Vehicle Cards --- */
+    /* --- Vehicle Cards (Shop & Garage) --- */
     .vehicle-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -301,13 +327,101 @@
     }
     .vehicle-card .btn:hover:not(:disabled) { background: var(--btn-primary-hover); }
     .vehicle-card .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    /* --- FIX: Out of Stock button (red background) --- */
     .vehicle-card .btn.out-of-stock {
       background: var(--danger) !important;
       color: #fff;
     }
     .vehicle-card .btn.out-of-stock:hover:not(:disabled) {
       background: #dc2626 !important;
+    }
+
+    /* --- Collectibles grid (Hot Wheels style) --- */
+    .collectibles-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 20px;
+    }
+    .collectible-card {
+      background: var(--card-header-bg);
+      border-radius: 12px;
+      padding: 16px;
+      border: 2px solid var(--hw-accent);
+      transition: 0.2s;
+      position: relative;
+    }
+    .collectible-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 20px rgba(232, 93, 4, 0.2);
+    }
+    .collectible-card img {
+      width: 100%;
+      height: 150px;
+      object-fit: cover;
+      border-radius: 8px;
+      background: #1e293b;
+      margin-bottom: 10px;
+    }
+    .collectible-card .name {
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: var(--text-main);
+    }
+    .collectible-card .brand {
+      color: var(--hw-accent);
+      font-weight: 600;
+      font-size: 0.9rem;
+      margin: 4px 0;
+    }
+    .collectible-card .btn-collect {
+      width: 100%;
+      padding: 8px;
+      border: none;
+      border-radius: 8px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: 0.2s;
+      margin-top: 10px;
+      background: var(--hw-accent);
+      color: #fff;
+      text-decoration: none;
+      display: inline-block;
+      text-align: center;
+    }
+    .collectible-card .btn-collect:hover {
+      background: var(--hw-accent-hover);
+      transform: scale(1.02);
+    }
+    .collectibles-filter {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 20px;
+      align-items: center;
+    }
+    .collectibles-filter select {
+      padding: 8px 14px;
+      border-radius: 30px;
+      border: 1px solid var(--border-light);
+      background: var(--card-bg);
+      color: var(--text-main);
+      font-family: var(--font-family);
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .affiliate-pill {
+      display: inline-block;
+      background: var(--hw-bg);
+      color: var(--hw-accent);
+      border: 1px solid var(--hw-accent);
+      border-radius: 30px;
+      padding: 4px 14px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+      margin-bottom: 12px;
+    }
+    .affiliate-pill .icon {
+      margin-right: 4px;
     }
 
     /* --- Race Cards --- */
@@ -503,7 +617,7 @@
       .top-bar .right { justify-content: center; }
       .racer-summary { flex-direction: column; text-align: center; }
       .racer-info .stats { justify-content: center; }
-      .vehicle-grid { grid-template-columns: 1fr; }
+      .vehicle-grid, .collectibles-grid { grid-template-columns: 1fr; }
       .race-grid { grid-template-columns: 1fr; }
       .tabs { flex-wrap: wrap; gap: 4px; }
       .tab-btn { padding: 6px 12px; font-size: 0.8rem; }
@@ -566,6 +680,7 @@
     <button class="tab-btn" data-tab="races">🏁 Races</button>
     <button class="tab-btn" data-tab="leaderboard">🏆 Leaderboard</button>
     <button class="tab-btn" data-tab="history">📜 History</button>
+    <button class="tab-btn" data-tab="collectibles">🏎️ Collectibles</button>
   </div>
 
   <!-- Tab Contents -->
@@ -632,6 +747,28 @@
       </div>
       <div class="history-list" id="historyList">
         <div style="text-align:center;padding:20px;color:var(--text-muted);">No history yet.</div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Collectibles Tab -->
+  <div id="tabCollectibles" class="tab-content">
+    <section class="card" style="border-color: var(--hw-accent);">
+      <div class="card-header" style="color: var(--hw-accent);">
+        <span>🏎️ Hot Wheels Collectibles</span>
+        <span class="badge" style="background: var(--hw-accent);">Real Models</span>
+      </div>
+      <div class="affiliate-pill">
+        <span class="icon">🔗</span> As an Amazon Associate, I earn from qualifying purchases.
+      </div>
+      <div class="collectibles-filter">
+        <label style="font-weight:600; color: var(--text-muted);">Filter by Brand:</label>
+        <select id="brandFilter" onchange="filterCollectibles()">
+          <option value="all">All Brands</option>
+        </select>
+      </div>
+      <div class="collectibles-grid" id="collectiblesGrid">
+        <div style="grid-column:1/-1; text-align:center; padding:40px; color:var(--text-muted);">Loading collectibles...</div>
       </div>
     </section>
   </div>
@@ -703,8 +840,11 @@
   function switchTab(tabName) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-    document.querySelector(`.tab-btn[data-tab="${tabName}"]`)?.classList.add('active');
-    document.getElementById('tab' + tabName.charAt(0).toUpperCase() + tabName.slice(1))?.classList.add('active');
+    const activeTabBtn = document.querySelector(`.tab-btn[data-tab="${tabName}"]`);
+    if (activeTabBtn) activeTabBtn.classList.add('active');
+    const contentId = 'tab' + tabName.charAt(0).toUpperCase() + tabName.slice(1);
+    const contentEl = document.getElementById(contentId);
+    if (contentEl) contentEl.classList.add('active');
   }
 
   document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -719,6 +859,8 @@
   let leaderboard = [];
   let history = [];
   let activeRaceModal = null;
+  let collectibles = [];
+  let allBrands = [];
 
   // ─── DOM refs ──────────────────────────────────────────────
   const $ = (id) => document.getElementById(id);
@@ -774,7 +916,15 @@
 
   // ─── Refresh All Data ──────────────────────────────────────
   async function refreshAll() {
-    await Promise.all([loadShop(), loadGarage(), loadRaces(), loadLeaderboard(), loadHistory(), updateSummary()]);
+    await Promise.all([
+      loadShop(),
+      loadGarage(),
+      loadRaces(),
+      loadLeaderboard(),
+      loadHistory(),
+      loadCollectibles(),
+      updateSummary()
+    ]);
   }
 
   // ─── Update Summary (with vehicle names) ──────────────────
@@ -927,7 +1077,6 @@
     }
     grid.innerHTML = playerVehicles.map(v => {
       const veh = v.vehicles;
-      // Use inline styles for direct color control
       const activateStyle = v.active ? '' : 'background: var(--accent); color: white;';
       const sellStyle = 'background: var(--danger); color: white;';
       return `
@@ -1315,6 +1464,63 @@
     `).join('');
   }
 
+  // ─── Load Collectibles ─────────────────────────────────────
+  async function loadCollectibles() {
+    try {
+      const { data, error } = await sb
+        .from('hotwheels_products')
+        .select('*')
+        .order('name');
+      if (error) throw error;
+      collectibles = data || [];
+      // Populate brand filter
+      const brands = [...new Set(collectibles.map(p => p.brand))];
+      const filterSelect = $('brandFilter');
+      if (filterSelect) {
+        const currentVal = filterSelect.value;
+        filterSelect.innerHTML = '<option value="all">All Brands</option>';
+        brands.forEach(b => {
+          const opt = document.createElement('option');
+          opt.value = b;
+          opt.textContent = b;
+          filterSelect.appendChild(opt);
+        });
+        // Restore selected value if possible
+        if ([...filterSelect.options].some(o => o.value === currentVal)) {
+          filterSelect.value = currentVal;
+        }
+      }
+      renderCollectibles();
+    } catch (err) {
+      showToast('Error loading collectibles: ' + err.message, 'error');
+    }
+  }
+
+  function filterCollectibles() {
+    renderCollectibles();
+  }
+
+  function renderCollectibles() {
+    const grid = $('collectiblesGrid');
+    const brandFilter = $('brandFilter')?.value || 'all';
+    let filtered = collectibles;
+    if (brandFilter !== 'all') {
+      filtered = collectibles.filter(p => p.brand === brandFilter);
+    }
+    if (!filtered.length) {
+      grid.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:40px; color:var(--text-muted);">No collectibles found.</div>';
+      return;
+    }
+    grid.innerHTML = filtered.map(p => `
+      <div class="collectible-card">
+        <img src="${p.image_url || 'https://via.placeholder.com/400x300/1e293b/ffffff?text=No+Image'}" alt="${p.name}">
+        <div class="name">${p.name}</div>
+        <div class="brand">${p.brand}</div>
+        <a href="${p.affiliate_url}" target="_blank" rel="noopener noreferrer" class="btn-collect">Collect Now</a>
+      </div>
+    `).join('');
+  }
+
   // ─── Realtime Setup ────────────────────────────────────────
   async function setupRealtime() {
     const channel = sb.channel('racing-updates');
@@ -1370,6 +1576,7 @@
   window.joinRace = joinRace;
   window.leaveRace = leaveRace;
   window.closeRaceModal = closeRaceModal;
+  window.filterCollectibles = filterCollectibles;
 </script>
 </body>
 </html>
