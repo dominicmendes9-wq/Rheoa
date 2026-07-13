@@ -300,6 +300,86 @@
       100% { opacity: 1; }
     }
     
+    /* ─── Cookie Banner ─── */
+    .cookie-banner {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 10000;
+      background: var(--card-bg, #fff);
+      border-top: 2px solid #2c6e9e;
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
+      padding: 16px 24px;
+      transform: translateY(100%);
+      transition: transform 0.5s ease;
+      backdrop-filter: blur(8px);
+      font-family: 'Courier New', monospace;
+    }
+    .cookie-banner.show {
+      transform: translateY(0);
+    }
+    .cookie-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .cookie-content p {
+      flex: 1;
+      margin: 0;
+      font-size: 0.95rem;
+      color: #222;
+    }
+    .cookie-actions {
+      display: flex;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+    .cookie-btn {
+      padding: 8px 24px;
+      border: none;
+      border-radius: 40px;
+      font-weight: 600;
+      font-family: 'Courier New', monospace;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    .cookie-btn.accept {
+      background: #2c6e9e;
+      color: #fff;
+    }
+    .cookie-btn.accept:hover {
+      background: #1f5480;
+      transform: scale(1.02);
+    }
+    .cookie-btn.learn {
+      background: transparent;
+      color: #666;
+      border: 1px solid #ccc;
+    }
+    .cookie-btn.learn:hover {
+      background: #eee;
+      color: #222;
+    }
+    @media (max-width: 600px) {
+      .cookie-content {
+        flex-direction: column;
+        text-align: center;
+      }
+      .cookie-actions {
+        width: 100%;
+        justify-content: center;
+      }
+      .cookie-btn {
+        flex: 1;
+        text-align: center;
+      }
+    }
+
     @media (max-width: 600px) {
       body { padding: 10px; }
       
@@ -365,6 +445,20 @@
 </head>
 <body>
 
+<!-- Cookie Consent Banner -->
+<div id="cookie-banner" class="cookie-banner">
+  <div class="cookie-content">
+    <p>
+      🍪 We use cookies to improve your experience, remember your preferences,
+      and analyse site usage. By continuing, you accept our use of cookies.
+    </p>
+    <div class="cookie-actions">
+      <button id="cookie-accept" class="cookie-btn accept">Accept</button>
+      <button id="cookie-learn" class="cookie-btn learn" onclick="window.location.href='privacy.html'">Learn More</button>
+    </div>
+  </div>
+</div>
+
 <canvas id="confetti-canvas"></canvas>
 <div class="toast-container" id="toast-container"></div>
 
@@ -409,7 +503,7 @@
 
 <div class="button-container">
   <button onclick="goTo('profile.html')" style="background:#9c27b0; color:white;">👤 My Profile</button>
-   <button onclick="goTo('historical_map.html')">💬 Historical Map</button>
+  <button onclick="goTo('historical_map.html')">💬 Historical Map</button>
   <button onclick="goTo('forum.html')">💬 Forum</button>
   <button onclick="goTo('chat.html')">💬 Chat</button>
   <button onclick="goTo('jobs.html')">💼 Jobs</button>
@@ -912,10 +1006,34 @@ function startAchievementChecker() {
   }, 30000);
 }
 
+// ─── Cookie Consent ──────────────────────────────────────────
+function initCookieBanner() {
+  const consent = localStorage.getItem('cookie_consent_accepted');
+  if (consent === 'true') return;
+
+  const banner = document.getElementById('cookie-banner');
+  const acceptBtn = document.getElementById('cookie-accept');
+
+  // Show banner with animation
+  banner.style.display = 'block';
+  requestAnimationFrame(() => {
+    banner.classList.add('show');
+  });
+
+  acceptBtn.addEventListener('click', () => {
+    localStorage.setItem('cookie_consent_accepted', 'true');
+    banner.classList.remove('show');
+    setTimeout(() => {
+      banner.style.display = 'none';
+    }, 500);
+  });
+}
+
 loadPlayer();
 startRegenTimer();
 startDecayChecker();
 startAchievementChecker();
+initCookieBanner(); // added
 
 setTimeout(() => {
   if (player) {
@@ -923,5 +1041,6 @@ setTimeout(() => {
   }
 }, 1000);
 </script>
+
 </body>
 </html>
