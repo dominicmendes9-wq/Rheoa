@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rheoa RPG – Community Guidelines</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Courier New', monospace;
+      background: #f8f8f0;
+      color: #222;
+      padding: 28px 20px;
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+      background: white;
+      border: 3px solid black;
+      border-radius: 16px;
+      padding: 40px 35px;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.06);
+    }
+
+    h1 {
+      font-size: 2.4rem;
+      margin-bottom: 6px;
+      color: #1a4b7a;
+      letter-spacing: -1px;
+      border-bottom: 4px solid #2c6e9e;
+      padding-bottom: 12px;
+    }
+
+    .subhead {
+      color: #555;
+      font-style: italic;
+      margin-bottom: 30px;
+      font-size: 1.05rem;
+    }
+
+    h2 {
+      font-size: 1.6rem;
+      margin: 36px 0 16px;
+      color: #1e2f5e;
+      border-left: 6px solid #2c6e9e;
+      padding-left: 16px;
+    }
+
+    h3 {
+      font-size: 1.2rem;
+      margin: 24px 0 10px;
+      color: #1f5480;
+    }
+
+    p, li {
+      margin-bottom: 14px;
+      color: #1e1e1e;
+    }
+
+    ul {
+      padding-left: 28px;
+      margin: 10px 0 20px;
+    }
+
+    ul li {
+      margin-bottom: 10px;
+      list-style-type: '📌 ';
+      padding-left: 6px;
+    }
+
+    ul li::marker {
+      font-size: 1.1rem;
+    }
+
+    ul.no-marker {
+      list-style-type: none;
+      padding-left: 0;
+    }
+
+    ul.no-marker li {
+      list-style-type: none;
+      padding-left: 0;
+    }
+
+    .highlight-box {
+      background: #f0f4fa;
+      border-left: 4px solid #2c6e9e;
+      padding: 16px 22px;
+      margin: 24px 0;
+      border-radius: 6px;
+      font-size: 0.95rem;
+    }
+
+    .highlight-box strong {
+      color: #1a4b7a;
+    }
+
+    .badge {
+      display: inline-block;
+      background: #1e2f5e;
+      color: white;
+      padding: 2px 14px;
+      border-radius: 40px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-right: 8px;
+    }
+
+    .consequence-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin: 18px 0 24px;
+    }
+
+    .consequence-card {
+      background: #f8fafc;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 16px 18px;
+    }
+
+    .consequence-card .level {
+      font-weight: 700;
+      font-size: 1rem;
+      margin-bottom: 4px;
+    }
+
+    .consequence-card .level.warning { color: #f59e0b; }
+    .consequence-card .level.timeout { color: #f97316; }
+    .consequence-card .level.temp-ban { color: #ef4444; }
+    .consequence-card .level.perm-ban { color: #b91c1c; }
+
+    .consequence-card .desc {
+      font-size: 0.9rem;
+      color: #444;
+    }
+
+    .back-button {
+      display: inline-block;
+      margin-top: 40px;
+      padding: 12px 32px;
+      font-family: 'Courier New', monospace;
+      font-weight: bold;
+      border: 2px solid black;
+      border-radius: 8px;
+      background: #666;
+      color: white;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+      font-size: 1rem;
+    }
+
+    .back-button:hover {
+      background: #222;
+      transform: scale(1.02);
+    }
+
+    .footer-meta {
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 2px dashed #ccc;
+      font-size: 0.85rem;
+      color: #666;
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .footer-meta a {
+      color: #1f5480;
+      text-decoration: none;
+    }
+
+    .footer-meta a:hover {
+      text-decoration: underline;
+    }
+
+    @media (max-width: 600px) {
+      body { padding: 16px; }
+      .container { padding: 24px 18px; }
+      h1 { font-size: 1.8rem; }
+      h2 { font-size: 1.3rem; }
+      .consequence-grid {
+        grid-template-columns: 1fr;
+      }
+      .back-button { width: 100%; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>📋 Community Guidelines</h1>
+  <div class="subhead">Last updated: 13 July 2026 · Rheoa RPG</div>
+
+  <p>
+    Welcome to Rheoa! We are building a community where players from all over the world
+    can have fun, compete, and connect. These Community Guidelines exist to ensure that
+    everyone feels safe, respected, and valued – no matter who they are or where they
+    come from.
+  </p>
+  <p>
+    By using Rheoa (including chat, forums, gangs, and all other features), you agree to
+    follow these guidelines. They work alongside our <a href="terms-of-service.html" style="color:#1f5480;">Terms of Service</a>
+    and <a href="privacy-policy.html" style="color:#1f5480;">Privacy Policy</a>.
+  </p>
+
+  <div class="highlight-box">
+    <strong>⚖️ Golden Rule:</strong> Treat others the way you would like to be treated.
+    Rheoa is a global community – be kind, be fair, and think before you post or chat.
+  </div>
+
+  <h2>1. Respect & Inclusivity</h2>
+  <p>
+    We welcome players of all backgrounds, cultures, and identities. We do not tolerate
+    behaviour that harasses, excludes, or discriminates against others.
+  </p>
+  <ul>
+    <li><strong>Be respectful:</strong> Disagree respectfully. Personal attacks, insults, and aggressive behaviour are not welcome.</li>
+    <li><strong>No discrimination:</strong> Hate speech, racism, sexism, homophobia, transphobia, and other forms of discrimination are strictly forbidden.</li>
+    <li><strong>Be mindful of cultural differences:</strong> Rheoa is global. What is acceptable in one culture may not be in another. When in doubt, be polite.</li>
+  </ul>
+
+  <h2>2. Safety & Privacy</h2>
+  <p>
+    Your safety and privacy – and that of every other player – is paramount.
+  </p>
+  <ul>
+    <li><strong>Do not share personal information:</strong> Never share your real name, phone number, email address, home address, bank details, passwords, or OTPs with anyone.</li>
+    <li><strong>Do not ask for personal information:</strong> Do not pressure other players to share their personal or financial details.</li>
+    <li><strong>Protect your account:</strong> Never share your password or auth tokens. We will never ask for them.</li>
+    <li><strong>Report suspicious behaviour:</strong> If someone makes you uncomfortable or attempts to scam you, stop the conversation immediately and report them using the in‑game report function.</li>
+  </ul>
+
+  <h2>3. Prohibited Content & Behaviour</h2>
+  <p>
+    The following activities are <strong>not allowed</strong> anywhere on Rheoa (chat,
+    forums, profiles, gang messages, testimonials, or any other user‑generated content):
+  </p>
+  <ul>
+    <li><strong>Harassment & Bullying:</strong> Targeting individuals with abusive, threatening, or unwanted messages.</li>
+    <li><strong>Hate Speech:</strong> Content that attacks or demeans based on race, ethnicity, religion, gender, sexual orientation, disability, or any other protected characteristic.</li>
+    <li><strong>Explicit or NSFW Content:</strong> Pornography, sexually explicit material, gore, or extreme violence.</li>
+    <li><strong>Impersonation:</strong> Pretending to be another player, a staff member, or a public figure.</li>
+    <li><strong>Doxxing:</strong> Sharing another person’s real‑world personal information without their explicit consent.</li>
+    <li><strong>Spam & Disruption:</strong> Flooding chat, posting repetitive messages, or disrupting gameplay for others.</li>
+    <li><strong>Scams & Fraud:</strong> Attempting to deceive other players for personal gain (e.g., fake trades, fake freelance orders, phishing).</li>
+    <li><strong>Exploits & Cheating:</strong> Using bugs, glitches, bots, or unauthorised third‑party tools to gain an unfair advantage.</li>
+    <li><strong>Real‑Money Trading (RMT):</strong> Buying or selling virtual currency, items, or accounts for real money outside of the official freelance marketplace (which uses escrow).</li>
+    <li><strong>Illegal Activities:</strong> Any content that promotes or facilitates illegal activities under local or international law.</li>
+  </ul>
+
+  <h2>4. Moderation & Consequences</h2>
+  <p>
+    We reserve the right to take action against any player who violates these guidelines.
+    The severity of the consequence will match the severity and frequency of the violation.
+  </p>
+
+  <div class="consequence-grid">
+    <div class="consequence-card">
+      <div class="level warning">⚠️ Warning</div>
+      <div class="desc">
+        <strong>First‑time or minor offences.</strong> You will receive a formal warning
+        via in‑game notification. No account restrictions are applied, but repeat
+        offences will escalate.
+      </div>
+    </div>
+    <div class="consequence-card">
+      <div class="level timeout">⏳ Timeout / Mute</div>
+      <div class="desc">
+        <strong>Chat or forum spam, minor harassment.</strong> Your ability to send
+        messages in chat or post in forums may be temporarily suspended for a set period
+        (e.g., 1 hour to 24 hours).
+      </div>
+    </div>
+    <div class="consequence-card">
+      <div class="level temp-ban">🚫 Temporary Ban</div>
+      <div class="desc">
+        <strong>Serious or repeat violations.</strong> Your account will be suspended
+        for a set period (24 hours, 7 days, or 30 days). You will not be able to log in
+        or play during this time.
+      </div>
+    </div>
+    <div class="consequence-card">
+      <div class="level perm-ban">⛔ Permanent Ban</div>
+      <div class="desc">
+        <strong>Extreme or repeated severe violations.</strong> Your account will be
+        permanently closed. You will lose all virtual items, currency, and progress.
+        This decision is final.
+      </div>
+    </div>
+  </div>
+
+  <div class="highlight-box">
+    <strong>🛡️ Moderator Discretion:</strong> Our moderation team (Admins and Founders)
+    has full discretion to apply the appropriate consequence, considering the context
+    and history of the user. We may also use automated tools to detect spam, hate
+    speech, or other violations.
+  </div>
+
+  <h2>5. Reporting Violations</h2>
+  <p>
+    If you encounter a player who is violating these guidelines, we encourage you to
+    report them. Your reports help us keep the community safe.
+  </p>
+  <ul>
+    <li><strong>In‑game Report:</strong> In chat or DMs, you can report a user by clicking the “Report” button (available in DM windows and the chat interface).</li>
+    <li><strong>Contact a Moderator:</strong> Founders and moderators are available in the game. You can reach out to them directly.</li>
+    <li><strong>Email:</strong> For serious issues, you can email us at <strong>support@rheoa.com</strong> with a detailed description and any screenshots.</li>
+  </ul>
+  <p>
+    We take all reports seriously and will investigate them promptly. We may not always
+    disclose the outcome of an investigation, but we will take appropriate action where
+    needed.
+  </p>
+
+  <h2>6. Appeals</h2>
+  <p>
+    If you believe a moderation action was taken against you in error, you have the
+    right to appeal. To submit an appeal:
+  </p>
+  <ul>
+    <li><strong>Email:</strong> Send an email to <strong>appeals@rheoa.com</strong> with your username, the action taken, and the reason you believe it was a mistake.</li>
+    <li><strong>Be patient:</strong> We will review your case and respond within 7–10 business days.</li>
+    <li><strong>Decision:</strong> The moderation team’s decision on appeals is final. Repeated frivolous appeals may result in additional restrictions.</li>
+  </ul>
+
+  <h2>7. Guidelines for Specific Features</h2>
+
+  <h3>💬 Chat & Direct Messages</h3>
+  <ul>
+    <li>Keep conversations respectful. If someone asks you to stop a topic, please respect that.</li>
+    <li>Do not spam, advertise, or post unsolicited links (except in the designated sharing areas).</li>
+    <li>Use the “Snooze” or “Block” feature if someone is bothering you, and report them if necessary.</li>
+  </ul>
+
+  <h3>📝 Forums & Comments</h3>
+  <ul>
+    <li>Stay on topic. Off‑topic posts may be removed.</li>
+    <li>Constructive criticism is welcome, but trolling or deliberate provocation is not.</li>
+    <li>Content that is irrelevant, spammy, or low‑quality may be removed.</li>
+  </ul>
+
+  <h3>🏢 Gangs</h3>
+  <ul>
+    <li>Gang names, descriptions, and logos must also comply with these guidelines.</li>
+    <li>Gang‑based harassment or rivalry is allowed as role‑play, but must not cross into real harassment or abuse.</li>
+  </ul>
+
+  <h3>📜 Testimonials & Profiles</h3>
+  <ul>
+    <li>Scrapbook (testimonial) entries should be kind or constructive. Negative testimonials targeting individuals may be removed.</li>
+    <li>Do not post false or misleading information about other players.</li>
+  </ul>
+
+  <h2>8. Updates to These Guidelines</h2>
+  <p>
+    We may update these Community Guidelines from time to time to reflect changes in the
+    game, community needs, or legal requirements. We will notify you of significant
+    changes via in‑game notifications or by updating the “Last updated” date above.
+  </p>
+  <p>
+    Your continued use of Rheoa after any changes constitutes your acceptance of the
+    updated guidelines. If you do not agree, you should stop using the platform.
+  </p>
+
+  <h2>9. Contact Us</h2>
+  <p>
+    If you have any questions about these guidelines or need to report a serious issue,
+    please reach out to us:
+  </p>
+  <ul style="list-style-type: '📧 ';">
+    <li><strong>General Support:</strong> support@rheoa.com</li>
+    <li><strong>Appeals:</strong> appeals@rheoa.com</li>
+    <li><strong>In‑game:</strong> Contact a Moderator or Founder via chat.</li>
+  </ul>
+
+  <p style="margin-top: 30px;">
+    Thank you for doing your part to make Rheoa a great place to play. See you in the game! 🎮
+  </p>
+
+  <!-- Back to Dashboard -->
+  <a href="dashboard.html" class="back-button">← Back to Dashboard</a>
+
+  <div class="footer-meta">
+    <span>© 2026 Rheoa RPG. All rights reserved.</span>
+    <span>
+      <a href="dashboard.html">Home</a> ·
+      <a href="cookie-policy.html">Cookie Policy</a> ·
+      <a href="terms-of-service.html">Terms of Service</a> ·
+      <a href="privacy-policy.html">Privacy Policy</a>
+    </span>
+  </div>
+</div>
+
+</body>
+</html>
