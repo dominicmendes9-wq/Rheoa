@@ -289,7 +289,7 @@
   let gardenPlots = [];
   let seedItems = [];
   let gardenChannel = null;
-  let pendingPlotIndex = null; // which plot we are planting in
+  let pendingPlotIndex = null;
 
   // ─── DOM refs ──────────────────────────────────────────────
   const $ = (id) => document.getElementById(id);
@@ -360,7 +360,6 @@
   // ─── Modal Functions ────────────────────────────────────────
   function openPlantModal(plotIndex) {
     pendingPlotIndex = plotIndex;
-    // Populate modal with owned seeds
     const ownedSeeds = seedItems.filter(s => s.quantity > 0);
     const container = $('modalSeedContainer');
     if (!ownedSeeds.length) {
@@ -435,9 +434,7 @@
       grid.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:40px; color:var(--text-muted);">You have no garden plots. Plant seeds to get started!</div>';
       return;
     }
-    // Determine max plots (based on gardening level)
     const maxPlots = Math.min(3 + Math.floor((currentPlayer.gardening_level || 1) / 5), 12);
-    // Ensure we have exactly maxPlots entries (fill missing with empty)
     const plots = [];
     for (let i = 0; i < maxPlots; i++) {
       const existing = gardenPlots.find(p => p.plot_index === i);
@@ -456,7 +453,6 @@
       const tierColors = { common: '#aaa', uncommon: '#4fc3f7', rare: '#ab47bc', epic: '#ffa726', legendary: '#f44336', mythic: '#ffd700' };
       const tierColor = plot.tier ? tierColors[plot.tier] || '#aaa' : '#aaa';
 
-      // Progress bar for growing
       let progress = 0;
       let remainingText = '';
       if (isPlanted && plot.growth_time_minutes) {
@@ -512,7 +508,6 @@
 
   // ─── Load Seeds ─────────────────────────────────────────────
   async function loadSeeds() {
-    // Fetch seeds from items table (type = 'seed')
     const { data, error } = await sb
       .from('items')
       .select('*')
@@ -524,7 +519,6 @@
     }
     seedItems = data || [];
 
-    // Fetch player's seed quantities
     const { data: playerItems, error: piError } = await sb
       .from('player_items')
       .select('item_id, quantity')
@@ -560,7 +554,7 @@
       </div>
     `).join('');
 
-    // Drag & Drop (unchanged)
+    // Drag & Drop
     document.querySelectorAll('.seed-card').forEach(el => {
       el.addEventListener('dragstart', (e) => {
         e.dataTransfer.setData('text/plain', el.dataset.seedId);
@@ -569,7 +563,6 @@
       el.addEventListener('dragend', (e) => {
         el.classList.remove('dragging');
       });
-      // Touch events for mobile
       let touchClone = null;
       el.addEventListener('touchstart', (e) => {
         const touch = e.touches[0];
@@ -589,7 +582,6 @@
         const touch = e.touches[0];
         touchClone.style.left = (touch.clientX - 30) + 'px';
         touchClone.style.top = (touch.clientY - 30) + 'px';
-        // Highlight plot under finger
         const elUnder = document.elementFromPoint(touch.clientX, touch.clientY);
         const plot = elUnder ? elUnder.closest('.plot-card') : null;
         document.querySelectorAll('.plot-card').forEach(p => p.style.borderColor = '');
@@ -624,6 +616,7 @@
       p_seed_item_id: seedId
     });
     if (error) {
+      console.error('RPC error:', error);
       showToast('Error: ' + error.message, 'error');
       return;
     }
@@ -631,11 +624,12 @@
       showToast('🌱 ' + data.message, 'success');
       await refreshAll();
     } else {
+      console.error('Plant failed:', data.error);
       showToast('❌ ' + data.error, 'error');
     }
   }
 
-  // ─── Other Actions (unchanged) ──────────────────────────────
+  // ─── Other Actions ──────────────────────────────────────────
   async function waterPlant(plotIndex) {
     const { data, error } = await sb.rpc('water_plant', { p_player_id: currentPlayer.id, p_plot_index: plotIndex });
     if (error) { showToast('Error: ' + error.message, 'error'); return; }
@@ -718,7 +712,7 @@
 
   // ─── Refresh All ────────────────────────────────────────────
   async function refreshAll() {
-    await loadPlayer(); // reload player data
+    await loadPlayer();
     await loadGarden();
     await loadSeeds();
     updateStats();
@@ -760,12 +754,11 @@
   initThemeAndFont();
   loadPlayer();
 
-  // Auto-refresh every 30s
   setInterval(() => {
     if (currentPlayer) refreshAll();
   }, 30000);
 
-  // Expose globals for inline onclick
+  // Expose globals
   window.plantSeed = plantSeed;
   window.waterPlant = waterPlant;
   window.fertilizePlant = fertilizePlant;
