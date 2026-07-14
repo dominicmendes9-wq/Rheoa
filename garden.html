@@ -385,8 +385,9 @@
 
   async function plantFromModal(seedId) {
     if (pendingPlotIndex === null) return;
+    const plotIndex = pendingPlotIndex;
     closePlantModal();
-    await plantSeed(pendingPlotIndex, seedId);
+    await plantSeed(plotIndex, seedId);
   }
 
   // ─── Auth & Player ──────────────────────────────────────────
@@ -518,7 +519,6 @@
       return;
     }
     seedItems = data || [];
-
     const { data: playerItems, error: piError } = await sb
       .from('player_items')
       .select('item_id, quantity')
@@ -535,7 +535,6 @@
     $('seedCount').textContent = seedItems.filter(s => s.quantity > 0).length + ' types';
   }
 
-  // ─── Render Seeds ───────────────────────────────────────────
   function renderSeeds() {
     const grid = $('seedGrid');
     if (!seedItems.length) {
@@ -554,7 +553,6 @@
       </div>
     `).join('');
 
-    // Drag & Drop
     document.querySelectorAll('.seed-card').forEach(el => {
       el.addEventListener('dragstart', (e) => {
         e.dataTransfer.setData('text/plain', el.dataset.seedId);
@@ -617,14 +615,13 @@
     });
     if (error) {
       console.error('RPC error:', error);
-      showToast('Error: ' + error.message, 'error');
+      showToast('Plant failed: ' + (error.message || 'Unknown error'), 'error');
       return;
     }
     if (data.success) {
       showToast('🌱 ' + data.message, 'success');
       await refreshAll();
     } else {
-      console.error('Plant failed:', data.error);
       showToast('❌ ' + data.error, 'error');
     }
   }
@@ -758,7 +755,6 @@
     if (currentPlayer) refreshAll();
   }, 30000);
 
-  // Expose globals
   window.plantSeed = plantSeed;
   window.waterPlant = waterPlant;
   window.fertilizePlant = fertilizePlant;
