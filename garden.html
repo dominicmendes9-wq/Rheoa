@@ -290,6 +290,7 @@
   let seedItems = [];
   let gardenChannel = null;
   let pendingPlotIndex = null;
+  let isClearing = false; // Prevents double-click on clear
 
   // ─── DOM refs ──────────────────────────────────────────────
   const $ = (id) => document.getElementById(id);
@@ -662,13 +663,29 @@
     }
   }
 
+  // ─── Clear Dead Plant (with double-click prevention) ──────
   async function clearDead(plotIndex) {
+    if (isClearing) return; // Prevent double-click
+    isClearing = true;
     const { data, error } = await sb.rpc('clear_dead_plant', { p_player_id: currentPlayer.id, p_plot_index: plotIndex });
-    if (error) { showToast('Error: ' + error.message, 'error'); return; }
-    if (data.success) { showToast('🗑️ ' + data.message, 'info'); await refreshAll(); }
-    else showToast('❌ ' + data.error, 'error');
+    if (error) {
+      showToast('Error: ' + error.message, 'error');
+      isClearing = false;
+      return;
+    }
+    if (data.success) {
+      // Only show toast if the message is not "Plot already empty."
+      if (data.message !== 'Plot already empty.') {
+        showToast('🗑️ ' + data.message, 'info');
+      }
+      await refreshAll();
+    } else {
+      showToast('❌ ' + data.error, 'error');
+    }
+    isClearing = false;
   }
 
+  // ─── Express Grow ──────────────────────────────────────────
   async function expressGrow(plotIndex) {
     if (!confirm('Express grow will cost cash. Continue?')) return;
     const { data, error } = await sb.rpc('express_grow', { p_player_id: currentPlayer.id, p_plot_index: plotIndex });
@@ -677,6 +694,7 @@
     else showToast('❌ ' + data.error, 'error');
   }
 
+  // ─── Upgrade Plot ──────────────────────────────────────────
   async function upgradePlot(plotIndex) {
     const type = prompt('Upgrade type: "irrigated" (reduces growth time by 20%). Cost: ₹100,000.', 'irrigated');
     if (!type) return;
@@ -755,6 +773,7 @@
     if (currentPlayer) refreshAll();
   }, 30000);
 
+  // ─── Expose global functions for inline onclick ────────────
   window.plantSeed = plantSeed;
   window.waterPlant = waterPlant;
   window.fertilizePlant = fertilizePlant;
