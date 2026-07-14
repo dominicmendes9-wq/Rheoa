@@ -116,6 +116,65 @@
     .seed-card .quantity { font-size:0.8rem; color:var(--text-muted); }
     .seed-card .price { font-size:0.8rem; color:var(--success); }
 
+    /* Planting Modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top:0; left:0; width:100%; height:100%;
+      background:rgba(0,0,0,0.6);
+      backdrop-filter:blur(4px);
+      z-index:10000;
+      justify-content:center;
+      align-items:center;
+    }
+    .modal-overlay.active { display:flex; }
+    .modal-content {
+      background:var(--card-bg);
+      border-radius:var(--radius);
+      padding:24px;
+      max-width:500px;
+      width:90%;
+      max-height:80vh;
+      overflow-y:auto;
+      box-shadow:var(--shadow);
+      border:1px solid var(--border-light);
+    }
+    .modal-header {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      margin-bottom:16px;
+    }
+    .modal-header h2 { font-size:1.2rem; }
+    .modal-close {
+      background:none;
+      border:none;
+      font-size:1.5rem;
+      cursor:pointer;
+      color:var(--text-muted);
+    }
+    .modal-close:hover { color:var(--text-main); }
+    .modal-seed-grid {
+      display:grid;
+      grid-template-columns:repeat(auto-fill, minmax(120px,1fr));
+      gap:12px;
+    }
+    .modal-seed-card {
+      background:var(--card-header-bg);
+      border-radius:12px;
+      padding:12px;
+      text-align:center;
+      border:2px solid var(--border-light);
+      cursor:pointer;
+      transition:0.2s;
+    }
+    .modal-seed-card:hover { border-color:var(--accent); transform:translateY(-2px); }
+    .modal-seed-card .icon { font-size:2.5rem; }
+    .modal-seed-card .name { font-weight:600; font-size:0.9rem; }
+    .modal-seed-card .tier { font-size:0.6rem; text-transform:uppercase; padding:2px 8px; border-radius:10px; background:var(--accent); color:#fff; display:inline-block; margin:4px 0; }
+    .modal-seed-card .quantity { font-size:0.8rem; color:var(--text-muted); }
+    .modal-no-seeds { text-align:center; padding:20px; color:var(--text-muted); }
+
     /* Toast */
     .toast-container { position:fixed; bottom:20px; right:20px; z-index:99999; display:flex; flex-direction:column; gap:8px; }
     .toast { padding:12px 20px; border-radius:8px; background:var(--card-bg); border:1px solid var(--border-light); backdrop-filter:blur(8px); color:var(--text-main); font-weight:500; animation:slideIn 0.3s ease-out; box-shadow:var(--shadow); max-width:350px; }
@@ -131,6 +190,7 @@
       .top-bar { flex-direction:column; align-items:stretch; }
       .top-bar .right { justify-content:center; }
       .stats-bar { flex-direction:column; align-items:center; text-align:center; }
+      .modal-content { max-width:90%; padding:16px; }
     }
   </style>
 </head>
@@ -174,7 +234,7 @@
     <h3>🌱 How to Garden</h3>
     <ol>
       <li><strong>Buy Seeds:</strong> Purchase seeds from the shop below using your cash.</li>
-      <li><strong>Plant:</strong> Drag a seed onto an empty plot, or click "Plant" and paste the seed ID from the seed card (you'll see it if you inspect the card or get it from the database).</li>
+      <li><strong>Plant:</strong> Click the "Plant" button on an empty plot, then select a seed from the popup.</li>
       <li><strong>Water:</strong> Click "Water" when the plant is dry (it will show "Wilted" status). Watering also advances growth stages.</li>
       <li><strong>Fertilize & Spray:</strong> Use Fertilize and Pest Spray to increase your yield (optional, costs energy).</li>
       <li><strong>Harvest:</strong> When ready (Harvestable status), click "Harvest" to collect crops and gain XP.</li>
@@ -203,6 +263,17 @@
   <button onclick="window.location.href='dashboard.html'" style="margin:30px auto; display:block; padding:12px 40px; background:var(--btn-secondary); border:none; border-radius:40px; color:white; font-weight:600; cursor:pointer;">← Back to Dashboard</button>
 </div>
 
+<!-- Planting Modal -->
+<div class="modal-overlay" id="plantModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>🌱 Plant a Seed</h2>
+      <button class="modal-close" onclick="closePlantModal()">✕</button>
+    </div>
+    <div id="modalSeedContainer" class="modal-seed-grid"></div>
+  </div>
+</div>
+
 <!-- Toast Container -->
 <div class="toast-container" id="toastContainer"></div>
 
@@ -218,6 +289,7 @@
   let gardenPlots = [];
   let seedItems = [];
   let gardenChannel = null;
+  let pendingPlotIndex = null; // which plot we are planting in
 
   // ─── DOM refs ──────────────────────────────────────────────
   const $ = (id) => document.getElementById(id);
@@ -283,6 +355,39 @@
       content.style.display = 'none';
       btn.textContent = '📖 How to Play';
     }
+  }
+
+  // ─── Modal Functions ────────────────────────────────────────
+  function openPlantModal(plotIndex) {
+    pendingPlotIndex = plotIndex;
+    // Populate modal with owned seeds
+    const ownedSeeds = seedItems.filter(s => s.quantity > 0);
+    const container = $('modalSeedContainer');
+    if (!ownedSeeds.length) {
+      container.innerHTML = '<div class="modal-no-seeds">You don\'t own any seeds. Buy some from the shop below.</div>';
+    } else {
+      const tierColors = { common: '#aaa', uncommon: '#4fc3f7', rare: '#ab47bc', epic: '#ffa726', legendary: '#f44336', mythic: '#ffd700' };
+      container.innerHTML = ownedSeeds.map(seed => `
+        <div class="modal-seed-card" onclick="plantFromModal('${seed.id}')">
+          <div class="icon">${seed.icon || '🌱'}</div>
+          <div class="name">${seed.name}</div>
+          <div class="tier" style="background:${tierColors[seed.tier] || '#aaa'};">${seed.tier || 'common'}</div>
+          <div class="quantity">x${seed.quantity}</div>
+        </div>
+      `).join('');
+    }
+    $('plantModal').classList.add('active');
+  }
+
+  function closePlantModal() {
+    $('plantModal').classList.remove('active');
+    pendingPlotIndex = null;
+  }
+
+  async function plantFromModal(seedId) {
+    if (pendingPlotIndex === null) return;
+    closePlantModal();
+    await plantSeed(pendingPlotIndex, seedId);
   }
 
   // ─── Auth & Player ──────────────────────────────────────────
@@ -394,7 +499,7 @@
             </div>
           ` : `
             <div class="actions">
-              <button onclick="openPlanting(${plot.plot_index})" style="background:var(--accent); color:#fff;">🌱 Plant</button>
+              <button onclick="openPlantModal(${plot.plot_index})" style="background:var(--accent); color:#fff;">🌱 Plant</button>
               ${currentPlayer.subscription_tier && ['black','founder'].includes(currentPlayer.subscription_tier.toLowerCase()) ? `
                 <button onclick="upgradePlot(${plot.plot_index})" style="background:#fbbf24; color:#1e293b;">🔧 Upgrade</button>
               ` : ''}
@@ -455,7 +560,7 @@
       </div>
     `).join('');
 
-    // Drag & Drop
+    // Drag & Drop (unchanged)
     document.querySelectorAll('.seed-card').forEach(el => {
       el.addEventListener('dragstart', (e) => {
         e.dataTransfer.setData('text/plain', el.dataset.seedId);
@@ -530,15 +635,7 @@
     }
   }
 
-  // ─── Planting from button (opens seed selector) ────────────
-  function openPlanting(plotIndex) {
-    // Simple prompt for seed ID – in a real implementation, show a modal with seeds
-    const seedOptions = seedItems.filter(s => s.quantity > 0).map(s => `${s.id}:${s.name}`).join(', ');
-    const seedId = prompt(`Enter seed ID to plant (available: ${seedOptions})`);
-    if (seedId) plantSeed(plotIndex, seedId.trim());
-  }
-
-  // ─── Other Actions ──────────────────────────────────────────
+  // ─── Other Actions (unchanged) ──────────────────────────────
   async function waterPlant(plotIndex) {
     const { data, error } = await sb.rpc('water_plant', { p_player_id: currentPlayer.id, p_plot_index: plotIndex });
     if (error) { showToast('Error: ' + error.message, 'error'); return; }
@@ -678,7 +775,9 @@
   window.expressGrow = expressGrow;
   window.upgradePlot = upgradePlot;
   window.buySeed = buySeed;
-  window.openPlanting = openPlanting;
+  window.openPlantModal = openPlantModal;
+  window.closePlantModal = closePlantModal;
+  window.plantFromModal = plantFromModal;
   window.toggleHowToPlay = toggleHowToPlay;
 </script>
 </body>
