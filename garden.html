@@ -60,7 +60,7 @@
     .stats-bar .stat .label { opacity:0.8; }
     .stats-bar .stat .value { font-weight:700; }
 
-    /* Info Sections (How to Play, Costs, Unlocks) */
+    /* Info Sections */
     .info-btn { background:var(--accent); color:#fff; border:none; padding:8px 20px; border-radius:40px; cursor:pointer; font-weight:600; transition:0.2s; margin:4px; }
     .info-btn:hover { background:var(--accent-hover); transform:scale(1.02); }
     .info-content { display:none; background:var(--card-bg); border-radius:var(--radius); padding:20px; margin-bottom:20px; border:1px solid var(--border-light); }
@@ -94,14 +94,8 @@
     .plot-card .actions button:disabled { opacity:0.5; cursor:not-allowed; }
     .plot-card .actions .water-btn { background:#4fc3f7; color:#0a1a2b; }
     .plot-card .actions .water-btn:hover:not(:disabled) { background:#039be5; }
-    .plot-card .actions .water-btn.wilted {
-      animation: breathe 1.5s ease-in-out infinite;
-    }
-    @keyframes breathe {
-      0% { transform: scale(1); opacity:0.8; }
-      50% { transform: scale(1.1); opacity:1; }
-      100% { transform: scale(1); opacity:0.8; }
-    }
+    .plot-card .actions .water-btn.wilted { animation:breathe 1.5s ease-in-out infinite; }
+    @keyframes breathe { 0%{transform:scale(1);opacity:0.8;} 50%{transform:scale(1.1);opacity:1;} 100%{transform:scale(1);opacity:0.8;} }
     .plot-card .actions .fertilize-btn { background:#aed581; color:#1e2b1a; }
     .plot-card .actions .fertilize-btn:hover:not(:disabled) { background:#7cb342; }
     .plot-card .actions .pest-btn { background:#ffab91; color:#3e1f1a; }
@@ -132,57 +126,15 @@
     .seed-card .price { font-size:0.8rem; color:var(--success); }
 
     /* Planting & Upgrade Modals */
-    .modal-overlay {
-      display: none;
-      position: fixed;
-      top:0; left:0; width:100%; height:100%;
-      background:rgba(0,0,0,0.6);
-      backdrop-filter:blur(4px);
-      z-index:10000;
-      justify-content:center;
-      align-items:center;
-    }
+    .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); z-index:10000; justify-content:center; align-items:center; }
     .modal-overlay.active { display:flex; }
-    .modal-content {
-      background:var(--card-bg);
-      border-radius:var(--radius);
-      padding:24px;
-      max-width:500px;
-      width:90%;
-      max-height:80vh;
-      overflow-y:auto;
-      box-shadow:var(--shadow);
-      border:1px solid var(--border-light);
-    }
-    .modal-header {
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      margin-bottom:16px;
-    }
+    .modal-content { background:var(--card-bg); border-radius:var(--radius); padding:24px; max-width:500px; width:90%; max-height:80vh; overflow-y:auto; box-shadow:var(--shadow); border:1px solid var(--border-light); }
+    .modal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
     .modal-header h2 { font-size:1.2rem; }
-    .modal-close {
-      background:none;
-      border:none;
-      font-size:1.5rem;
-      cursor:pointer;
-      color:var(--text-muted);
-    }
+    .modal-close { background:none; border:none; font-size:1.5rem; cursor:pointer; color:var(--text-muted); }
     .modal-close:hover { color:var(--text-main); }
-    .modal-seed-grid {
-      display:grid;
-      grid-template-columns:repeat(auto-fill, minmax(120px,1fr));
-      gap:12px;
-    }
-    .modal-seed-card {
-      background:var(--card-header-bg);
-      border-radius:12px;
-      padding:12px;
-      text-align:center;
-      border:2px solid var(--border-light);
-      cursor:pointer;
-      transition:0.2s;
-    }
+    .modal-seed-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(120px,1fr)); gap:12px; }
+    .modal-seed-card { background:var(--card-header-bg); border-radius:12px; padding:12px; text-align:center; border:2px solid var(--border-light); cursor:pointer; transition:0.2s; }
     .modal-seed-card:hover { border-color:var(--accent); transform:translateY(-2px); }
     .modal-seed-card .icon { font-size:2.5rem; }
     .modal-seed-card .name { font-weight:600; font-size:0.9rem; }
@@ -198,7 +150,6 @@
     .toast.info { border-color:var(--accent); }
     @keyframes slideIn { from { opacity:0; transform:translateX(20px); } to { opacity:1; transform:translateX(0); } }
 
-    /* Responsive */
     @media (max-width:600px) {
       .garden-grid { grid-template-columns:repeat(auto-fill, minmax(150px,1fr)); }
       .seed-grid { grid-template-columns:repeat(auto-fill, minmax(120px,1fr)); }
@@ -262,15 +213,13 @@
       <li><strong>Express Grow (Black+):</strong> Instantly grow a plant for cash.</li>
       <li><strong>Upgrade Plot (Black+):</strong> Upgrade a plot to "Irrigated" for faster growth.</li>
     </ol>
-    <p class="hint">💡 Hint: Keep an eye on the progress bar and water regularly to prevent wilting! Check the status label above each plot.</p>
+    <p class="hint">💡 Hint: Keep an eye on the progress bar and water regularly to prevent wilting!</p>
   </div>
 
   <div id="costsContent" class="info-content">
     <h3>💰 Costs & Energy</h3>
     <table>
-      <thead>
-        <tr><th>Action</th><th>Energy Cost</th><th>Cash Cost</th><th>Notes</th></tr>
-      </thead>
+      <thead><tr><th>Action</th><th>Energy Cost</th><th>Cash Cost</th><th>Notes</th></tr></thead>
       <tbody>
         <tr><td>🌱 Plant</td><td>5</td><td>—</td><td>Uses one seed</td></tr>
         <tr><td>💧 Water</td><td>5</td><td>—</td><td>Prevents wilting, advances growth</td></tr>
@@ -287,11 +236,8 @@
 
   <div id="unlocksContent" class="info-content">
     <h3>🔓 Next Level Unlocks</h3>
-    <p>As your Gardening Level increases, you unlock more plots and new features:</p>
     <table>
-      <thead>
-        <tr><th>Gardening Level</th><th>Unlock</th></tr>
-      </thead>
+      <thead><tr><th>Gardening Level</th><th>Unlock</th></tr></thead>
       <tbody>
         <tr><td>1</td><td>Start with 3 plots</td></tr>
         <tr><td>5</td><td>+1 plot (total 4)</td></tr>
@@ -359,13 +305,13 @@
 
   // ─── State ──────────────────────────────────────────────────
   let currentPlayer = null;
-  let gardenPlots = [];          // Raw plot data from RPC (with timestamps)
+  let gardenPlots = [];
   let seedItems = [];
   let gardenChannel = null;
   let pendingPlotIndex = null;
   let isClearing = false;
   let renderInterval = null;
-  let prevWiltedStates = {};     // Track wilted state for beep
+  let prevWiltedStates = {};
 
   // ─── DOM refs ──────────────────────────────────────────────
   const $ = (id) => document.getElementById(id);
@@ -398,9 +344,7 @@
       gain.connect(ctx.destination);
       osc.start();
       osc.stop(ctx.currentTime + 0.15);
-    } catch (e) {
-      // Silently fail if audio is not supported
-    }
+    } catch (e) { /* silently fail */ }
   }
 
   // ─── Theme & Font ──────────────────────────────────────────
@@ -440,15 +384,9 @@
   }
 
   // ─── Toggle Info Sections ──────────────────────────────────
-  function toggleHowToPlay() {
-    toggleSection('howToPlayContent', 'howToPlayBtn', '📖 How to Play', '📕 Hide Guide');
-  }
-  function toggleCosts() {
-    toggleSection('costsContent', 'costsBtn', '💰 Costs & Energy', '💰 Hide Costs');
-  }
-  function toggleUnlocks() {
-    toggleSection('unlocksContent', 'unlocksBtn', '🔓 Next Level Unlocks', '🔓 Hide Unlocks');
-  }
+  function toggleHowToPlay() { toggleSection('howToPlayContent', 'howToPlayBtn', '📖 How to Play', '📕 Hide Guide'); }
+  function toggleCosts() { toggleSection('costsContent', 'costsBtn', '💰 Costs & Energy', '💰 Hide Costs'); }
+  function toggleUnlocks() { toggleSection('unlocksContent', 'unlocksBtn', '🔓 Next Level Unlocks', '🔓 Hide Unlocks'); }
   function toggleSection(contentId, btnId, showText, hideText) {
     const content = $(contentId);
     const btn = $(btnId);
@@ -481,12 +419,10 @@
     }
     $('plantModal').classList.add('active');
   }
-
   function closePlantModal() {
     $('plantModal').classList.remove('active');
     pendingPlotIndex = null;
   }
-
   async function plantFromModal(seedId) {
     if (pendingPlotIndex === null) return;
     const plotIndex = pendingPlotIndex;
@@ -521,12 +457,10 @@
     }
     $('upgradeModal').classList.add('active');
   }
-
   function closeUpgradeModal() {
     $('upgradeModal').classList.remove('active');
     pendingPlotIndex = null;
   }
-
   async function upgradeFromModal(upgradeType) {
     if (pendingPlotIndex === null) return;
     const plotIndex = pendingPlotIndex;
@@ -561,20 +495,19 @@
     startRenderTimer();
   }
 
-  // ─── Load Garden (raw data from RPC) ────────────────────────
+  // ─── Load Garden ────────────────────────────────────────────
   async function loadGarden() {
     const { data, error } = await sb.rpc('get_garden_state', { p_player_id: currentPlayer.id });
     if (error) {
       console.error('Error loading garden:', error);
       return;
     }
-    // Store raw data (including timestamps)
     gardenPlots = data || [];
     renderGarden();
     updateStats();
   }
 
-  // ─── Render Garden (computes timers on the fly) ────────────
+  // ─── Render Garden ──────────────────────────────────────────
   function renderGarden() {
     const grid = $('gardenGrid');
     const now = new Date();
@@ -592,12 +525,27 @@
       else plots.push({ plot_index: i, status: 'empty' });
     }
 
-    // Track which plots just became wilted (for beep)
     const wiltedNow = {};
+
+    // ─── Improved formatTime ──────────────────────────────────
+    const formatTime = (seconds) => {
+      if (seconds === Infinity || seconds < 0) return '--:--';
+      const totalSecs = Math.floor(seconds);
+      const hours = Math.floor(totalSecs / 3600);
+      const mins = Math.floor((totalSecs % 3600) / 60);
+      const secs = totalSecs % 60;
+
+      if (hours > 0) {
+        return `${hours}h ${String(mins).padStart(2, '0')}m`;
+      } else if (mins > 0) {
+        return `${mins}m ${String(secs).padStart(2, '0')}s`;
+      } else {
+        return `${secs}s`;
+      }
+    };
 
     grid.innerHTML = plots.map(plot => {
       const isPlanted = plot.status === 'planted';
-      const isHarvestable = false; // computed later
       let isWilted = false;
       let isDead = false;
       let remainingSeconds = 0;
@@ -617,7 +565,6 @@
         remainingSeconds = Math.max(0, totalGrowthSeconds - elapsed);
         harvestReady = remainingSeconds <= 0;
 
-        // Water deadline
         timeSinceWater = (now - lastWateredAt) / 1000;
         wiltThreshold = 0.5 * totalGrowthSeconds;
         deadThreshold = 0.75 * totalGrowthSeconds;
@@ -628,44 +575,23 @@
         wiltedNow[plot.plot_index] = isWilted;
       }
 
-      // Status and badge
       let statusClass = '';
       let statusLabel = '';
-      if (isDead) {
-        statusClass = 'status-dead';
-        statusLabel = '💀 Dead';
-      } else if (isWilted) {
-        statusClass = 'status-wilted';
-        statusLabel = '⚠️ Wilted';
-      } else if (harvestReady) {
-        statusClass = 'status-harvestable';
-        statusLabel = '🌟 Ready';
-      } else if (isPlanted) {
-        statusClass = 'status-planted';
-        statusLabel = '🌱 Growing';
-      } else {
-        statusClass = '';
-        statusLabel = '🌿 Empty';
-      }
+      if (isDead) { statusClass = 'status-dead'; statusLabel = '💀 Dead'; }
+      else if (isWilted) { statusClass = 'status-wilted'; statusLabel = '⚠️ Wilted'; }
+      else if (harvestReady) { statusClass = 'status-harvestable'; statusLabel = '🌟 Ready'; }
+      else if (isPlanted) { statusClass = 'status-planted'; statusLabel = '🌱 Growing'; }
+      else { statusClass = ''; statusLabel = '🌿 Empty'; }
 
       const tierColors = { common: '#aaa', uncommon: '#4fc3f7', rare: '#ab47bc', epic: '#ffa726', legendary: '#f44336', mythic: '#ffd700' };
       const tierColor = plot.tier ? tierColors[plot.tier] || '#aaa' : '#aaa';
       const plotLevel = plot.upgrade_type ? 2 : 1;
 
-      // Progress bar
       let progress = 0;
       if (isPlanted && totalGrowthSeconds > 0) {
         const elapsed = totalGrowthSeconds - remainingSeconds;
         progress = Math.min(100, (elapsed / totalGrowthSeconds) * 100);
       }
-
-      // Timer strings
-      const formatTime = (seconds) => {
-        if (seconds === Infinity || seconds < 0) return '--:--';
-        const mins = Math.floor(seconds / 60);
-        const secs = Math.floor(seconds % 60);
-        return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-      };
 
       const harvestTimer = harvestReady ? '✅ Ready' : formatTime(remainingSeconds);
       const waterTimer = isDead ? '💀 Dead' : isWilted ? `⏳ ${formatTime(timeToDeath)} to death` : (isPlanted ? `💧 ${formatTime(timeToWilt)} to wilt` : '');
@@ -711,19 +637,13 @@
       `;
     }).join('');
 
-    // Play beep if any plot just became wilted (transition from not wilted to wilted)
+    // Beep on new wilt
     let playBeepFlag = false;
     for (const idx in wiltedNow) {
       const wasWilted = prevWiltedStates[idx] || false;
-      if (wiltedNow[idx] && !wasWilted) {
-        playBeepFlag = true;
-        break;
-      }
+      if (wiltedNow[idx] && !wasWilted) { playBeepFlag = true; break; }
     }
-    if (playBeepFlag) {
-      playBeep();
-    }
-    // Update prevWiltedStates
+    if (playBeepFlag) { playBeep(); }
     prevWiltedStates = wiltedNow;
   }
 
@@ -993,12 +913,11 @@
   initThemeAndFont();
   loadPlayer();
 
-  // Also refresh from server every 30 seconds to keep raw data in sync
   setInterval(() => {
     if (currentPlayer) loadGarden();
   }, 30000);
 
-  // ─── Expose global functions for inline onclick ────────────
+  // ─── Expose global functions ──────────────────────────────
   window.plantSeed = plantSeed;
   window.waterPlant = waterPlant;
   window.fertilizePlant = fertilizePlant;
