@@ -546,46 +546,52 @@
 
     grid.innerHTML = plots.map(plot => {
       const isPlanted = plot.status === 'planted';
-      let isWilted = false;
-      let isDead = false;
+      // Use RPC's is_harvestable field
+      const isHarvestable = plot.is_harvestable || false;
+      const isWilted = plot.is_wilted || false;
+      const isDead = plot.is_dead || false;
+
+      let statusClass = '';
+      let statusLabel = '';
+      if (isDead) {
+        statusClass = 'status-dead';
+        statusLabel = '💀 Dead';
+      } else if (isWilted) {
+        statusClass = 'status-wilted';
+        statusLabel = '⚠️ Wilted';
+      } else if (isHarvestable) {
+        statusClass = 'status-harvestable';
+        statusLabel = '🌟 Ready';
+      } else if (isPlanted) {
+        statusClass = 'status-planted';
+        statusLabel = '🌱 Growing';
+      } else {
+        statusClass = '';
+        statusLabel = '🌿 Empty';
+      }
+
+      const tierColors = { common: '#aaa', uncommon: '#4fc3f7', rare: '#ab47bc', epic: '#ffa726', legendary: '#f44336', mythic: '#ffd700' };
+      const tierColor = plot.tier ? tierColors[plot.tier] || '#aaa' : '#aaa';
+      const plotLevel = plot.upgrade_type ? 2 : 1;
+
+      // Compute progress bar and timers
       let remainingSeconds = 0;
       let totalGrowthSeconds = 0;
-      let timeSinceWater = 0;
-      let wiltThreshold = Infinity;
-      let deadThreshold = Infinity;
       let timeToWilt = Infinity;
       let timeToDeath = Infinity;
-      let harvestReady = false;
-
       if (isPlanted && plot.planted_at && plot.last_watered_at && plot.growth_time_minutes) {
         const plantedAt = new Date(plot.planted_at);
         const lastWateredAt = new Date(plot.last_watered_at);
         totalGrowthSeconds = plot.growth_time_minutes * 60;
         const elapsed = (now - plantedAt) / 1000;
         remainingSeconds = Math.max(0, totalGrowthSeconds - elapsed);
-        harvestReady = remainingSeconds <= 0;
 
-        timeSinceWater = (now - lastWateredAt) / 1000;
-        wiltThreshold = 0.5 * totalGrowthSeconds;
-        deadThreshold = 0.75 * totalGrowthSeconds;
-        isWilted = timeSinceWater > wiltThreshold;
-        isDead = timeSinceWater > deadThreshold;
+        const timeSinceWater = (now - lastWateredAt) / 1000;
+        const wiltThreshold = 0.5 * totalGrowthSeconds;
+        const deadThreshold = 0.75 * totalGrowthSeconds;
         timeToWilt = Math.max(0, wiltThreshold - timeSinceWater);
         timeToDeath = Math.max(0, deadThreshold - timeSinceWater);
-        wiltedNow[plot.plot_index] = isWilted;
       }
-
-      let statusClass = '';
-      let statusLabel = '';
-      if (isDead) { statusClass = 'status-dead'; statusLabel = '💀 Dead'; }
-      else if (isWilted) { statusClass = 'status-wilted'; statusLabel = '⚠️ Wilted'; }
-      else if (harvestReady) { statusClass = 'status-harvestable'; statusLabel = '🌟 Ready'; }
-      else if (isPlanted) { statusClass = 'status-planted'; statusLabel = '🌱 Growing'; }
-      else { statusClass = ''; statusLabel = '🌿 Empty'; }
-
-      const tierColors = { common: '#aaa', uncommon: '#4fc3f7', rare: '#ab47bc', epic: '#ffa726', legendary: '#f44336', mythic: '#ffd700' };
-      const tierColor = plot.tier ? tierColors[plot.tier] || '#aaa' : '#aaa';
-      const plotLevel = plot.upgrade_type ? 2 : 1;
 
       let progress = 0;
       if (isPlanted && totalGrowthSeconds > 0) {
@@ -593,7 +599,7 @@
         progress = Math.min(100, (elapsed / totalGrowthSeconds) * 100);
       }
 
-      const harvestTimer = harvestReady ? '✅ Ready' : formatTime(remainingSeconds);
+      const harvestTimer = isHarvestable ? '✅ Ready' : formatTime(remainingSeconds);
       const waterTimer = isDead ? '💀 Dead' : isWilted ? `⏳ ${formatTime(timeToDeath)} to death` : (isPlanted ? `💧 ${formatTime(timeToWilt)} to wilt` : '');
 
       const waterBtnClass = isWilted && !isDead ? 'water-btn wilted' : 'water-btn';
@@ -607,21 +613,21 @@
           ${isPlanted ? `
             <div class="progress"><div class="fill" style="width:${progress}%;"></div></div>
             <div class="timers">
-              <div><span class="label">⏳ Harvest:</span> <span class="value ${harvestReady ? 'ready' : ''}">${harvestTimer}</span></div>
+              <div><span class="label">⏳ Harvest:</span> <span class="value ${isHarvestable ? 'ready' : ''}">${harvestTimer}</span></div>
               ${waterTimer ? `<div><span class="label">${isDead ? '💀' : '💧'} Water:</span> <span class="value ${isDead ? 'danger' : isWilted ? 'warning' : ''}">${waterTimer}</span></div>` : ''}
             </div>
           ` : ''}
           <div class="status-badge ${statusClass}">${statusLabel}</div>
           ${isPlanted ? `
             <div class="actions">
-              ${!isDead && !harvestReady ? `
+              ${!isDead && !isHarvestable ? `
                 <button class="${waterBtnClass}" onclick="waterPlant(${plot.plot_index})" ${isWilted ? '' : 'disabled'}>💧 Water</button>
-                <button class="fertilize-btn" onclick="fertilizePlant(${plot.plot_index})" ${plot.fertilized ? 'disabled' : ''}>🌿 Fertilize</button>
-                <button class="pest-btn" onclick="pestSpray(${plot.plot_index})" ${plot.pest_sprayed ? 'disabled' : ''}>🐞 Spray</button>
+                <button class="fertilize-btn" onclick="fertilizePlant(${plot.plot_index})" ${plot.is_fertilized ? 'disabled' : ''}>🌿 Fertilize</button>
+                <button class="pest-btn" onclick="pestSpray(${plot.plot_index})" ${plot.is_pest_sprayed ? 'disabled' : ''}>🐞 Spray</button>
               ` : ''}
-              ${harvestReady ? `<button class="harvest-btn" onclick="harvestPlant(${plot.plot_index})">🧺 Harvest</button>` : ''}
+              ${isHarvestable ? `<button class="harvest-btn" onclick="harvestPlant(${plot.plot_index})">🧺 Harvest</button>` : ''}
               ${isDead ? `<button class="clear-btn" onclick="clearDead(${plot.plot_index})">🗑️ Clear</button>` : ''}
-              ${currentPlayer.subscription_tier && ['black','founder'].includes(currentPlayer.subscription_tier.toLowerCase()) && isPlanted && !isDead && !harvestReady ? `
+              ${currentPlayer.subscription_tier && ['black','founder'].includes(currentPlayer.subscription_tier.toLowerCase()) && isPlanted && !isDead && !isHarvestable ? `
                 <button onclick="expressGrow(${plot.plot_index})" style="background:#fbbf24; color:#1e293b;">⚡ Express</button>
               ` : ''}
             </div>
