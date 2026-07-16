@@ -614,7 +614,7 @@
             <div class="progress"><div class="fill" style="width:${progress}%;"></div></div>
             <div class="timers">
               <div><span class="label">⏳ Harvest:</span> <span class="value ${isHarvestable ? 'ready' : ''}">${harvestTimer}</span></div>
-              ${waterTimer ? `<div><span class="label">${isDead ? '💀' : '💧'} Water:</span> <span class="value ${isDead ? 'danger' : isWilted ? 'warning' : ''}">${waterTimer}</span></div>` : ''}
+              ${waterTimer ? `<div><span class="label">${isDead ? '💀' : ''} Water:</span> <span class="value ${isDead ? 'danger' : isWilted ? 'warning' : ''}">${waterTimer}</span></div>` : ''}
             </div>
           ` : ''}
           <div class="status-badge ${statusClass}">${statusLabel}</div>
