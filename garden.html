@@ -213,7 +213,7 @@
       <li><strong>Express Grow (Black+):</strong> Instantly grow a plant for cash.</li>
       <li><strong>Upgrade Plot (Black+):</strong> Upgrade a plot to "Irrigated" for faster growth.</li>
     </ol>
-    <p class="hint">🔊 Audio alerts: Single beep = wilted; urgent double beep = approaching death (&lt;1 min); cheerful chime = harvest ready.</p>
+    <p class="hint">🔊 Audio alerts: Single beep = wilted; urgent double beep at 60s & 30s before death; cheerful chime = harvest ready.</p>
   </div>
 
   <div id="costsContent" class="info-content">
@@ -314,7 +314,8 @@
 
   // Alert tracking (to fire once per state)
   let prevWiltedStates = {};
-  let prevApproachingDeathStates = {};
+  let prevApproachingDeath60States = {};
+  let prevApproachingDeath30States = {};
   let prevHarvestReadyStates = {};
 
   // ─── DOM refs ──────────────────────────────────────────────
@@ -352,7 +353,7 @@
     } catch (e) { /* silently fail */ }
   }
 
-  // 2. Approaching death – urgent double beep
+  // 2. Approaching death – urgent double beep (now with 60s and 30s thresholds)
   function playApproachingDeathBeep() {
     try {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -596,7 +597,8 @@
 
     // Alert tracking states
     const wiltedNow = {};
-    const approachingDeathNow = {};
+    const approachingDeath60Now = {};
+    const approachingDeath30Now = {};
     const harvestReadyNow = {};
 
     // ─── Format time ──────────────────────────────────────────
@@ -668,7 +670,10 @@
           wiltedNow[plot.plot_index] = true;
         }
         if (timeToDeath <= 60 && timeToDeath > 0 && !isDead) {
-          approachingDeathNow[plot.plot_index] = true;
+          approachingDeath60Now[plot.plot_index] = true;
+        }
+        if (timeToDeath <= 30 && timeToDeath > 0 && !isDead) {
+          approachingDeath30Now[plot.plot_index] = true;
         }
         if (isHarvestable) {
           harvestReadyNow[plot.plot_index] = true;
@@ -681,8 +686,12 @@
         progress = Math.min(100, (elapsed / totalGrowthSeconds) * 100);
       }
 
-      const harvestTimer = isHarvestable ? '✅ Ready' : formatTime(remainingSeconds);
-      const waterTimer = isDead ? '💀 Dead' : isWilted ? `⏳ ${formatTime(timeToDeath)} to death` : (isPlanted ? `💧 ${formatTime(timeToWilt)} to wilt` : '');
+      // Only show timers if relevant
+      const showHarvestTimer = isPlanted && !isDead && !isHarvestable;
+      const showWaterTimer = isPlanted && !isDead && !isHarvestable;
+
+      const harvestTimer = showHarvestTimer ? formatTime(remainingSeconds) : '';
+      const waterTimer = showWaterTimer ? (isWilted ? `⏳ ${formatTime(timeToDeath)} to death` : `💧 ${formatTime(timeToWilt)} to wilt`) : '';
 
       const waterBtnClass = isWilted && !isDead ? 'water-btn wilted' : 'water-btn';
 
@@ -695,8 +704,8 @@
           ${isPlanted ? `
             <div class="progress"><div class="fill" style="width:${progress}%;"></div></div>
             <div class="timers">
-              <div><span class="label">⏳ Harvest:</span> <span class="value ${isHarvestable ? 'ready' : ''}">${harvestTimer}</span></div>
-              ${waterTimer ? `<div><span class="label">Water:</span> <span class="value ${isDead ? 'danger' : isWilted ? 'warning' : ''}">${waterTimer}</span></div>` : ''}
+              ${showHarvestTimer ? `<div><span class="label">⏳ Harvest:</span> <span class="value">${harvestTimer}</span></div>` : ''}
+              ${showWaterTimer ? `<div><span class="label">Water:</span> <span class="value ${isWilted ? 'warning' : ''}">${waterTimer}</span></div>` : ''}
             </div>
           ` : ''}
           <div class="status-badge ${statusClass}">${statusLabel}</div>
@@ -733,14 +742,21 @@
         break;
       }
     }
-    // 2. Approaching death
-    for (const idx in approachingDeathNow) {
-      if (!prevApproachingDeathStates[idx]) {
+    // 2. Approaching death at 60 seconds
+    for (const idx in approachingDeath60Now) {
+      if (!prevApproachingDeath60States[idx]) {
         playApproachingDeathBeep();
         break;
       }
     }
-    // 3. Harvest ready
+    // 3. Approaching death at 30 seconds
+    for (const idx in approachingDeath30Now) {
+      if (!prevApproachingDeath30States[idx]) {
+        playApproachingDeathBeep();
+        break;
+      }
+    }
+    // 4. Harvest ready
     for (const idx in harvestReadyNow) {
       if (!prevHarvestReadyStates[idx]) {
         playHarvestReadyChime();
@@ -750,7 +766,8 @@
 
     // Update previous states
     prevWiltedStates = wiltedNow;
-    prevApproachingDeathStates = approachingDeathNow;
+    prevApproachingDeath60States = approachingDeath60Now;
+    prevApproachingDeath30States = approachingDeath30Now;
     prevHarvestReadyStates = harvestReadyNow;
   }
 
