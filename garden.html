@@ -336,7 +336,6 @@
   }
 
   // ─── Audio Functions ──────────────────────────────────────
-  // 1. Wilted – single beep
   function playWiltBeep() {
     try {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -353,7 +352,6 @@
     } catch (e) { /* silently fail */ }
   }
 
-  // 2. Approaching death – urgent double beep (60 sec or 30 sec)
   function playApproachingDeathBeep() {
     try {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -383,7 +381,6 @@
     } catch (e) { /* silently fail */ }
   }
 
-  // 3. Harvest ready – cheerful ascending chime
   function playHarvestReadyChime() {
     try {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -668,8 +665,8 @@
           showHarvestTimer = true;
         }
 
-        // Show water timer only if plant is not dead, not harvestable, and water is needed before harvest
-        if (!isDead && !isHarvestable && timeToWilt < remainingHarvestSeconds) {
+        // Show water timer only if plant is not dead, not harvestable, and water is needed before or exactly at harvest
+        if (!isDead && !isHarvestable && timeToWilt <= remainingHarvestSeconds) {
           showWaterTimer = true;
           // Track states for alerts only if water is relevant
           if (isWilted) {
@@ -779,10 +776,10 @@
         break;
       }
     }
-    // 3. Approaching death (30 sec) – different tone or same? we'll use same, but track separately.
+    // 3. Approaching death (30 sec)
     for (const idx in approachingDeath30Now) {
       if (!prevApproachingDeath30States[idx]) {
-        playApproachingDeathBeep(); // same sound
+        playApproachingDeathBeep();
         break;
       }
     }
