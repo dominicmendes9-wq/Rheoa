@@ -644,6 +644,7 @@
       let remainingHarvestSeconds = Infinity;
       let timeToWilt = Infinity;
       let timeToDeath = Infinity;
+      let hasBeenWatered = false;
       let showWaterTimer = false;
       let showHarvestTimer = false;
 
@@ -656,27 +657,28 @@
 
         const timeSinceWater = (now - lastWateredAt) / 1000;
         const wiltThreshold = 0.5 * totalGrowthSeconds;
-        const deadThreshold = 0.75 * totalGrowthSeconds;
+        const deathThreshold = 0.75 * totalGrowthSeconds;
         timeToWilt = Math.max(0, wiltThreshold - timeSinceWater);
-        timeToDeath = Math.max(0, deadThreshold - timeSinceWater);
+        timeToDeath = Math.max(0, deathThreshold - timeSinceWater);
+        hasBeenWatered = (lastWateredAt - plantedAt) > 0; // at least one watering
 
         // Show harvest timer if plant is not dead and not harvestable
         if (!isDead && !isHarvestable) {
           showHarvestTimer = true;
         }
 
-        // Show water timer only if plant is not dead, not harvestable, and water is needed before or exactly at harvest
-        if (!isDead && !isHarvestable && timeToWilt <= remainingHarvestSeconds) {
+        // Show water timer if plant is alive and not harvestable
+        if (!isDead && !isHarvestable) {
           showWaterTimer = true;
-          // Track states for alerts only if water is relevant
-          if (isWilted) {
+          // Track states for alerts
+          if (isWilted && !hasBeenWatered) {
             wiltedNow[plot.plot_index] = true;
           }
-          // Approaching death (60 sec) only if death would happen before harvest
-          if (timeToDeath <= 60 && timeToDeath > 0 && timeToDeath < remainingHarvestSeconds) {
+          // Approaching death (only after first watering)
+          if (hasBeenWatered && timeToDeath <= 60 && timeToDeath > 0 && timeToDeath < remainingHarvestSeconds) {
             approachingDeath60Now[plot.plot_index] = true;
           }
-          if (timeToDeath <= 30 && timeToDeath > 0 && timeToDeath < remainingHarvestSeconds) {
+          if (hasBeenWatered && timeToDeath <= 30 && timeToDeath > 0 && timeToDeath < remainingHarvestSeconds) {
             approachingDeath30Now[plot.plot_index] = true;
           }
         }
@@ -700,12 +702,17 @@
         if (isDead) {
           waterTimerDisplay = '💀 Dead';
         } else if (isWilted) {
+          // If wilted, show time to death regardless of watered status
           waterTimerDisplay = `⏳ ${formatTime(timeToDeath)} to death`;
+        } else if (hasBeenWatered) {
+          // After first watering, show time to death (75% threshold)
+          waterTimerDisplay = `💧 ${formatTime(timeToDeath)} to death`;
         } else {
+          // Before first watering, show time to wilt (50% threshold)
           waterTimerDisplay = `💧 ${formatTime(timeToWilt)} to wilt`;
         }
       } else {
-        waterTimerDisplay = ''; // hide
+        waterTimerDisplay = '';
       }
 
       const waterBtnClass = isWilted && !isDead && showWaterTimer ? 'water-btn wilted' : 'water-btn';
@@ -734,16 +741,16 @@
           <div class="status-badge ${statusClass}">${statusLabel}</div>
           ${isPlanted && !isDead ? `
             <div class="actions">
-              ${!isHarvestable && showWaterTimer ? `
+              ${!isHarvestable ? `
                 <button class="${waterBtnClass}" onclick="waterPlant(${plot.plot_index})" ${isWilted ? '' : 'disabled'}>💧 Water</button>
                 <button class="fertilize-btn" onclick="fertilizePlant(${plot.plot_index})" ${plot.is_fertilized ? 'disabled' : ''}>🌿 Fertilize</button>
                 <button class="pest-btn" onclick="pestSpray(${plot.plot_index})" ${plot.is_pest_sprayed ? 'disabled' : ''}>🐞 Spray</button>
-              ` : ''}
-              ${isHarvestable ? `<button class="harvest-btn" onclick="harvestPlant(${plot.plot_index})">🧺 Harvest</button>` : ''}
-              ${isDead ? `<button class="clear-btn" onclick="clearDead(${plot.plot_index})">🗑️ Clear</button>` : ''}
-              ${currentPlayer.subscription_tier && ['black','founder'].includes(currentPlayer.subscription_tier.toLowerCase()) && !isHarvestable && !isDead && showWaterTimer ? `
-                <button onclick="expressGrow(${plot.plot_index})" style="background:#fbbf24; color:#1e293b;">⚡ Express</button>
-              ` : ''}
+                ${currentPlayer.subscription_tier && ['black','founder'].includes(currentPlayer.subscription_tier.toLowerCase()) ? `
+                  <button onclick="expressGrow(${plot.plot_index})" style="background:#fbbf24; color:#1e293b;">⚡ Express</button>
+                ` : ''}
+              ` : `
+                <button class="harvest-btn" onclick="harvestPlant(${plot.plot_index})">🧺 Harvest</button>
+              `}
             </div>
           ` : `
             <div class="actions">
@@ -762,21 +769,21 @@
     }).join('');
 
     // ─── Audio Alerts (fire only on state change) ─────────────
-    // 1. Wilted
+    // 1. Wilted (only before first watering)
     for (const idx in wiltedNow) {
       if (!prevWiltedStates[idx]) {
         playWiltBeep();
         break;
       }
     }
-    // 2. Approaching death (60 sec)
+    // 2. Approaching death (60 sec) – after first watering
     for (const idx in approachingDeath60Now) {
       if (!prevApproachingDeath60States[idx]) {
         playApproachingDeathBeep();
         break;
       }
     }
-    // 3. Approaching death (30 sec)
+    // 3. Approaching death (30 sec) – after first watering
     for (const idx in approachingDeath30Now) {
       if (!prevApproachingDeath30States[idx]) {
         playApproachingDeathBeep();
