@@ -622,21 +622,22 @@
         remainingHarvestSeconds = Math.max(0, totalGrowthSeconds - elapsed);
         showHarvestTimer = true;
 
-        // Determine watering count based on last_watered_at
-        let wateringCount = 0;
-        const secondsSincePlanted = (now - plantedAt) / 1000;
+        // Determine watering count based on last_watered_at, but treat initial planting as no watering
+        const waterElapsed = (lastWateredAt - plantedAt) / 1000; // seconds since planting to last watering
         const firstDeadline = totalGrowthSeconds / 3;
         const secondDeadline = (totalGrowthSeconds * 2) / 3;
+        let wateringCount = 0;
 
-        // Check if last_watered_at exists and when it occurred relative to planting
-        if (lastWateredAt) {
-          const waterElapsed = (lastWateredAt - plantedAt) / 1000;
-          if (waterElapsed < secondDeadline) {
-            wateringCount = 1; // first watering done
-          } else {
-            wateringCount = 2; // second watering done (or after)
-          }
+        // If lastWateredAt is within 1 second of plantedAt, treat as no watering yet (initial state)
+        if (waterElapsed < 1) {
+          wateringCount = 0;
+        } else if (waterElapsed < secondDeadline) {
+          wateringCount = 1; // first watering done
+        } else {
+          wateringCount = 2; // second watering done (or after)
         }
+
+        const secondsSincePlanted = (now - plantedAt) / 1000;
 
         // Determine next deadline and timer display
         if (wateringCount === 0) {
@@ -644,7 +645,6 @@
           const timeToFirst = Math.max(0, firstDeadline - secondsSincePlanted);
           waterTimerText = `💧 ${formatTime(timeToFirst)} to water`;
           if (secondsSincePlanted >= firstDeadline && secondsSincePlanted < totalGrowthSeconds) {
-            // Watering is due now
             waterBtnActive = true;
             waterBtnClass += ' urgent';
             // Track deadline reached for alert
@@ -652,24 +652,21 @@
               deadlineReachedNow[plot.plot_index] = 1;
             }
           }
-          // else water button inactive
         } else if (wateringCount === 1) {
           // First watering done, second not done
           const timeToSecond = Math.max(0, secondDeadline - secondsSincePlanted);
           waterTimerText = `💧 ${formatTime(timeToSecond)} to water`;
           if (secondsSincePlanted >= secondDeadline && secondsSincePlanted < totalGrowthSeconds) {
-            // Second watering due now
             waterBtnActive = true;
             waterBtnClass += ' urgent';
             if (!prevWaterDeadlineReached[plot.plot_index] || prevWaterDeadlineReached[plot.plot_index] < 2) {
               deadlineReachedNow[plot.plot_index] = 2;
             }
           }
-          // else water button inactive
         } else {
           // wateringCount >= 2 -> watering done
           wateringDone = true;
-          waterTimerText = ''; // hide timer
+          waterTimerText = '';
           waterBtnActive = false;
         }
 
@@ -757,7 +754,7 @@
       const count = deadlineReachedNow[idx];
       const prev = prevWaterDeadlineReached[idx] || 0;
       if (count > prev) {
-        playBeep(); // single beep for each deadline
+        playBeep();
       }
     }
     // Harvest ready
