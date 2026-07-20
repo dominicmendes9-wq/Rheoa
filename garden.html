@@ -625,13 +625,12 @@
         const secondDeadline = (totalGrowthSeconds * 2) / 3;
         let wateringCount = 0;
 
-        // FIXED: correctly detect watering count
         if (waterElapsed <= 1) {
-          wateringCount = 0; // no real watering yet
+          wateringCount = 0;
         } else if (waterElapsed <= secondDeadline) {
-          wateringCount = 1; // first watering done, second pending
+          wateringCount = 1;
         } else {
-          wateringCount = 2; // both waterings done
+          wateringCount = 2;
         }
 
         const secondsSincePlanted = (now - plantedAt) / 1000;
