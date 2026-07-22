@@ -254,14 +254,14 @@
       text-align: center;
     }
 
-    /* ─── Scheduled Posts Section (NEW) ─── */
+    /* ─── Scheduled Posts Section ─── */
     .scheduled-section {
       margin: 16px 20px 20px;
       padding: 12px;
       background: var(--card-header-bg);
       border-radius: 12px;
       border: 1px solid var(--border-light);
-      display: none; /* hidden until there are scheduled posts */
+      display: none;
     }
     .scheduled-section h4 {
       font-size: 0.9rem;
@@ -427,7 +427,6 @@
       color: #fff;
     }
 
-    /* ── NEW: schedule controls and "Post as" ── */
     .post-form .schedule-controls {
       display: flex;
       flex-wrap: wrap;
@@ -509,6 +508,10 @@
     .post-meta {
       font-size: 0.8rem;
       color: var(--text-muted);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 4px 10px;
     }
     .post-meta .author-link {
       color: var(--accent);
@@ -518,6 +521,16 @@
     }
     .post-meta .author-link:hover {
       text-decoration: underline;
+    }
+    .post-meta .ai-badge {
+      background: #9c27b0;
+      color: #fff;
+      padding: 0 6px;
+      border-radius: 12px;
+      font-size: 0.65rem;
+      font-weight: 600;
+      display: inline-block;
+      line-height: 1.6;
     }
     .post-stats {
       display: flex;
@@ -577,6 +590,16 @@
     .post-detail-meta .author-link:hover {
       text-decoration: underline;
     }
+    .post-detail-meta .ai-badge {
+      background: #9c27b0;
+      color: #fff;
+      padding: 0 8px;
+      border-radius: 12px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      display: inline-block;
+      line-height: 1.8;
+    }
     .post-detail-meta .stat-pill {
       background: var(--btn-ghost);
       padding: 2px 12px;
@@ -625,13 +648,11 @@
       max-width: 100%;
       height: auto;
     }
-    /* Image size classes */
     .img-small { width: 300px; max-width: 100%; }
     .img-medium { width: 500px; max-width: 100%; }
     .img-large { width: 700px; max-width: 100%; }
     .img-original { width: 100%; }
 
-    /* Editable post styles */
     .post-editor-wrapper {
       margin: 12px 0;
     }
@@ -1106,7 +1127,7 @@
           <li class="empty-favorites">You haven't followed any communities yet.</li>
         </ul>
       </div>
-      <!-- Scheduled Posts (NEW) -->
+      <!-- Scheduled Posts -->
       <div class="sidebar-section" id="scheduledSection" style="display:none;">
         <div class="sidebar-header" onclick="toggleSidebarSection(this)">
           📅 Scheduled Posts
@@ -1166,8 +1187,11 @@ let editingCommentId = null;
 let communities = [];
 let followedCommunityIds = new Set();
 let forumChannel = null;
-let aiMembers = []; // NEW: AI members list
+let aiMembers = [];
 let affiliateEnabled = false;
+
+// ─── prevent double comment submission ───
+let submittingComment = false;
 
 // ─────────────────────────────────────────────
 // TOAST
@@ -1338,7 +1362,7 @@ async function init() {
 
   await loadCommunities();
   await loadFollowedCommunities();
-  await loadAIMembers(); // NEW: load AI members for dropdown
+  await loadAIMembers();
   await trackDeviceInfo();
 
   document.addEventListener('click', function(e) {
@@ -1358,12 +1382,11 @@ async function init() {
   } else {
     await loadFeed();
   }
-  // Load scheduled posts for the author
   if (currentPlayer) await loadScheduledPosts();
 }
 
 // ─────────────────────────────────────────────
-// LOAD AI MEMBERS (NEW)
+// LOAD AI MEMBERS
 // ─────────────────────────────────────────────
 async function loadAIMembers() {
   const { data, error } = await sb.from('ai_members').select('*').order('name');
@@ -1386,7 +1409,7 @@ function populateAISelects() {
 }
 
 // ─────────────────────────────────────────────
-// LOAD SCHEDULED POSTS (NEW)
+// LOAD SCHEDULED POSTS
 // ─────────────────────────────────────────────
 async function loadScheduledPosts() {
   if (!currentPlayer) return;
@@ -1509,17 +1532,22 @@ async function selectCommunity(community) {
 }
 
 // ─────────────────────────────────────────────
-// COMMUNITY VIEW (with published posts filter)
+// COMMUNITY VIEW (with published posts filter & AI display)
 // ─────────────────────────────────────────────
 async function loadCommunityView() {
   if (!currentCommunity) return;
 
+  // Join with ai_members to get AI names for posts
   const { data: posts, error } = await sb
     .from('posts')
-    .select(`*, author:players(username)`)
+    .select(`
+      *,
+      author:players(username),
+      ai_member:ai_members(name, avatar_url)
+    `)
     .eq('community_id', currentCommunity.id)
     .is('deleted_at', null)
-    .lte('published_at', new Date().toISOString()) // ONLY PUBLISHED POSTS
+    .lte('published_at', new Date().toISOString())
     .order('created_at', { ascending: false });
 
   if (error) { console.error('Error loading posts:', error); showToast('Error loading posts', 'error'); return; }
@@ -1591,12 +1619,24 @@ async function loadCommunityView() {
   } else {
     posts.forEach(post => {
       const readTime = estimateReadTime(post.content || '');
+      // Determine display name and AI badge
+      let displayName, isAI, aiAvatar;
+      if (post.is_ai_post && post.ai_member) {
+        displayName = post.ai_member.name;
+        isAI = true;
+        aiAvatar = post.ai_member.avatar_url || '🤖';
+      } else {
+        displayName = post.author?.username || 'Unknown';
+        isAI = false;
+      }
       html += `
         <div class="post-item" onclick="viewPost('${post.id}')">
           <div class="post-content">
             <div class="post-title">${escapeHtml(post.title)}</div>
             <div class="post-meta">
-              Posted by <span class="author-link" onclick="event.stopPropagation(); viewProfile('${post.author_id}')">${escapeHtml(post.author?.username || 'Unknown')}</span>
+              Posted by 
+              ${isAI ? `<span>${escapeHtml(displayName)} <span class="ai-badge">🤖 AI</span></span>` :
+                      `<span class="author-link" onclick="event.stopPropagation(); viewProfile('${post.author_id}')">${escapeHtml(displayName)}</span>`}
               • ${new Date(post.created_at).toLocaleString()}
             </div>
             <div class="post-stats">
@@ -1616,7 +1656,7 @@ async function loadCommunityView() {
 }
 
 // ─────────────────────────────────────────────
-// FEED (latest posts) – also filtered by published_at
+// FEED (latest posts) – also with AI display
 // ─────────────────────────────────────────────
 async function loadFeed() {
   currentCommunity = null;
@@ -1632,7 +1672,12 @@ async function loadFeed() {
 
   const { data: posts, error } = await sb
     .from('posts')
-    .select(`*, author:players(username), community:communities(name, display_name, icon)`)
+    .select(`
+      *,
+      author:players(username),
+      community:communities(name, display_name, icon),
+      ai_member:ai_members(name, avatar_url)
+    `)
     .is('deleted_at', null)
     .lte('published_at', new Date().toISOString())
     .order('created_at', { ascending: false })
@@ -1647,13 +1692,24 @@ async function loadFeed() {
     html += `<div id="postsList">`;
     posts.forEach(post => {
       const readTime = estimateReadTime(post.content || '');
+      let displayName, isAI, aiAvatar;
+      if (post.is_ai_post && post.ai_member) {
+        displayName = post.ai_member.name;
+        isAI = true;
+        aiAvatar = post.ai_member.avatar_url || '🤖';
+      } else {
+        displayName = post.author?.username || 'Unknown';
+        isAI = false;
+      }
       html += `
         <div class="post-item" onclick="viewPost('${post.id}')">
           <div class="post-content">
             <div class="post-title">${escapeHtml(post.title)}</div>
             <div class="post-meta">
               Posted in ${post.community?.icon || '🌐'} ${escapeHtml(post.community?.display_name || 'Unknown')} 
-              by <span class="author-link" onclick="event.stopPropagation(); viewProfile('${post.author_id}')">${escapeHtml(post.author?.username || 'Unknown')}</span>
+              by 
+              ${isAI ? `<span>${escapeHtml(displayName)} <span class="ai-badge">🤖 AI</span></span>` :
+                      `<span class="author-link" onclick="event.stopPropagation(); viewProfile('${post.author_id}')">${escapeHtml(displayName)}</span>`}
               • ${new Date(post.created_at).toLocaleString()}
             </div>
             <div class="post-stats">
@@ -1671,7 +1727,7 @@ async function loadFeed() {
 }
 
 // ─────────────────────────────────────────────
-// SCHEDULE TOGGLE & CREATE/ SCHEDULE POST (NEW)
+// SCHEDULE TOGGLE & CREATE/ SCHEDULE POST
 // ─────────────────────────────────────────────
 function toggleSchedule() {
   const checked = document.getElementById('scheduleToggle').checked;
@@ -1705,7 +1761,6 @@ async function createOrSchedulePost() {
   const communityId = currentCommunity.id;
   const authorId = currentPlayer.id;
 
-  // Check if "Post as" is selected (AI)
   const select = document.getElementById('postAsSelect');
   const selectedValue = select.value;
   let isAI = false;
@@ -1768,7 +1823,7 @@ function clearPostEditor() {
 }
 
 // ─────────────────────────────────────────────
-// IMAGE INSERT, EMOJI PICKER, LINK INSERT (unchanged)
+// IMAGE INSERT, EMOJI PICKER, LINK INSERT
 // ─────────────────────────────────────────────
 function insertImageWithSize(editorId) {
   const url = prompt('Enter the direct image URL (e.g., https://i.postimg.cc/...):', '');
@@ -1833,7 +1888,7 @@ function openEmojiPicker() {
 }
 
 // ─────────────────────────────────────────────
-// VIEW POST, COMMENTS, REACTIONS, VOTES (mostly unchanged)
+// VIEW POST
 // ─────────────────────────────────────────────
 async function viewPost(postId) {
   currentPost = postId;
@@ -1844,10 +1899,18 @@ async function viewPost(postId) {
   await loadPostView(postId);
 }
 
+// ─────────────────────────────────────────────
+// LOAD POST VIEW WITH COMMENTS & AI DISPLAY
+// ─────────────────────────────────────────────
 async function loadPostView(postId) {
   const { data: post, error } = await sb
     .from('posts')
-    .select(`*, author:players(username), community:communities(*)`)
+    .select(`
+      *,
+      author:players(username),
+      community:communities(*),
+      ai_member:ai_members(name, avatar_url)
+    `)
     .eq('id', postId)
     .single();
 
@@ -1890,12 +1953,27 @@ async function loadPostView(postId) {
     sanitizedContent = sanitizedContent.replace(/<div class="affiliate-pill".*?<\/div>/, '').trim();
   }
 
+  // Determine display name & AI badge for post detail
+  let displayName, isAI, aiAvatar;
+  if (post.is_ai_post && post.ai_member) {
+    displayName = post.ai_member.name;
+    isAI = true;
+    aiAvatar = post.ai_member.avatar_url || '🤖';
+  } else {
+    displayName = post.author?.username || 'Unknown';
+    isAI = false;
+  }
+
   let html = `
     <div class="back-link" onclick="selectCommunityById('${post.community.id}')">← Back to ${escapeHtml(post.community.display_name)}</div>
     <div class="post-detail-card">
       <div class="post-detail-title">${escapeHtml(post.title)}</div>
       <div class="post-detail-meta">
-        <span>Posted by <span class="author-link" onclick="viewProfile('${post.author_id}')">${escapeHtml(post.author?.username)}</span></span>
+        <span>
+          Posted by 
+          ${isAI ? `<span>${escapeHtml(displayName)} <span class="ai-badge">🤖 AI</span></span>` :
+                  `<span class="author-link" onclick="viewProfile('${post.author_id}')">${escapeHtml(displayName)}</span>`}
+        </span>
         <span>• ${new Date(post.created_at).toLocaleString()}</span>
         <span class="stat-pill"><span class="icon">👁️</span> ${post.view_count || 0}</span>
         <span class="stat-pill"><span class="icon">📖</span> ${readTime}</span>
@@ -2235,26 +2313,40 @@ function openEmojiPicker() {
   document.body.appendChild(picker);
 }
 
-// ─── SUBMIT COMMENT ────────────────────────────────────────
+// ─── SUBMIT COMMENT (with anti‑double‑submission flag) ────
 async function submitComment(parentId) {
-  const content = parentId ? document.getElementById(`reply-content-${parentId}`).value.trim() : document.getElementById('commentContent').value.trim();
-  if (!content) return showToast('Comment cannot be empty', 'error');
-  let depth = 0;
-  if (parentId) {
-    const parentDepth = await getParentDepth(parentId);
-    depth = parentDepth + 1;
+  if (submittingComment) return;
+  submittingComment = true;
+  try {
+    const content = parentId
+      ? document.getElementById(`reply-content-${parentId}`).value.trim()
+      : document.getElementById('commentContent').value.trim();
+    if (!content) { showToast('Comment cannot be empty', 'error'); return; }
+
+    let depth = 0;
+    if (parentId) {
+      const parentDepth = await getParentDepth(parentId);
+      depth = parentDepth + 1;
+    }
+    const { error } = await sb.from('comments').insert({
+      content,
+      post_id: currentPost.id,
+      author_id: currentPlayer.id,
+      parent_id: parentId || null,
+      depth: depth,
+      is_deleted: false
+    });
+    if (error) { showToast(error.message, 'error'); return; }
+    showToast('Comment posted', 'success');
+    if (parentId) hideReplyForm(parentId);
+    else document.getElementById('commentContent').value = '';
+    await loadPostView(currentPost.id);
+  } catch (e) {
+    console.error(e);
+    showToast('Error posting comment', 'error');
+  } finally {
+    setTimeout(() => { submittingComment = false; }, 500);
   }
-  const { error } = await sb.from('comments').insert({
-    content,
-    post_id: currentPost.id,
-    author_id: currentPlayer.id,
-    parent_id: parentId || null,
-    depth: depth,
-    is_deleted: false
-  });
-  if (error) return showToast(error.message, 'error');
-  showToast('Comment posted', 'success');
-  loadPostView(currentPost.id);
 }
 async function getParentDepth(parentId) {
   const { data } = await sb.from('comments').select('depth').eq('id', parentId).single();
