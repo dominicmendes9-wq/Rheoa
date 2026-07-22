@@ -254,6 +254,31 @@
       text-align: center;
     }
 
+    /* ─── Scheduled Posts Section (NEW) ─── */
+    .scheduled-section {
+      margin: 16px 20px 20px;
+      padding: 12px;
+      background: var(--card-header-bg);
+      border-radius: 12px;
+      border: 1px solid var(--border-light);
+      display: none; /* hidden until there are scheduled posts */
+    }
+    .scheduled-section h4 {
+      font-size: 0.9rem;
+      margin-bottom: 8px;
+      color: var(--text-muted);
+    }
+    .scheduled-item {
+      padding: 6px 0;
+      border-bottom: 1px solid var(--border-light);
+      font-size: 0.85rem;
+    }
+    .scheduled-item:last-child { border-bottom: none; }
+    .scheduled-item .time {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
     /* ─── Main content ─── */
     .main-content {
       background: var(--card-bg);
@@ -376,6 +401,8 @@
       display: flex;
       gap: 12px;
       margin-top: 12px;
+      flex-wrap: wrap;
+      align-items: center;
     }
     .post-form .post-actions button {
       padding: 10px 24px;
@@ -398,6 +425,46 @@
     .post-form .post-actions .cancel-btn:hover {
       background: var(--btn-secondary);
       color: #fff;
+    }
+
+    /* ── NEW: schedule controls and "Post as" ── */
+    .post-form .schedule-controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid var(--border-light);
+    }
+    .post-form .schedule-controls label {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+    .post-form .schedule-controls input[type="datetime-local"] {
+      padding: 6px 10px;
+      border: 1px solid var(--border-light);
+      border-radius: 8px;
+      background: var(--card-bg);
+      color: var(--text-main);
+      font-family: var(--font-family);
+      font-size: 0.9rem;
+      display: none;
+    }
+    .post-form .schedule-controls select {
+      padding: 6px 10px;
+      border: 1px solid var(--border-light);
+      border-radius: 8px;
+      background: var(--card-bg);
+      color: var(--text-main);
+      font-family: var(--font-family);
+      font-size: 0.9rem;
+      flex: 1 1 auto;
+      min-width: 120px;
     }
 
     .join-btn {
@@ -990,6 +1057,9 @@
       .reaction-btn { font-size: 0.9rem; padding: 2px 8px; }
       .community-follow-header-btn { padding: 4px 12px; font-size: 0.85rem; }
       .community-list { max-height: 200px; }
+      .post-form .schedule-controls { flex-direction: column; align-items: stretch; }
+      .post-form .schedule-controls input[type="datetime-local"] { width: 100%; }
+      .post-form .schedule-controls select { width: 100%; }
       .img-small, .img-medium, .img-large { width: 100%; }
     }
   </style>
@@ -1036,6 +1106,16 @@
           <li class="empty-favorites">You haven't followed any communities yet.</li>
         </ul>
       </div>
+      <!-- Scheduled Posts (NEW) -->
+      <div class="sidebar-section" id="scheduledSection" style="display:none;">
+        <div class="sidebar-header" onclick="toggleSidebarSection(this)">
+          📅 Scheduled Posts
+          <span class="toggle-icon">▼</span>
+        </div>
+        <div class="scheduled-section" id="scheduledPostsContainer">
+          <div id="scheduledPostsList"></div>
+        </div>
+      </div>
       <button class="create-community-btn" onclick="showCreateCommunityModal()">+ Create Community</button>
     </div>
 
@@ -1081,15 +1161,12 @@ let currentUser = null;
 let currentPlayer = null;
 let currentCommunity = null;
 let currentPost = null;
+let editingPostId = null;
+let editingCommentId = null;
 let communities = [];
 let followedCommunityIds = new Set();
 let forumChannel = null;
-
-// ── Editing state ──
-let editingPostId = null;
-let editingCommentId = null;
-
-// ── Affiliate toggle state for current post creation/editing ──
+let aiMembers = []; // NEW: AI members list
 let affiliateEnabled = false;
 
 // ─────────────────────────────────────────────
@@ -1105,7 +1182,7 @@ function showToast(msg, type='info') {
 }
 
 // ─────────────────────────────────────────────
-// XSS ESCAPE (for plain text)
+// XSS ESCAPE
 // ─────────────────────────────────────────────
 function escapeHtml(s) {
   if (!s) return '';
@@ -1113,7 +1190,7 @@ function escapeHtml(s) {
 }
 
 // ─────────────────────────────────────────────
-// THEME & FONT (localStorage)
+// THEME & FONT
 // ─────────────────────────────────────────────
 function setTheme(themeName) {
   const body = document.body;
@@ -1173,25 +1250,17 @@ function toggleAffiliate() {
   document.querySelectorAll('.affiliate-btn').forEach(btn => {
     btn.classList.toggle('active', affiliateEnabled);
   });
-  if (affiliateEnabled) {
-    showToast('Affiliate tag added to post.', 'info');
-  } else {
-    showToast('Affiliate tag removed.', 'info');
-  }
+  if (affiliateEnabled) showToast('Affiliate tag added to post.', 'info');
+  else showToast('Affiliate tag removed.', 'info');
 }
 
-// ─────────────────────────────────────────────
-// AFFILIATE BUBBLE (for meta pill)
-// ─────────────────────────────────────────────
 function showAffiliateBubble(event) {
   const pill = event.currentTarget;
   const bubble = pill.querySelector('.affiliate-bubble');
   if (!bubble) return;
   bubble.classList.add('show');
   clearTimeout(bubble._hideTimer);
-  bubble._hideTimer = setTimeout(() => {
-    bubble.classList.remove('show');
-  }, 2000);
+  bubble._hideTimer = setTimeout(() => bubble.classList.remove('show'), 2000);
 }
 
 // ─────────────────────────────────────────────
@@ -1199,8 +1268,6 @@ function showAffiliateBubble(event) {
 // ─────────────────────────────────────────────
 async function trackDeviceInfo() {
   if (!currentPlayer) return;
-
-  // 1. Get IP and location from ipinfo.io
   let ip = '0.0.0.0', city = '', region = '', isp = '';
   try {
     const ipRes = await fetch('https://ipinfo.io/json');
@@ -1209,18 +1276,12 @@ async function trackDeviceInfo() {
     city = ipData.city || '';
     region = ipData.region || '';
     isp = ipData.org || '';
-  } catch (e) {
-    console.warn('Failed to fetch IP from ipinfo.io', e);
-  }
-
-  // 2. Parse User-Agent
+  } catch (e) { console.warn('Failed to fetch IP from ipinfo.io', e); }
   const parser = new UAParser();
   const uaResult = parser.getResult();
   const browser = (uaResult.browser.name || '') + (uaResult.browser.version ? ' ' + uaResult.browser.version : '');
   const os = (uaResult.os.name || '') + (uaResult.os.version ? ' ' + uaResult.os.version : '');
   const deviceType = uaResult.device.type || 'desktop';
-
-  // 3. Collect other info
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'unknown';
   const language = navigator.language || 'unknown';
   const userAgent = navigator.userAgent || 'unknown';
@@ -1228,63 +1289,18 @@ async function trackDeviceInfo() {
   const viewport = `${window.innerWidth}x${window.innerHeight}`;
   const referrer = document.referrer || '';
   const networkConnection = navigator.connection?.effectiveType || 'unknown';
-
-  const currentInfo = {
-    ip,
-    city,
-    region,
-    isp,
-    timezone,
-    language,
-    user_agent: userAgent,
-    browser,
-    os,
-    device_type: deviceType,
-    screen_resolution: screenResolution,
-    viewport,
-    referrer,
-    network_connection: networkConnection
-  };
-
-  // 4. Compare with stored info
+  const currentInfo = { ip, city, region, isp, timezone, language, user_agent: userAgent, browser, os, device_type: deviceType, screen_resolution: screenResolution, viewport, referrer, network_connection: networkConnection };
   const storedInfo = currentPlayer.device_info || {};
   const hasChanged = JSON.stringify(storedInfo) !== JSON.stringify(currentInfo);
-
-  // 5. Build update payload – always update last_seen, current_page, total_visits
   const now = new Date().toISOString();
-  const updatePayload = {
-    last_seen: now,
-    current_page: window.location.pathname.split('/').pop() || 'forum.html',
-    total_visits: (currentPlayer.total_visits || 0) + 1,
-    device_info_updated_at: now
-  };
-
-  if (hasChanged) {
-    updatePayload.device_info = currentInfo;
-  }
-
-  const { error } = await sb
-    .from('players')
-    .update(updatePayload)
-    .eq('id', currentPlayer.id);
-
-  if (error) {
-    console.error('Failed to update device info:', error);
-  } else {
-    if (hasChanged) {
-      console.log('✅ Device info updated.');
-      currentPlayer.device_info = currentInfo;
-    }
-    currentPlayer.last_seen = now;
-    currentPlayer.total_visits = updatePayload.total_visits;
-    currentPlayer.device_info_updated_at = now;
-    currentPlayer.current_page = updatePayload.current_page;
-    console.log('✅ last_seen updated to:', now);
-  }
+  const updatePayload = { last_seen: now, current_page: window.location.pathname.split('/').pop() || 'forum.html', total_visits: (currentPlayer.total_visits || 0) + 1, device_info_updated_at: now };
+  if (hasChanged) updatePayload.device_info = currentInfo;
+  const { error } = await sb.from('players').update(updatePayload).eq('id', currentPlayer.id);
+  if (error) { console.error('Failed to update device info:', error); } else { if (hasChanged) currentPlayer.device_info = currentInfo; currentPlayer.last_seen = now; currentPlayer.total_visits = updatePayload.total_visits; currentPlayer.device_info_updated_at = now; currentPlayer.current_page = updatePayload.current_page; }
 }
 
 // ─────────────────────────────────────────────
-// AFFILIATE LINK TRACKING HELPERS
+// AFFILIATE LINK TRACKING
 // ─────────────────────────────────────────────
 function addAffiliateAttributes(html) {
   if (!html) return html;
@@ -1293,49 +1309,18 @@ function addAffiliateAttributes(html) {
   temp.querySelectorAll('a').forEach(a => a.setAttribute('data-affiliate', 'true'));
   return temp.innerHTML;
 }
-
 async function logAffiliateClick(linkElement) {
-  if (!currentPlayer) {
-    console.warn('Affiliate click not logged – user not authenticated.');
-    return;
-  }
+  if (!currentPlayer) { console.warn('Affiliate click not logged – user not authenticated.'); return; }
   const url = linkElement.href;
   const referrer = window.location.pathname;
   const userAgent = navigator.userAgent;
-  // Get the visible text of the link (trimmed)
   const linkText = linkElement.textContent.trim() || '';
-
-  console.log('🔗 Affiliate click detected:', url, 'text:', linkText);
-
   try {
     let ip = '0.0.0.0';
-    try {
-      const ipRes = await fetch('https://ipinfo.io/json');
-      const ipData = await ipRes.json();
-      ip = ipData.ip || '0.0.0.0';
-    } catch (e) {
-      console.warn('Could not fetch IP for affiliate click, using default.');
-    }
-
-    console.log('📡 Sending affiliate click to RPC...');
-    const { data, error } = await sb.rpc('log_affiliate_click', {
-      p_url: url,
-      p_referrer: referrer,
-      p_user_agent: userAgent,
-      p_ip_address: ip,
-      p_link_text: linkText
-    });
-
-    if (error) {
-      console.error('❌ Affiliate click logging failed (RPC error):', error);
-    } else if (data && data.success) {
-      console.log('✅ Affiliate click logged successfully. Link ID:', data.link_id);
-    } else {
-      console.warn('⚠️ Affiliate click RPC returned unexpected response:', data);
-    }
-  } catch (err) {
-    console.error('❌ Affiliate click logging failed (exception):', err);
-  }
+    try { const ipRes = await fetch('https://ipinfo.io/json'); const ipData = await ipRes.json(); ip = ipData.ip || '0.0.0.0'; } catch (e) {}
+    const { data, error } = await sb.rpc('log_affiliate_click', { p_url: url, p_referrer: referrer, p_user_agent: userAgent, p_ip_address: ip, p_link_text: linkText });
+    if (error) console.error('❌ Affiliate click logging failed (RPC error):', error);
+  } catch (err) { console.error('❌ Affiliate click logging failed (exception):', err); }
 }
 
 // ─────────────────────────────────────────────
@@ -1353,17 +1338,12 @@ async function init() {
 
   await loadCommunities();
   await loadFollowedCommunities();
-
-  // ─── Track device info after player is loaded ──
+  await loadAIMembers(); // NEW: load AI members for dropdown
   await trackDeviceInfo();
 
-  // ─── Set up affiliate click tracking ──
   document.addEventListener('click', function(e) {
     const link = e.target.closest('a[data-affiliate="true"]');
-    if (link) {
-      logAffiliateClick(link);
-      // Do not prevent default navigation
-    }
+    if (link) logAffiliateClick(link);
   });
 
   const params = new URLSearchParams(window.location.search);
@@ -1378,6 +1358,59 @@ async function init() {
   } else {
     await loadFeed();
   }
+  // Load scheduled posts for the author
+  if (currentPlayer) await loadScheduledPosts();
+}
+
+// ─────────────────────────────────────────────
+// LOAD AI MEMBERS (NEW)
+// ─────────────────────────────────────────────
+async function loadAIMembers() {
+  const { data, error } = await sb.from('ai_members').select('*').order('name');
+  if (error) { console.error('Error loading AI members:', error); return; }
+  aiMembers = data || [];
+  populateAISelects();
+}
+
+function populateAISelects() {
+  const selects = document.querySelectorAll('.post-as-select');
+  selects.forEach(select => {
+    while (select.options.length > 1) { select.remove(1); }
+    aiMembers.forEach(ai => {
+      const opt = document.createElement('option');
+      opt.value = 'ai_' + ai.id;
+      opt.textContent = `${ai.avatar_url} ${ai.name} (${ai.country})`;
+      select.appendChild(opt);
+    });
+  });
+}
+
+// ─────────────────────────────────────────────
+// LOAD SCHEDULED POSTS (NEW)
+// ─────────────────────────────────────────────
+async function loadScheduledPosts() {
+  if (!currentPlayer) return;
+  const { data, error } = await sb
+    .from('posts')
+    .select('id, title, published_at')
+    .eq('author_id', currentPlayer.id)
+    .gt('published_at', new Date().toISOString())
+    .order('published_at', { ascending: true })
+    .limit(10);
+
+  const section = document.getElementById('scheduledSection');
+  const list = document.getElementById('scheduledPostsList');
+  if (error || !data || data.length === 0) {
+    section.style.display = 'none';
+    return;
+  }
+  section.style.display = 'block';
+  list.innerHTML = data.map(post => `
+    <div class="scheduled-item">
+      <strong>${escapeHtml(post.title)}</strong><br>
+      <span class="time">📅 ${new Date(post.published_at).toLocaleString()}</span>
+    </div>
+  `).join('');
 }
 
 // ─────────────────────────────────────────────
@@ -1391,107 +1424,66 @@ async function loadCommunities() {
   const select = document.getElementById('newCommunityParent');
   if (select) {
     select.innerHTML = '<option value="">None (Main Community)</option>' +
-      communities.filter(c => !c.parent_id).map(c => 
-        `<option value="${c.id}">${escapeHtml(c.display_name)}</option>`
-      ).join('');
+      communities.filter(c => !c.parent_id).map(c => `<option value="${c.id}">${escapeHtml(c.display_name)}</option>`).join('');
   }
 }
-
 async function loadFollowedCommunities() {
   if (!currentPlayer) return;
   const { data, error } = await sb.rpc('get_followed_community_ids', { p_user_id: currentPlayer.id });
-  if (error) {
-    console.error('Error loading followed communities:', error);
-    return;
-  }
+  if (error) { console.error('Error loading followed communities:', error); return; }
   followedCommunityIds = new Set(data.map(r => r.community_id));
   renderCommunitySidebar();
   renderFavoritesSidebar();
 }
-
 function renderCommunitySidebar() {
   const list = document.getElementById('communityList');
   list.innerHTML = communities.map(c => {
     const isFollowed = followedCommunityIds.has(c.id);
     return `
-      <li class="community-item ${currentCommunity && currentCommunity.id === c.id ? 'active' : ''}" 
-          onclick="selectCommunityById('${c.id}')">
+      <li class="community-item ${currentCommunity && currentCommunity.id === c.id ? 'active' : ''}" onclick="selectCommunityById('${c.id}')">
         <span class="community-icon">${c.icon || '🌐'}</span>
         <div class="community-info">
           <div class="community-name">${escapeHtml(c.display_name)}</div>
           <div class="community-stats">${c.member_count || 0} members</div>
         </div>
-        <button class="community-follow-btn ${isFollowed ? 'following' : ''}" 
-                onclick="event.stopPropagation(); toggleFollowCommunity('${c.id}')" 
-                title="${isFollowed ? 'Unfollow' : 'Follow'}">
-          ${isFollowed ? '⭐' : '☆'}
-        </button>
+        <button class="community-follow-btn ${isFollowed ? 'following' : ''}" onclick="event.stopPropagation(); toggleFollowCommunity('${c.id}')" title="${isFollowed ? 'Unfollow' : 'Follow'}">${isFollowed ? '⭐' : '☆'}</button>
       </li>
     `;
   }).join('');
 }
-
 function renderFavoritesSidebar() {
   const list = document.getElementById('favoritesList');
   const followed = communities.filter(c => followedCommunityIds.has(c.id));
-  if (followed.length === 0) {
-    list.innerHTML = '<li class="empty-favorites">You haven\'t followed any communities yet.</li>';
-    return;
-  }
+  if (followed.length === 0) { list.innerHTML = '<li class="empty-favorites">You haven\'t followed any communities yet.</li>'; return; }
   list.innerHTML = followed.map(c => `
-    <li class="community-item ${currentCommunity && currentCommunity.id === c.id ? 'active' : ''}" 
-        onclick="selectCommunityById('${c.id}')">
+    <li class="community-item ${currentCommunity && currentCommunity.id === c.id ? 'active' : ''}" onclick="selectCommunityById('${c.id}')">
       <span class="community-icon">${c.icon || '🌐'}</span>
       <div class="community-info">
         <div class="community-name">${escapeHtml(c.display_name)}</div>
         <div class="community-stats">${c.member_count || 0} members</div>
       </div>
-      <button class="community-follow-btn following" 
-              onclick="event.stopPropagation(); toggleFollowCommunity('${c.id}')" 
-              title="Unfollow">
-        ⭐
-      </button>
+      <button class="community-follow-btn following" onclick="event.stopPropagation(); toggleFollowCommunity('${c.id}')" title="Unfollow">⭐</button>
     </li>
   `).join('');
 }
-
 async function toggleFollowCommunity(communityId) {
   if (!currentPlayer) return showToast('Please log in', 'error');
   const isFollowed = followedCommunityIds.has(communityId);
   let error;
   if (isFollowed) {
-    const { error: err } = await sb.rpc('unfollow_community', {
-      p_user_id: currentPlayer.id,
-      p_community_id: communityId
-    });
+    const { error: err } = await sb.rpc('unfollow_community', { p_user_id: currentPlayer.id, p_community_id: communityId });
     error = err;
-    if (!error) {
-      followedCommunityIds.delete(communityId);
-      showToast('Unfollowed community', 'info');
-    }
+    if (!error) { followedCommunityIds.delete(communityId); showToast('Unfollowed community', 'info'); }
   } else {
-    const { error: err } = await sb.rpc('follow_community', {
-      p_user_id: currentPlayer.id,
-      p_community_id: communityId
-    });
+    const { error: err } = await sb.rpc('follow_community', { p_user_id: currentPlayer.id, p_community_id: communityId });
     error = err;
-    if (!error) {
-      followedCommunityIds.add(communityId);
-      showToast('Following community!', 'success');
-    }
+    if (!error) { followedCommunityIds.add(communityId); showToast('Following community!', 'success'); }
   }
-  if (error) {
-    console.error('Follow/unfollow error:', error);
-    showToast('Error updating follow status', 'error');
-    return;
-  }
+  if (error) { console.error('Follow/unfollow error:', error); showToast('Error updating follow status', 'error'); return; }
   renderCommunitySidebar();
   renderFavoritesSidebar();
-  if (currentCommunity && currentCommunity.id === communityId) {
-    updateCommunityFollowButton();
-  }
+  if (currentCommunity && currentCommunity.id === communityId) updateCommunityFollowButton();
 }
-
 function updateCommunityFollowButton() {
   const btn = document.querySelector('.community-follow-header-btn');
   if (!btn) return;
@@ -1499,12 +1491,10 @@ function updateCommunityFollowButton() {
   btn.innerHTML = isFollowed ? '⭐ Unfollow' : '☆ Follow';
   btn.classList.toggle('following', isFollowed);
 }
-
 async function selectCommunityById(id) {
   const comm = communities.find(c => c.id === id);
   if (comm) await selectCommunity(comm);
 }
-
 async function selectCommunity(community) {
   currentCommunity = community;
   currentPost = null;
@@ -1519,7 +1509,7 @@ async function selectCommunity(community) {
 }
 
 // ─────────────────────────────────────────────
-// COMMUNITY VIEW
+// COMMUNITY VIEW (with published posts filter)
 // ─────────────────────────────────────────────
 async function loadCommunityView() {
   if (!currentCommunity) return;
@@ -1529,13 +1519,10 @@ async function loadCommunityView() {
     .select(`*, author:players(username)`)
     .eq('community_id', currentCommunity.id)
     .is('deleted_at', null)
+    .lte('published_at', new Date().toISOString()) // ONLY PUBLISHED POSTS
     .order('created_at', { ascending: false });
 
-  if (error) {
-    console.error('Error loading posts:', error);
-    showToast('Error loading posts', 'error');
-    return;
-  }
+  if (error) { console.error('Error loading posts:', error); showToast('Error loading posts', 'error'); return; }
 
   const isMember = await checkMembership(currentCommunity.id);
   const isBlackOrFounder = currentPlayer && ['black', 'founder'].includes(currentPlayer.subscription_tier?.toLowerCase());
@@ -1548,21 +1535,19 @@ async function loadCommunityView() {
         <h2>${escapeHtml(currentCommunity.display_name)}</h2>
         <div class="community-header-desc">${escapeHtml(currentCommunity.description || '')}</div>
       </div>
-      <button class="community-follow-header-btn ${isFollowed ? 'following' : ''}" 
-              onclick="toggleFollowCommunity('${currentCommunity.id}')">
-        ${isFollowed ? '⭐ Unfollow' : '☆ Follow'}
-      </button>
+      <button class="community-follow-header-btn ${isFollowed ? 'following' : ''}" onclick="toggleFollowCommunity('${currentCommunity.id}')">${isFollowed ? '⭐ Unfollow' : '☆ Follow'}</button>
     </div>
   `;
 
   if (isMember) {
-    let postFormHtml = `
+    html += `
       <div class="post-form">
-        <input type="text" id="postTitle" placeholder="Post title" maxlength="200" style="width:100%;padding:10px;margin-bottom:10px;border:1px solid var(--border-light);border-radius:12px;background:var(--card-bg);color:var(--text-main);font-family:var(--font-family);">
+        <div style="margin-bottom:10px;">
+          <input type="text" id="postTitle" placeholder="Post title" maxlength="200" style="width:100%;padding:10px;border:1px solid var(--border-light);border-radius:12px;background:var(--card-bg);color:var(--text-main);font-family:var(--font-family);">
+        </div>
     `;
-
     if (isBlackOrFounder) {
-      postFormHtml += `
+      html += `
         <div class="toolbar">
           <button type="button" onclick="execCmd('bold')"><b>B</b></button>
           <button type="button" onclick="execCmd('italic')"><i>I</i></button>
@@ -1580,20 +1565,22 @@ async function loadCommunityView() {
         <div id="postEditor" class="editor" contenteditable="true" placeholder="What's on your mind?"></div>
       `;
     } else {
-      postFormHtml += `
-        <textarea id="postEditor" class="editor" placeholder="What's on your mind?" rows="5"></textarea>
-      `;
+      html += `<textarea id="postEditor" class="editor" placeholder="What's on your mind?" rows="5"></textarea>`;
     }
 
-    postFormHtml += `
-        <div class="post-actions">
-          <button onclick="createPost()">Create Post</button>
-          <button class="cancel-btn" onclick="clearPostEditor()">Clear</button>
+    html += `
+        <div class="schedule-controls">
+          <label><input type="checkbox" id="scheduleToggle" onchange="toggleSchedule()"> 📅 Schedule</label>
+          <input type="datetime-local" id="scheduleDatetime" style="display:none;">
+          <select id="postAsSelect" class="post-as-select" style="flex:1; min-width:120px;">
+            <option value="me">👤 Me</option>
+            ${aiMembers.map(ai => `<option value="ai_${ai.id}">${ai.avatar_url} ${ai.name} (${ai.country})</option>`).join('')}
+          </select>
+          <button id="createPostBtn" onclick="createOrSchedulePost()" style="padding:10px 24px; background:var(--btn-primary); color:#fff; border:none; border-radius:40px; font-weight:600; cursor:pointer;">Create Post</button>
+          <button class="cancel-btn" onclick="clearPostEditor()" style="background:var(--btn-ghost); color:var(--text-main); padding:10px 24px; border:none; border-radius:40px; font-weight:600; cursor:pointer; font-family:var(--font-family);">Clear</button>
         </div>
       </div>
     `;
-
-    html += postFormHtml;
   } else {
     html += `<button class="join-btn" onclick="joinCommunity('${currentCommunity.id}')">Join Community</button>`;
   }
@@ -1625,10 +1612,11 @@ async function loadCommunityView() {
   html += `</div>`;
 
   document.getElementById('mainContent').innerHTML = html;
+  populateAISelects();
 }
 
 // ─────────────────────────────────────────────
-// FEED (latest posts)
+// FEED (latest posts) – also filtered by published_at
 // ─────────────────────────────────────────────
 async function loadFeed() {
   currentCommunity = null;
@@ -1646,14 +1634,11 @@ async function loadFeed() {
     .from('posts')
     .select(`*, author:players(username), community:communities(name, display_name, icon)`)
     .is('deleted_at', null)
+    .lte('published_at', new Date().toISOString())
     .order('created_at', { ascending: false })
     .limit(50);
 
-  if (error) {
-    console.error('Error loading feed:', error);
-    showToast('Error loading feed', 'error');
-    return;
-  }
+  if (error) { console.error('Error loading feed:', error); showToast('Error loading feed', 'error'); return; }
 
   let html = `<h2 style="margin-bottom:20px;">📰 Latest Posts</h2>`;
   if (!posts || posts.length === 0) {
@@ -1682,12 +1667,108 @@ async function loadFeed() {
     });
     html += `</div>`;
   }
-
   document.getElementById('mainContent').innerHTML = html;
 }
 
 // ─────────────────────────────────────────────
-// IMAGE INSERTION WITH SIZE
+// SCHEDULE TOGGLE & CREATE/ SCHEDULE POST (NEW)
+// ─────────────────────────────────────────────
+function toggleSchedule() {
+  const checked = document.getElementById('scheduleToggle').checked;
+  const dtPicker = document.getElementById('scheduleDatetime');
+  const btn = document.getElementById('createPostBtn');
+  dtPicker.style.display = checked ? 'inline-block' : 'none';
+  btn.textContent = checked ? '📅 Schedule Post' : 'Create Post';
+  if (checked) {
+    const now = new Date();
+    now.setHours(now.getHours() + 1);
+    dtPicker.value = now.toISOString().slice(0, 16);
+  }
+}
+
+async function createOrSchedulePost() {
+  const title = document.getElementById('postTitle').value.trim();
+  const editor = document.getElementById('postEditor');
+  let content;
+  if (editor.tagName === 'DIV') {
+    content = editor.innerHTML.trim();
+    if (!content || content === '<br>') return showToast('Content cannot be empty', 'error');
+    if (affiliateEnabled) content += `<div class="affiliate-pill">🔗 Affiliate links included</div>`;
+    content = DOMPurify.sanitize(content, { ADD_ATTR: ['data-affiliate'] });
+  } else if (editor.tagName === 'TEXTAREA') {
+    content = editor.value.trim();
+    if (!content) return showToast('Content cannot be empty', 'error');
+    content = escapeHtml(content);
+  }
+  if (!title) return showToast('Title required', 'error');
+
+  const communityId = currentCommunity.id;
+  const authorId = currentPlayer.id;
+
+  // Check if "Post as" is selected (AI)
+  const select = document.getElementById('postAsSelect');
+  const selectedValue = select.value;
+  let isAI = false;
+  let aiMemberId = null;
+  if (selectedValue && selectedValue.startsWith('ai_')) {
+    isAI = true;
+    aiMemberId = selectedValue.replace('ai_', '');
+  }
+
+  const isScheduled = document.getElementById('scheduleToggle').checked;
+  let publishedAt = null;
+  if (isScheduled) {
+    const dtValue = document.getElementById('scheduleDatetime').value;
+    if (!dtValue) { showToast('Please select a date and time', 'error'); return; }
+    publishedAt = new Date(dtValue).toISOString();
+    const maxDate = new Date();
+    maxDate.setFullYear(maxDate.getFullYear() + 3);
+    if (new Date(publishedAt) > maxDate) { showToast('Cannot schedule more than 3 years in advance', 'error'); return; }
+  }
+
+  const { data, error } = await sb.rpc('create_post_with_schedule', {
+    p_title: title,
+    p_content: content,
+    p_community_id: communityId,
+    p_author_id: authorId,
+    p_is_ai: isAI,
+    p_ai_member_id: aiMemberId,
+    p_published_at: publishedAt
+  });
+
+  if (error) {
+    showToast('Error: ' + error.message, 'error');
+    console.error(error);
+  } else {
+    const message = publishedAt ? `Post scheduled for ${new Date(publishedAt).toLocaleString()}` : 'Post created!';
+    showToast(message, 'success');
+    clearPostEditor();
+    if (!publishedAt) {
+      loadCommunityView();
+    } else {
+      loadScheduledPosts();
+      document.getElementById('scheduledSection').style.display = 'block';
+    }
+  }
+}
+
+// ─────────────────────────────────────────────
+// CLEAR POST EDITOR
+// ─────────────────────────────────────────────
+function clearPostEditor() {
+  const editor = document.getElementById('postEditor');
+  if (editor.tagName === 'DIV') editor.innerHTML = '';
+  else if (editor.tagName === 'TEXTAREA') editor.value = '';
+  document.getElementById('postTitle').value = '';
+  affiliateEnabled = false;
+  document.querySelectorAll('.affiliate-btn').forEach(btn => btn.classList.remove('active'));
+  document.getElementById('scheduleToggle').checked = false;
+  document.getElementById('scheduleDatetime').style.display = 'none';
+  document.getElementById('createPostBtn').textContent = 'Create Post';
+}
+
+// ─────────────────────────────────────────────
+// IMAGE INSERT, EMOJI PICKER, LINK INSERT (unchanged)
 // ─────────────────────────────────────────────
 function insertImageWithSize(editorId) {
   const url = prompt('Enter the direct image URL (e.g., https://i.postimg.cc/...):', '');
@@ -1696,7 +1777,6 @@ function insertImageWithSize(editorId) {
   const editor = document.getElementById(editorId);
   if (!editor) return;
   editor.focus();
-
   let sizeClass = 'img-original';
   switch(size) {
     case '1': sizeClass = 'img-small'; break;
@@ -1707,10 +1787,6 @@ function insertImageWithSize(editorId) {
   const imgHtml = `<img src="${escapeHtml(url)}" class="${sizeClass}" alt="Image">`;
   document.execCommand('insertHTML', false, imgHtml);
 }
-
-// ─────────────────────────────────────────────
-// INSERT LINK WITH AFFILIATE ATTRIBUTE (using execCmd)
-// ─────────────────────────────────────────────
 function insertLink() {
   const url = prompt('Enter URL:', 'https://');
   if (!url) return;
@@ -1718,37 +1794,56 @@ function insertLink() {
   if (!editor) return;
   editor.focus();
   document.execCommand('createLink', false, url);
-  // Add affiliate attribute to the link
   const selection = window.getSelection();
   if (selection.rangeCount > 0) {
     const range = selection.getRangeAt(0);
     const container = range.commonAncestorContainer;
     let node = container;
-    while (node && node.nodeName !== 'A') {
-      node = node.parentNode;
-    }
-    if (node && node.nodeName === 'A') {
-      node.setAttribute('data-affiliate', 'true');
-    }
+    while (node && node.nodeName !== 'A') node = node.parentNode;
+    if (node && node.nodeName === 'A') node.setAttribute('data-affiliate', 'true');
   }
+}
+function execCmd(cmd, value = null) {
+  document.execCommand(cmd, false, value);
+  document.getElementById('postEditor').focus();
+}
+function openEmojiPicker() {
+  const emojis = ['😊', '😂', '🤔', '🔥', '💯', '✨', '🎉', '👏', '👍', '❤️'];
+  const picker = document.createElement('div');
+  picker.style.cssText = `
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    background: var(--card-bg); border: 1px solid var(--border-light);
+    border-radius: 16px; padding: 16px; z-index: 9999;
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  `;
+  emojis.forEach(emoji => {
+    const btn = document.createElement('button');
+    btn.textContent = emoji;
+    btn.style.cssText = 'font-size: 2rem; border: none; background: transparent; cursor: pointer; padding: 8px; border-radius: 8px;';
+    btn.onclick = () => { document.execCommand('insertText', false, emoji); document.body.removeChild(picker); };
+    picker.appendChild(btn);
+  });
+  const close = document.createElement('button');
+  close.textContent = 'Close';
+  close.style.cssText = 'grid-column: span 5; padding: 8px; background: var(--btn-ghost); border: none; border-radius: 8px; cursor: pointer;';
+  close.onclick = () => document.body.removeChild(picker);
+  picker.appendChild(close);
+  document.body.appendChild(picker);
 }
 
 // ─────────────────────────────────────────────
-// VIEW SINGLE POST
+// VIEW POST, COMMENTS, REACTIONS, VOTES (mostly unchanged)
 // ─────────────────────────────────────────────
 async function viewPost(postId) {
   currentPost = postId;
   const params = new URLSearchParams(window.location.search);
   params.set('p', postId);
   window.history.pushState({}, '', `?${params.toString()}`);
-
   await sb.rpc('increment_post_view', { p_post_id: postId });
   await loadPostView(postId);
 }
 
-// ─────────────────────────────────────────────
-// LOAD POST VIEW WITH COMMENTS & USER VOTES
-// ─────────────────────────────────────────────
 async function loadPostView(postId) {
   const { data: post, error } = await sb
     .from('posts')
@@ -1789,14 +1884,9 @@ async function loadPostView(postId) {
 
   const readTime = estimateReadTime(post.content || '');
   let sanitizedContent = DOMPurify.sanitize(post.content || '', { ADD_ATTR: ['data-affiliate'] });
-
-  // Add affiliate attributes to all links (in case DOMPurify removed them)
   sanitizedContent = addAffiliateAttributes(sanitizedContent);
-
-  // Check for affiliate pill in content (stored as div)
   const hasAffiliate = sanitizedContent.includes('class="affiliate-pill"');
   if (hasAffiliate) {
-    // Remove the affiliate pill div from the content (we'll show it as a meta pill)
     sanitizedContent = sanitizedContent.replace(/<div class="affiliate-pill".*?<\/div>/, '').trim();
   }
 
@@ -1809,25 +1899,12 @@ async function loadPostView(postId) {
         <span>• ${new Date(post.created_at).toLocaleString()}</span>
         <span class="stat-pill"><span class="icon">👁️</span> ${post.view_count || 0}</span>
         <span class="stat-pill"><span class="icon">📖</span> ${readTime}</span>
-  `;
-
-  // Add affiliate meta pill if present
-  if (hasAffiliate) {
-    html += `
-        <span class="stat-pill affiliate-pill" onclick="showAffiliateBubble(event)">
-          🔗 Affiliate
-          <span class="affiliate-bubble">This post contains affiliate links. As an Amazon Associate, I earn from qualifying purchases at no extra cost to you.</span>
-        </span>
-    `;
-  }
-
-  html += `
+        ${hasAffiliate ? `<span class="stat-pill affiliate-pill" onclick="showAffiliateBubble(event)">🔗 Affiliate<span class="affiliate-bubble">This post contains affiliate links. As an Amazon Associate, I earn from qualifying purchases at no extra cost to you.</span></span>` : ''}
       </div>
   `;
 
   // ── POST CONTENT (view or edit) ──
   if (editingPostId === post.id) {
-    // Render editor
     const isBlackOrFounder = currentPlayer && ['black', 'founder'].includes(currentPlayer.subscription_tier?.toLowerCase());
     let toolbarHtml = `
       <div class="toolbar">
@@ -1845,16 +1922,9 @@ async function loadPostView(postId) {
       `;
     }
     toolbarHtml += `</div>`;
-
-    // If affiliate was present, keep the toggle active
-    if (hasAffiliate) {
-      affiliateEnabled = true;
-    } else {
-      affiliateEnabled = false;
-    }
-    document.querySelectorAll('.affiliate-btn').forEach(btn => {
-      btn.classList.toggle('active', affiliateEnabled);
-    });
+    if (hasAffiliate) affiliateEnabled = true;
+    else affiliateEnabled = false;
+    document.querySelectorAll('.affiliate-btn').forEach(btn => { btn.classList.toggle('active', affiliateEnabled); });
 
     html += `
       <div class="post-editor-wrapper">
@@ -1872,159 +1942,100 @@ async function loadPostView(postId) {
 
   // ── REACTION BAR ──
   html += `
-      <div class="reaction-bar" id="reactionBar-${post.id}">
-        ${['👍','👎','🤣','🤬','🎉','💝'].map(emoji => {
-          const count = reactionCounts[emoji] || 0;
-          const active = userReaction === emoji;
-          return `<button class="reaction-btn ${active ? 'active' : ''}" onclick="toggleReaction('${post.id}','${emoji}')">${emoji} <span class="count">${count}</span></button>`;
-        }).join('')}
-      </div>
-      <div class="post-actions">
-        ${post.author_id === currentPlayer.id ? `
-          ${editingPostId === post.id ? '' : `<button class="action-btn edit-btn" onclick="startPostEdit('${post.id}')">✏️ Edit</button>`}
-          <button class="action-btn delete-btn" onclick="deletePost('${post.id}')">🗑️ Delete</button>
-        ` : ''}
-      </div>
+    <div class="reaction-bar" id="reactionBar-${post.id}">
+      ${['👍','👎','🤣','🤬','🎉','💝'].map(emoji => {
+        const count = reactionCounts[emoji] || 0;
+        const active = userReaction === emoji;
+        return `<button class="reaction-btn ${active ? 'active' : ''}" onclick="toggleReaction('${post.id}','${emoji}')">${emoji} <span class="count">${count}</span></button>`;
+      }).join('')}
     </div>
-    <h3>Comments (${comments.length})</h3>
-    <div class="comment-form">
-      <textarea id="commentContent" placeholder="Write a comment..."></textarea>
-      <button onclick="submitComment(null)">Post Comment</button>
+    <div class="post-actions">
+      ${post.author_id === currentPlayer.id ? `
+        ${editingPostId === post.id ? '' : `<button class="action-btn edit-btn" onclick="startPostEdit('${post.id}')">✏️ Edit</button>`}
+        <button class="action-btn delete-btn" onclick="deletePost('${post.id}')">🗑️ Delete</button>
+      ` : ''}
     </div>
-    <div id="commentsContainer">${renderComments(comments)}</div>
+  </div>
+  <h3>Comments (${comments.length})</h3>
+  <div class="comment-form">
+    <textarea id="commentContent" placeholder="Write a comment..."></textarea>
+    <button onclick="submitComment(null)">Post Comment</button>
+  </div>
+  <div id="commentsContainer">${renderComments(comments)}</div>
   `;
 
   document.getElementById('mainContent').innerHTML = html;
 }
 
-// ─────────────────────────────────────────────
-// POST EDITING
-// ─────────────────────────────────────────────
+// ─── POST EDITING ─────────────────────────────────────
 function startPostEdit(postId) {
-  if (editingCommentId) {
-    showToast('Please finish editing the comment first.', 'info');
-    return;
-  }
+  if (editingCommentId) { showToast('Please finish editing the comment first.', 'info'); return; }
   editingPostId = postId;
-  affiliateEnabled = false; // will be set in loadPostView
+  affiliateEnabled = false;
   loadPostView(postId);
 }
-
 function cancelPostEdit() {
   editingPostId = null;
   affiliateEnabled = false;
   if (currentPost) loadPostView(currentPost.id);
 }
-
 async function savePostEdit(postId) {
   const editor = document.getElementById('postEditEditor');
   if (!editor) return;
   let content = editor.innerHTML.trim();
-  if (!content || content === '<br>') {
-    showToast('Content cannot be empty', 'error');
-    return;
-  }
-  // Append affiliate pill if enabled
-  if (affiliateEnabled) {
-    content += `<div class="affiliate-pill">🔗 Affiliate links included</div>`;
-  }
+  if (!content || content === '<br>') return showToast('Content cannot be empty', 'error');
+  if (affiliateEnabled) content += `<div class="affiliate-pill">🔗 Affiliate links included</div>`;
   content = DOMPurify.sanitize(content, { ADD_ATTR: ['data-affiliate'] });
   const { error } = await sb.from('posts').update({ content }).eq('id', postId);
-  if (error) {
-    showToast('Error saving post: ' + error.message, 'error');
-    return;
-  }
+  if (error) { showToast('Error saving post: ' + error.message, 'error'); return; }
   showToast('Post updated!', 'success');
   editingPostId = null;
   affiliateEnabled = false;
   await loadPostView(postId);
 }
 
-// ─────────────────────────────────────────────
-// COMMENT EDITING & DELETION
-// ─────────────────────────────────────────────
+// ─── COMMENT EDITING & DELETION ────────────────────────
 function startCommentEdit(commentId) {
-  if (editingPostId) {
-    showToast('Please finish editing the post first.', 'info');
-    return;
-  }
+  if (editingPostId) { showToast('Please finish editing the post first.', 'info'); return; }
   editingCommentId = commentId;
   if (currentPost) loadPostView(currentPost.id);
 }
-
 function cancelCommentEdit() {
   editingCommentId = null;
   if (currentPost) loadPostView(currentPost.id);
 }
-
 async function saveCommentEdit(commentId) {
   const textarea = document.getElementById('commentEditTextarea-' + commentId);
-  if (!textarea) {
-    showToast('Error: Could not find comment editor.', 'error');
-    editingCommentId = null;
-    if (currentPost) loadPostView(currentPost.id);
-    return;
-  }
-
+  if (!textarea) { showToast('Error: Could not find comment editor.', 'error'); editingCommentId = null; if (currentPost) loadPostView(currentPost.id); return; }
   const content = textarea.value.trim();
-  if (!content) {
-    showToast('Comment cannot be empty', 'error');
-    return;
-  }
-
+  if (!content) { showToast('Comment cannot be empty', 'error'); return; }
   try {
     const { data, error } = await sb.from('comments').update({ content }).eq('id', commentId).select();
-    if (error) {
-      console.error('Update error:', error);
-      showToast('Error saving comment: ' + error.message, 'error');
-      return;
-    }
-    if (!data || data.length === 0) {
-      showToast('Comment not found or you do not have permission to edit it.', 'error');
-      return;
-    }
+    if (error) { console.error('Update error:', error); showToast('Error saving comment: ' + error.message, 'error'); return; }
+    if (!data || data.length === 0) { showToast('Comment not found or you do not have permission to edit it.', 'error'); return; }
     showToast('Comment updated!', 'success');
     editingCommentId = null;
     if (currentPost) await loadPostView(currentPost.id);
-  } catch (err) {
-    console.error('Unexpected error:', err);
-    showToast('Error saving comment.', 'error');
-    editingCommentId = null;
-    if (currentPost) loadPostView(currentPost.id);
-  }
+  } catch (err) { console.error('Unexpected error:', err); showToast('Error saving comment.', 'error'); editingCommentId = null; if (currentPost) loadPostView(currentPost.id); }
 }
-
 async function deleteComment(commentId) {
   if (!confirm('Delete this comment?')) return;
   try {
     const { data, error } = await sb.from('comments').delete().eq('id', commentId).select();
-    if (error) {
-      console.error('Delete error:', error);
-      showToast('Error deleting comment: ' + error.message, 'error');
-      return;
-    }
-    if (!data || data.length === 0) {
-      showToast('Comment not found or you do not have permission to delete it.', 'error');
-      return;
-    }
+    if (error) { console.error('Delete error:', error); showToast('Error deleting comment: ' + error.message, 'error'); return; }
+    if (!data || data.length === 0) { showToast('Comment not found or you do not have permission to delete it.', 'error'); return; }
     showToast('Comment deleted.', 'success');
     if (currentPost) await loadPostView(currentPost.id);
-  } catch (err) {
-    console.error('Delete error:', err);
-    showToast('Error deleting comment.', 'error');
-  }
+  } catch (err) { console.error('Delete error:', err); showToast('Error deleting comment.', 'error'); }
 }
 
-// ─────────────────────────────────────────────
-// RICH TEXT HELPERS FOR EDITOR
-// ─────────────────────────────────────────────
+// ─── RICH TEXT HELPERS FOR EDITOR ──────────────────────
 function execCmdOnEditor(editorId, cmd, value = null) {
   const editor = document.getElementById(editorId);
   if (!editor) return;
   editor.focus();
   document.execCommand(cmd, false, value);
 }
-
 function insertLinkOnEditor(editorId) {
   const url = prompt('Enter URL:', 'https://');
   if (!url) return;
@@ -2032,21 +2043,15 @@ function insertLinkOnEditor(editorId) {
   if (!editor) return;
   editor.focus();
   document.execCommand('createLink', false, url);
-  // Add affiliate attribute
   const selection = window.getSelection();
   if (selection.rangeCount > 0) {
     const range = selection.getRangeAt(0);
     const container = range.commonAncestorContainer;
     let node = container;
-    while (node && node.nodeName !== 'A') {
-      node = node.parentNode;
-    }
-    if (node && node.nodeName === 'A') {
-      node.setAttribute('data-affiliate', 'true');
-    }
+    while (node && node.nodeName !== 'A') node = node.parentNode;
+    if (node && node.nodeName === 'A') node.setAttribute('data-affiliate', 'true');
   }
 }
-
 function openEmojiPickerForEditor(editorId) {
   const emojis = ['😊', '😂', '🤔', '🔥', '💯', '✨', '🎉', '👏', '👍', '❤️'];
   const picker = document.createElement('div');
@@ -2061,10 +2066,7 @@ function openEmojiPickerForEditor(editorId) {
     const btn = document.createElement('button');
     btn.textContent = emoji;
     btn.style.cssText = 'font-size: 2rem; border: none; background: transparent; cursor: pointer; padding: 8px; border-radius: 8px;';
-    btn.onclick = () => {
-      document.execCommand('insertText', false, emoji);
-      document.body.removeChild(picker);
-    };
+    btn.onclick = () => { document.execCommand('insertText', false, emoji); document.body.removeChild(picker); };
     picker.appendChild(btn);
   });
   const close = document.createElement('button');
@@ -2075,25 +2077,18 @@ function openEmojiPickerForEditor(editorId) {
   document.body.appendChild(picker);
 }
 
-// ─────────────────────────────────────────────
-// LOAD COMMENTS WITH USER VOTES
-// ─────────────────────────────────────────────
+// ─── LOAD COMMENTS ──────────────────────────────────────
 async function loadComments(postId) {
   try {
     const { data: commentsData, error } = await sb
       .from('comments')
-      .select(`
-        *,
-        author:players(username)
-      `)
+      .select(`*, author:players(username)`)
       .eq('post_id', postId)
       .is('is_deleted', false)
       .order('depth', { ascending: true })
       .order('created_at', { ascending: true });
-
     if (error) throw error;
     if (!commentsData || commentsData.length === 0) return [];
-
     const commentIds = commentsData.map(c => c.id);
     let userVotes = {};
     if (currentPlayer) {
@@ -2107,7 +2102,6 @@ async function loadComments(postId) {
         voteData.forEach(v => { userVotes[v.target_id] = v.vote_value; });
       }
     }
-
     return commentsData.map(c => ({
       ...c,
       author_name: c.author?.username || 'Unknown',
@@ -2120,12 +2114,9 @@ async function loadComments(postId) {
   }
 }
 
-// ─────────────────────────────────────────────
-// RENDER COMMENTS (with inline edit support + affiliate attributes)
-// ─────────────────────────────────────────────
+// ─── RENDER COMMENTS ────────────────────────────────────
 function renderComments(comments, parentId = null) {
   if (!comments || comments.length === 0) return '';
-
   const filtered = comments.filter(c => c.parent_id === parentId);
   if (filtered.length === 0) return '';
 
@@ -2137,9 +2128,7 @@ function renderComments(comments, parentId = null) {
 
     let commentContentHtml;
     let commentContent = c.content || '';
-    // Add affiliate attributes to comment content when displayed
     if (!isEditing) {
-      // Escape HTML and convert newlines, then add affiliate attributes
       commentContent = escapeHtml(commentContent).replace(/\n/g, '<br>');
       commentContent = addAffiliateAttributes(commentContent);
     }
@@ -2155,9 +2144,7 @@ function renderComments(comments, parentId = null) {
         </div>
       `;
     } else {
-      commentContentHtml = `
-        <div class="comment-content">${commentContent}</div>
-      `;
+      commentContentHtml = `<div class="comment-content">${commentContent}</div>`;
     }
 
     return `
@@ -2190,87 +2177,39 @@ function renderComments(comments, parentId = null) {
   }).join('');
 }
 
-// ─────────────────────────────────────────────
-// REACTIONS (post only)
-// ─────────────────────────────────────────────
+// ─── REACTIONS ──────────────────────────────────────────
 async function loadPostReactions(postId) {
-  const { data, error } = await sb
-    .from('post_reactions')
-    .select('*')
-    .eq('post_id', postId);
-  if (error) {
-    console.error('Error loading reactions:', error);
-    return [];
-  }
+  const { data, error } = await sb.from('post_reactions').select('*').eq('post_id', postId);
+  if (error) { console.error('Error loading reactions:', error); return []; }
   return data || [];
 }
-
 async function toggleReaction(postId, emoji) {
   if (!currentPlayer) return showToast('Please log in', 'error');
-
-  const existing = await sb
-    .from('post_reactions')
-    .select('*')
-    .eq('post_id', postId)
-    .eq('user_id', currentPlayer.id)
-    .maybeSingle();
-
+  const existing = await sb.from('post_reactions').select('*').eq('post_id', postId).eq('user_id', currentPlayer.id).maybeSingle();
   if (existing.data && existing.data.reaction_type === emoji) {
-    await sb
-      .from('post_reactions')
-      .delete()
-      .eq('id', existing.data.id);
+    await sb.from('post_reactions').delete().eq('id', existing.data.id);
   } else {
-    if (existing.data) {
-      await sb
-        .from('post_reactions')
-        .delete()
-        .eq('id', existing.data.id);
-    }
-    await sb
-      .from('post_reactions')
-      .insert({
-        post_id: postId,
-        user_id: currentPlayer.id,
-        reaction_type: emoji
-      });
+    if (existing.data) await sb.from('post_reactions').delete().eq('id', existing.data.id);
+    await sb.from('post_reactions').insert({ post_id: postId, user_id: currentPlayer.id, reaction_type: emoji });
   }
-
   await loadPostView(postId);
 }
 
-// ─────────────────────────────────────────────
-// VOTE (only for comments now)
-// ─────────────────────────────────────────────
+// ─── VOTE ────────────────────────────────────────────────────
 async function vote(targetType, targetId, value) {
-  if (targetType !== 'comment') {
-    showToast('Voting only available on comments', 'info');
-    return;
-  }
-  const { error } = await sb.rpc('handle_vote', {
-    p_player_id: currentPlayer.id,
-    p_target_type: targetType,
-    p_target_id: targetId,
-    p_vote_value: value
-  });
-  if (error) {
-    console.error('Vote error:', error);
-    return showToast(error.message, 'error');
-  }
-  
+  if (targetType !== 'comment') { showToast('Voting only available on comments', 'info'); return; }
+  const { error } = await sb.rpc('handle_vote', { p_player_id: currentPlayer.id, p_target_type: targetType, p_target_id: targetId, p_vote_value: value });
+  if (error) { console.error('Vote error:', error); return showToast(error.message, 'error'); }
   if (currentPost) await loadPostView(currentPost.id);
   else if (currentCommunity) await loadCommunityView();
   else await loadFeed();
 }
 
-// ─────────────────────────────────────────────
-// RICH TEXT HELPERS (for post creation)
-// ─────────────────────────────────────────────
+// ─── RICH TEXT HELPERS (for post creation) ────────────────
 function execCmd(cmd, value = null) {
   document.execCommand(cmd, false, value);
   document.getElementById('postEditor').focus();
 }
-
 function openEmojiPicker() {
   const emojis = ['😊', '😂', '🤔', '🔥', '💯', '✨', '🎉', '👏', '👍', '❤️'];
   const picker = document.createElement('div');
@@ -2285,10 +2224,7 @@ function openEmojiPicker() {
     const btn = document.createElement('button');
     btn.textContent = emoji;
     btn.style.cssText = 'font-size: 2rem; border: none; background: transparent; cursor: pointer; padding: 8px; border-radius: 8px;';
-    btn.onclick = () => {
-      document.execCommand('insertText', false, emoji);
-      document.body.removeChild(picker);
-    };
+    btn.onclick = () => { document.execCommand('insertText', false, emoji); document.body.removeChild(picker); };
     picker.appendChild(btn);
   });
   const close = document.createElement('button');
@@ -2299,68 +2235,15 @@ function openEmojiPicker() {
   document.body.appendChild(picker);
 }
 
-function clearPostEditor() {
-  const editor = document.getElementById('postEditor');
-  if (editor.tagName === 'DIV') {
-    editor.innerHTML = '';
-  } else if (editor.tagName === 'TEXTAREA') {
-    editor.value = '';
-  }
-  document.getElementById('postTitle').value = '';
-  affiliateEnabled = false;
-  document.querySelectorAll('.affiliate-btn').forEach(btn => btn.classList.remove('active'));
-}
-
-// ─────────────────────────────────────────────
-// CREATE POST
-// ─────────────────────────────────────────────
-async function createPost() {
-  const title = document.getElementById('postTitle').value.trim();
-  const editor = document.getElementById('postEditor');
-  let content;
-
-  if (editor.tagName === 'DIV') {
-    content = editor.innerHTML.trim();
-    if (!content || content === '<br>') return showToast('Content cannot be empty', 'error');
-    if (affiliateEnabled) {
-      content += `<div class="affiliate-pill">🔗 Affiliate links included</div>`;
-    }
-    content = DOMPurify.sanitize(content, { ADD_ATTR: ['data-affiliate'] });
-  } else if (editor.tagName === 'TEXTAREA') {
-    content = editor.value.trim();
-    if (!content) return showToast('Content cannot be empty', 'error');
-    content = escapeHtml(content);
-  }
-
-  if (!title) return showToast('Title required', 'error');
-
-  const { error } = await sb.from('posts').insert({
-    title,
-    content,
-    community_id: currentCommunity.id,
-    author_id: currentPlayer.id
-  });
-  if (error) return showToast(error.message, 'error');
-  showToast('Post created!', 'success');
-  clearPostEditor();
-  loadCommunityView();
-}
-
-// ─────────────────────────────────────────────
-// SUBMIT COMMENT
-// ─────────────────────────────────────────────
+// ─── SUBMIT COMMENT ────────────────────────────────────────
 async function submitComment(parentId) {
-  const content = parentId
-    ? document.getElementById(`reply-content-${parentId}`).value.trim()
-    : document.getElementById('commentContent').value.trim();
+  const content = parentId ? document.getElementById(`reply-content-${parentId}`).value.trim() : document.getElementById('commentContent').value.trim();
   if (!content) return showToast('Comment cannot be empty', 'error');
-
   let depth = 0;
   if (parentId) {
     const parentDepth = await getParentDepth(parentId);
     depth = parentDepth + 1;
   }
-
   const { error } = await sb.from('comments').insert({
     content,
     post_id: currentPost.id,
@@ -2373,12 +2256,10 @@ async function submitComment(parentId) {
   showToast('Comment posted', 'success');
   loadPostView(currentPost.id);
 }
-
 async function getParentDepth(parentId) {
   const { data } = await sb.from('comments').select('depth').eq('id', parentId).single();
   return data?.depth || 0;
 }
-
 function showReplyForm(commentId) {
   document.getElementById(`reply-form-${commentId}`).style.display = 'block';
 }
@@ -2386,36 +2267,19 @@ function hideReplyForm(commentId) {
   document.getElementById(`reply-form-${commentId}`).style.display = 'none';
 }
 
-// ─────────────────────────────────────────────
-// DELETE POST
-// ─────────────────────────────────────────────
+// ─── DELETE POST ────────────────────────────────────────────
 async function deletePost(postId) {
   if (!confirm('Delete this post? This action cannot be undone.')) return;
   try {
-    const { error } = await sb
-      .from('posts')
-      .update({ deleted_at: new Date().toISOString() })
-      .eq('id', postId);
-    if (error) {
-      console.error('Delete error:', error);
-      showToast('Failed to delete post: ' + error.message, 'error');
-      return;
-    }
+    const { error } = await sb.from('posts').update({ deleted_at: new Date().toISOString() }).eq('id', postId);
+    if (error) { console.error('Delete error:', error); showToast('Failed to delete post: ' + error.message, 'error'); return; }
     showToast('Post deleted successfully.', 'success');
-    if (currentCommunity) {
-      await loadCommunityView();
-    } else {
-      await loadFeed();
-    }
-  } catch (err) {
-    console.error('Delete exception:', err);
-    showToast('Error deleting post.', 'error');
-  }
+    if (currentCommunity) await loadCommunityView();
+    else await loadFeed();
+  } catch (err) { console.error('Delete exception:', err); showToast('Error deleting post.', 'error'); }
 }
 
-// ─────────────────────────────────────────────
-// COMMUNITY MANAGEMENT
-// ─────────────────────────────────────────────
+// ─── COMMUNITY MANAGEMENT ──────────────────────────────────
 function showCreateCommunityModal() {
   document.getElementById('createCommunityModal').style.display = 'flex';
 }
@@ -2423,7 +2287,6 @@ async function createCommunity() {
   const name = document.getElementById('newCommunityName').value.trim().toLowerCase().replace(/\s+/g, '');
   const display_name = document.getElementById('newCommunityDisplayName').value.trim();
   if (!name || !display_name) return showToast('Name and display name required', 'error');
-
   const { error } = await sb.from('communities').insert({
     name, display_name,
     description: document.getElementById('newCommunityDesc').value,
@@ -2437,31 +2300,21 @@ async function createCommunity() {
   closeModal('createCommunityModal');
   loadCommunities();
 }
-
 async function checkMembership(communityId) {
-  const { count } = await sb.from('community_members')
-    .select('*', { count: 'exact', head: true })
-    .eq('community_id', communityId)
-    .eq('player_id', currentPlayer.id);
+  const { count } = await sb.from('community_members').select('*', { count: 'exact', head: true }).eq('community_id', communityId).eq('player_id', currentPlayer.id);
   return count > 0;
 }
-
 async function joinCommunity(communityId) {
-  const { error } = await sb.from('community_members').insert({
-    community_id: communityId, player_id: currentPlayer.id
-  });
+  const { error } = await sb.from('community_members').insert({ community_id: communityId, player_id: currentPlayer.id });
   if (error) return showToast(error.message, 'error');
   showToast('Joined community!', 'success');
   loadCommunityView();
 }
-
 function closeModal(id) {
   document.getElementById(id).style.display = 'none';
 }
 
-// ─────────────────────────────────────────────
-// UTILITY: Estimate read time
-// ─────────────────────────────────────────────
+// ─── UTILITY: Estimate read time ───────────────────────────
 function estimateReadTime(html) {
   if (!html) return '0 min';
   const text = html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
@@ -2470,15 +2323,9 @@ function estimateReadTime(html) {
   return `${minutes} min read`;
 }
 
-// ─────────────────────────────────────────────
-// REAL-TIME SUBSCRIPTIONS
-// ─────────────────────────────────────────────
+// ─── REAL-TIME SUBSCRIPTIONS ──────────────────────────────
 function subscribeToCommunity(communityId) {
-  if (forumChannel) {
-    forumChannel.unsubscribe();
-    forumChannel = null;
-  }
-
+  if (forumChannel) { forumChannel.unsubscribe(); forumChannel = null; }
   forumChannel = sb.channel(`forum-${communityId}`)
     .on('postgres_changes', {
       event: 'INSERT',
@@ -2486,21 +2333,14 @@ function subscribeToCommunity(communityId) {
       table: 'posts',
       filter: `community_id=eq.${communityId}`
     }, (payload) => {
-      if (currentCommunity && currentCommunity.id === communityId) {
-        loadCommunityView();
-      }
+      if (currentCommunity && currentCommunity.id === communityId) loadCommunityView();
     })
     .subscribe((status) => {
       if (status === 'SUBSCRIBED') console.log('Subscribed to community posts');
     });
 }
-
 function subscribeToPostComments(postId) {
-  if (forumChannel) {
-    forumChannel.unsubscribe();
-    forumChannel = null;
-  }
-
+  if (forumChannel) { forumChannel.unsubscribe(); forumChannel = null; }
   forumChannel = sb.channel(`post-${postId}`)
     .on('postgres_changes', {
       event: 'INSERT',
@@ -2508,28 +2348,21 @@ function subscribeToPostComments(postId) {
       table: 'comments',
       filter: `post_id=eq.${postId}`
     }, (payload) => {
-      if (currentPost && currentPost.id === postId) {
-        loadPostView(postId);
-      }
+      if (currentPost && currentPost.id === postId) loadPostView(postId);
     })
     .subscribe((status) => {
       if (status === 'SUBSCRIBED') console.log('Subscribed to post comments');
     });
 }
 
-// ─────────────────────────────────────────────
-// PROFILE NAVIGATION
-// ─────────────────────────────────────────────
+// ─── PROFILE NAVIGATION ────────────────────────────────────
 function viewProfile(userId) {
   window.location.href = `profile.html?id=${userId}`;
 }
 
-// ─────────────────────────────────────────────
-// EXPOSE GLOBAL FUNCTIONS
-// ─────────────────────────────────────────────
+// ─── EXPOSE GLOBAL FUNCTIONS ──────────────────────────────
 window.selectCommunityById = selectCommunityById;
 window.vote = vote;
-window.createPost = createPost;
 window.submitComment = submitComment;
 window.showReplyForm = showReplyForm;
 window.hideReplyForm = hideReplyForm;
@@ -2548,13 +2381,9 @@ window.clearPostEditor = clearPostEditor;
 window.toggleFollowCommunity = toggleFollowCommunity;
 window.toggleSidebarSection = toggleSidebarSection;
 window.viewProfile = viewProfile;
-
-// ── NEW FUNCTIONS ──
 window.toggleAffiliate = toggleAffiliate;
 window.insertImageWithSize = insertImageWithSize;
 window.showAffiliateBubble = showAffiliateBubble;
-
-// ── EDITING FUNCTIONS ──
 window.startPostEdit = startPostEdit;
 window.savePostEdit = savePostEdit;
 window.cancelPostEdit = cancelPostEdit;
@@ -2564,6 +2393,8 @@ window.cancelCommentEdit = cancelCommentEdit;
 window.execCmdOnEditor = execCmdOnEditor;
 window.insertLinkOnEditor = insertLinkOnEditor;
 window.openEmojiPickerForEditor = openEmojiPickerForEditor;
+window.createOrSchedulePost = createOrSchedulePost;
+window.toggleSchedule = toggleSchedule;
 
 // ─────────────────────────────────────────────
 // START
