@@ -1184,7 +1184,7 @@ function showToast(msg, type='info') {
 }
 
 // ─────────────────────────────────────────────
-// XSS ESCAPE
+// XSS ESCAPE (for plain text)
 // ─────────────────────────────────────────────
 function escapeHtml(s) {
   if (!s) return '';
@@ -1510,7 +1510,7 @@ async function selectCommunity(community) {
 }
 
 // ─────────────────────────────────────────────
-// COMMUNITY VIEW (with new toolbar buttons for founder)
+// COMMUNITY VIEW (with full toolbar)
 // ─────────────────────────────────────────────
 async function loadCommunityView() {
   if (!currentCommunity) return;
@@ -1569,7 +1569,7 @@ async function loadCommunityView() {
           <button type="button" class="affiliate-btn" onclick="toggleAffiliate()">🔗 Affiliate</button>
           <button type="button" onclick="insertImageWithSize('postEditor')">🖼️ Image</button>
       `;
-      // ── NEW: Founder-only toolbar buttons ──
+      // Founder-only buttons
       if (isFounder) {
         html += `
           <button type="button" onclick="execCmd('strikeThrough')"><s>S</s></button>
@@ -1748,7 +1748,6 @@ function toggleSchedule() {
   }
 }
 
-// ─── NEW: Insert Table function for Founder ───
 function insertTable() {
   const rows = prompt('Enter number of rows:', '3');
   if (!rows) return;
@@ -1774,7 +1773,11 @@ async function createOrSchedulePost() {
     content = editor.innerHTML.trim();
     if (!content || content === '<br>') return showToast('Content cannot be empty', 'error');
     if (affiliateEnabled) content += `<div class="affiliate-pill">🔗 Affiliate links included</div>`;
-    content = DOMPurify.sanitize(content, { ADD_ATTR: ['data-affiliate'] });
+    // Sanitize but allow all needed tags
+    content = DOMPurify.sanitize(content, {
+      ADD_ATTR: ['data-affiliate'],
+      ALLOWED_TAGS: ['h1','h2','h3','h4','h5','h6','p','strong','em','u','s','ul','ol','li','blockquote','pre','code','table','thead','tbody','tr','th','td','a','img','br','hr','div','span','b','i','strike','sub','sup']
+    });
   } else if (editor.tagName === 'TEXTAREA') {
     content = editor.value.trim();
     if (!content) return showToast('Content cannot be empty', 'error');
@@ -1826,6 +1829,7 @@ async function createOrSchedulePost() {
     const message = publishedAt ? `Post scheduled for ${new Date(publishedAt).toLocaleString()}` : 'Post created!';
     showToast(message, 'success');
     clearPostEditor();
+    // Immediately reload the view
     await loadCommunityView();
     if (publishedAt) {
       loadScheduledPosts();
@@ -1930,7 +1934,7 @@ async function viewPost(postId) {
 }
 
 // ─────────────────────────────────────────────
-// LOAD POST VIEW WITH COMMENTS
+// LOAD POST VIEW (with full editing toolbar)
 // ─────────────────────────────────────────────
 async function loadPostView(postId) {
   const { data: post, error } = await sb
@@ -1976,7 +1980,10 @@ async function loadPostView(postId) {
   reactions.forEach(r => { reactionCounts[r.reaction_type] = (reactionCounts[r.reaction_type] || 0) + 1; });
 
   const readTime = estimateReadTime(post.content || '');
-  let sanitizedContent = DOMPurify.sanitize(post.content || '', { ADD_ATTR: ['data-affiliate'] });
+  let sanitizedContent = DOMPurify.sanitize(post.content || '', {
+    ADD_ATTR: ['data-affiliate'],
+    ALLOWED_TAGS: ['h1','h2','h3','h4','h5','h6','p','strong','em','u','s','ul','ol','li','blockquote','pre','code','table','thead','tbody','tr','th','td','a','img','br','hr','div','span','b','i','strike','sub','sup']
+  });
   sanitizedContent = addAffiliateAttributes(sanitizedContent);
   const hasAffiliate = sanitizedContent.includes('class="affiliate-pill"');
   if (hasAffiliate) {
@@ -2013,12 +2020,17 @@ async function loadPostView(postId) {
   // ── POST CONTENT (view or edit) ──
   if (editingPostId === post.id) {
     const isBlackOrFounder = currentPlayer && ['black', 'founder'].includes(currentPlayer.subscription_tier?.toLowerCase());
+    const isFounderEditor = currentPlayer && currentPlayer.subscription_tier?.toLowerCase() === 'founder';
     let toolbarHtml = `
       <div class="toolbar">
         <button type="button" onclick="execCmdOnEditor('postEditEditor', 'bold')"><b>B</b></button>
         <button type="button" onclick="execCmdOnEditor('postEditEditor', 'italic')"><i>I</i></button>
         <button type="button" onclick="execCmdOnEditor('postEditEditor', 'insertUnorderedList')">• Bullet</button>
+        <button type="button" onclick="execCmdOnEditor('postEditEditor', 'indent')">↗ Indent</button>
+        <button type="button" onclick="execCmdOnEditor('postEditEditor', 'outdent')">↘ Outdent</button>
+        <button type="button" onclick="execCmdOnEditor('postEditEditor', 'formatBlock', 'h1')">H1</button>
         <button type="button" onclick="execCmdOnEditor('postEditEditor', 'formatBlock', 'h2')">H2</button>
+        <button type="button" onclick="execCmdOnEditor('postEditEditor', 'formatBlock', 'p')">Text</button>
         <button type="button" onclick="insertLinkOnEditor('postEditEditor')">🔗 Link</button>
         <button type="button" onclick="openEmojiPickerForEditor('postEditEditor')">😊 Emoji</button>
     `;
@@ -2026,6 +2038,15 @@ async function loadPostView(postId) {
       toolbarHtml += `
         <button type="button" class="affiliate-btn ${affiliateEnabled ? 'active' : ''}" onclick="toggleAffiliate()">🔗 Affiliate</button>
         <button type="button" onclick="insertImageWithSize('postEditEditor')">🖼️ Image</button>
+      `;
+    }
+    if (isFounderEditor) {
+      toolbarHtml += `
+        <button type="button" onclick="execCmdOnEditor('postEditEditor', 'strikeThrough')"><s>S</s></button>
+        <button type="button" onclick="execCmdOnEditor('postEditEditor', 'insertOrderedList')">1. List</button>
+        <button type="button" onclick="execCmdOnEditor('postEditEditor', 'formatBlock', 'blockquote')">“ Quote</button>
+        <button type="button" onclick="execCmdOnEditor('postEditEditor', 'formatBlock', 'pre')">&lt;/&gt; Code</button>
+        <button type="button" onclick="insertTableOnEditor('postEditEditor')">⊞ Table</button>
       `;
     }
     toolbarHtml += `</div>`;
@@ -2092,13 +2113,37 @@ async function savePostEdit(postId) {
   let content = editor.innerHTML.trim();
   if (!content || content === '<br>') return showToast('Content cannot be empty', 'error');
   if (affiliateEnabled) content += `<div class="affiliate-pill">🔗 Affiliate links included</div>`;
-  content = DOMPurify.sanitize(content, { ADD_ATTR: ['data-affiliate'] });
+  content = DOMPurify.sanitize(content, {
+    ADD_ATTR: ['data-affiliate'],
+    ALLOWED_TAGS: ['h1','h2','h3','h4','h5','h6','p','strong','em','u','s','ul','ol','li','blockquote','pre','code','table','thead','tbody','tr','th','td','a','img','br','hr','div','span','b','i','strike','sub','sup']
+  });
   const { error } = await sb.from('posts').update({ content }).eq('id', postId);
   if (error) { showToast('Error saving post: ' + error.message, 'error'); return; }
   showToast('Post updated!', 'success');
   editingPostId = null;
   affiliateEnabled = false;
   await loadPostView(postId);
+}
+
+// ─── TABLE INSERT FOR EDITOR ──────────────────────────
+function insertTableOnEditor(editorId) {
+  const rows = prompt('Enter number of rows:', '3');
+  if (!rows) return;
+  const cols = prompt('Enter number of columns:', '3');
+  if (!cols) return;
+  let tableHtml = '<table border="1" style="border-collapse:collapse; width:100%;">';
+  for (let i = 0; i < parseInt(rows); i++) {
+    tableHtml += '<tr>';
+    for (let j = 0; j < parseInt(cols); j++) {
+      tableHtml += `<td style="padding:8px; border:1px solid #ccc;">Cell ${i+1}${String.fromCharCode(65+j)}</td>`;
+    }
+    tableHtml += '</tr>';
+  }
+  tableHtml += '</table><br>';
+  const editor = document.getElementById(editorId);
+  if (!editor) return;
+  editor.focus();
+  document.execCommand('insertHTML', false, tableHtml);
 }
 
 // ─── COMMENT EDITING & DELETION ────────────────────────
@@ -2446,7 +2491,11 @@ function estimateReadTime(html) {
 
 // ─── REAL-TIME SUBSCRIPTIONS ──────────────────────────────
 function subscribeToCommunity(communityId) {
-  if (forumChannel) { forumChannel.unsubscribe(); forumChannel = null; }
+  if (forumChannel) {
+    forumChannel.unsubscribe();
+    forumChannel = null;
+  }
+
   forumChannel = sb.channel(`forum-${communityId}`)
     .on('postgres_changes', {
       event: 'INSERT',
@@ -2454,14 +2503,22 @@ function subscribeToCommunity(communityId) {
       table: 'posts',
       filter: `community_id=eq.${communityId}`
     }, (payload) => {
-      if (currentCommunity && currentCommunity.id === communityId) loadCommunityView();
+      // Reload view on new post
+      if (currentCommunity && currentCommunity.id === communityId) {
+        loadCommunityView();
+      }
     })
     .subscribe((status) => {
       if (status === 'SUBSCRIBED') console.log('Subscribed to community posts');
     });
 }
+
 function subscribeToPostComments(postId) {
-  if (forumChannel) { forumChannel.unsubscribe(); forumChannel = null; }
+  if (forumChannel) {
+    forumChannel.unsubscribe();
+    forumChannel = null;
+  }
+
   forumChannel = sb.channel(`post-${postId}`)
     .on('postgres_changes', {
       event: 'INSERT',
@@ -2469,7 +2526,9 @@ function subscribeToPostComments(postId) {
       table: 'comments',
       filter: `post_id=eq.${postId}`
     }, (payload) => {
-      if (currentPost && currentPost.id === postId) loadPostView(postId);
+      if (currentPost && currentPost.id === postId) {
+        loadPostView(postId);
+      }
     })
     .subscribe((status) => {
       if (status === 'SUBSCRIBED') console.log('Subscribed to post comments');
@@ -2516,7 +2575,8 @@ window.insertLinkOnEditor = insertLinkOnEditor;
 window.openEmojiPickerForEditor = openEmojiPickerForEditor;
 window.createOrSchedulePost = createOrSchedulePost;
 window.toggleSchedule = toggleSchedule;
-window.insertTable = insertTable;  // NEW
+window.insertTable = insertTable;
+window.insertTableOnEditor = insertTableOnEditor;
 
 // ─────────────────────────────────────────────
 // START
