@@ -1510,7 +1510,36 @@ async function selectCommunity(community) {
 }
 
 // ─────────────────────────────────────────────
-// COMMUNITY VIEW (with proper HTML rendering)
+// PASTE HANDLER – forces HTML paste (NEW)
+// ─────────────────────────────────────────────
+function setupPasteHandler() {
+    const editor = document.getElementById('postEditor');
+    if (!editor) return;
+    
+    editor.addEventListener('paste', function(e) {
+        // 1. Prevent default paste
+        e.preventDefault();
+        
+        // 2. Get the clipboard content as HTML
+        const clipboardData = e.clipboardData || window.clipboardData;
+        if (!clipboardData) return;
+        
+        // 3. Try to get HTML content
+        let html = clipboardData.getData('text/html');
+        if (!html) {
+            // Fallback: get plain text and wrap as HTML
+            const text = clipboardData.getData('text/plain');
+            if (!text) return;
+            html = text.replace(/\n/g, '<br>');
+        }
+        
+        // 4. Insert the HTML at the cursor position
+        document.execCommand('insertHTML', false, html);
+    });
+}
+
+// ─────────────────────────────────────────────
+// COMMUNITY VIEW
 // ─────────────────────────────────────────────
 async function loadCommunityView() {
   if (!currentCommunity) return;
@@ -1658,6 +1687,7 @@ async function loadCommunityView() {
 
   document.getElementById('mainContent').innerHTML = html;
   populateAISelects();
+  setupPasteHandler(); // ← NEW: set up paste handler after editor is rendered
 }
 
 // ─────────────────────────────────────────────
