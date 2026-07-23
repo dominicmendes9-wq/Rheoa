@@ -1184,7 +1184,7 @@ function showToast(msg, type='info') {
 }
 
 // ─────────────────────────────────────────────
-// XSS ESCAPE (for plain text)
+// XSS ESCAPE (for plain text only – NOT for HTML content)
 // ─────────────────────────────────────────────
 function escapeHtml(s) {
   if (!s) return '';
@@ -1510,7 +1510,7 @@ async function selectCommunity(community) {
 }
 
 // ─────────────────────────────────────────────
-// COMMUNITY VIEW (with full toolbar)
+// COMMUNITY VIEW (with proper HTML rendering)
 // ─────────────────────────────────────────────
 async function loadCommunityView() {
   if (!currentCommunity) return;
@@ -1569,7 +1569,6 @@ async function loadCommunityView() {
           <button type="button" class="affiliate-btn" onclick="toggleAffiliate()">🔗 Affiliate</button>
           <button type="button" onclick="insertImageWithSize('postEditor')">🖼️ Image</button>
       `;
-      // Founder-only buttons
       if (isFounder) {
         html += `
           <button type="button" onclick="execCmd('strikeThrough')"><s>S</s></button>
@@ -1733,7 +1732,7 @@ async function loadFeed() {
 }
 
 // ─────────────────────────────────────────────
-// SCHEDULE TOGGLE & CREATE/ SCHEDULE POST
+// SCHEDULE TOGGLE & CREATE/ SCHEDULE POST (STORES HTML)
 // ─────────────────────────────────────────────
 function toggleSchedule() {
   const checked = document.getElementById('scheduleToggle').checked;
@@ -1769,14 +1768,24 @@ async function createOrSchedulePost() {
   const title = document.getElementById('postTitle').value.trim();
   const editor = document.getElementById('postEditor');
   let content;
+
   if (editor.tagName === 'DIV') {
+    // contenteditable – store HTML (not escaped)
     content = editor.innerHTML.trim();
     if (!content || content === '<br>') return showToast('Content cannot be empty', 'error');
     if (affiliateEnabled) content += `<div class="affiliate-pill">🔗 Affiliate links included</div>`;
-    // Sanitize but allow all needed tags
+    // Sanitize with DOMPurify but keep HTML tags
     content = DOMPurify.sanitize(content, {
-      ADD_ATTR: ['data-affiliate'],
-      ALLOWED_TAGS: ['h1','h2','h3','h4','h5','h6','p','strong','em','u','s','ul','ol','li','blockquote','pre','code','table','thead','tbody','tr','th','td','a','img','br','hr','div','span','b','i','strike','sub','sup']
+      ALLOWED_TAGS: [
+        'h1','h2','h3','h4','h5','h6',
+        'p','strong','em','u','s','strike',
+        'ul','ol','li',
+        'blockquote','pre','code',
+        'table','thead','tbody','tr','th','td',
+        'a','img','br','hr','div','span',
+        'b','i','sub','sup'
+      ],
+      ALLOWED_ATTR: ['href','src','alt','class','style','target','rel','border','cellpadding','cellspacing']
     });
   } else if (editor.tagName === 'TEXTAREA') {
     content = editor.value.trim();
@@ -1814,7 +1823,7 @@ async function createOrSchedulePost() {
 
   const { data, error } = await sb.rpc('create_post_with_schedule', {
     p_title: title,
-    p_content: content,
+    p_content: content, // ← stored as HTML
     p_community_id: communityId,
     p_author_id: authorId,
     p_is_ai: isAI,
@@ -1829,7 +1838,6 @@ async function createOrSchedulePost() {
     const message = publishedAt ? `Post scheduled for ${new Date(publishedAt).toLocaleString()}` : 'Post created!';
     showToast(message, 'success');
     clearPostEditor();
-    // Immediately reload the view
     await loadCommunityView();
     if (publishedAt) {
       loadScheduledPosts();
@@ -1934,7 +1942,7 @@ async function viewPost(postId) {
 }
 
 // ─────────────────────────────────────────────
-// LOAD POST VIEW (with full editing toolbar)
+// LOAD POST VIEW (renders HTML content, not escaped)
 // ─────────────────────────────────────────────
 async function loadPostView(postId) {
   const { data: post, error } = await sb
@@ -1980,9 +1988,18 @@ async function loadPostView(postId) {
   reactions.forEach(r => { reactionCounts[r.reaction_type] = (reactionCounts[r.reaction_type] || 0) + 1; });
 
   const readTime = estimateReadTime(post.content || '');
+  // Sanitize but KEEP HTML tags
   let sanitizedContent = DOMPurify.sanitize(post.content || '', {
-    ADD_ATTR: ['data-affiliate'],
-    ALLOWED_TAGS: ['h1','h2','h3','h4','h5','h6','p','strong','em','u','s','ul','ol','li','blockquote','pre','code','table','thead','tbody','tr','th','td','a','img','br','hr','div','span','b','i','strike','sub','sup']
+    ALLOWED_TAGS: [
+      'h1','h2','h3','h4','h5','h6',
+      'p','strong','em','u','s','strike',
+      'ul','ol','li',
+      'blockquote','pre','code',
+      'table','thead','tbody','tr','th','td',
+      'a','img','br','hr','div','span',
+      'b','i','sub','sup'
+    ],
+    ALLOWED_ATTR: ['href','src','alt','class','style','target','rel','border','cellpadding','cellspacing']
   });
   sanitizedContent = addAffiliateAttributes(sanitizedContent);
   const hasAffiliate = sanitizedContent.includes('class="affiliate-pill"');
@@ -2065,6 +2082,7 @@ async function loadPostView(postId) {
       </div>
     `;
   } else {
+    // Render the HTML content (not escaped)
     html += `<div class="post-detail-content">${sanitizedContent}</div>`;
   }
 
@@ -2114,8 +2132,16 @@ async function savePostEdit(postId) {
   if (!content || content === '<br>') return showToast('Content cannot be empty', 'error');
   if (affiliateEnabled) content += `<div class="affiliate-pill">🔗 Affiliate links included</div>`;
   content = DOMPurify.sanitize(content, {
-    ADD_ATTR: ['data-affiliate'],
-    ALLOWED_TAGS: ['h1','h2','h3','h4','h5','h6','p','strong','em','u','s','ul','ol','li','blockquote','pre','code','table','thead','tbody','tr','th','td','a','img','br','hr','div','span','b','i','strike','sub','sup']
+    ALLOWED_TAGS: [
+      'h1','h2','h3','h4','h5','h6',
+      'p','strong','em','u','s','strike',
+      'ul','ol','li',
+      'blockquote','pre','code',
+      'table','thead','tbody','tr','th','td',
+      'a','img','br','hr','div','span',
+      'b','i','sub','sup'
+    ],
+    ALLOWED_ATTR: ['href','src','alt','class','style','target','rel','border','cellpadding','cellspacing']
   });
   const { error } = await sb.from('posts').update({ content }).eq('id', postId);
   if (error) { showToast('Error saving post: ' + error.message, 'error'); return; }
@@ -2503,7 +2529,6 @@ function subscribeToCommunity(communityId) {
       table: 'posts',
       filter: `community_id=eq.${communityId}`
     }, (payload) => {
-      // Reload view on new post
       if (currentCommunity && currentCommunity.id === communityId) {
         loadCommunityView();
       }
