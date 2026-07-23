@@ -1510,7 +1510,7 @@ async function selectCommunity(community) {
 }
 
 // ─────────────────────────────────────────────
-// COMMUNITY VIEW (with AI name displayed, no pill)
+// COMMUNITY VIEW (with new toolbar buttons for founder)
 // ─────────────────────────────────────────────
 async function loadCommunityView() {
   if (!currentCommunity) return;
@@ -1531,7 +1531,6 @@ async function loadCommunityView() {
 
   const isMember = await checkMembership(currentCommunity.id);
   const isBlackOrFounder = currentPlayer && ['black', 'founder'].includes(currentPlayer.subscription_tier?.toLowerCase());
-  // Check if the current user is a Founder subscriber
   const isFounder = currentPlayer && currentPlayer.subscription_tier?.toLowerCase() === 'founder';
 
   const isFollowed = followedCommunityIds.has(currentCommunity.id);
@@ -1569,6 +1568,18 @@ async function loadCommunityView() {
           <button type="button" onclick="openEmojiPicker()">😊 Emoji</button>
           <button type="button" class="affiliate-btn" onclick="toggleAffiliate()">🔗 Affiliate</button>
           <button type="button" onclick="insertImageWithSize('postEditor')">🖼️ Image</button>
+      `;
+      // ── NEW: Founder-only toolbar buttons ──
+      if (isFounder) {
+        html += `
+          <button type="button" onclick="execCmd('strikeThrough')"><s>S</s></button>
+          <button type="button" onclick="execCmd('insertOrderedList')">1. List</button>
+          <button type="button" onclick="execCmd('formatBlock', 'blockquote')">“ Quote</button>
+          <button type="button" onclick="execCmd('formatBlock', 'pre')">&lt;/&gt; Code</button>
+          <button type="button" onclick="insertTable()">⊞ Table</button>
+        `;
+      }
+      html += `
         </div>
         <div id="postEditor" class="editor" contenteditable="true" placeholder="What's on your mind?"></div>
       `;
@@ -1580,7 +1591,6 @@ async function loadCommunityView() {
         <div class="schedule-controls">
     `;
 
-    // Only show schedule toggle and AI dropdown for Founder subscribers
     if (isFounder) {
       html += `
           <label><input type="checkbox" id="scheduleToggle" onchange="toggleSchedule()"> 📅 Schedule</label>
@@ -1591,7 +1601,6 @@ async function loadCommunityView() {
           </select>
       `;
     } else {
-      // Non-founders: hide AI and scheduler features
       html += `
           <input type="hidden" id="scheduleToggle" value="false">
           <input type="hidden" id="scheduleDatetime" value="">
@@ -1617,7 +1626,6 @@ async function loadCommunityView() {
   } else {
     posts.forEach(post => {
       const readTime = estimateReadTime(post.content || '');
-      // For AI posts, show the AI member name; for regular posts, show the author's username
       let displayName;
       let isAiPost = false;
       if (post.is_ai_post && post.ai_member) {
@@ -1627,7 +1635,6 @@ async function loadCommunityView() {
         displayName = post.author?.username || 'Unknown';
         isAiPost = false;
       }
-      // AI posts are still linked to the founder's profile for traceability
       const profileUserId = post.author_id;
       html += `
         <div class="post-item" onclick="viewPost('${post.id}')">
@@ -1635,7 +1642,7 @@ async function loadCommunityView() {
             <div class="post-title">${escapeHtml(post.title)}</div>
             <div class="post-meta">
               Posted by 
-              <span class="author-link" onclick="event.stopPropagation(); viewProfile('${profileUserId}')">${escapeHtml(displayName)}</span>
+              ${isAiPost ? `<span>${escapeHtml(displayName)}</span>` : `<span class="author-link" onclick="event.stopPropagation(); viewProfile('${profileUserId}')">${escapeHtml(displayName)}</span>`}
               • ${new Date(post.created_at).toLocaleString()}
             </div>
             <div class="post-stats">
@@ -1708,7 +1715,7 @@ async function loadFeed() {
             <div class="post-meta">
               Posted in ${post.community?.icon || '🌐'} ${escapeHtml(post.community?.display_name || 'Unknown')} 
               by 
-              <span class="author-link" onclick="event.stopPropagation(); viewProfile('${profileUserId}')">${escapeHtml(displayName)}</span>
+              ${isAiPost ? `<span>${escapeHtml(displayName)}</span>` : `<span class="author-link" onclick="event.stopPropagation(); viewProfile('${profileUserId}')">${escapeHtml(displayName)}</span>`}
               • ${new Date(post.created_at).toLocaleString()}
             </div>
             <div class="post-stats">
@@ -1741,6 +1748,24 @@ function toggleSchedule() {
   }
 }
 
+// ─── NEW: Insert Table function for Founder ───
+function insertTable() {
+  const rows = prompt('Enter number of rows:', '3');
+  if (!rows) return;
+  const cols = prompt('Enter number of columns:', '3');
+  if (!cols) return;
+  let tableHtml = '<table border="1" style="border-collapse:collapse; width:100%;">';
+  for (let i = 0; i < parseInt(rows); i++) {
+    tableHtml += '<tr>';
+    for (let j = 0; j < parseInt(cols); j++) {
+      tableHtml += `<td style="padding:8px; border:1px solid #ccc;">Cell ${i+1}${String.fromCharCode(65+j)}</td>`;
+    }
+    tableHtml += '</tr>';
+  }
+  tableHtml += '</table><br>';
+  document.execCommand('insertHTML', false, tableHtml);
+}
+
 async function createOrSchedulePost() {
   const title = document.getElementById('postTitle').value.trim();
   const editor = document.getElementById('postEditor');
@@ -1760,7 +1785,6 @@ async function createOrSchedulePost() {
   const communityId = currentCommunity.id;
   const authorId = currentPlayer.id;
 
-  // Check if the current user is a Founder subscriber
   const isFounder = currentPlayer && currentPlayer.subscription_tier?.toLowerCase() === 'founder';
   let isAI = false;
   let aiMemberId = null;
@@ -1802,7 +1826,6 @@ async function createOrSchedulePost() {
     const message = publishedAt ? `Post scheduled for ${new Date(publishedAt).toLocaleString()}` : 'Post created!';
     showToast(message, 'success');
     clearPostEditor();
-    // Immediately reload the view to show the new post
     await loadCommunityView();
     if (publishedAt) {
       loadScheduledPosts();
@@ -1960,14 +1983,15 @@ async function loadPostView(postId) {
     sanitizedContent = sanitizedContent.replace(/<div class="affiliate-pill".*?<\/div>/, '').trim();
   }
 
-  // Determine display name
   let displayName;
+  let isAiPost = false;
   if (post.is_ai_post && post.ai_member) {
     displayName = post.ai_member.name;
+    isAiPost = true;
   } else {
     displayName = post.author?.username || 'Unknown';
+    isAiPost = false;
   }
-  // Always link to the author's profile (founder for AI posts, the real user otherwise)
   const profileUserId = post.author_id;
 
   let html = `
@@ -1977,7 +2001,7 @@ async function loadPostView(postId) {
       <div class="post-detail-meta">
         <span>
           Posted by 
-          <span class="author-link" onclick="viewProfile('${profileUserId}')">${escapeHtml(displayName)}</span>
+          ${isAiPost ? `<span>${escapeHtml(displayName)}</span>` : `<span class="author-link" onclick="viewProfile('${profileUserId}')">${escapeHtml(displayName)}</span>`}
         </span>
         <span>• ${new Date(post.created_at).toLocaleString()}</span>
         <span class="stat-pill"><span class="icon">👁️</span> ${post.view_count || 0}</span>
@@ -2492,6 +2516,7 @@ window.insertLinkOnEditor = insertLinkOnEditor;
 window.openEmojiPickerForEditor = openEmojiPickerForEditor;
 window.createOrSchedulePost = createOrSchedulePost;
 window.toggleSchedule = toggleSchedule;
+window.insertTable = insertTable;  // NEW
 
 // ─────────────────────────────────────────────
 // START
