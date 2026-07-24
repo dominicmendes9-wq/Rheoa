@@ -1510,7 +1510,7 @@ async function selectCommunity(community) {
 }
 
 // ─────────────────────────────────────────────
-// PASTE HANDLER – forces HTML paste (NEW)
+// PASTE HANDLER – forces HTML paste
 // ─────────────────────────────────────────────
 function setupPasteHandler() {
     const editor = document.getElementById('postEditor');
@@ -1539,7 +1539,7 @@ function setupPasteHandler() {
 }
 
 // ─────────────────────────────────────────────
-// COMMUNITY VIEW
+// COMMUNITY VIEW (with reorganized toolbar)
 // ─────────────────────────────────────────────
 async function loadCommunityView() {
   if (!currentCommunity) return;
@@ -1585,25 +1585,34 @@ async function loadCommunityView() {
     if (isBlackOrFounder) {
       html += `
         <div class="toolbar">
+          <!-- Text Formatting -->
           <button type="button" onclick="execCmd('bold')"><b>B</b></button>
           <button type="button" onclick="execCmd('italic')"><i>I</i></button>
+          <button type="button" onclick="execCmd('strikeThrough')"><s>S</s></button>
+          <span class="separator"></span>
+          <!-- Lists -->
           <button type="button" onclick="execCmd('insertUnorderedList')">• Bullet</button>
+          <button type="button" onclick="execCmd('insertOrderedList')">1. List</button>
+          <span class="separator"></span>
+          <!-- Indent -->
           <button type="button" onclick="execCmd('indent')">↗ Indent</button>
           <button type="button" onclick="execCmd('outdent')">↘ Outdent</button>
+          <span class="separator"></span>
+          <!-- Headings -->
           <button type="button" onclick="execCmd('formatBlock', 'h1')">H1</button>
           <button type="button" onclick="execCmd('formatBlock', 'h2')">H2</button>
           <button type="button" onclick="execCmd('formatBlock', 'p')">Text</button>
+          <span class="separator"></span>
+          <!-- Links & Emoji -->
           <button type="button" onclick="insertLink()">🔗 Link</button>
           <button type="button" onclick="openEmojiPicker()">😊 Emoji</button>
-          <button type="button" class="affiliate-btn" onclick="toggleAffiliate()">🔗 Affiliate</button>
+          <span class="separator"></span>
+          <!-- Image & Affiliate (founder only) -->
           <button type="button" onclick="insertImageWithSize('postEditor')">🖼️ Image</button>
       `;
       if (isFounder) {
         html += `
-          <button type="button" onclick="execCmd('strikeThrough')"><s>S</s></button>
-          <button type="button" onclick="execCmd('insertOrderedList')">1. List</button>
-          <button type="button" onclick="execCmd('formatBlock', 'blockquote')">“ Quote</button>
-          <button type="button" onclick="execCmd('formatBlock', 'pre')">&lt;/&gt; Code</button>
+          <button type="button" class="affiliate-btn" onclick="toggleAffiliate()">🔗 Affiliate</button>
           <button type="button" onclick="insertTable()">⊞ Table</button>
         `;
       }
@@ -1687,7 +1696,7 @@ async function loadCommunityView() {
 
   document.getElementById('mainContent').innerHTML = html;
   populateAISelects();
-  setupPasteHandler(); // ← NEW: set up paste handler after editor is rendered
+  setupPasteHandler();
 }
 
 // ─────────────────────────────────────────────
@@ -1762,7 +1771,7 @@ async function loadFeed() {
 }
 
 // ─────────────────────────────────────────────
-// SCHEDULE TOGGLE & CREATE/ SCHEDULE POST (STORES HTML)
+// SCHEDULE TOGGLE & CREATE/ SCHEDULE POST
 // ─────────────────────────────────────────────
 function toggleSchedule() {
   const checked = document.getElementById('scheduleToggle').checked;
@@ -1853,7 +1862,7 @@ async function createOrSchedulePost() {
 
   const { data, error } = await sb.rpc('create_post_with_schedule', {
     p_title: title,
-    p_content: content, // ← stored as HTML
+    p_content: content,
     p_community_id: communityId,
     p_author_id: authorId,
     p_is_ai: isAI,
@@ -1868,6 +1877,7 @@ async function createOrSchedulePost() {
     const message = publishedAt ? `Post scheduled for ${new Date(publishedAt).toLocaleString()}` : 'Post created!';
     showToast(message, 'success');
     clearPostEditor();
+    // Immediately reload the view to show the new post
     await loadCommunityView();
     if (publishedAt) {
       loadScheduledPosts();
@@ -1972,7 +1982,7 @@ async function viewPost(postId) {
 }
 
 // ─────────────────────────────────────────────
-// LOAD POST VIEW (renders HTML content, not escaped)
+// LOAD POST VIEW (with reorganized toolbar)
 // ─────────────────────────────────────────────
 async function loadPostView(postId) {
   const { data: post, error } = await sb
@@ -2070,29 +2080,38 @@ async function loadPostView(postId) {
     const isFounderEditor = currentPlayer && currentPlayer.subscription_tier?.toLowerCase() === 'founder';
     let toolbarHtml = `
       <div class="toolbar">
+        <!-- Text Formatting -->
         <button type="button" onclick="execCmdOnEditor('postEditEditor', 'bold')"><b>B</b></button>
         <button type="button" onclick="execCmdOnEditor('postEditEditor', 'italic')"><i>I</i></button>
+        <button type="button" onclick="execCmdOnEditor('postEditEditor', 'strikeThrough')"><s>S</s></button>
+        <span class="separator"></span>
+        <!-- Lists -->
         <button type="button" onclick="execCmdOnEditor('postEditEditor', 'insertUnorderedList')">• Bullet</button>
+        <button type="button" onclick="execCmdOnEditor('postEditEditor', 'insertOrderedList')">1. List</button>
+        <span class="separator"></span>
+        <!-- Indent -->
         <button type="button" onclick="execCmdOnEditor('postEditEditor', 'indent')">↗ Indent</button>
         <button type="button" onclick="execCmdOnEditor('postEditEditor', 'outdent')">↘ Outdent</button>
+        <span class="separator"></span>
+        <!-- Headings -->
         <button type="button" onclick="execCmdOnEditor('postEditEditor', 'formatBlock', 'h1')">H1</button>
         <button type="button" onclick="execCmdOnEditor('postEditEditor', 'formatBlock', 'h2')">H2</button>
         <button type="button" onclick="execCmdOnEditor('postEditEditor', 'formatBlock', 'p')">Text</button>
+        <span class="separator"></span>
+        <!-- Links & Emoji -->
         <button type="button" onclick="insertLinkOnEditor('postEditEditor')">🔗 Link</button>
         <button type="button" onclick="openEmojiPickerForEditor('postEditEditor')">😊 Emoji</button>
+        <span class="separator"></span>
+        <!-- Image & Affiliate (founder only) -->
+        <button type="button" onclick="insertImageWithSize('postEditEditor')">🖼️ Image</button>
     `;
     if (isBlackOrFounder) {
       toolbarHtml += `
         <button type="button" class="affiliate-btn ${affiliateEnabled ? 'active' : ''}" onclick="toggleAffiliate()">🔗 Affiliate</button>
-        <button type="button" onclick="insertImageWithSize('postEditEditor')">🖼️ Image</button>
       `;
     }
     if (isFounderEditor) {
       toolbarHtml += `
-        <button type="button" onclick="execCmdOnEditor('postEditEditor', 'strikeThrough')"><s>S</s></button>
-        <button type="button" onclick="execCmdOnEditor('postEditEditor', 'insertOrderedList')">1. List</button>
-        <button type="button" onclick="execCmdOnEditor('postEditEditor', 'formatBlock', 'blockquote')">“ Quote</button>
-        <button type="button" onclick="execCmdOnEditor('postEditEditor', 'formatBlock', 'pre')">&lt;/&gt; Code</button>
         <button type="button" onclick="insertTableOnEditor('postEditEditor')">⊞ Table</button>
       `;
     }
@@ -2547,6 +2566,7 @@ function estimateReadTime(html) {
 
 // ─── REAL-TIME SUBSCRIPTIONS ──────────────────────────────
 function subscribeToCommunity(communityId) {
+  // Unsubscribe from existing channel
   if (forumChannel) {
     forumChannel.unsubscribe();
     forumChannel = null;
@@ -2559,6 +2579,18 @@ function subscribeToCommunity(communityId) {
       table: 'posts',
       filter: `community_id=eq.${communityId}`
     }, (payload) => {
+      // Reload view on new post
+      if (currentCommunity && currentCommunity.id === communityId) {
+        loadCommunityView();
+      }
+    })
+    .on('postgres_changes', {
+      event: 'UPDATE',
+      schema: 'public',
+      table: 'posts',
+      filter: `community_id=eq.${communityId}`
+    }, (payload) => {
+      // Reload view on post update
       if (currentCommunity && currentCommunity.id === communityId) {
         loadCommunityView();
       }
