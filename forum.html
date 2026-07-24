@@ -1539,7 +1539,16 @@ function setupPasteHandler() {
 }
 
 // ─────────────────────────────────────────────
-// COMMUNITY VIEW (with reorganized toolbar)
+// HELPER: get current time with a 2‑second grace period
+// ─────────────────────────────────────────────
+function getPublishedAtThreshold() {
+    const d = new Date();
+    d.setSeconds(d.getSeconds() + 2);
+    return d.toISOString();
+}
+
+// ─────────────────────────────────────────────
+// COMMUNITY VIEW (with reorganized toolbar + time offset)
 // ─────────────────────────────────────────────
 async function loadCommunityView() {
   if (!currentCommunity) return;
@@ -1553,7 +1562,7 @@ async function loadCommunityView() {
     `)
     .eq('community_id', currentCommunity.id)
     .is('deleted_at', null)
-    .lte('published_at', new Date().toISOString())
+    .lte('published_at', getPublishedAtThreshold()) // ← grace period added
     .order('created_at', { ascending: false });
 
   if (error) { console.error('Error loading posts:', error); showToast('Error loading posts', 'error'); return; }
@@ -1700,7 +1709,7 @@ async function loadCommunityView() {
 }
 
 // ─────────────────────────────────────────────
-// FEED (latest posts)
+// FEED (latest posts) – also with time offset
 // ─────────────────────────────────────────────
 async function loadFeed() {
   currentCommunity = null;
@@ -1723,7 +1732,7 @@ async function loadFeed() {
       ai_member:ai_members(name, avatar_url)
     `)
     .is('deleted_at', null)
-    .lte('published_at', new Date().toISOString())
+    .lte('published_at', getPublishedAtThreshold()) // ← grace period added
     .order('created_at', { ascending: false })
     .limit(50);
 
@@ -1982,7 +1991,7 @@ async function viewPost(postId) {
 }
 
 // ─────────────────────────────────────────────
-// LOAD POST VIEW (with reorganized toolbar)
+// LOAD POST VIEW (with reorganized toolbar + time offset)
 // ─────────────────────────────────────────────
 async function loadPostView(postId) {
   const { data: post, error } = await sb
